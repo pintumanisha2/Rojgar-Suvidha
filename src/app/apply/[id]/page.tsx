@@ -314,9 +314,10 @@ export default function ApplyPage() {
 
                   // 5. Update Coupon Usage if applied
                   if (appliedCoupon) {
-                    await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id }).catch(() => {
-                      supabase.from("coupons").update({ used_count: appliedCoupon.used_count + 1 }).eq("id", appliedCoupon.id);
-                    });
+                    const { error: rpcErr } = await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
+                    if (rpcErr) {
+                      await supabase.from("coupons").update({ used_count: appliedCoupon.used_count + 1 }).eq("id", appliedCoupon.id);
+                    }
                   }
 
                   setSuccessTrackingId(trackingCode);
