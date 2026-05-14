@@ -85,7 +85,7 @@ export default function HeroBanner() {
               src={main.image_url}
               alt={main.title}
               fill
-              className="object-cover object-center block transition-transform duration-700 group-hover:scale-105"
+              className="object-fill sm:object-cover object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
             {/* Gradient overlay */}

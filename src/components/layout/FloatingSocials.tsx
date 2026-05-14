@@ -23,7 +23,7 @@ export default function FloatingSocials() {
       /* Mobile: bottom-left above BottomNav | Desktop: bottom-left side */
       bottom-20 left-4
       md:bottom-10 md:left-10
-      flex flex-col gap-3`}
+      hidden md:flex flex-col gap-3`}
     >
       {/* YouTube */}
       <a
