@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
         
         // Force a hard redirect instead of relying on Next.js router or AdminLayout listeners
         // This completely fixes the "spinning forever" issue
-        window.location.href = "/admin";
+        router.push("/admin");
         return; 
       }
     } catch (err: any) {

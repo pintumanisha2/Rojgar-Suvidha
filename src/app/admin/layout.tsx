@@ -70,7 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (!mounted) return;
       
       if (!session && pathname !== "/admin/login") {
-        window.location.href = "/admin/login";
+        router.push("/admin/login");
       } else if (session) {
         const email = session.user.email ?? null;
         setAdminEmail(email);
@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!mounted) return;
         setUserRole(fetchedRole);
         if (pathname === "/admin/login") {
-          window.location.href = "/admin";
+          router.replace("/admin");
         }
       }
       setIsAuthLoading(false);
@@ -96,13 +96,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!mounted) return;
         setUserRole(fetchedRole);
         if (pathname === "/admin/login") {
-          window.location.href = "/admin";
+          router.replace("/admin");
         }
       } else {
         setAdminEmail(null);
         setUserRole("unauthorized");
         if (pathname !== "/admin/login") {
-          window.location.href = "/admin/login";
+          router.push("/admin/login");
         }
       }
       setIsAuthLoading(false);
@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       timeoutId = setTimeout(async () => {
         await supabase.auth.signOut();
         alert("Session Expired due to 10 minutes of inactivity. For security reasons, you have been logged out.");
-        window.location.href = "/admin/login";
+        router.push("/admin/login");
       }, 600000); 
     };
 
