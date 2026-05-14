@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, ClipboardCheck, Loader2, CheckCircle2, AlertCircle, ShieldCheck, FileText } from "lucide-react";
 import Script from "next/script";
 
-export default function ApplyForMePage() {
+function ApplyForMeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -437,5 +437,13 @@ export default function ApplyForMePage() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function ApplyForMePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /></div>}>
+      <ApplyForMeContent />
+    </Suspense>
   );
 }
