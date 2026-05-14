@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ClipboardCheck, Loader2, Download, Clock, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 
 const STATUS_STEPS = ["pending", "in_progress", "completed"];
 
-const STATUS_CONFIG: Record<string, { label: string; desc: string; color: string; bg: string; icon: JSX.Element }> = {
+const STATUS_CONFIG: Record<string, { label: string; desc: string; color: string; bg: string; icon: React.ReactNode }> = {
   pending:     { label: "Request Received",  desc: "Aapki request hume mil gayi. Hum jald kaam shuru karenge.", color: "text-amber-700",  bg: "bg-amber-100 dark:bg-amber-900/30",  icon: <Clock className="w-5 h-5" /> },
   in_progress: { label: "Form Filling",      desc: "Hum abhi aapka form fill kar rahe hain.",                 color: "text-blue-700",   bg: "bg-blue-100 dark:bg-blue-900/30",   icon: <RefreshCw className="w-5 h-5" /> },
   completed:   { label: "Completed! ✅",     desc: "Aapka form bhar diya gaya hai. Receipt download karein.", color: "text-green-700",  bg: "bg-green-100 dark:bg-green-900/30", icon: <CheckCircle2 className="w-5 h-5" /> },
