@@ -95,9 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const fetchedRole = await getRoleFromEmail(email);
         if (!mounted) return;
         setUserRole(fetchedRole);
-        if (pathname === "/admin/login") {
-          router.replace("/admin");
-        }
+        // Removed router.replace("/admin") to prevent race condition with login page
       } else {
         setAdminEmail(null);
         setUserRole("unauthorized");
