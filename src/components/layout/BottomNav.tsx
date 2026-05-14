@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Briefcase, Bookmark, UserCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollYRef = useRef(0);
 
   // Hide Bottom Nav on admin pages
   if (pathname.startsWith("/admin")) return null;
@@ -17,17 +17,17 @@ export default function BottomNav() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false); // Scrolling down
+      if (currentScrollY > lastScrollYRef.current && currentScrollY > 100) {
+        setIsVisible(false);
       } else {
-        setIsVisible(true);  // Scrolling up
+        setIsVisible(true);
       }
-      setLastScrollY(currentScrollY);
+      lastScrollYRef.current = currentScrollY;
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, []); // Empty dep array - listener registered ONCE only
 
   const navItems = [
     { name: "Home", href: "/", icon: Home },
