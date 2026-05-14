@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   Search, MessageSquareWarning, Loader2, RefreshCw,
@@ -16,7 +16,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   other:        "💬 Other",
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: JSX.Element }> = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   open:     { label: "Open",     color: "text-amber-700",  bg: "bg-amber-100 dark:bg-amber-900/30",  icon: <Clock className="w-4 h-4" /> },
   resolved: { label: "Resolved", color: "text-green-700",  bg: "bg-green-100 dark:bg-green-900/30",  icon: <CheckCircle2 className="w-4 h-4" /> },
   closed:   { label: "Closed",   color: "text-gray-500",   bg: "bg-gray-100 dark:bg-gray-800",       icon: <XCircle className="w-4 h-4" /> },
