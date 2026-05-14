@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, MousePointerClick } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -79,11 +80,13 @@ export default function HeroBanner() {
           {/* ── Main (Large) Banner ── */}
           {/* Mobile: image shows at natural height (no crop, no black bars) */}
           {/* Desktop: fixed 220px grid height with object-cover */}
-          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer sm:h-full">
-            <img
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer sm:h-full aspect-[16/9] sm:aspect-auto">
+            <Image
               src={main.image_url}
               alt={main.title}
-              className="w-full h-auto sm:h-full sm:object-cover object-center block transition-transform duration-700 group-hover:scale-105"
+              fill
+              className="object-cover object-center block transition-transform duration-700 group-hover:scale-105"
+              priority
             />
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
@@ -143,10 +146,11 @@ export default function HeroBanner() {
             {/* Small Banner 1 */}
             {banners.length >= 2 && (
               <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer">
-                <img
+                <Image
                   src={side1.image_url}
                   alt={side1.title}
-                  className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  fill
+                  className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-end justify-between">
@@ -168,10 +172,11 @@ export default function HeroBanner() {
             {/* Small Banner 2 */}
             {banners.length >= 3 ? (
               <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer">
-                <img
+                <Image
                   src={side2.image_url}
                   alt={side2.title}
-                  className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  fill
+                  className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-end justify-between">
