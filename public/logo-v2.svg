@@ -1,0 +1,28 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="premiumGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="goldTie" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Centered and Padded Group to avoid edge clipping -->
+  <g transform="translate(10, 10) scale(0.8)">
+    <!-- Magnifying Glass Ring -->
+    <circle cx="45" cy="45" r="40" stroke="url(#premiumGrad)" stroke-width="7" fill="none" />
+    
+    <!-- Stylized Handle -->
+    <path d="M74 74L90 90" stroke="url(#premiumGrad)" stroke-width="12" stroke-linecap="round" />
+    
+    <!-- Professional Icon -->
+    <circle cx="45" cy="35" r="14" fill="url(#premiumGrad)" />
+    <path d="M15 75C15 60 25 55 45 55C65 55 75 60 75 75V82H15V75Z" fill="url(#premiumGrad)" />
+    
+    <!-- Golden Tie -->
+    <path d="M45 55L41 65L45 76L49 65L45 55Z" fill="url(#goldTie)" />
+  </g>
+</svg>
