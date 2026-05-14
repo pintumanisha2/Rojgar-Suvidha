@@ -74,18 +74,18 @@ export default function HeroBanner() {
   return (
     <div className="w-full bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 px-3 sm:px-4 py-3">
       <div className="max-w-7xl mx-auto">
-        {/* Mobile: single full-width banner | Desktop: 3-card grid */}
+        {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[220px]">
 
-          {/* ── Main (Large) Banner ── */}
-          {/* Mobile: image shows at natural height (no crop, no black bars) */}
-          {/* Desktop: fixed 220px grid height with object-cover */}
-          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer sm:h-full aspect-[16/9] sm:aspect-auto">
+          {/* Main Banner - fixed height on mobile/tab, fill on desktop */}
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer sm:h-full"
+            style={{ height: '160px' }}
+          >
             <Image
               src={main.image_url}
               alt={main.title}
               fill
-              className="object-fill sm:object-cover object-center block transition-transform duration-700 group-hover:scale-105"
+              className="object-contain sm:object-cover object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
             {/* Gradient overlay */}
