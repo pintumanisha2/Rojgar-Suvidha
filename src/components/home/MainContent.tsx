@@ -17,6 +17,7 @@ interface JobItem {
   lastDate?: string;
   posts?: string;
   eligibility?: string;
+  slug: string;
 }
 
 interface Section {
@@ -93,8 +94,10 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
         status: job.status as StatusKey,
         tag: job.tag as TagType,
         lastDate,
-        slug: job.slug
-      };
+        slug: job.slug,
+        posts: job.total_posts,
+        eligibility: job.short_info
+      } as JobItem;
     })
   }));
 
