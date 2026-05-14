@@ -23,7 +23,7 @@ export default function ApplyForMePage() {
   const [jobUrl, setJobUrl] = useState(searchParams.get("url") || "");
   const [note, setNote] = useState("");
   const [paymentVerified, setPaymentVerified] = useState(false);
-  const [razorpayKey, setRazorpayKey] = useState(process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "");
+
   const [termsAccepted, setTermsAccepted] = useState(false);
   
   // Smart Age Calculator State
