@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+export const maxDuration = 60; // Prevent Vercel timeout
+
 export async function POST(req: Request) {
   try {
     const { message, history } = await req.json();
@@ -20,10 +22,10 @@ export async function POST(req: Request) {
     const latestAdmitCards = formatList(allItems?.filter(i => i.category === 'admit-cards').slice(0, 10) || []);
     const latestAdmissions = formatList(allItems?.filter(i => i.category === 'admission').slice(0, 10) || []);
 
-    const hfApiKey = process.env.HF_API_KEY;
-    if (!hfApiKey) {
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
       return NextResponse.json(
-        { error: "AI Configuration missing (HF_API_KEY)" },
+        { error: "AI Configuration missing (GROQ_API_KEY)" },
         { status: 500 }
       );
     }
@@ -65,15 +67,15 @@ ${latestAdmissions}`;
       { role: "user", content: message },
     ];
 
-    // 4. Call Hugging Face API (OpenAI Compatible)
-    const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3/v1/chat/completions", {
+    // 4. Call Groq API (OpenAI Compatible)
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${hfApiKey}`,
+        "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "mistralai/Mistral-7B-Instruct-v0.3",
+        model: "llama3-8b-8192", // Using fast Llama 3 model
         messages: messagesPayload,
         max_tokens: 512,
         temperature: 0.5,
@@ -83,11 +85,11 @@ ${latestAdmissions}`;
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("HF API Error Details:", data);
+      console.error("Groq API Error Details:", data);
       return NextResponse.json(
         { 
-          error: "Hugging Face API error", 
-          details: data.error || "Unknown API Error" 
+          error: "Groq API error", 
+          details: data.error?.message || "Unknown API Error" 
         }, 
         { status: 502 }
       );

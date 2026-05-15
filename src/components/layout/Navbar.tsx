@@ -239,7 +239,7 @@ export default function Navbar() {
               <Link href="/" className="flex items-center gap-3 shrink-0">
                 <div className="shrink-0 flex items-center justify-center mr-1 hover:scale-110 transition-transform duration-300 cursor-pointer">
                   <Image 
-                    src="/logo-v2.svg" 
+                    src="/rojgar suvidha logo.png" 
                     alt="Rojgar Suvidha Icon"
                     width={46}
                     height={46}

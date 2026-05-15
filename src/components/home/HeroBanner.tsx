@@ -71,8 +71,8 @@ export default function HeroBanner() {
     return (
       <div className="w-full bg-white dark:bg-gray-950 px-3 sm:px-4 py-3">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[220px]">
-            <div className="sm:col-span-2 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse aspect-[16/9] sm:aspect-auto sm:h-full" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
+            <div className="sm:col-span-2 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse h-[140px] sm:h-[200px]" />
             <div className="hidden sm:flex flex-col gap-3">
               <div className="flex-1 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
               <div className="flex-1 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
@@ -95,13 +95,10 @@ export default function HeroBanner() {
     <div className="w-full bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 px-3 sm:px-4 py-3">
       <div className="max-w-7xl mx-auto">
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[220px]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
 
           {/* Main Banner - fully clickable */}
-          <div
-            className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group sm:h-full"
-            style={{ height: '160px' }}
-          >
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer h-[140px] sm:h-[200px]">
             {/* Wrap entire banner in Link if link_url exists */}
             {main.link_url ? (
               <Link href={main.link_url} className="absolute inset-0 z-10" aria-label={main.title} />
@@ -112,7 +109,7 @@ export default function HeroBanner() {
               alt={main.title}
               fill
               unoptimized
-              className="object-contain sm:object-cover object-center block transition-transform duration-700 group-hover:scale-105"
+              className="object-fill object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
             {/* Gradient overlay */}
@@ -166,7 +163,7 @@ export default function HeroBanner() {
           </div>
 
           {/* ── Right Side: 2 Small Banners (hidden on mobile) ── */}
-          <div className="hidden sm:flex flex-col gap-3 h-full">
+          <div className="hidden sm:flex flex-col gap-3 sm:h-[200px]">
             {/* Small Banner 1 */}
             {banners.length >= 2 && (
               <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer">

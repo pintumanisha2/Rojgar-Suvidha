@@ -56,7 +56,7 @@ export default function Footer() {
             <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="bg-indigo-600 p-2 rounded-lg">
                 <Image
-                  src="/logo-white.png"
+                  src="/logo-blue.png"
                   alt="Rojgar Suvidha – India's #1 Government Job Portal"
                   width={24}
                   height={24}

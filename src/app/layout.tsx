@@ -97,6 +97,11 @@ export const metadata: Metadata = {
       "hi-IN": `${BASE_URL}?lang=hi`,
     },
   },
+  icons: {
+    icon: '/logo-blue.png',
+    shortcut: '/logo-blue.png',
+    apple: '/logo-blue.png',
+  },
   verification: {
     // Add your verification codes here when ready
     // google: "your-google-verification-code",
@@ -126,7 +131,7 @@ const organizationSchema = {
   name: "Rojgar Suvidha",
   alternateName: ["RojgarSuvidha", "Rojgar Suvidha India"],
   url: BASE_URL,
-  logo: `${BASE_URL}/logo.png`,
+  logo: `${BASE_URL}/logo-blue.png`,
   description: "India's #1 trusted portal for Sarkari Naukri, Government Jobs, Admit Cards, Results & Apply For Me service.",
   foundingDate: "2024",
   sameAs: [

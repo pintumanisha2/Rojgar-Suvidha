@@ -24,6 +24,9 @@ function ApplyForMeContent() {
   const [jobTitle, setJobTitle] = useState(searchParams.get("job") || "");
   const [jobUrl, setJobUrl] = useState(searchParams.get("url") || "");
   const [note, setNote] = useState("");
+  const [existingId, setExistingId] = useState("");
+  const [existingPassword, setExistingPassword] = useState("");
+  const [preferences, setPreferences] = useState("");
   // FIX: Removed unused paymentVerified state
 
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -162,7 +165,7 @@ function ApplyForMeContent() {
                 job_title: jobTitle.trim(),
                 job_url: jobUrl.trim() || null,
                 status: "paid",
-                admin_notes: `[Cashfree Payment] ` + (note.trim() || ""),
+                admin_notes: `[Cashfree Payment]\nExisting ID: ${existingId || "N/A"}\nPassword: ${existingPassword || "N/A"}\nPreferences: ${preferences || "N/A"}\nNote: ${note.trim() || "N/A"}`,
                 verification_code: code,
                 tracking_id: tId,
               })
@@ -461,11 +464,39 @@ function ApplyForMeContent() {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Koi Special Note? (Optional)
+                  Exam Center / Post Preferences (Optional)
+                </label>
+                <input type="text" value={preferences} onChange={e => setPreferences(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+                  placeholder="e.g. 1st Choice: Patna, 2nd: Delhi..." />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Registration No. (Agar pehle se hai)
+                  </label>
+                  <input type="text" value={existingId} onChange={e => setExistingId(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+                    placeholder="e.g. SSC Registration No." />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Password (Agar pehle se hai)
+                  </label>
+                  <input type="text" value={existingPassword} onChange={e => setExistingPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
+                    placeholder="e.g. ssc@1234" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Koi Aur Special Note? (Optional)
                 </label>
                 <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
                   className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all"
-                  placeholder="e.g. SC category mein apply karna hai, last date kal hai..." />
+                  placeholder="e.g. SC category mein apply karna hai, fee payment main khud karunga..." />
               </div>
             </div>
 

@@ -187,7 +187,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     publisher: {
       "@type": "Organization",
       name: "Rojgar Suvidha",
-      logo: { "@type": "ImageObject", url: `${BASE_URL}/logo.png` },
+      logo: { "@type": "ImageObject", url: `${BASE_URL}/logo-blue.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${BASE_URL}/job/${slug}` },
     articleSection: categoryLabel,

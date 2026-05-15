@@ -27,7 +27,7 @@ export default function PushNotificationsPage() {
             title,
             body,
             url,
-            icon: "/logo.png"
+            icon: "/logo-blue.png"
           }
         })
       });

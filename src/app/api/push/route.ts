@@ -37,7 +37,7 @@ export async function POST(req: Request) {
           title: 'Welcome to Rojgar Suvidha! 🎉',
           body: 'Job alerts are now active. You will receive updates instantly.',
           url: '/',
-          icon: '/logo.png'
+          icon: '/logo-blue.png'
         })
       );
       return NextResponse.json({ success: true, message: 'Subscribed and test push sent' });
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         title: 'New Update on Rojgar Suvidha! 🚀',
         body: 'Check out the latest job notification or admit card now.',
         url: '/',
-        icon: '/logo.png'
+        icon: '/logo-blue.png'
       };
 
       // Loop through all subscriptions and send push
