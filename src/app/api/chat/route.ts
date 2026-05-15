@@ -86,7 +86,7 @@ ${latestAdmissions}
         "X-Title": "Rojgar Suvidha", // Optional, for OpenRouter rankings
       },
       body: JSON.stringify({
-        model: "google/gemma-2-9b-it:free", // Most stable free model on OpenRouter currently
+        model: "mistralai/mistral-7b-instruct:free", // Highly stable and always-on free model
         messages: messagesPayload,
         temperature: 0.5,
         max_tokens: 512,
