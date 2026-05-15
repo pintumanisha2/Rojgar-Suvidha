@@ -81,11 +81,9 @@ export default function AdminLoginPage() {
         }
 
         setFailedAttempts(0); // Reset on success
-        
-        // Force a hard redirect instead of relying on Next.js router or AdminLayout listeners
-        // This completely fixes the "spinning forever" issue
+        setLoading(false); // FIX: Stop spinner before redirect
         router.push("/admin");
-        return; 
+        return;
       }
     } catch (err: any) {
       setLoading(false);

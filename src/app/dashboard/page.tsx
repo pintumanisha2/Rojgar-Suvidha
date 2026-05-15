@@ -9,6 +9,7 @@ import {
   LogOut, CheckCircle2, Loader2, ShieldCheck, Lock, Briefcase, Camera, Trash2
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
+import RecentlyViewed from "@/components/home/RecentlyViewed";
 
 function DashboardContent() {
   const router = useRouter();
@@ -19,43 +20,96 @@ function DashboardContent() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarTimestamp, setAvatarTimestamp] = useState<number>(Date.now()); // FIX: stable timestamp, not inline Date.now()
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [myApplications, setMyApplications] = useState<any[]>([]);
+  // Live OTP Alert
+  const [otpAlert, setOtpAlert] = useState<any>(null);
+  const [otpInput, setOtpInput] = useState("");
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [otpSubmitted, setOtpSubmitted] = useState(false);
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.push("/login"); return; }
-      setUser(session.user);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { router.push("/login"); return; }
+        setUser(session.user);
 
-      const { data: profileData } = await supabase
-        .from("profiles").select("*").eq("id", session.user.id).single();
+        const { data: profileData } = await supabase
+          .from("profiles").select("*").eq("id", session.user.id).single();
 
-      if (!profileData?.full_name) { router.push("/profile-setup"); return; }
-      setProfile(profileData);
-      if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url);
+        if (!profileData?.full_name) { router.push("/profile-setup"); return; }
+        setProfile(profileData);
+        if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url);
 
-      // Fetch Apply For Me requests
-      const { data: reqData } = await supabase
-        .from("apply_for_me_requests")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
-      setMyRequests(reqData || []);
+        // Fetch Apply For Me requests
+        const { data: reqData } = await supabase
+          .from("apply_for_me_requests")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+        setMyRequests(reqData || []);
 
-      // Fetch direct form applications
-      const { data: appData } = await supabase
-        .from("user_applications")
-        .select("tracking_id, form_id, full_name, selected_post_name, application_status, total_paid, created_at")
-        .eq("phone", profileData?.mobile_number || "")
-        .order("created_at", { ascending: false });
-      setMyApplications(appData || []);
-
-      setLoading(false);
+        // FIX: Fetch applications by user_id first, fallback to phone number
+        const { data: appData } = await supabase
+          .from("user_applications")
+          .select("tracking_id, form_id, full_name, selected_post_name, application_status, total_paid, created_at")
+          .or(`user_id.eq.${session.user.id},phone.eq.${profileData?.mobile_number || "__none__"}`)
+          .order("created_at", { ascending: false });
+        setMyApplications(appData || []);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false); // FIX: Always stop spinner, even on error
+      }
     };
     fetchUser();
   }, [router]);
+
+  // Poll for live OTP requests (every 4 seconds)
+  useEffect(() => {
+    if (!user) return;
+    const checkOtp = async () => {
+      const { data } = await supabase
+        .from("otp_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        setOtpAlert(data);
+        const secsLeft = Math.max(0, Math.floor((new Date(data.expires_at).getTime() - Date.now()) / 1000));
+        setOtpSecondsLeft(secsLeft);
+      }
+    };
+    checkOtp();
+    const poll = setInterval(checkOtp, 4000);
+    return () => clearInterval(poll);
+  }, [user]);
+
+  // OTP countdown timer
+  useEffect(() => {
+    if (!otpAlert || otpSecondsLeft <= 0) return;
+    const t = setInterval(() => setOtpSecondsLeft(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [otpAlert, otpSecondsLeft]);
+
+  const handleSubmitOtp = async () => {
+    if (!otpInput.trim() || !otpAlert) return;
+    setOtpSubmitting(true);
+    await supabase.from("otp_requests")
+      .update({ otp_value: otpInput.trim(), status: "fulfilled" })
+      .eq("id", otpAlert.id);
+    setOtpSubmitting(false);
+    setOtpSubmitted(true);
+    setOtpAlert(null);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -103,7 +157,8 @@ function DashboardContent() {
         const { data } = supabase.storage.from("avatars").getPublicUrl(path);
         const remoteUrl = data.publicUrl;
         await supabase.from("profiles").update({ avatar_url: remoteUrl }).eq("id", user.id);
-        setAvatarUrl(remoteUrl); // Update to actual URL so it persists on reload
+        setAvatarUrl(remoteUrl);
+        setAvatarTimestamp(Date.now()); // FIX: Update timestamp only after new upload
       }
     } catch (e) {
       console.error("Avatar upload error:", e);
@@ -121,7 +176,73 @@ function DashboardContent() {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen py-10 px-4">
+
+      {/* ── LIVE OTP ALERT — appears when team needs OTP ── */}
+      {otpAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-red-400 w-full max-w-sm p-6 text-center">
+            {/* Pulsing indicator */}
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <span className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
+              <span className="text-sm font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">LIVE — Team Form Fill Kar Rahi Hai!</span>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 text-sm mb-1">
+              <strong className="text-gray-900 dark:text-white">{otpAlert.job_title}</strong>
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              Apne phone par SMS/Email dekho — OTP aaya hoga. Yahan enter karo:
+            </p>
+
+            {/* Verification code — trust signal */}
+            {otpAlert.verification_code && (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-xl px-3 py-2 mb-4 text-left flex items-start gap-2">
+                <span className="text-base shrink-0">✅</span>
+                <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed">
+                  <strong>Aapka Secret Code:</strong>{" "}
+                  <span className="font-mono font-extrabold tracking-widest text-green-800 dark:text-green-200">{otpAlert.verification_code}</span>
+                  <br />
+                  Yeh popup genuine hai — team ne yahan se request ki hai.
+                </p>
+              </div>
+            )}
+
+            {/* OTP Input */}
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={8}
+              value={otpInput}
+              onChange={e => setOtpInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="OTP yahan likho"
+              className="w-full text-center text-2xl font-extrabold font-mono tracking-widest py-3 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 mb-4"
+            />
+
+            {/* Submit */}
+            <button
+              onClick={handleSubmitOtp}
+              disabled={otpInput.length < 4 || otpSubmitting}
+              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-extrabold text-base transition-all active:scale-95 mb-3"
+            >
+              {otpSubmitting ? "Bhej rahe hain..." : "✅ OTP Submit Karo"}
+            </button>
+
+            {/* Countdown */}
+            <p className="text-xs text-gray-400">
+              ⏱️ {Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")} mein expire hoga
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* OTP submitted success toast */}
+      {otpSubmitted && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-2">
+          ✅ OTP team ko mil gaya! Form jald submit hoga.
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8">
+
 
         {/* Sidebar */}
         <div className="w-full md:w-80 shrink-0">
@@ -134,7 +255,7 @@ function DashboardContent() {
                 <div className="relative mb-3">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/50 shadow-lg bg-white/20 flex items-center justify-center">
                     {avatarUrl ? (
-                      <img src={`${avatarUrl}?t=${Date.now()}`} alt="Profile" className="w-full h-full object-cover" />
+                      <img src={`${avatarUrl}?t=${avatarTimestamp}`} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                       <UserCircle className="w-12 h-12 text-white" />
                     )}
@@ -273,15 +394,20 @@ function DashboardContent() {
 
           {/* SAVED JOBS TAB */}
           {activeTab === "saved" && (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden p-16 text-center">
-              <Bookmark className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Saved Jobs Yet</h3>
-              <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-                When you browse jobs, click the heart icon to save them here for later.
-              </p>
-              <Link href="/" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/30">
-                Browse Latest Jobs
-              </Link>
+            <div className="space-y-5">
+              {/* Recently Viewed Jobs - client-side localStorage */}
+              <RecentlyViewed />
+
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden p-10 text-center">
+                <Bookmark className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Your Saved Jobs</h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
+                  Aapki saved jobs ek dedicated page par hain. Unhe dekhne ke liye click karein.
+                </p>
+                <Link href="/saved-jobs" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/30">
+                  View Saved Jobs →
+                </Link>
+              </div>
             </div>
           )}
 
@@ -358,12 +484,15 @@ function DashboardContent() {
                 <div className="space-y-4">
                   {myRequests.map(req => {
                     const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-                      pending: { label: "⏳ Pending", color: "text-amber-700", bg: "bg-amber-100 dark:bg-amber-900/30" },
-                      in_progress: { label: "🔄 In Progress", color: "text-blue-700", bg: "bg-blue-100 dark:bg-blue-900/30" },
-                      completed: { label: "✅ Completed", color: "text-green-700", bg: "bg-green-100 dark:bg-green-900/30" },
-                      rejected: { label: "❌ Rejected", color: "text-red-700", bg: "bg-red-100 dark:bg-red-900/30" },
+                      paid:          { label: "✅ Payment Received",    color: "text-blue-700 dark:text-blue-300",   bg: "bg-blue-50 dark:bg-blue-900/30"   },
+                      pending:       { label: "⏳ Queue Mein Hai",       color: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50 dark:bg-amber-900/30" },
+                      in_progress:   { label: "🔄 Form Fill Ho Raha Hai",color: "text-indigo-700 dark:text-indigo-300",bg: "bg-indigo-50 dark:bg-indigo-900/30"},
+                      needs_info:    { label: "⚠️ Document Chahiye",     color: "text-orange-700 dark:text-orange-300",bg: "bg-orange-50 dark:bg-orange-900/30"},
+                      completed:     { label: "✅ Form Submit Ho Gaya!", color: "text-green-700 dark:text-green-300",  bg: "bg-green-50 dark:bg-green-900/30"  },
+                      refund_pending:{ label: "💸 Refund Processing",    color: "text-pink-700 dark:text-pink-300",   bg: "bg-pink-50 dark:bg-pink-900/30"   },
+                      rejected:      { label: "❌ Rejected",             color: "text-red-700 dark:text-red-300",     bg: "bg-red-50 dark:bg-red-900/30"     },
                     };
-                    const cfg = statusConfig[req.status] || statusConfig.pending;
+                    const cfg = statusConfig[req.status] || statusConfig.paid;
                     return (
                       <div key={req.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -377,9 +506,37 @@ function DashboardContent() {
                             <p className="text-xs text-gray-400 mt-1">
                               Submitted: {new Date(req.created_at).toLocaleString("en-IN")}
                             </p>
-                            {req.admin_notes && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Tracking ID: <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
+                                {req.tracking_id || `AFM-${req.id.slice(0, 8).toUpperCase()}`}
+                              </span>
+                            </p>
+                            {/* Verification Code — shown for anti-scam protection */}
+                            {req.verification_code && (
+                              <div className="mt-3 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl px-3 py-2">
+                                <span className="text-red-500 text-sm">🔐</span>
+                                <div>
+                                  <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider leading-none">Secret Verification Code</p>
+                                  <p className="text-base font-extrabold text-red-700 dark:text-red-300 font-mono tracking-widest mt-0.5">{req.verification_code}</p>
+                                  <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">Call pe yeh code maango — nahi pata = Scammer!</p>
+                                </div>
+                              </div>
+                            )}
+                            {/* Completed celebration */}
+                            {req.status === "completed" && (
+                              <div className="mt-2 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-xl px-3 py-2">
+                                <p className="text-xs font-extrabold text-green-700 dark:text-green-300">🎉 Aapka form successfully submit ho gaya! Neeche receipt download karo.</p>
+                              </div>
+                            )}
+                            {/* needs_info: user action required */}
+                            {req.status === "needs_info" && (
+                              <div className="mt-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-xl px-3 py-2">
+                                <p className="text-xs font-extrabold text-orange-700 dark:text-orange-300">⚠️ Hamari team ko aapka koi document chahiye. Admin note padho aur support se contact karo.</p>
+                              </div>
+                            )}
+                            {req.admin_notes && !req.admin_notes.startsWith("[Cashfree") && (
                               <div className="mt-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-3">
-                                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">💬 Admin Note:</p>
+                                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">💬 Team Message:</p>
                                 <p className="text-sm text-indigo-800 dark:text-indigo-300">{req.admin_notes}</p>
                               </div>
                             )}

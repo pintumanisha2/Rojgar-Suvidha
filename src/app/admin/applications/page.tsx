@@ -30,6 +30,10 @@ export default function AdminApplicationsPage() {
   const [docsLoading, setDocsLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  // OTP system
+  const [otpRequest, setOtpRequest] = useState<any>(null);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [requestingOtp, setRequestingOtp] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -50,22 +54,22 @@ export default function AdminApplicationsPage() {
 
   const fetchRequests = async () => {
     setLoading(true);
-    // If we haven't loaded role yet, wait. The effect will call this again after role loads.
-    
-    let query = supabase.from("apply_for_me_requests").select("*").order("created_at", { ascending: false });
-    
-    const { data } = await query;
-    setRequests(data || []);
-    setLoading(false);
+    try {
+      const query = supabase.from("apply_for_me_requests").select("*").order("created_at", { ascending: false });
+      const { data } = await query;
+      setRequests(data || []);
+    } catch (err) {
+      console.error("Failed to fetch requests:", err);
+    } finally {
+      setLoading(false); // FIX: Always stop spinner
+    }
   };
 
   const filtered = requests.filter(r => {
-    // If user is a form filler, they should only see requests assigned to them
-    if (currentUserRole === 'form_filler' && r.assigned_to !== currentUserEmail) {
-      return false;
-    }
-    // Then apply the tab filter
+    if (currentUserRole === 'form_filler' && r.assigned_to !== currentUserEmail) return false;
     if (filter === "all") return true;
+    // "pending" tab shows both unpaid-pending AND freshly paid requests
+    if (filter === "pending") return r.status === "pending" || r.status === "paid";
     return r.status === filter;
   });
 
@@ -77,7 +81,7 @@ export default function AdminApplicationsPage() {
     const { data, error } = await supabase
       .from("apply_for_me_requests")
       .select("*")
-      .eq("status", "pending")
+      .in("status", ["pending", "paid"])  // ✅ Include freshly paid requests
       .is("assigned_to", null)
       .order("created_at", { ascending: true })
       .limit(1)
@@ -134,6 +138,65 @@ export default function AdminApplicationsPage() {
     setSaving(false);
     setSelected(null);
     fetchRequests();
+  };
+
+  // OTP Request — sends in-app OTP request to user
+  const handleRequestOtp = async () => {
+    if (!selected) return;
+    setRequestingOtp(true);
+    setOtpRequest(null);
+
+    // 1. Mark request as in_progress so user dashboard shows live alert
+    await supabase.from("apply_for_me_requests")
+      .update({ status: "in_progress" })
+      .eq("id", selected.id);
+    setNewStatus("in_progress");
+
+    // 2. Insert OTP request record
+    const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+    const { data: newOtp } = await supabase
+      .from("otp_requests")
+      .insert({
+        apply_request_id: selected.id,
+        user_id: selected.user_id,
+        job_title: selected.job_title,
+        verification_code: selected.verification_code || null,
+        status: "pending",
+        expires_at: expiresAt,
+      })
+      .select()
+      .single();
+
+    setOtpRequest(newOtp);
+    setRequestingOtp(false);
+
+    // 3. Start countdown timer (3 min = 180s)
+    setOtpTimer(180);
+    const countdown = setInterval(() => {
+      setOtpTimer(prev => {
+        if (prev <= 1) { clearInterval(countdown); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // 4. Poll every 3s for user's OTP response
+    const poll = setInterval(async () => {
+      if (!newOtp) { clearInterval(poll); return; }
+      const { data } = await supabase
+        .from("otp_requests")
+        .select("*")
+        .eq("id", newOtp.id)
+        .single();
+      if (data?.status === "fulfilled") {
+        setOtpRequest(data);
+        clearInterval(poll);
+      }
+      // Stop polling after 3 min
+      if (new Date() > new Date(expiresAt)) {
+        clearInterval(poll);
+        await supabase.from("otp_requests").update({ status: "expired" }).eq("id", newOtp.id);
+      }
+    }, 3000);
   };
 
   const handleReceiptUpload = async (file: File) => {
@@ -205,7 +268,7 @@ export default function AdminApplicationsPage() {
 
   const stats = {
     total:       requests.length,
-    pending:     requests.filter(r => r.status === "pending").length,
+    pending:     requests.filter(r => r.status === "pending" || r.status === "paid").length,
     in_progress: requests.filter(r => r.status === "in_progress").length,
     completed:   requests.filter(r => r.status === "completed").length,
   };
@@ -308,6 +371,19 @@ export default function AdminApplicationsPage() {
                       <p className="text-xs text-gray-400 mt-1">
                         Submitted: {new Date(req.created_at).toLocaleString("en-IN")}
                       </p>
+
+                      {/* Role-based info row */}
+                      {currentUserRole === "super_admin" && req.tracking_id && (
+                        <p className="text-xs mt-1">
+                          Tracking: <span className="font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">{req.tracking_id}</span>
+                        </p>
+                      )}
+                      {currentUserRole === "form_filler" && req.verification_code && (
+                        <p className="text-xs mt-1 text-red-600 dark:text-red-400 font-bold">
+                          🔐 Secret Code: <span className="font-mono font-extrabold tracking-widest">{req.verification_code}</span>
+                          <span className="text-gray-400 font-normal ml-2">(Call verify karne ke liye)</span>
+                        </p>
+                      )}
                     </div>
                     <div className="text-indigo-500 font-bold text-sm shrink-0">View →</div>
                   </div>
@@ -336,6 +412,23 @@ export default function AdminApplicationsPage() {
                     <div><p className="text-gray-400 text-xs">Mobile</p><p className="font-bold text-gray-900 dark:text-white">{selected.phone_number}</p></div>
                     <div><p className="text-gray-400 text-xs">Email</p><p className="font-bold text-gray-900 dark:text-white">{selected.email}</p></div>
                     <div><p className="text-gray-400 text-xs">Submitted</p><p className="font-bold text-gray-900 dark:text-white">{new Date(selected.created_at).toLocaleString("en-IN")}</p></div>
+
+                    {/* Super admin: tracking ID */}
+                    {currentUserRole === "super_admin" && selected.tracking_id && (
+                      <div className="col-span-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-2">
+                        <p className="text-gray-400 text-xs">Tracking ID</p>
+                        <p className="font-extrabold text-indigo-700 dark:text-indigo-300 font-mono text-base">{selected.tracking_id}</p>
+                      </div>
+                    )}
+
+                    {/* Form filler: only secret code, no tracking ID */}
+                    {currentUserRole === "form_filler" && selected.verification_code && (
+                      <div className="col-span-2 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-600 rounded-xl px-3 py-2">
+                        <p className="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">🔐 Secret Verification Code</p>
+                        <p className="font-extrabold text-red-700 dark:text-red-300 font-mono text-xl tracking-widest mt-1">{selected.verification_code}</p>
+                        <p className="text-[10px] text-red-500 mt-1">Jab user call kare, pehle aap yeh code bolo — tab woh OTP share karega.</p>
+                      </div>
+                    )}
                     {selected.assigned_to && currentUserRole !== 'form_filler' && (
                       <div className="col-span-2 mt-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 p-3 rounded-xl">
                         <p className="text-purple-600 dark:text-purple-400 text-xs font-bold mb-1">Form Filler / Assigned To:</p>
@@ -454,6 +547,56 @@ export default function AdminApplicationsPage() {
 
               </div>
 
+              {/* ── IN-APP OTP SECTION ── */}
+              <div className="p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">🔐 User se OTP Maango (In-App)</p>
+
+                {/* OTP received! Show it prominently */}
+                {otpRequest?.status === "fulfilled" && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-400 rounded-2xl p-4 mb-3 text-center">
+                    <p className="text-xs font-extrabold text-green-600 uppercase tracking-wider mb-1">✅ OTP Mil Gaya!</p>
+                    <p className="text-4xl font-extrabold font-mono text-green-700 dark:text-green-300 tracking-[0.3em]">
+                      {otpRequest.otp_value}
+                    </p>
+                    <p className="text-xs text-green-500 mt-1">Abhi portal par enter karo — jaldi!</p>
+                  </div>
+                )}
+
+                {/* Waiting for OTP */}
+                {otpRequest?.status === "pending" && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 rounded-xl p-3 mb-3 flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 text-amber-500 animate-spin shrink-0" />
+                    <div>
+                      <p className="text-xs font-extrabold text-amber-700 dark:text-amber-300">User se OTP ka wait kar rahe hain...</p>
+                      <p className="text-xs text-amber-500">
+                        Expires in: {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Expired */}
+                {otpRequest?.status === "expired" && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
+                    <p className="text-xs font-bold text-red-600">⏰ OTP request expire ho gayi. User ne respond nahi kiya. Dobara try karo.</p>
+                  </div>
+                )}
+
+                {/* Request button */}
+                {(!otpRequest || otpRequest.status === "expired") && (
+                  <button onClick={handleRequestOtp} disabled={requestingOtp || !selected?.user_id}
+                    className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+                    {requestingOtp
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Bhej rahe hain...</>
+                      : <>🔔 User se OTP Maango</>
+                    }
+                  </button>
+                )}
+                <p className="text-[10px] text-gray-400 mt-2 text-center">
+                  User ke dashboard par ek live alert aayega — woh OTP enter karenge, aapko yahan dikhe ga.
+                </p>
+              </div>
+
               <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex gap-3">
                 {currentUserRole === 'super_admin' && (
                   <button onClick={handleDeleteRequest} disabled={saving}
@@ -471,6 +614,7 @@ export default function AdminApplicationsPage() {
                   Save Changes
                 </button>
               </div>
+
             </div>
           </div>
         )}

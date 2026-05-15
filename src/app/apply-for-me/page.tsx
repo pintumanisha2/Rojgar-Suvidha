@@ -17,12 +17,14 @@ function ApplyForMeContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [trackingId, setTrackingId] = useState("");
 
   // Form fields
   const [jobTitle, setJobTitle] = useState(searchParams.get("job") || "");
   const [jobUrl, setJobUrl] = useState(searchParams.get("url") || "");
   const [note, setNote] = useState("");
-  const [paymentVerified, setPaymentVerified] = useState(false);
+  // FIX: Removed unused paymentVerified state
 
   const [termsAccepted, setTermsAccepted] = useState(false);
   
@@ -70,19 +72,22 @@ function ApplyForMeContent() {
   useEffect(() => {
     generateCaptcha();
     const fetchUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const fullUrl = window.location.pathname + window.location.search;
-        router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
-        return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const fullUrl = window.location.pathname + window.location.search;
+          router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
+          return;
+        }
+        setUser(session.user);
+        const { data: profileData } = await supabase
+          .from("profiles").select("*").eq("id", session.user.id).single();
+        setProfile(profileData);
+      } catch (err) {
+        console.error("Apply-for-me fetch error:", err);
+      } finally {
+        setLoading(false); // FIX: Always stop spinner even on network error
       }
-      setUser(session.user);
-
-      const { data: profileData } = await supabase
-        .from("profiles").select("*").eq("id", session.user.id).single();
-      
-      setProfile(profileData);
-      setLoading(false);
     };
     fetchUser();
   }, [router]);
@@ -90,6 +95,10 @@ function ApplyForMeContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle.trim()) { setError("Job ka naam daalna zaroori hai."); return; }
+    
+    // FIX: Guard against keyboard Enter bypassing the disabled button
+    if (!termsAccepted) { setError("Pehle Terms & Conditions accept karein."); return; }
+    if (!profile?.full_name) { setError("Pehle apna profile complete karein."); return; }
     
     // Validate Captcha
     if (parseInt(captchaInput) !== captcha.num1 + captcha.num2) {
@@ -138,8 +147,12 @@ function ApplyForMeContent() {
               return;
           }
           if (result.paymentDetails) {
+            // Generate unique codes
+            const code = "RS-" + Math.floor(1000 + Math.random() * 9000).toString();
+            const tId = "AFM-" + Math.random().toString(36).slice(2, 10).toUpperCase();
+
             // 3. Save to Supabase after successful payment
-            const { error: insertError } = await supabase
+            const { data: insertedRow, error: insertError } = await supabase
               .from("apply_for_me_requests")
               .insert({
                 user_id: user.id,
@@ -150,11 +163,17 @@ function ApplyForMeContent() {
                 job_url: jobUrl.trim() || null,
                 status: "paid",
                 admin_notes: `[Cashfree Payment] ` + (note.trim() || ""),
-              });
+                verification_code: code,
+                tracking_id: tId,
+              })
+              .select("id")
+              .single();
 
             if (insertError) {
               setError("Payment successful but failed to save request. Contact support.");
             } else {
+              setVerificationCode(code);
+              setTrackingId(tId);
               setSubmitted(true);
             }
             setSubmitting(false);
@@ -178,16 +197,44 @@ function ApplyForMeContent() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl p-10 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-500" />
+        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl p-7 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 text-green-500" />
           </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-3">Payment & Request Successful! 🎉</h2>
-          <p className="text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-            Aapki "Apply For Me" request aur payment details hume mil gayi hain. Hum jald hi aapka form fill karenge. Status check karne ke liye apna Dashboard dekhein.
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">Request Successful! 🎉</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4">
+            Hamari team 24 ghante ke andar form fill karegi. Neeche wala <strong className="text-gray-700 dark:text-gray-200">Secret Code save karo</strong> — call ke time kaam aayega.
           </p>
+
+          {/* Tracking ID */}
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-wider">Tracking ID</p>
+              <p className="text-base font-extrabold text-indigo-700 dark:text-indigo-300 font-mono">{trackingId}</p>
+            </div>
+            <p className="text-xs text-indigo-400 dark:text-indigo-500 text-right">Dashboard mein<br />status track karo</p>
+          </div>
+
+          {/* Anti-scam verification code */}
+          <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-400 dark:border-red-500 rounded-2xl p-5 mb-4 text-left">
+            <p className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">
+              🔐 Aapka Secret Verification Code
+            </p>
+            <div className="text-3xl font-extrabold text-red-700 dark:text-red-300 tracking-widest text-center py-3 bg-white dark:bg-gray-900 rounded-xl border border-red-200 dark:border-red-700 my-2 font-mono">
+              {verificationCode}
+            </div>
+            <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed mt-3">
+              ⚠️ <strong>Jab hamari team call kare</strong>, woh pehle yeh code bolenge.<br />
+              Agar caller yeh code <strong>nahi bata sake</strong> — woh <strong>SCAMMER hai</strong>, turant call kaat do.
+            </p>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700 rounded-xl p-3 mb-5 text-xs text-amber-800 dark:text-amber-300 text-left">
+            📌 Yeh code Dashboard → Requests tab mein bhi hamesha dikhega.
+          </div>
+
           <div className="space-y-3">
-            <Link href="/dashboard"
+            <Link href="/dashboard?tab=requests"
               className="block w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-center transition-all shadow-lg shadow-indigo-500/30">
               Dashboard par Jaayein
             </Link>
@@ -201,6 +248,7 @@ function ApplyForMeContent() {
     );
   }
 
+
   return (
     <>
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
@@ -208,18 +256,117 @@ function ApplyForMeContent() {
       <div className="max-w-2xl mx-auto">
 
         {/* Back */}
-        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 mb-8 transition-colors">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Wapas Jaao
         </Link>
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/30">
-            <ClipboardCheck className="w-8 h-8 text-white" />
+        {/* ── HERO EXPLAINER ── */}
+        <div className="bg-gradient-to-br from-indigo-700 via-indigo-800 to-violet-900 rounded-2xl p-5 sm:p-7 mb-6 text-white shadow-xl border border-indigo-600/30">
+
+          {/* Title */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-11 h-11 bg-orange-500/20 rounded-2xl flex items-center justify-center border border-orange-400/30 shrink-0">
+              <ClipboardCheck className="w-6 h-6 text-orange-400" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-extrabold leading-tight">Apply For Me Service</h1>
+              <p className="text-indigo-200 text-[11px] sm:text-sm font-medium">Sarkari Naukri Form — Hum Bharenge, Tension Mat Lo!</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Apply For Me 🚀</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Form bharna bhool jaao! Bas details do aur secure payment karo, hum form bhar denge.</p>
+
+          {/* What is it */}
+          <div className="bg-white/10 rounded-xl p-3.5 mb-5 text-sm text-indigo-100 leading-relaxed border border-white/10">
+            <span className="text-white font-extrabold">🤔 Ye service kya hai?</span>
+            <br />
+            Kisi bhi <strong className="text-orange-300">Sarkari Naukri (SSC, Railway, Police, Army, Bank)</strong> ka online form khud bharna
+            bahut mushkil hota hai — photo resize, fee payment, galat details se rejection ka darr...
+            <br /><br />
+            <strong className="text-white">Hum sab karte hain aapke liye.</strong> Aap bas job select karo aur payment karo — baaki hamari expert team sambhalegi. ✅
+          </div>
+
+          {/* Step-by-step visual flow */}
+          <p className="text-[10px] sm:text-xs font-extrabold text-indigo-300 uppercase tracking-widest mb-3">
+            📌 Exactly kaise use karna hai — Step by Step:
+          </p>
+
+          <div className="space-y-2.5">
+            {/* Step 1 */}
+            <div className="flex gap-3 items-start bg-white/10 rounded-xl p-3 border border-white/10">
+              <div className="w-7 h-7 rounded-full bg-indigo-500 border-2 border-indigo-300 flex items-center justify-center text-xs font-extrabold shrink-0">1</div>
+              <div>
+                <p className="text-sm font-extrabold text-white">Koi bhi Job dhundho</p>
+                <p className="text-xs text-indigo-200 mt-0.5">
+                  Homepage par ya "Latest Jobs" mein apni pasand ki Sarkari Naukri dhundho —
+                  jaise <span className="text-orange-300 font-bold">SSC CGL, Railway Group D, UP Police</span> etc.
+                </p>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="text-center text-indigo-400 text-sm font-bold">↓</div>
+
+            {/* Step 2 */}
+            <div className="flex gap-3 items-start bg-white/10 rounded-xl p-3 border border-white/10">
+              <div className="w-7 h-7 rounded-full bg-indigo-500 border-2 border-indigo-300 flex items-center justify-center text-xs font-extrabold shrink-0">2</div>
+              <div>
+                <p className="text-sm font-extrabold text-white">Job page par jaao aur "Apply For Me" button dhundho</p>
+                <p className="text-xs text-indigo-200 mt-0.5">
+                  Job detail page par neeche scroll karo — wahan ek <span className="bg-orange-500/30 text-orange-300 font-bold px-1.5 py-0.5 rounded">🚀 Apply For Me</span> button hoga.
+                  Usi par click karo.
+                </p>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="text-center text-indigo-400 text-sm font-bold">↓</div>
+
+            {/* Step 3 */}
+            <div className="flex gap-3 items-start bg-white/10 rounded-xl p-3 border border-white/10">
+              <div className="w-7 h-7 rounded-full bg-indigo-500 border-2 border-indigo-300 flex items-center justify-center text-xs font-extrabold shrink-0">3</div>
+              <div>
+                <p className="text-sm font-extrabold text-white">Yahan aao — details confirm karo</p>
+                <p className="text-xs text-indigo-200 mt-0.5">
+                  Job ka naam automatically fill ho jaayega. Bas apna profile check karo
+                  aur confirm karo ki sab sahi hai.
+                </p>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="text-center text-indigo-400 text-sm font-bold">↓</div>
+
+            {/* Step 4 */}
+            <div className="flex gap-3 items-start bg-emerald-500/20 rounded-xl p-3 border border-emerald-400/30">
+              <div className="w-7 h-7 rounded-full bg-emerald-500 border-2 border-emerald-300 flex items-center justify-center text-xs font-extrabold shrink-0">✓</div>
+              <div>
+                <p className="text-sm font-extrabold text-white">Payment karo — Kaam ho gaya! 🎉</p>
+                <p className="text-xs text-emerald-200 mt-0.5">
+                  Secure online payment ke baad hamari team <strong>24 ghante ke andar</strong> aapka form fill karegi.
+                  Status aap Dashboard par check kar sakte ho.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tip */}
+          <div className="mt-4 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2.5 flex items-start gap-2">
+            <span className="text-lg shrink-0">💡</span>
+            <p className="text-xs text-yellow-200">
+              <strong className="text-yellow-300">Seedha yahan aaye hain?</strong> Neeche apna form manually bhi fill kar sakte ho —
+              bas job ka naam aur link do, hum baki sambhal lenge.
+            </p>
+          </div>
         </div>
+
+        {/* Divider before form */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <span className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2">
+            Ya seedha form baro
+          </span>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+        </div>
+
 
         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
           
@@ -281,9 +428,10 @@ function ApplyForMeContent() {
                   </p>
                   <p className="text-xs font-medium">
                     {calculateAge()!.isEligible 
-                      ? "🟢 You are generally ELIGIBLE for this job (Age is between 18 and 32). Please check exact official notification rules." 
-                      : "🔴 You might NOT BE ELIGIBLE (Age is under 18 or over 32). Please check category relaxation rules."}
+                      ? "🟢 You are generally ELIGIBLE for this job (Age is between 18 and 32). Please verify exact age limits from the official notification." 
+                      : "🔴 You might NOT BE ELIGIBLE based on 18–32 general limit. Please check category relaxation (OBC/SC/ST/Ex-servicemen) in the official notification."}
                   </p>
+                  <p className="text-[10px] mt-1 opacity-70">⚠️ This calculator uses a general 18–32 range. Always verify from official notification.</p>
                 </div>
               </div>
             )}

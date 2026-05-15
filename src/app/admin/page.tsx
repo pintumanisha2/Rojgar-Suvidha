@@ -9,21 +9,8 @@ import {
   ArrowRight, AlertCircle, BellRing
 } from "lucide-react";
 
-interface StatsCard {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  href: string;
-}
 
-const stats: StatsCard[] = [
-  { label: "Total Active Jobs", value: "0", icon: Briefcase, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-50 dark:bg-indigo-900/30", href: "/admin/jobs" },
-  { label: "Admit Cards", value: "0", icon: BookOpen, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-900/30", href: "/admin/jobs" },
-  { label: "Results Published", value: "0", icon: FileText, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-900/30", href: "/admin/jobs" },
-  { label: "Apply Requests", value: "0", icon: Users, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-900/30", href: "/admin/applications" },
-];
+// FIX: Removed hardcoded stats array (was always showing 0). Now using dynamic statCounts state fetched from Supabase.
 
 const quickActions = [
   { label: "Create New Post", icon: PlusCircle, href: "/admin/jobs/new", color: "bg-indigo-600 hover:bg-indigo-700 text-white" },
@@ -45,6 +32,8 @@ export default function AdminDashboardPage() {
   const [writerStats, setWriterStats] = useState<any>({ today: 0, month: 0, total: 0 });
   const [allWritersStats, setAllWritersStats] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  // FIX: Dynamic stat counts instead of hardcoded 0
+  const [statCounts, setStatCounts] = useState({ activeJobs: 0, admitCards: 0, results: 0, applyRequests: 0 });
 
   // Live Clock
   useEffect(() => {
@@ -106,22 +95,35 @@ export default function AdminDashboardPage() {
           setUserRole(currentRole);
         }
 
+        // FIX: Fetch real stats from Supabase (was hardcoded to 0 before)
+        const [activeJobsRes, admitCardsRes, resultsRes, applyReqRes] = await Promise.all([
+          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "published"),
+          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "admit-card").eq("status", "published"),
+          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "result").eq("status", "published"),
+          supabase.from("apply_for_me_requests").select("*", { count: "exact", head: true }).in("status", ["pending", "paid"]),
+        ]);
+        setStatCounts({
+          activeJobs: activeJobsRes.count || 0,
+          admitCards: admitCardsRes.count || 0,
+          results: resultsRes.count || 0,
+          applyRequests: applyReqRes.count || 0,
+        });
+
+        // Fetch pending apply requests (for alert banner)
+        const { count } = await supabase
+          .from("apply_for_me_requests")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["pending", "paid"]); // FIX: was only checking "Pending" (capital P)
+        
+        if (count !== null) setPendingRequests(count);
+
         // Fetch recent jobs
         const { data: jobs } = await supabase
           .from("jobs")
           .select("id, title, category, status, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
-
         if (jobs) setRecentJobs(jobs);
-        
-        // Fetch pending apply requests
-        const { count } = await supabase
-          .from("apply_for_me_requests")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "Pending");
-        
-        if (count !== null) setPendingRequests(count);
 
         // Fetch Form Filler Stats
         if (currentRole === 'form_filler' && email) {
@@ -260,14 +262,19 @@ export default function AdminDashboardPage() {
       {/* Stats Grid */}
       {(userRole === 'super_admin' || userRole === 'admin' || userRole === 'content_writer') && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => {
+          {[
+            { label: "Total Active Jobs", value: statCounts.activeJobs, icon: Briefcase, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-50 dark:bg-indigo-900/30", href: "/admin/jobs" },
+            { label: "Admit Cards", value: statCounts.admitCards, icon: BookOpen, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-900/30", href: "/admin/jobs" },
+            { label: "Results Published", value: statCounts.results, icon: FileText, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-900/30", href: "/admin/jobs" },
+            { label: "Apply Requests", value: statCounts.applyRequests, icon: Users, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-900/30", href: "/admin/applications" },
+          ].map((stat) => {
             const Icon = stat.icon;
             return (
               <Link key={stat.label} href={stat.href} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow group">
                 <div className={`inline-flex p-3 rounded-xl mb-4 ${stat.bgColor}`}>
                   <Icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
-                <p className="text-2xl font-extrabold text-gray-900 dark:text-white">{stat.value}</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white">{loading ? "..." : stat.value}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{stat.label}</p>
               </Link>
             );

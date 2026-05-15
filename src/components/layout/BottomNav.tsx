@@ -8,16 +8,17 @@ import { useEffect, useState, useRef } from "react";
 export default function BottomNav() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
+  const [tappedItem, setTappedItem] = useState<string | null>(null);
   const lastScrollYRef = useRef(0);
 
-  // Hide Bottom Nav on admin pages
-  if (pathname.startsWith("/admin")) return null;
-
-  // Hide on scroll down, show on scroll up
+  // FIX: All hooks MUST be called before any conditional return
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollYRef.current && currentScrollY > 100) {
+      // Psychology: Hide on scroll down (more reading space), show on scroll up (user wants to navigate)
+      if (currentScrollY > lastScrollYRef.current && currentScrollY > 80) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
@@ -27,49 +28,110 @@ export default function BottomNav() {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []); // Empty dep array - listener registered ONCE only
+  }, [pathname]);
+
+  if (pathname.startsWith("/admin")) return null;
 
   const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Jobs", href: "/latest-jobs", icon: Briefcase },
-    { name: "Saved", href: "/dashboard?tab=saved", icon: Bookmark },
-    { name: "Profile", href: "/dashboard", icon: UserCircle },
+    {
+      name: "Home",
+      href: "/",
+      icon: Home,
+      // Psychology: Active state is clear, matches mental model
+      activeCheck: pathname === "/",
+    },
+    {
+      name: "Jobs",
+      href: "/latest-jobs",
+      icon: Briefcase,
+      activeCheck: pathname === "/latest-jobs" || pathname.startsWith("/latest-jobs/") || pathname.startsWith("/job/"),
+    },
+    {
+      name: "Saved",
+      href: "/saved-jobs",
+      icon: Bookmark,
+      activeCheck: pathname === "/saved-jobs" || pathname.startsWith("/saved-jobs/"),
+    },
+    {
+      name: "My Account",
+      href: "/dashboard",
+      icon: UserCircle,
+      activeCheck: pathname === "/dashboard" || pathname.startsWith("/dashboard/"),
+    },
   ];
+
+  const handleTap = (name: string) => {
+    setTappedItem(name);
+    // Psychology: Haptic-like bounce feedback confirms the tap was registered
+    setTimeout(() => setTappedItem(null), 300);
+  };
 
   return (
     <>
-      {/* Spacer to prevent content from hiding behind the bottom nav */}
-      <div className="h-16 md:hidden block"></div>
-      
-      <div 
-        className={`md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-50 transition-transform duration-300 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      {/* Spacer so content doesn't hide behind nav */}
+      <div className="h-[68px] md:hidden block" />
+
+      <nav
+        aria-label="Main navigation"
+        className={`md:hidden fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 ease-in-out ${
+          isVisible ? "translate-y-0" : "translate-y-full"
+        }`}
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex items-center justify-around h-16 px-2">
-          {navItems.map((item) => {
-            // Check if active (handle dashboard tabs carefully)
-            const isActive = pathname === item.href || (item.href !== "/" && pathname === item.href.split('?')[0]);
-            
-            return (
-              <Link 
-                key={item.name} 
-                href={item.href}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                  isActive ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 dark:text-gray-400 hover:text-indigo-500"
-                }`}
-              >
-                <item.icon 
-                  className={`w-6 h-6 ${isActive ? "fill-indigo-50 dark:fill-indigo-900/30 stroke-[2.5px] scale-110" : "stroke-2"} transition-all`} 
-                />
-                <span className={`text-[10px] ${isActive ? "font-extrabold" : "font-medium"}`}>
-                  {item.name}
-                </span>
-              </Link>
-            );
-          })}
+        {/* Psychology: Frosted glass = modern, familiar iOS/Android pattern */}
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/80 dark:border-gray-800/80 shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.12)]">
+          <div className="flex items-stretch justify-around h-[60px] px-1">
+            {navItems.map((item) => {
+              const isActive = item.activeCheck;
+              const isTapped = tappedItem === item.name;
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => handleTap(item.name)}
+                  className="flex flex-col items-center justify-center flex-1 gap-0.5 relative py-1 transition-all"
+                  aria-label={item.name}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {/* Psychology: Active pill indicator — clear, unambiguous feedback */}
+                  {isActive && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-500 rounded-full" />
+                  )}
+
+                  {/* Icon with tap animation */}
+                  <span
+                    className={`flex items-center justify-center w-9 h-7 rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? "bg-indigo-50 dark:bg-indigo-900/40"
+                        : "bg-transparent"
+                    } ${isTapped ? "scale-90" : "scale-100"}`}
+                  >
+                    <item.icon
+                      className={`transition-all duration-200 ${
+                        isActive
+                          ? "w-5 h-5 text-indigo-600 dark:text-indigo-400 stroke-[2.5px]"
+                          : "w-5 h-5 text-gray-400 dark:text-gray-500 stroke-2 group-hover:text-gray-600"
+                      }`}
+                    />
+                  </span>
+
+                  {/* Psychology: Short, clear labels (Hick's Law — reduce reading time) */}
+                  <span
+                    className={`text-[10px] leading-none transition-all duration-200 ${
+                      isActive
+                        ? "font-extrabold text-indigo-600 dark:text-indigo-400"
+                        : "font-medium text-gray-400 dark:text-gray-500"
+                    }`}
+                  >
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </nav>
     </>
   );
 }
-// force rebuild

@@ -96,18 +96,18 @@ export default function Home() {
       {/* Auto-Sliding Hero Banner */}
       <HeroBanner />
 
-      {/* Social Media Call to Action (Highly Clickable) */}
+      {/* Social Media Call to Action */}
       <SocialPromo />
 
-      {/* Top Banner Ad */}
-      <div className="max-w-7xl mx-auto px-4 mt-2">
+      {/* Top Banner Ad — hidden on mobile to reduce scroll */}
+      <div className="hidden sm:block max-w-7xl mx-auto px-4 mt-2">
         <AdSensePlaceholder format="leaderboard" />
       </div>
 
       {/* Feature Highlights (Apply For Me & YouTube) */}
       <Highlights />
 
-      {/* Main Content - Job Listings (SarkariResult style but premium) */}
+      {/* Main Content - Job Listings */}
       <MainContent />
 
       {/* Bottom Banner Ad */}

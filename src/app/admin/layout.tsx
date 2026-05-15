@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, Users, CreditCard, BookOpen,
   Image as ImageIcon, BarChart2, Ticket, MessageSquareWarning,
-  ChevronRight, LogOut, Settings, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles
+  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles
 } from "lucide-react";
 
 const navItems = [
@@ -19,6 +18,7 @@ const navItems = [
   { href: "/admin/jobs", label: "Jobs Management", icon: BookOpen },
   { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
   { href: "/admin/banners", label: "Banner", icon: ImageIcon },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell }, // FIX: was missing from sidebar
   { href: "/admin/direct-form", label: "Direct Form", icon: BarChart2 },
   { href: "/admin/coupons", label: "Coupon", icon: Ticket },
   { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
@@ -274,7 +274,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const Icon = item.icon;
             const active = isActive(item);
             return (
-              <a
+              // FIX: Using Next.js Link instead of <a> to prevent full page reloads
+              <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsSidebarOpen(false)}
@@ -286,7 +287,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Icon className="h-5 w-5 shrink-0" />
                 {item.label}
                 {active && <ChevronRight className="h-4 w-4 ml-auto" />}
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -329,10 +330,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative">
+            {/* FIX: Removed hardcoded red dot - bell icon now goes to notifications page */}
+            <Link href="/admin/notifications" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <Bell className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
+            </Link>
             <Link
               href="/"
               target="_blank"

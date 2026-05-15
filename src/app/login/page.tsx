@@ -67,6 +67,9 @@ function LoginContent() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    // FIX: Redirect to profile-setup only for new users.
+    // We send to /profile-setup which already checks if profile exists and
+    // redirects to dashboard if it does. So returning users are handled correctly.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

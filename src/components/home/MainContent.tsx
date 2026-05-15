@@ -145,11 +145,11 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
         <span className="text-xs text-gray-400 ml-1">• Updated Daily</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" id="latest-updates-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" id="job-sections-grid">
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <div key={section.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+            <div key={section.id} id={`section-${section.id}`} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
 
               {/* Header */}
               <div className={`bg-gradient-to-r ${section.headerBg} px-3 py-2.5 flex items-center justify-between`}>

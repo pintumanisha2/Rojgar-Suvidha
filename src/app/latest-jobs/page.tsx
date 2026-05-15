@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   keywords: [
     "latest government jobs", "latest sarkari naukri", "sarkari naukri today",
     "new govt jobs 2025", "new govt jobs 2026", "latest govt jobs today",
-    "ssc jobs 2025", "ssc jobs 2026", "railway jobs 2025", "railway jobs 2026",
+    "ssc jobs 2025", "ssc jobs 2026", "railway jobs 2026", "railway jobs 2026",
     "bank jobs 2025", "bank jobs 2026", "upsc jobs 2025",
     "police jobs 2025", "defence jobs 2025",
     "10th pass sarkari naukri", "12th pass govt jobs",

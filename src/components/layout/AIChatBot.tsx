@@ -12,6 +12,7 @@ export default function AIChatBot() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -33,6 +34,13 @@ export default function AIChatBot() {
         recognitionRef.current.onerror = () => setIsListening(false);
       }
     }
+
+    // Show welcome toast after 3 seconds if chat is not opened
+    const toastTimer = setTimeout(() => {
+      setShowToast(true);
+    }, 3000);
+    
+    return () => clearTimeout(toastTimer);
   }, []);
 
   const toggleListening = () => {
@@ -122,6 +130,21 @@ export default function AIChatBot() {
           0%, 80%, 100% { transform: translateY(0); }
           40% { transform: translateY(-6px); }
         }
+        @keyframes toastSlide {
+          from { transform: translateX(20px) scale(0.9); opacity: 0; }
+          to { transform: translateX(0) scale(1); opacity: 1; }
+        }
+        .toast-enter {
+          animation: toastSlide 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .glass-panel {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+        }
+        .dark .glass-panel {
+          background: rgba(17, 24, 39, 0.85);
+        }
       `}</style>
 
       <div className="fixed bottom-24 md:bottom-5 right-5 z-[999] flex flex-col items-end gap-3">
@@ -129,19 +152,20 @@ export default function AIChatBot() {
         {/* ── Chat Window ── */}
         {isOpen && (
           <div
-            className="chat-window-enter flex flex-col bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700"
+            className="chat-window-enter flex flex-col glass-panel rounded-3xl overflow-hidden border border-white/40 dark:border-gray-700/50"
             style={{
-              width: "320px",
-              height: "480px",
-              boxShadow: "0 20px 60px -10px rgba(79, 70, 229, 0.25), 0 4px 20px rgba(0,0,0,0.12)",
+              width: "340px",
+              height: "520px",
+              boxShadow: "0 30px 60px -10px rgba(79, 70, 229, 0.3), 0 0 0 1px rgba(255,255,255,0.2) inset",
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white shrink-0">
-              <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shrink-0 shadow-sm relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+              <div className="flex items-center gap-3 relative z-10">
                 <div className="relative">
-                  <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/25">
-                    <Bot className="w-4.5 h-4.5 text-white" style={{ width: "18px", height: "18px" }} />
+                  <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
+                    <Sparkles className="w-5 h-5 text-white" />
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 border-2 border-indigo-600 rounded-full" />
                 </div>
@@ -168,15 +192,15 @@ export default function AIChatBot() {
                   <div className={`flex gap-2 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                     {/* Avatar */}
                     <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${
                         msg.role === "user"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-indigo-600"
+                          ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white"
+                          : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-indigo-600"
                       }`}
                     >
                       {msg.role === "user"
-                        ? <User style={{ width: "12px", height: "12px" }} />
-                        : <Bot style={{ width: "12px", height: "12px" }} />
+                        ? <User style={{ width: "14px", height: "14px" }} />
+                        : <Sparkles style={{ width: "14px", height: "14px" }} />
                       }
                     </div>
 
@@ -284,21 +308,47 @@ export default function AIChatBot() {
           </div>
         )}
 
+        {/* ── Welcome Toast Popup ── */}
+        {!isOpen && showToast && (
+          <div className="toast-enter relative mr-2 mb-1">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-2xl p-3 pr-8 flex items-center gap-3">
+              <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-xs font-extrabold text-gray-900 dark:text-white">Need Job Help?</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">Ask our AI Assistant anything!</p>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowToast(false); }}
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            {/* Small triangle pointer */}
+            <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white dark:bg-gray-900 border-b border-r border-gray-200 dark:border-gray-700 rotate-45" />
+          </div>
+        )}
+
         {/* ── Floating Button ── */}
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 ${
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (!isOpen) setShowToast(false);
+          }}
+          className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 ${
             isOpen
-              ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
-              : "bg-indigo-600 text-white bot-btn-pulse"
+              ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+              : "bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white bot-btn-pulse border border-white/20"
           }`}
         >
           {isOpen ? (
-            <X style={{ width: "22px", height: "22px" }} />
+            <X style={{ width: "24px", height: "24px" }} />
           ) : (
             <>
-              <Bot style={{ width: "26px", height: "26px" }} />
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-400 border-2 border-indigo-600 rounded-full" />
+              <Sparkles style={{ width: "28px", height: "28px" }} />
+              <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-green-400 border-[3px] border-indigo-600 rounded-full" />
             </>
           )}
         </button>

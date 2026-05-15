@@ -9,6 +9,8 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
 import SaveJobButton from "@/components/ui/SaveJobButton";
+import TrackJobView from "@/components/ui/TrackJobView";
+import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -271,6 +273,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
+      {/* Track this job visit for Recently Viewed feature (client-side) */}
+      <TrackJobView slug={job.slug} title={job.title} category={job.category} />
+
       <div className="bg-gray-50 dark:bg-gray-950 min-h-screen py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
           
@@ -384,7 +389,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               </h3>
               <p className="text-xs text-gray-500 mt-1 font-medium">Help someone get a government job by sharing this update.</p>
             </div>
-            <div className="flex w-full sm:w-auto gap-3">
+            <div className="flex w-full sm:w-auto gap-3 flex-wrap">
               <a 
                 href={`https://api.whatsapp.com/send?text=🔥 *${encodeURIComponent(job.title)}* %0A%0AApply Here: https://rojgarsuvidha.com/job/${slug}`}
                 target="_blank"
@@ -401,6 +406,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               >
                 <Send className="w-5 h-5" /> Telegram
               </a>
+              {/* Copy Link button */}
+              <CopyLinkButton url={`https://rojgarsuvidha.com/job/${slug}`} title={job.title} />
             </div>
           </div>
 
@@ -438,31 +445,44 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             );
           })()}
 
-          {/* Blog Post Content Area for SEO and Detailed Explanations */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 shadow-sm">
-             {/* Add standard ProseMirror styling for tables and layout */}
+          {/* Blog Post Content Area */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-8 shadow-sm">
              <style>{`
-              .blog-content { line-height: 1.7; color: #374151; }
+              .blog-content { line-height: 1.75; color: #374151; font-size: 15px; }
               .dark .blog-content { color: #d1d5db; }
-              .blog-content h1, .blog-content h2 { color: #111827; font-weight: 800; margin-top: 2rem; margin-bottom: 1rem; }
-              .dark .blog-content h1, .dark .blog-content h2 { color: #f9fafb; }
-              .blog-content p { margin-bottom: 1rem; }
-              .blog-content table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-              .blog-content th, .blog-content td { border: 1px solid #e5e7eb; padding: 12px; }
-              .blog-content th { background-color: #f3f4f6; font-weight: bold; }
+              .blog-content h1, .blog-content h2 { color: #111827; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem; }
+              .blog-content h3 { color: #1f2937; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; font-size: 1rem; }
+              @media(min-width:640px){
+                .blog-content h1, .blog-content h2 { font-size: 1.5rem; margin-top: 2rem; }
+                .blog-content h3 { font-size: 1.15rem; }
+              }
+              .dark .blog-content h1, .dark .blog-content h2, .dark .blog-content h3 { color: #f9fafb; }
+              .blog-content p { margin-bottom: 0.9rem; }
+              /* Mobile: table scrolls horizontally instead of overflowing */
+              .blog-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; font-size: 13px; }
+              .blog-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 1.5rem; border-radius: 8px; border: 1px solid #e5e7eb; }
+              .blog-table-wrap table { margin-bottom: 0; border: none; border-radius: 0; min-width: 320px; }
+              .blog-content th, .blog-content td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }
+              @media(min-width:640px){
+                .blog-content th, .blog-content td { padding: 12px 14px; font-size: 14px; }
+              }
+              .blog-content th { background-color: #f3f4f6; font-weight: 700; }
               .dark .blog-content table, .dark .blog-content th, .dark .blog-content td { border-color: #374151; }
+              .dark .blog-table-wrap { border-color: #374151; }
               .dark .blog-content th { background-color: #1f2937; }
-              .blog-content img { max-width: 100%; border-radius: 8px; margin: 1.5rem 0; }
-              .blog-content a { color: #4f46e5; text-decoration: underline; }
+              .blog-content img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
+              .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-all; }
               .dark .blog-content a { color: #818cf8; }
-              .blog-content ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
-              .blog-content ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1rem; }
+              .blog-content ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.9rem; }
+              .blog-content ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.9rem; }
+              .blog-content li { margin-bottom: 0.25rem; }
             `}</style>
             
-            <article 
-              className="blog-content max-w-none break-words" 
-              dangerouslySetInnerHTML={{ __html: job.blog_content || DEMO_BLOG_CONTENT }} 
+            <article
+              className="blog-content max-w-none break-words"
+              dangerouslySetInnerHTML={{ __html: job.blog_content || DEMO_BLOG_CONTENT }}
             />
+
             
             <div className="bg-orange-50 dark:bg-orange-900/10 border-l-4 border-orange-500 p-4 rounded-r-lg mt-8">
               <p className="text-sm text-orange-800 dark:text-orange-200">

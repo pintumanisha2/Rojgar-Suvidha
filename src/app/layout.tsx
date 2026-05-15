@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { PublicHeader, PublicFooter } from "@/components/layout/PublicUI";
@@ -6,6 +7,7 @@ import FloatingSocials from "@/components/layout/FloatingSocials";
 import AIChatBot from "@/components/layout/AIChatBot";
 import PushNotificationPrompt from "@/components/layout/PushNotificationPrompt";
 import BottomNav from "@/components/layout/BottomNav";
+import TopLoader from "@/components/layout/TopLoader";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -219,6 +221,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Suspense fallback={null}>
+            <TopLoader />
+          </Suspense>
           <PublicHeader />
           <main className="flex-grow flex flex-col">
             {children}

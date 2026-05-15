@@ -5,92 +5,104 @@ export async function POST(req: Request) {
   try {
     const { message, history } = await req.json();
 
-    // 1. Fetch Context from Supabase (Latest Jobs with slugs)
-    const { data: latestJobs } = await supabase
+    // 1. Fetch Comprehensive Context from Supabase (Jobs, Results, Admit Cards, Admissions)
+    const { data: allItems } = await supabase
       .from("jobs")
       .select("title, category, status, slug")
       .neq("status", "draft")
       .order("created_at", { ascending: false })
-      .limit(15);
+      .limit(80);
 
-    // Build context WITH slugs so AI can generate correct links
-    const contextString =
-      latestJobs
-        ?.map((j) => `- ${j.title} (Category: ${j.category}, Link: /jobs/${j.slug})`)
-        .join("\n") || "Abhi koi recent update nahi hai.";
+    const formatList = (list: any[]) => list.length ? list.map(i => `- ${i.title} (Link: /jobs/${i.slug})`).join('\n') : "Abhi koi naya update nahi hai.";
 
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
+    const latestJobs = formatList(allItems?.filter(i => i.category === 'latest-jobs').slice(0, 15) || []);
+    const latestResults = formatList(allItems?.filter(i => i.category === 'results').slice(0, 10) || []);
+    const latestAdmitCards = formatList(allItems?.filter(i => i.category === 'admit-cards').slice(0, 10) || []);
+    const latestAdmissions = formatList(allItems?.filter(i => i.category === 'admission').slice(0, 10) || []);
+
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openRouterKey) {
       return NextResponse.json(
-        { error: "AI Configuration missing (API Key)" },
+        { error: "AI Configuration missing (OPENROUTER API Key)" },
         { status: 500 }
       );
     }
 
-    // 2. System Instruction (Gemini v1beta format — separate from conversation)
+    // 2. System Instruction (Deep Knowledge of Platform)
     const systemInstruction = `You are "Rojgar Assistant", the EXCLUSIVE AI career guide for the "Rojgar Suvidha" platform.
 
+PLATFORM FEATURES (YOU MUST KNOW THESE):
+- "Apply For Me" Service: A premium service where students can pay a small fee and our expert team will fill their complex govt forms with 100% accuracy. The OTP is handled securely inside the platform without phone calls.
+- "Digital Locker": A 100% secure vault where students can upload and save their documents (Photo, Signature, Aadhaar, Marksheets) so they never have to search for them while applying.
+
 STRICT RULES:
-1. ONLY answer using the "Current Job Listings" provided below. Do NOT use external knowledge for job details.
-2. NEVER mention or recommend other websites (e.g., Sarkari Result, FreeJobAlert, NaukariPak, etc.).
-3. If a user asks for a job NOT in the list, say: "Abhi ye jaankari hamare portal par uplabdh nahi hai. Kripya Latest Updates check karte rahein."
-4. NEVER hallucinate or invent job names, dates, or eligibility.
-5. Always be loyal to Rojgar Suvidha.
+1. ONLY answer using the "Current Database Listings" provided below. Do NOT use external knowledge for job/result details.
+2. NEVER mention or recommend other websites (like Sarkari Result, FreeJobAlert). Always say check "Rojgar Suvidha".
+3. If a user asks for something NOT in the list, say: "Abhi ye jaankari hamare portal par uplabdh nahi hai."
+4. Always be loyal, polite, and helpful.
 
 FORMATTING:
 - Respond in friendly Hinglish (mix of Hindi and English).
-- Keep answers short (2-4 lines max).
-- For jobs in the list, include a link exactly like this: [View Details](LINK_FROM_LIST)
-- For general questions (resume tips, document upload, etc.), answer helpfully without a job link.
+- Keep answers short, direct, and scannable.
+- If providing a link from the lists below, format exactly like this: [View Details](LINK_FROM_LIST)
+- DO NOT use markdown bold headers (like **Jobs**). Use simple text or emojis.
 
-Current Job Listings on Rojgar Suvidha:
-${contextString}`;
+CURRENT DATABASE LISTINGS ON ROJGAR SUVIDHA:
 
-    // 3. Build conversation history for Gemini (user/model roles only)
-    const conversationHistory = history
+[LATEST JOBS]
+${latestJobs}
+
+[ADMIT CARDS]
+${latestAdmitCards}
+
+[RESULTS]
+${latestResults}
+
+[ADMISSIONS]
+${latestAdmissions}
+`;
+
+    // 3. Build conversation history for OpenRouter (OpenAI format)
+    const formattedHistory = history
       .filter((h: any) => h.content?.trim())
       .map((h: any) => ({
-        role: h.role === "user" ? "user" : "model",
-        parts: [{ text: h.content }],
+        role: h.role === "user" ? "user" : "assistant",
+        content: h.content,
       }));
 
-    // 4. Call Gemini API (v1beta supports systemInstruction)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: systemInstruction }],
-          },
-          contents: [
-            ...conversationHistory,
-            { role: "user", parts: [{ text: message }] },
-          ],
-          generationConfig: {
-            temperature: 0.6,
-            topK: 40,
-            topP: 0.92,
-            maxOutputTokens: 512,
-          },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          ],
-        }),
-      }
-    );
+    const messagesPayload = [
+      { role: "system", content: systemInstruction },
+      ...formattedHistory,
+      { role: "user", content: message },
+    ];
+
+    // 4. Call OpenRouter API (Accessing free models)
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openRouterKey}`,
+        "HTTP-Referer": "https://rojgarsuvidha.com", // Optional, for OpenRouter rankings
+        "X-Title": "Rojgar Suvidha", // Optional, for OpenRouter rankings
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-3-8b-instruct:free", // 100% Free model on OpenRouter
+        messages: messagesPayload,
+        temperature: 0.5,
+        max_tokens: 512,
+        top_p: 0.9,
+      }),
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini API Error:", data);
-      return NextResponse.json({ error: "Gemini API error" }, { status: 502 });
+      console.error("OpenRouter API Error:", data);
+      return NextResponse.json({ error: "OpenRouter API error" }, { status: 502 });
     }
 
     const botReply =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      data.choices?.[0]?.message?.content ||
       "Maafi chahta hoon, main abhi samajh nahi paa raha hoon. Kripya dobara koshish karein.";
 
     return NextResponse.json({ reply: botReply });
