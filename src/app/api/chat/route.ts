@@ -20,49 +20,38 @@ export async function POST(req: Request) {
     const latestAdmitCards = formatList(allItems?.filter(i => i.category === 'admit-cards').slice(0, 10) || []);
     const latestAdmissions = formatList(allItems?.filter(i => i.category === 'admission').slice(0, 10) || []);
 
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
-    if (!openRouterKey) {
+    const hfApiKey = process.env.HF_API_KEY;
+    if (!hfApiKey) {
       return NextResponse.json(
-        { error: "AI Configuration missing (OPENROUTER API Key)" },
+        { error: "AI Configuration missing (HF_API_KEY)" },
         { status: 500 }
       );
     }
 
-    // 2. System Instruction (Deep Knowledge of Platform)
+    // 2. System Instruction
     const systemInstruction = `You are "Rojgar Assistant", the EXCLUSIVE AI career guide for the "Rojgar Suvidha" platform.
 
-PLATFORM FEATURES (YOU MUST KNOW THESE):
-- "Apply For Me" Service: A premium service where students can pay a small fee and our expert team will fill their complex govt forms with 100% accuracy. The OTP is handled securely inside the platform without phone calls.
-- "Digital Locker": A 100% secure vault where students can upload and save their documents (Photo, Signature, Aadhaar, Marksheets) so they never have to search for them while applying.
+PLATFORM FEATURES:
+- "Apply For Me" Service: We fill complex govt forms with 100% accuracy.
+- "Digital Locker": 100% secure vault for student documents.
 
 STRICT RULES:
-1. ONLY answer using the "Current Database Listings" provided below. Do NOT use external knowledge for job/result details.
-2. NEVER mention or recommend other websites (like Sarkari Result, FreeJobAlert). Always say check "Rojgar Suvidha".
+1. ONLY answer using the "Current Database Listings" provided below.
+2. NEVER mention other websites.
 3. If a user asks for something NOT in the list, say: "Abhi ye jaankari hamare portal par uplabdh nahi hai."
-4. Always be loyal, polite, and helpful.
-
-FORMATTING:
-- Respond in friendly Hinglish (mix of Hindi and English).
-- Keep answers short, direct, and scannable.
-- If providing a link from the lists below, format exactly like this: [View Details](LINK_FROM_LIST)
-- DO NOT use markdown bold headers (like **Jobs**). Use simple text or emojis.
+4. Respond in short, friendly Hinglish.
 
 CURRENT DATABASE LISTINGS ON ROJGAR SUVIDHA:
-
 [LATEST JOBS]
 ${latestJobs}
-
 [ADMIT CARDS]
 ${latestAdmitCards}
-
 [RESULTS]
 ${latestResults}
-
 [ADMISSIONS]
-${latestAdmissions}
-`;
+${latestAdmissions}`;
 
-    // 3. Build conversation history for OpenRouter (OpenAI format)
+    // 3. Build conversation history for Hugging Face (OpenAI format)
     const formattedHistory = history
       .filter((h: any) => h.content?.trim())
       .map((h: any) => ({
@@ -76,32 +65,29 @@ ${latestAdmissions}
       { role: "user", content: message },
     ];
 
-    // 4. Call OpenRouter API (Accessing free models)
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    // 4. Call Hugging Face API (OpenAI Compatible)
+    const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${openRouterKey}`,
-        "HTTP-Referer": "https://rojgarsuvidha.com", // Optional, for OpenRouter rankings
-        "X-Title": "Rojgar Suvidha", // Optional, for OpenRouter rankings
+        "Authorization": `Bearer ${hfApiKey}`,
       },
       body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct:free", // Highly stable and always-on free model
+        model: "mistralai/Mistral-7B-Instruct-v0.3",
         messages: messagesPayload,
-        temperature: 0.5,
         max_tokens: 512,
-        top_p: 0.9,
+        temperature: 0.5,
       }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenRouter API Error Details:", data);
+      console.error("HF API Error Details:", data);
       return NextResponse.json(
         { 
-          error: "OpenRouter API error", 
-          details: data.error?.message || "Unknown API Error" 
+          error: "Hugging Face API error", 
+          details: data.error || "Unknown API Error" 
         }, 
         { status: 502 }
       );
