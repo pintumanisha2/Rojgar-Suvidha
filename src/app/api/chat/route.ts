@@ -86,7 +86,7 @@ ${latestAdmissions}
         "X-Title": "Rojgar Suvidha", // Optional, for OpenRouter rankings
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3-8b-instruct:free", // 100% Free model on OpenRouter
+        model: "google/gemma-2-9b-it:free", // Most stable free model on OpenRouter currently
         messages: messagesPayload,
         temperature: 0.5,
         max_tokens: 512,
@@ -97,8 +97,14 @@ ${latestAdmissions}
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenRouter API Error:", data);
-      return NextResponse.json({ error: "OpenRouter API error" }, { status: 502 });
+      console.error("OpenRouter API Error Details:", data);
+      return NextResponse.json(
+        { 
+          error: "OpenRouter API error", 
+          details: data.error?.message || "Unknown API Error" 
+        }, 
+        { status: 502 }
+      );
     }
 
     const botReply =

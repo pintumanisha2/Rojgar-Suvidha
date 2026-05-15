@@ -82,12 +82,12 @@ export default function AIChatBot() {
       if (data.reply) {
         setMessages((prev) => [...prev, { role: "bot", content: data.reply }]);
       } else {
-        throw new Error(data.error || "Failed to get reply");
+        throw new Error(data.details || data.error || "Failed to get reply");
       }
-    } catch {
+    } catch (err: any) {
       setMessages((prev) => [
         ...prev,
-        { role: "bot", content: "Sorry, abhi server mein kuch dikkat hai. Kripya baad mein koshish karein." },
+        { role: "bot", content: `Error: ${err.message || "Server me dikkat hai."}` },
       ]);
     } finally {
       setIsLoading(false);
