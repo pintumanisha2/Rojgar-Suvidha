@@ -9,8 +9,8 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
 import SaveJobButton from "@/components/ui/SaveJobButton";
-import TrackJobView from "@/components/ui/TrackJobView";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
+import TrackJobViewWrapper from "@/components/ui/TrackJobViewWrapper";
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -274,7 +274,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
       {/* Track this job visit for Recently Viewed feature (client-side) */}
-      <TrackJobView slug={job.slug} title={job.title} category={job.category} />
+      <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
 
       <div className="bg-gray-50 dark:bg-gray-950 min-h-screen py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -458,24 +458,32 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               }
               .dark .blog-content h1, .dark .blog-content h2, .dark .blog-content h3 { color: #f9fafb; }
               .blog-content p { margin-bottom: 0.9rem; }
-              /* Mobile: table scrolls horizontally instead of overflowing */
-              .blog-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; font-size: 13px; }
-              .blog-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 1.5rem; border-radius: 8px; border: 1px solid #e5e7eb; }
-              .blog-table-wrap table { margin-bottom: 0; border: none; border-radius: 0; min-width: 320px; }
-              .blog-content th, .blog-content td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }
+              /* ── Table: always scrollable horizontally on mobile ── */
+              .blog-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border-radius: 8px; font-size: 13px; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+              .blog-content thead, .blog-content tbody, .blog-content tr { display: table; width: 100%; table-layout: fixed; }
+              .blog-content th, .blog-content td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; white-space: normal; word-break: break-word; }
               @media(min-width:640px){
+                .blog-content table { display: table; overflow-x: visible; white-space: normal; }
+                .blog-content thead, .blog-content tbody, .blog-content tr { display: table-row-group; width: auto; }
+                .blog-content tr { display: table-row; }
                 .blog-content th, .blog-content td { padding: 12px 14px; font-size: 14px; }
               }
-              .blog-content th { background-color: #f3f4f6; font-weight: 700; }
+              .blog-content th { background-color: #4f46e5; color: white; font-weight: 700; }
               .dark .blog-content table, .dark .blog-content th, .dark .blog-content td { border-color: #374151; }
-              .dark .blog-table-wrap { border-color: #374151; }
-              .dark .blog-content th { background-color: #1f2937; }
+              .dark .blog-content th { background-color: #3730a3; }
+              .dark .blog-content td { background-color: #111827; color: #d1d5db; }
+              /* ── Hide AI-generated Table of Contents ── */
+              .blog-content div[style*='background:#f9fafb'],
+              .blog-content div[style*="background:#f9fafb"],
+              .blog-content div[style*='background: #f9fafb'],
+              .blog-content div[style*="background: #f9fafb"] { display: none !important; }
+              /* ── Other styles ── */
               .blog-content img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
               .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-all; }
               .dark .blog-content a { color: #818cf8; }
               .blog-content ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.9rem; }
               .blog-content ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.9rem; }
-              .blog-content li { margin-bottom: 0.25rem; }
+              .blog-content li { margin-bottom: 0.4rem; }
             `}</style>
             
             <article

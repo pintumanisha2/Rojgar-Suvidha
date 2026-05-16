@@ -4,20 +4,31 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Sparkles, Send, Loader2, ArrowLeft, 
-  FileText, Copy, Check, Wand2, Info
+  FileText, Copy, Check, Wand2, Info,
+  Briefcase, Trophy, CreditCard, Newspaper, GraduationCap, ClipboardList
 } from "lucide-react";
 import Link from "next/link";
+
+const CATEGORIES = [
+  { value: "latest-jobs",  label: "Latest Jobs",   icon: Briefcase,     color: "bg-indigo-100 text-indigo-700 border-indigo-200",    activeColor: "bg-indigo-600 text-white border-indigo-600" },
+  { value: "results",      label: "Results",        icon: Trophy,        color: "bg-green-100 text-green-700 border-green-200",       activeColor: "bg-green-600 text-white border-green-600" },
+  { value: "admit-cards",  label: "Admit Cards",    icon: CreditCard,    color: "bg-orange-100 text-orange-700 border-orange-200",    activeColor: "bg-orange-500 text-white border-orange-500" },
+  { value: "news",         label: "News",           icon: Newspaper,     color: "bg-blue-100 text-blue-700 border-blue-200",          activeColor: "bg-blue-600 text-white border-blue-600" },
+  { value: "admission",    label: "Admission",      icon: GraduationCap, color: "bg-purple-100 text-purple-700 border-purple-200",    activeColor: "bg-purple-600 text-white border-purple-600" },
+  { value: "answer-key",   label: "Answer Key",     icon: ClipboardList, color: "bg-rose-100 text-rose-700 border-rose-200",          activeColor: "bg-rose-600 text-white border-rose-600" },
+];
 
 export default function AIWriterPage() {
   const router = useRouter();
   const [rawText, setRawText] = useState("");
+  const [category, setCategory] = useState("latest-jobs");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   const handleScan = async () => {
     if (!rawText || rawText.length < 50) {
-      alert("Please paste the official notification text first (min 50 chars).");
+      alert("Please paste the notification/content text first (min 50 chars).");
       return;
     }
 
@@ -27,7 +38,7 @@ export default function AIWriterPage() {
       const response = await fetch("/api/admin/scan-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawText }),
+        body: JSON.stringify({ rawText, category }),
       });
 
       const data = await response.json();
@@ -43,10 +54,18 @@ export default function AIWriterPage() {
 
   const handleCreatePost = () => {
     if (!result) return;
-    
-    // Store in localStorage so /admin/jobs/new can pick it up
     localStorage.setItem("ai_generated_job", JSON.stringify(result));
     router.push("/admin/jobs/new?source=ai");
+  };
+
+  const selectedCat = CATEGORIES.find(c => c.value === category)!;
+  const loadingMessages: Record<string, string> = {
+    "latest-jobs":  "Extracting job details, eligibility & writing full blog...",
+    "results":      "Analysing result data & writing result blog...",
+    "admit-cards":  "Extracting admit card details & download guide...",
+    "news":         "Summarising news & writing impact analysis...",
+    "admission":    "Extracting admission details & eligibility...",
+    "answer-key":   "Extracting answer key info & objection guide...",
   };
 
   return (
@@ -62,7 +81,7 @@ export default function AIWriterPage() {
               <Sparkles className="h-6 w-6 text-indigo-500 fill-indigo-500/20" /> 
               AI Super Writer
             </h2>
-            <p className="text-sm text-gray-500 font-medium">Turn messy notifications into professional English blogs</p>
+            <p className="text-sm text-gray-500 font-medium">Paste any notification — AI writes the perfect blog for any category</p>
           </div>
         </div>
       </div>
@@ -70,12 +89,41 @@ export default function AIWriterPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Input Section */}
-        <div className="space-y-6">
+        <div className="space-y-5">
+
+          {/* ── Category Selector ── */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">1</span>
+              Select Content Category
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                const isActive = category === cat.value;
+                return (
+                  <button
+                    key={cat.value}
+                    onClick={() => setCategory(cat.value)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                      isActive ? cat.activeColor : cat.color + " hover:opacity-80"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Text Input ── */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <FileText className="h-5 w-5 text-indigo-500" />
-                Paste Notification Text
+              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">2</span>
+                <FileText className="h-4 w-4 text-indigo-500" />
+                Paste Content / Notification Text
               </h3>
               <button 
                 onClick={() => setRawText("")}
@@ -86,33 +134,46 @@ export default function AIWriterPage() {
             </div>
             
             <textarea
-              className="w-full h-[400px] p-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
-              placeholder="Paste the official PDF text, news article, or website content here..."
+              className="w-full h-[320px] p-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+              placeholder={
+                category === "latest-jobs"  ? "Paste the official job notification PDF text here..." :
+                category === "results"      ? "Paste the result notification or result page content here..." :
+                category === "admit-cards"  ? "Paste the admit card notification or download page content here..." :
+                category === "news"         ? "Paste the news article or press release text here..." :
+                category === "admission"    ? "Paste the admission notification or prospectus text here..." :
+                category === "answer-key"   ? "Paste the answer key notification or objection details here..." :
+                "Paste content here..."
+              }
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
             />
 
             <div className="mt-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl flex items-start gap-3">
-              <Info className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
+              <Info className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
               <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
-                Tip: Copy the entire page of a PDF or website. AI will automatically filter the noise and extract only important data (Fee, Dates, Age, Eligibility) and write an English blog.
+                {category === "latest-jobs"  && "AI will extract job title, eligibility, salary, selection process and write a full SEO blog."}
+                {category === "results"      && "AI will extract result details, merit list info, cutoff and write a result announcement blog."}
+                {category === "admit-cards"  && "AI will extract exam date, admit card download steps and write a complete guide."}
+                {category === "news"         && "AI will summarise the news and write an impact analysis blog for aspirants."}
+                {category === "admission"    && "AI will extract admission details, eligibility, fee and write a complete admission guide."}
+                {category === "answer-key"   && "AI will extract answer key details, objection process and write a guide blog."}
               </p>
             </div>
 
             <button
               onClick={handleScan}
               disabled={loading || !rawText}
-              className="w-full mt-6 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+              className="w-full mt-5 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
             >
               {loading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  AI is Scanning & Writing...
+                  AI is Writing...
                 </>
               ) : (
                 <>
                   <Wand2 className="h-5 w-5" />
-                  Generate Professional Blog
+                  Generate {selectedCat.label} Blog
                 </>
               )}
             </button>
@@ -122,20 +183,23 @@ export default function AIWriterPage() {
         {/* Output Section */}
         <div className="space-y-6">
           {loading ? (
-            <div className="h-[500px] bg-white dark:bg-gray-900 rounded-3xl border-2 border-dashed border-indigo-100 dark:border-indigo-900/30 flex flex-col items-center justify-center p-8 text-center">
+            <div className="h-[560px] bg-white dark:bg-gray-900 rounded-3xl border-2 border-dashed border-indigo-100 dark:border-indigo-900/30 flex flex-col items-center justify-center p-8 text-center">
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full animate-ping absolute inset-0" />
                 <div className="w-20 h-20 bg-indigo-500 rounded-full flex items-center justify-center relative">
                   <Sparkles className="h-10 w-10 text-white animate-pulse" />
                 </div>
               </div>
-              <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Gemini 2.0 is at work...</h4>
-              <p className="text-sm text-gray-500 max-w-xs">Extracting tables, formatting HTML, and optimizing for SEO in professional English.</p>
+              <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">AI is writing your blog...</h4>
+              <p className="text-sm text-gray-500 max-w-xs">{loadingMessages[category]}</p>
             </div>
           ) : result ? (
             <div className="bg-white dark:bg-gray-900 rounded-3xl border border-indigo-200 dark:border-indigo-900 p-6 shadow-xl animate-in fade-in zoom-in duration-500">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest text-xs">AI Generated Result</h3>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">AI Generated Result</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Category: <strong>{selectedCat.label}</strong></p>
+                </div>
                 <button 
                   onClick={handleCreatePost}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-full shadow-md transition-all active:scale-95 flex items-center gap-2"
@@ -150,15 +214,31 @@ export default function AIWriterPage() {
                   <p className="font-bold text-gray-900 dark:text-white leading-tight">{result.title}</p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">Last Date</label>
-                    <p className="font-bold text-indigo-600 text-sm">{result.lastDate}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase">App Fee</label>
-                    <p className="font-bold text-emerald-600 text-sm">{result.appFee}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {result.lastDate && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Last Date / Date</label>
+                      <p className="font-bold text-indigo-600 text-sm">{result.lastDate}</p>
+                    </div>
+                  )}
+                  {result.appFee && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Fee / Key Info</label>
+                      <p className="font-bold text-emerald-600 text-sm">{result.appFee}</p>
+                    </div>
+                  )}
+                  {result.totalPosts && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Posts / Vacancies</label>
+                      <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{result.totalPosts}</p>
+                    </div>
+                  )}
+                  {result.category && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase">Category</label>
+                      <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">{result.category}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -172,16 +252,17 @@ export default function AIWriterPage() {
                     </button>
                   </div>
                   <div 
-                    className="max-h-[300px] overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl text-[12px] text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700 prose-sm prose-indigo dark:prose-invert"
+                    className="max-h-[280px] overflow-y-auto p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl text-[12px] text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700 prose-sm prose-indigo dark:prose-invert"
                     dangerouslySetInnerHTML={{ __html: result.blogHtml }}
                   />
                 </div>
               </div>
             </div>
           ) : (
-            <div className="h-[500px] bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-8 text-center text-gray-400">
+            <div className="h-[560px] bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center p-8 text-center text-gray-400">
               <Wand2 className="h-12 w-12 mb-4 opacity-20" />
-              <p className="text-sm">Scan results will appear here in professional English.</p>
+              <p className="text-sm font-medium">Select a category, paste content, and generate.</p>
+              <p className="text-xs mt-1 opacity-60">Supports: Jobs, Results, Admit Cards, News, Admission, Answer Key</p>
             </div>
           )}
         </div>
