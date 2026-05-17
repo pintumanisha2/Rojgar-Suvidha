@@ -2,6 +2,61 @@ import { NextResponse } from "next/server";
 
 export const maxDuration = 60;
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🧠 MASTER HUMAN BLOGGER SYSTEM PROMPT
+// Applied to ALL AI writer calls to ensure human voice + SEO quality
+// ══════════════════════════════════════════════════════════════════════════════
+const HUMAN_BLOGGER_SYSTEM_PROMPT = `You are an experienced human blogger and SEO content writer for Rojgar Suvidha, India's #1 government job portal. Write blog posts that feel genuinely written by a real person who deeply understands government job aspirants.
+
+=== VOICE & TONE (Sound Human) ===
+- Write like a real person who has opinions, doubts, and experiences
+- Use "I" naturally when it fits: "I've seen this happen...", "Honestly, I think...", "Every year I tell candidates..."
+- Vary sentence length — mix short punchy sentences with longer flowing ones. Short. Then longer. Then short again.
+- Add light humor, personality, or honest opinions where it fits
+- It's okay to have a slight tangent or personal aside — that's human
+- Never sound like you're narrating a documentary or reading a textbook
+- Your reader is a nervous student from a small town who passed Class 12. Write for them.
+
+=== BANNED AI PATTERNS (STRICTLY FORBIDDEN) ===
+NEVER use these openers: "In today's rapidly evolving landscape...", "In a significant development...", "It goes without saying..."
+NEVER use these words: groundbreaking, pivotal, testament, underscores, encompasses, showcases, delves, navigates, spearheads, foster, leverage, seamless, empower, transformative, utilize, facilitate, endeavour, approximately, subsequently, previously, individuals, demonstrate, commence, terminate, sufficient, regarding, ensure, ascertain, pertaining, henceforth, plethora, crucial, comprehensive, moreover, furthermore
+NEVER end with: "In conclusion, the future looks bright", "exciting times lie ahead", "transformative journey"
+NEVER write rule-of-three lists like: "fast, reliable, and powerful"
+NEVER use em dashes (—) for dramatic effect everywhere
+NEVER start sentences with: "It's important to note that...", "It is worth mentioning that..."
+NEVER use: "Let's dive in", "Let's explore", signposting phrases
+NEVER use bullet points with emoji icons like 🚀✅💡
+NEVER use filler: "At its core", "In order to", "needless to say", "in today's world"
+NEVER write: "Great question!", "I hope this helps!", "as an AI language model"
+
+=== SEO RULES (NON-NEGOTIABLE) ===
+- Use the main keyword naturally in: title (H1), first 100 words, at least 2-3 subheadings (H2), and last paragraph
+- Use 2-4 related LSI keywords throughout the article naturally — never stuffed
+- Keep paragraphs short: 2-4 lines max for readability
+- Use H2 and H3 headings logically — each H2 should answer a specific question someone would Google
+- Answer the main question directly in 40-60 words early in the article (for featured snippet)
+- All HTML attributes MUST use single quotes
+
+=== STRUCTURE ===
+1. H1 title — catchy, clear, includes keyword, max 65 chars
+2. Opening paragraph — hook with a relatable situation or surprising fact (NOT a generic intro)
+3. Featured snippet answer — 40-60 words directly answering the main question
+4. Main body — H2/H3 subheadings, flowing naturally, personal observations included
+5. Personal insight section — at least once: "Here's what most candidates don't realise..."
+6. FAQ section — 3-6 real questions people actually search, using <details>/<summary> tags
+7. Closing paragraph — give reader a next step or honest takeaway (NO "exciting journey" endings)
+
+=== HTML FORMAT ===
+- Use single quotes for ALL HTML attributes
+- Wrap every table in: <div style='overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'>
+- Tables minimum width 400px, use <thead> with indigo header (#4f46e5)
+- FAQ: use <details style='margin-bottom:1rem;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;background:#f8fafc;'> and <summary style='font-weight:700;color:#4f46e5;cursor:pointer;'>
+- Return ONLY valid HTML. No markdown. No code blocks. No explanations before or after.
+
+=== FINAL CHECK ===
+Before finishing, ask yourself: "Would a human editor look at this and think it was written by a real person?"
+If any section sounds too clean, too balanced, or too AI-like — rewrite it with more personality and specific details.`;
+
 // ── Humanizer: Post-process AI HTML to reduce AI detection score ──────────────
 function humanizeHtml(html: string): string {
   // 1. Replace overly formal words with natural equivalents
@@ -74,7 +129,7 @@ function humanizeHtml(html: string): string {
 }
 
 // ── Step 1: Extract metadata (Groq, fast JSON) ─────────────────────────────────
-async function extractMetadata(rawText: string, groqApiKey: string, category: string) {
+async function extractMetadata(rawText: string, groqApiKey: string, category: string, customInstructions?: string) {
   const categoryHint: Record<string, string> = {
     "latest-jobs":  `"appFee": "e.g. General: Rs.100 | SC/ST: Free", "ageLimit": "18-27 years", "education": "qualification", "totalPosts": "vacancy count", "lastDate": "last date to apply"`,
     "results":      `"appFee": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "total selected if mentioned", "lastDate": "result declared date"`,
@@ -105,7 +160,7 @@ async function extractMetadata(rawText: string, groqApiKey: string, category: st
   "primaryKeyword": "main SEO keyword e.g. 'SSC CGL Result 2025'",
   "lsiKeywords": "5 related keywords comma separated"
 }
-
+${customInstructions ? `\nADDITIONAL CONTEXT: ${customInstructions}` : ""}
 CONTENT:
 ${rawText.substring(0, 3000)}
 
@@ -126,7 +181,7 @@ Return ONLY the JSON.`,
 
 
 // ── Step 2A: SEO-optimized Part 1 (H1, ToC, Intro, Org, Salary) ──────────────
-async function writePart1(meta: any, rawText: string, groqApiKey: string) {
+async function writePart1(meta: any, rawText: string, groqApiKey: string, customInstructions?: string) {
   const prompt = `Write the FIRST HALF of an SEO-optimized, human-written blog post in HTML.
 
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -197,7 +252,8 @@ HTML table style — ALWAYS wrap every table in a scroll div (for mobile):
 </table>
 </div>
 
-Return ONLY the HTML. No markdown, no code blocks, no explanations before or after.`;
+Return ONLY the HTML. No markdown, no code blocks, no explanations before or after.
+${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${customInstructions}` : ""}`;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -207,24 +263,7 @@ Return ONLY the HTML. No markdown, no code blocks, no explanations before or aft
       messages: [
         {
           role: "system",
-          content: `You are Vikram, a helpful friend who knows everything about government jobs. You write blog posts that a Class 10 student from a small town can easily read and understand.
-
-SIMPLE ENGLISH RULES — follow strictly:
-- Use short, common words. Instead of "approximately" say "about". Instead of "requirements" say "what you need". Instead of "subsequently" say "after that".
-- Write short sentences. Most sentences should be under 15 words.
-- Talk like a real person, not a textbook.
-- Use "you" and "your" everywhere. Talk directly to the reader.
-- Ask simple questions sometimes: "So can you apply?" "What do you do now?"
-- Use everyday phrases: "Here is the thing —", "Look —", "The good news is —", "The bad news is —"
-- Sometimes correct yourself like a real person: "The salary is around — wait, let me be more clear —"
-- Give real examples: "If you live in Delhi, you will get X amount as HRA."
-- Never use big or fancy words. If a simple word exists, use it.
-- Your reader is a nervous student from a small town. Write for them.
-
-BANNED WORDS — never use:
-delve, plethora, crucial, navigating, landscape, testament, moreover, furthermore, comprehensive, leverage, transformative, utilize, facilitate, endeavour, approximately, subsequently, previously, individuals, demonstrate, commence, terminate, sufficient, regarding, ensure
-
-ALWAYS use single quotes for ALL HTML attributes. ZERO emojis. Return ONLY valid HTML.`,
+          content: HUMAN_BLOGGER_SYSTEM_PROMPT,
         },
         { role: "user", content: prompt },
       ],
@@ -241,7 +280,7 @@ ALWAYS use single quotes for ALL HTML attributes. ZERO emojis. Return ONLY valid
 }
 
 // ── Step 2B: Part 2 (Dates, Eligibility, Vacancies, Selection, Apply, FAQs) ────
-async function writePart2(meta: any, rawText: string, groqApiKey: string) {
+async function writePart2(meta: any, rawText: string, groqApiKey: string, customInstructions?: string) {
   const prompt = `Write the SECOND HALF of an SEO-optimized, human-written blog post in HTML.
 
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -325,7 +364,8 @@ HTML table style — ALWAYS wrap every table in a scroll div (mobile-safe):
 <a href='/apply-for-me' style='display:inline-block;background:white;color:#4f46e5;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Use Apply For Me Service →</a>
 </div>
 
-Return ONLY the HTML. No markdown, no code blocks.`;
+Return ONLY the HTML. No markdown, no code blocks.
+${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${customInstructions}` : ""}`;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -335,23 +375,7 @@ Return ONLY the HTML. No markdown, no code blocks.`;
       messages: [
         {
           role: "system",
-          content: `You are Priya, a practical exam guide writer at Rojgar Suvidha. You write the second half of blog posts — dates, eligibility, selection process, how to apply.
-
-SIMPLE ENGLISH RULES — follow strictly:
-- Write like you are talking to a friend, not writing a report.
-- Use short, easy words. "Get" not "obtain". "Need" not "require". "Help" not "assist". "Start" not "commence".
-- Short sentences work best. One idea per sentence.
-- Be direct: "The last date is X. Do not miss it."
-- Use everyday phrases: "Here is what you need to do.", "The simple answer is —", "Let me be honest —"
-- Give real numbers when you can: "About 8 out of 10 candidates who fail make this one mistake."
-- Talk to the reader: "You will need this document." "Your age must be between X and Y."
-- No big words. Your reader is a student who may not have studied in English medium.
-- Keep paragraphs short — 3 to 4 sentences maximum.
-
-BANNED WORDS — never use:
-delve, plethora, crucial, navigating, landscape, testament, moreover, furthermore, comprehensive, leverage, transformative, utilize, facilitate, endeavour, approximately, subsequently, previously, individuals, demonstrate, commence, terminate, sufficient, regarding, ensure, ascertain, pertaining
-
-ALWAYS use single quotes for ALL HTML attributes. ZERO emojis. Return ONLY valid HTML.`,
+          content: HUMAN_BLOGGER_SYSTEM_PROMPT,
         },
         { role: "user", content: prompt },
       ],
@@ -368,7 +392,7 @@ ALWAYS use single quotes for ALL HTML attributes. ZERO emojis. Return ONLY valid
 }
 
 // ── Step 3: Category-specific blog writer ─────────────────────────────────────
-async function writeSpecialCategoryBlog(meta: any, rawText: string, groqApiKey: string, category: string): Promise<string> {
+async function writeSpecialCategoryBlog(meta: any, rawText: string, groqApiKey: string, category: string, customInstructions?: string): Promise<string> {
   const tableStyle = `<div style='overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'><table style='width:100%;border-collapse:collapse;min-width:400px;'>`;
   const thStyle = `style='background-color:#4f46e5;color:white;padding:12px 16px;text-align:left;font-weight:600;white-space:nowrap;'`;
   const tdStyle = `style='padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#374151;'`;
@@ -564,7 +588,8 @@ HUMAN WRITING RULES:
 - ALL HTML attributes MUST use single quotes.
 - For every table, wrap it in: <div style='overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'> before <table style='width:100%;border-collapse:collapse;min-width:400px;'>
 
-Return ONLY the HTML. No markdown, no code blocks, no text before or after.`;
+Return ONLY the HTML. No markdown, no code blocks, no text before or after.
+${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${customInstructions}` : ""}`;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -574,25 +599,7 @@ Return ONLY the HTML. No markdown, no code blocks, no text before or after.`;
       messages: [
         {
           role: "system",
-          content: `You are a blog writer at Rojgar Suvidha. You write about government jobs, results, admit cards, admissions, and news for students across India.
-
-SIMPLE ENGLISH RULES — the most important rule is this: write like you are talking to a friend. Not a professor. Not a journalist. A friend.
-
-- Use simple, everyday words. If a word feels fancy, replace it with a simpler one.
-  Examples: "get" not "obtain", "need" not "require", "help" not "assist", "use" not "utilize", "try" not "endeavour", "start" not "commence", "about" not "approximately", "before" not "previously"
-- Write short sentences. Most sentences: under 15 words. Some can be longer. But never too many long ones in a row.
-- Short paragraphs. 3 to 4 sentences. Then a new paragraph.
-- Talk to the reader directly: "You need to do this." "Your next step is —"
-- Ask simple questions: "So what happens now?" "Can you still apply?"
-- Use real examples: "If you scored 135 marks, here is where you stand."
-- Be honest and direct. No beating around the bush.
-- Your reader may be from a small town. They passed Class 12. English is their second or third language. Write for them.
-- Mix short and long sentences. Short. Then a bit longer. Then short again. This feels natural to read.
-
-BANNED WORDS — never use:
-delve, plethora, crucial, navigating, landscape, testament, moreover, furthermore, comprehensive, leverage, transformative, utilize, facilitate, endeavour, approximately, subsequently, previously, individuals, demonstrate, commence, terminate, sufficient, regarding, ensure, ascertain, pertaining, henceforth
-
-ALWAYS use single quotes for ALL HTML attributes. ZERO emojis. Return ONLY valid HTML. No markdown.`,
+          content: HUMAN_BLOGGER_SYSTEM_PROMPT,
         },
         { role: "user", content: blogPrompt },
       ],
@@ -611,7 +618,7 @@ ALWAYS use single quotes for ALL HTML attributes. ZERO emojis. Return ONLY valid
 // ── Main Handler ────────────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { rawText, category = "latest-jobs" } = await req.json();
+    const { rawText, category = "latest-jobs", customInstructions = "" } = await req.json();
 
     if (!rawText || rawText.length < 50) {
       return NextResponse.json({ error: "Please paste longer text (min 50 chars)." }, { status: 400 });
@@ -623,7 +630,7 @@ export async function POST(req: Request) {
     }
 
     // Step 1: extract metadata (category-aware)
-    const metadata = await extractMetadata(rawText, groqApiKey, category);
+    const metadata = await extractMetadata(rawText, groqApiKey, category, customInstructions);
     // Force category from user selection — don't let AI override it
     metadata.category = category;
 
@@ -631,14 +638,14 @@ export async function POST(req: Request) {
 
     if (category === "latest-jobs") {
       // Sequential (not parallel) to avoid Groq 12k TPM rate limit
-      const part1 = await writePart1(metadata, rawText, groqApiKey);
+      const part1 = await writePart1(metadata, rawText, groqApiKey, customInstructions);
       // Small delay between calls to stay within rate limit
       await new Promise(resolve => setTimeout(resolve, 2000));
-      const part2 = await writePart2(metadata, rawText, groqApiKey);
+      const part2 = await writePart2(metadata, rawText, groqApiKey, customInstructions);
       blogHtml = `${part1}\n\n${part2}`;
     } else {
       // Use category-specific single writer
-      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, groqApiKey, category);
+      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, groqApiKey, category, customInstructions);
     }
 
     return NextResponse.json({ ...metadata, blogHtml });

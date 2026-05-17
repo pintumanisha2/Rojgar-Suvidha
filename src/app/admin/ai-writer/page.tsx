@@ -22,6 +22,7 @@ export default function AIWriterPage() {
   const router = useRouter();
   const [rawText, setRawText] = useState("");
   const [category, setCategory] = useState("latest-jobs");
+  const [customInstructions, setCustomInstructions] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -38,7 +39,7 @@ export default function AIWriterPage() {
       const response = await fetch("/api/admin/scan-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawText, category }),
+        body: JSON.stringify({ rawText, category, customInstructions }),
       });
 
       const data = await response.json();
@@ -117,11 +118,60 @@ export default function AIWriterPage() {
             </div>
           </div>
 
+          {/* ── Custom AI Instructions ── */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">2</span>
+              AI Ko Extra Instructions Do
+              <span className="text-[10px] font-normal text-gray-400 ml-1">(Optional)</span>
+            </h3>
+            <p className="text-[11px] text-gray-400 mb-3 ml-7">AI ko batao ye post kaise likhna hai — category, focus area, ya koi khaas baat</p>
+
+            {/* Quick Instruction Pills */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[
+                { label: "📋 Result Section Post", text: "Ye Result section ka post hai. Result announcement, cutoff, merit list aur next steps pe focus karo." },
+                { label: "📰 News Section Post", text: "Ye News section ka post hai. News journalism style mein likho — inverted pyramid, facts first, short paragraphs." },
+                { label: "🎓 Admission Post", text: "Ye Admission section ka post hai. Students ko guide karo — eligibility, process, documents clearly explain karo." },
+                { label: "💼 Latest Jobs Post", text: "Ye Latest Jobs section ka post hai. Job details, eligibility, salary, apply process sab detail mein cover karo." },
+                { label: "🎫 Admit Card Post", text: "Ye Admit Card section ka post hai. Download steps, exam date, documents to carry — practical guide style mein likho." },
+                { label: "🔑 Answer Key Post", text: "Ye Answer Key section ka post hai. Score calculation, objection process, expected cutoff cover karo." },
+              ].map((pill) => (
+                <button
+                  key={pill.label}
+                  onClick={() => setCustomInstructions(pill.text)}
+                  className={`text-[11px] px-2.5 py-1.5 rounded-lg border font-medium transition-all ${
+                    customInstructions === pill.text
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:text-indigo-600"
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              className="w-full h-20 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[12px] text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+              placeholder={`Apni instruction likho... jaise:\n"Ye SSC CGL 2025 result post hai — cutoff aur next steps pe zyada focus karo"`}
+              value={customInstructions}
+              onChange={(e) => setCustomInstructions(e.target.value)}
+            />
+            {customInstructions && (
+              <button
+                onClick={() => setCustomInstructions("")}
+                className="text-[11px] text-red-400 hover:text-red-600 mt-1 font-medium"
+              >
+                Clear instructions
+              </button>
+            )}
+          </div>
+
           {/* ── Text Input ── */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm" id="content-input-section">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">2</span>
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">3</span>
                 <FileText className="h-4 w-4 text-indigo-500" />
                 Paste Content / Notification Text
               </h3>

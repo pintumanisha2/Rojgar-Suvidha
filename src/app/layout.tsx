@@ -238,6 +238,23 @@ export default function RootLayout({
           <AIChatBot />
           <PushNotificationPrompt />
           <BottomNav />
+          
+          {/* Auto-update Service Worker to prevent caching issues for users */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                      for(let registration of registrations) {
+                        registration.update();
+                      }
+                    });
+                  });
+                }
+              `,
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>
