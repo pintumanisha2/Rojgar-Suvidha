@@ -1,5 +1,5 @@
 "use client";
-
+// v2 — category selector + human blogger prompts
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
@@ -23,6 +23,7 @@ export default function AIWriterPage() {
   const [rawText, setRawText] = useState("");
   const [category, setCategory] = useState("latest-jobs");
   const [customInstructions, setCustomInstructions] = useState("");
+  const [officialLink, setOfficialLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -39,7 +40,7 @@ export default function AIWriterPage() {
       const response = await fetch("/api/admin/scan-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawText, category, customInstructions }),
+        body: JSON.stringify({ rawText, category, customInstructions, officialLink }),
       });
 
       const data = await response.json();
@@ -167,11 +168,42 @@ export default function AIWriterPage() {
             )}
           </div>
 
+          {/* ── Official Notification Link ── */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] font-black">3</span>
+              Official Notification Link
+              <span className="text-[10px] font-normal text-gray-400 ml-1">(Optional — builds trust)</span>
+            </h3>
+            <p className="text-[11px] text-gray-400 mb-3 ml-7">Paste the official govt website URL or PDF link — shown as a verified source in the blog</p>
+            <div className="flex gap-2 items-center">
+              <span className="text-lg">📄</span>
+              <input
+                type="url"
+                className="flex-1 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[12px] text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                placeholder="e.g. https://ssc.nic.in/notice/notifications/2025/cgl-notice.pdf"
+                value={officialLink}
+                onChange={(e) => setOfficialLink(e.target.value)}
+              />
+              {officialLink && (
+                <button
+                  onClick={() => setOfficialLink("")}
+                  className="text-[11px] text-red-400 hover:text-red-600 font-medium whitespace-nowrap"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {officialLink && (
+              <p className="text-[11px] text-green-600 dark:text-green-400 mt-2 ml-7 font-medium">✓ Blog mein official source box add ho jayega</p>
+            )}
+          </div>
+
           {/* ── Text Input ── */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm" id="content-input-section">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">3</span>
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">4</span>
                 <FileText className="h-4 w-4 text-indigo-500" />
                 Paste Content / Notification Text
               </h3>

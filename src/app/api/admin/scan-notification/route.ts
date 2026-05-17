@@ -618,7 +618,7 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
 // ── Main Handler ────────────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { rawText, category = "latest-jobs", customInstructions = "" } = await req.json();
+    const { rawText, category = "latest-jobs", customInstructions = "", officialLink = "" } = await req.json();
 
     if (!rawText || rawText.length < 50) {
       return NextResponse.json({ error: "Please paste longer text (min 50 chars)." }, { status: 400 });
@@ -648,7 +648,22 @@ export async function POST(req: Request) {
       blogHtml = await writeSpecialCategoryBlog(metadata, rawText, groqApiKey, category, customInstructions);
     }
 
-    return NextResponse.json({ ...metadata, blogHtml });
+    // ── Append Official Notification Trust Box (if URL provided) ────────────────
+    if (officialLink && officialLink.trim()) {
+      const officialBox = `
+<div style='background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:20px 24px;margin:2rem 0;display:flex;align-items:flex-start;gap:16px;'>
+  <div style='font-size:2rem;line-height:1;margin-top:2px;'>📄</div>
+  <div style='flex:1;'>
+    <p style='font-weight:800;color:#15803d;margin:0 0 6px;font-size:1rem;'>Official Notification — Verified Source</p>
+    <p style='color:#374151;margin:0 0 12px;font-size:0.9rem;line-height:1.6;'>This post is based on the official government notification. For complete and accurate information, download the original PDF below.</p>
+    <a href='${officialLink.trim()}' target='_blank' rel='noopener noreferrer nofollow' style='display:inline-flex;align-items:center;gap:8px;background:#16a34a;color:white;font-weight:700;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;'>📥 Download Official PDF / Notification →</a>
+    <p style='margin:10px 0 0;font-size:0.78rem;color:#6b7280;'>Source: Official Government Website &nbsp;|&nbsp; Always verify from the official source before applying.</p>
+  </div>
+</div>`;
+      blogHtml = blogHtml + "\n" + officialBox;
+    }
+
+    return NextResponse.json({ ...metadata, officialLink, blogHtml });
   } catch (error: any) {
     console.error("AI Super Writer Error:", error.message);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
