@@ -60,7 +60,7 @@ If any section sounds too clean, too balanced, or too AI-like — rewrite it wit
 // ── Humanizer: Post-process AI HTML to reduce AI detection score ──────────────
 function humanizeHtml(html: string): string {
   // 1. Replace overly formal words with natural equivalents
-  const wordMap: [RegExp, string][] = [
+  const wordMap: [RegExp, string | ((m: string) => string)][] = [
     [/\bprovide\b/gi, "give"],
     [/\bobtain\b/gi, "get"],
     [/\bpurchase\b/gi, "buy"],
@@ -86,7 +86,7 @@ function humanizeHtml(html: string): string {
 
   let out = html;
   for (const [pattern, replacement] of wordMap) {
-    out = out.replace(pattern, replacement as string);
+    out = out.replace(pattern, replacement as any);
   }
 
   // 2. Randomly insert conversational openers at start of some <p> tags
