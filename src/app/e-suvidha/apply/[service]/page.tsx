@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
@@ -86,9 +86,9 @@ const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: s
   },
 };
 
-export default function ESuvidhaApply({ params }: { params: { service: string } }) {
+export default function ESuvidhaApply({ params }: { params: Promise<{ service: string }> }) {
   const router = useRouter();
-  const serviceId = params.service;
+  const { service: serviceId } = use(params);
   const serviceDetails = SERVICE_DB[serviceId] || {
     title: "Cyber Cafe Service",
     price: 100,
