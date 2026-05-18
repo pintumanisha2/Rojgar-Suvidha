@@ -36,6 +36,7 @@ const navSections = [
   { name: "Answer Key", href: "/answer-key", icon: Key, color: "text-purple-500" },
   { name: "Admission", href: "/admission", icon: GraduationCap, color: "text-blue-500" },
   { name: "News", href: "/news", icon: Newspaper, color: "text-rose-500" },
+  { name: "e-Suvidha", href: "/e-suvidha", icon: Landmark, color: "text-emerald-500" },
 ];
 
 // Jobs by sector — links to /jobs/[type] dynamic pages

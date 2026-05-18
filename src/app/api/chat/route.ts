@@ -10,16 +10,18 @@ export async function POST(req: Request) {
     // 1. Fetch Comprehensive Context from Supabase (Jobs, Results, Admit Cards, Admissions)
     const { data: allItems } = await supabase
       .from("jobs")
-      .select("title, category, status, slug")
+      .select("title, category, status, slug, short_info")
       .neq("status", "draft")
       .order("created_at", { ascending: false })
       .limit(80);
 
-    const formatList = (list: any[]) => list.length ? list.map(i => `- ${i.title} (Link: /jobs/${i.slug})`).join('\n') : "Abhi koi naya update nahi hai.";
+    const formatList = (list: any[]) => list.length 
+      ? list.map(i => `- ${i.title} | Details: ${i.short_info ? i.short_info.slice(0, 100) + '...' : ''} | URL: /job/${i.slug}`).join('\n') 
+      : "Abhi koi naya update nahi hai.";
 
     const latestJobs = formatList(allItems?.filter(i => i.category === 'latest-jobs').slice(0, 15) || []);
-    const latestResults = formatList(allItems?.filter(i => i.category === 'results').slice(0, 10) || []);
-    const latestAdmitCards = formatList(allItems?.filter(i => i.category === 'admit-cards').slice(0, 10) || []);
+    const latestResults = formatList(allItems?.filter(i => i.category === 'result').slice(0, 10) || []);
+    const latestAdmitCards = formatList(allItems?.filter(i => i.category === 'admit-card').slice(0, 10) || []);
     const latestAdmissions = formatList(allItems?.filter(i => i.category === 'admission').slice(0, 10) || []);
 
     const groqApiKey = process.env.GROQ_API_KEY;
@@ -34,14 +36,16 @@ export async function POST(req: Request) {
     const systemInstruction = `You are "Rojgar Assistant", the EXCLUSIVE AI career guide for the "Rojgar Suvidha" platform.
 
 PLATFORM FEATURES:
-- "Apply For Me" Service: We fill complex govt forms with 100% accuracy.
-- "Digital Locker": 100% secure vault for student documents.
+- "Apply For Me" Service: We fill complex govt forms for students accurately.
 
 STRICT RULES:
 1. ONLY answer using the "Current Database Listings" provided below.
 2. NEVER mention other websites.
 3. If a user asks for something NOT in the list, say: "Abhi ye jaankari hamare portal par uplabdh nahi hai."
-4. Respond in short, friendly Hinglish.
+4. When a user asks about a specific job, give a very short 1-sentence description based on the data.
+5. ALWAYS format links EXACTLY like this at the end of the job info: [View Details](/job/slug)
+6. Introduce the "Apply For Me" service very naturally and politely as a helpful suggestion, not a sales pitch. Use a friendly tone like: "Waise agar aap form bharne ki jhanjhat se bachna chahte hain (jaise photo ya document resize karna), toh aap hamari 'Apply For Me' service try kar sakte hain. Hamari team aapka form ekdum sahi tarike se bhar degi, taaki aap apna poora dhyan sirf padhai par laga sakein! 😊"
+7. Respond in short, engaging, and friendly Hinglish.
 
 CURRENT DATABASE LISTINGS ON ROJGAR SUVIDHA:
 [LATEST JOBS]
@@ -75,7 +79,7 @@ ${latestAdmissions}`;
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192", // Using fast Llama 3 model
+        model: "llama-3.3-70b-versatile", // Using the latest supported model
         messages: messagesPayload,
         max_tokens: 512,
         temperature: 0.5,

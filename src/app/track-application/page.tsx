@@ -119,12 +119,18 @@ export default function TrackApplicationPage() {
             <p className={`text-sm font-bold ${cfg.color}`}>{cfg.desc}</p>
           </div>
 
-          {req.admin_notes && (
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
-              <p className="text-xs font-bold text-indigo-500 mb-1">💬 Message from Team:</p>
-              <p className="text-sm text-indigo-800 dark:text-indigo-300 font-medium">{req.admin_notes}</p>
-            </div>
-          )}
+          {(() => {
+            const displayAdminNote = req.admin_notes ? req.admin_notes.split('--- E-SUVIDHA DETAILS ---')[0].trim() : "";
+            if (displayAdminNote && !displayAdminNote.startsWith("[Cashfree")) {
+              return (
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4">
+                  <p className="text-xs font-bold text-indigo-500 mb-1">💬 Message from Team:</p>
+                  <p className="text-sm text-indigo-800 dark:text-indigo-300 font-medium">{displayAdminNote}</p>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* RECEIPT DOWNLOAD */}
           {req.final_receipt_url && (

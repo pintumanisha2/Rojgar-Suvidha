@@ -27,6 +27,7 @@ export default function AdminApplicationsPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [studentDocs, setStudentDocs] = useState<{name: string; url: string}[]>([]);
+  const [eSuvidhaData, setESuvidhaData] = useState<string>("");
   const [docsLoading, setDocsLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
@@ -34,6 +35,8 @@ export default function AdminApplicationsPage() {
   const [otpRequest, setOtpRequest] = useState<any>(null);
   const [otpTimer, setOtpTimer] = useState(0);
   const [requestingOtp, setRequestingOtp] = useState(false);
+
+  const [serviceType, setServiceType] = useState("all"); // all | sarkari | esuvidha
 
   useEffect(() => {
     const init = async () => {
@@ -67,6 +70,11 @@ export default function AdminApplicationsPage() {
 
   const filtered = requests.filter(r => {
     if (currentUserRole === 'form_filler' && r.assigned_to !== currentUserEmail) return false;
+    
+    const isESuvidha = r.job_title?.includes("[e-Suvidha]");
+    if (serviceType === "sarkari" && isESuvidha) return false;
+    if (serviceType === "esuvidha" && !isESuvidha) return false;
+
     if (filter === "all") return true;
     // "pending" tab shows both unpaid-pending AND freshly paid requests
     if (filter === "pending") return r.status === "pending" || r.status === "paid";
@@ -104,11 +112,43 @@ export default function AdminApplicationsPage() {
 
   const openRequest = async (req: any) => {
     setSelected(req);
-    setAdminNote(req.admin_notes || "");
     setNewStatus(req.status);
     setStudentDocs([]);
+    setESuvidhaData("");
 
-    // Fetch student's uploaded documents from Storage
+    let note = req.admin_notes || "";
+    let esDocs: {name: string; url: string}[] = [];
+    
+    // Parse e-Suvidha data
+    if (note.includes("--- E-SUVIDHA DETAILS ---")) {
+      const parts = note.split("--- E-SUVIDHA DETAILS ---");
+      note = parts[0].trim(); // Real admin note
+      
+      const rest = parts[1];
+      if (rest.includes("--- UPLOADED DOCUMENTS ---")) {
+        const subparts = rest.split("--- UPLOADED DOCUMENTS ---");
+        setESuvidhaData(subparts[0].trim()); // Extra fields like Father Name
+        
+        const docLines = subparts[1].trim().split('\n');
+        for (const line of docLines) {
+          const idx = line.indexOf(': http');
+          if (idx !== -1) {
+            esDocs.push({ name: line.substring(0, idx).trim(), url: line.substring(idx + 2).trim() });
+          }
+        }
+      } else {
+        setESuvidhaData(rest.trim());
+      }
+    }
+    
+    setAdminNote(note);
+
+    if (req.job_title?.includes("[e-Suvidha]")) {
+      setStudentDocs(esDocs);
+      return; // Skip fetching from Supabase for e-Suvidha
+    }
+
+    // Fetch student's uploaded documents from Storage (For regular Sarkari jobs)
     if (req.user_id) {
       setDocsLoading(true);
       const { data: files } = await supabase.storage
@@ -131,9 +171,19 @@ export default function AdminApplicationsPage() {
   const handleSave = async () => {
     if (!selected) return;
     setSaving(true);
+    
+    let finalNote = adminNote;
+    if (selected.job_title?.includes("[e-Suvidha]")) {
+      const originalNote = selected.admin_notes || "";
+      if (originalNote.includes("--- E-SUVIDHA DETAILS ---")) {
+        const esuvidhaPart = originalNote.substring(originalNote.indexOf("--- E-SUVIDHA DETAILS ---"));
+        finalNote = adminNote.trim() + (adminNote.trim() ? "\n\n" : "") + esuvidhaPart;
+      }
+    }
+
     await supabase
       .from("apply_for_me_requests")
-      .update({ status: newStatus, admin_notes: adminNote })
+      .update({ status: newStatus, admin_notes: finalNote })
       .eq("id", selected.id);
     setSaving(false);
     setSelected(null);
@@ -313,12 +363,26 @@ export default function AdminApplicationsPage() {
         </div>
 
         {/* Filter Tabs & Assign Button */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div className="flex bg-gray-200/50 dark:bg-gray-800 rounded-xl p-1 w-full md:w-auto overflow-x-auto">
+            <button onClick={() => setServiceType("all")} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${serviceType === "all" ? "bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              🌍 All Applications
+            </button>
+            <button onClick={() => setServiceType("sarkari")} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${serviceType === "sarkari" ? "bg-white dark:bg-gray-700 shadow text-orange-600 dark:text-orange-400" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              🏛️ Sarkari Jobs
+            </button>
+            <button onClick={() => setServiceType("esuvidha")} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${serviceType === "esuvidha" ? "bg-white dark:bg-gray-700 shadow text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+              📱 E-Suvidha Services
+            </button>
+          </div>
+        </div>
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex gap-2 flex-wrap">
             {["all", "pending", "in_progress", "needs_info", "completed", "refund_pending", "rejected"].map(f => (
               <button key={f} onClick={() => setFilter(f)}
                 className={`px-4 py-2 rounded-xl text-sm font-bold transition-all capitalize ${filter === f ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50"}`}>
-                {f === "all" ? "All" : STATUS_CONFIG[f]?.label}
+                {f === "all" ? "All Status" : STATUS_CONFIG[f]?.label}
               </button>
             ))}
           </div>
@@ -442,13 +506,31 @@ export default function AdminApplicationsPage() {
 
                 {/* Job Info */}
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-5">
-                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 text-sm mb-2">Job Details</h3>
+                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 text-sm mb-2">Job / Service Details</h3>
                   <p className="font-extrabold text-gray-900 dark:text-white">{selected.job_title}</p>
                   {selected.job_url && (
                     <a href={selected.job_url} target="_blank" rel="noopener noreferrer"
                       className="text-indigo-600 text-sm font-bold flex items-center gap-1 mt-1 hover:underline">
                       <ExternalLink className="w-4 h-4" /> Job Link Kholein
                     </a>
+                  )}
+                  
+                  {eSuvidhaData && (
+                    <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-800">
+                      <h4 className="text-xs font-bold text-indigo-800 dark:text-indigo-400 mb-2 uppercase tracking-wider">E-Suvidha Extra Details</h4>
+                      <div className="space-y-1.5">
+                        {eSuvidhaData.split('\n').map((line, i) => {
+                          const [key, ...valParts] = line.split(':');
+                          if (!key || !valParts.length) return null;
+                          return (
+                            <div key={i} className="text-sm">
+                              <span className="font-bold text-gray-700 dark:text-gray-300">{key}:</span> 
+                              <span className="text-gray-900 dark:text-white ml-1">{valParts.join(':')}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
 

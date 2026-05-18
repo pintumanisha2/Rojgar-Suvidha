@@ -40,6 +40,17 @@ const jobsByState = [
   { href: "/state/west-bengal", label: "West Bengal Govt Jobs" },
 ];
 
+const eSuvidhaLinks = [
+  { href: "/e-suvidha", label: "e-Suvidha Portal" },
+  { href: "/e-suvidha/apply/pan-new", label: "Apply PAN Card Online" },
+  { href: "/e-suvidha/apply/voter-new", label: "Apply Voter ID Online" },
+  { href: "/e-suvidha/apply/udyam", label: "Udyam Aadhaar (MSME)" },
+  { href: "/e-suvidha/apply/pcc", label: "Police Clearance (PCC)" },
+  { href: "/e-suvidha/apply/itr-nil", label: "ITR Filing (Nil Return)" },
+  { href: "/e-suvidha/apply/resume-cv", label: "Professional Resume Maker" },
+  { href: "/e-suvidha/apply/passport", label: "Passport Appointment" },
+];
+
 export default function Footer() {
   const pathname = usePathname();
   if (pathname.startsWith('/admin')) return null;
@@ -49,7 +60,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ── Main Grid ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10 mb-10 sm:mb-14">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-10 mb-10 sm:mb-14">
 
           {/* Brand & Description */}
           <div className="col-span-2 md:col-span-1">
@@ -127,6 +138,21 @@ export default function Footer() {
               ))}
             </ul>
           </div>
+
+          {/* e-Suvidha Services */}
+          <div>
+            <h3 className="text-sm font-bold mb-4 text-blue-400 uppercase tracking-wider">e-Suvidha Services</h3>
+            <ul className="space-y-2.5">
+              {eSuvidhaLinks.map(link => (
+                <li key={link.href}>
+                  <Link href={link.href} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* ── Contact & Social Row ── */}
@@ -190,7 +216,7 @@ export default function Footer() {
             <span className="ml-1">Not affiliated with any government organization.</span>
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-x-5 gap-y-2">
-            <Link href="/about-us" className="text-gray-500 hover:text-white transition-colors text-xs">About Us</Link>
+            <Link href="/about" className="text-gray-500 hover:text-white transition-colors text-xs">About Us</Link>
             <Link href="/contact-us" className="text-gray-500 hover:text-white transition-colors text-xs">Contact Us</Link>
             <Link href="/complaint" className="text-red-400 hover:text-red-300 transition-colors text-xs font-semibold">Help & Support</Link>
             <Link href="/track-application" className="text-gray-500 hover:text-white transition-colors text-xs">Track Application</Link>

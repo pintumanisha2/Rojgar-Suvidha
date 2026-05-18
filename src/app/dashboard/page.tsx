@@ -534,12 +534,19 @@ function DashboardContent() {
                                 <p className="text-xs font-extrabold text-orange-700 dark:text-orange-300">⚠️ Hamari team ko aapka koi document chahiye. Admin note padho aur support se contact karo.</p>
                               </div>
                             )}
-                            {req.admin_notes && !req.admin_notes.startsWith("[Cashfree") && (
-                              <div className="mt-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-3">
-                                <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">💬 Team Message:</p>
-                                <p className="text-sm text-indigo-800 dark:text-indigo-300">{req.admin_notes}</p>
-                              </div>
-                            )}
+                            
+                            {(() => {
+                              const displayAdminNote = req.admin_notes ? req.admin_notes.split('--- E-SUVIDHA DETAILS ---')[0].trim() : "";
+                              if (displayAdminNote && !displayAdminNote.startsWith("[Cashfree")) {
+                                return (
+                                  <div className="mt-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-3">
+                                    <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">💬 Team Message:</p>
+                                    <p className="text-sm text-indigo-800 dark:text-indigo-300">{displayAdminNote}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
 
                           {/* Receipt Download */}

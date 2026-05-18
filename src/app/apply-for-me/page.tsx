@@ -134,7 +134,11 @@ function ApplyForMeContent() {
       }
 
       // 2. Open Cashfree Checkout Modal
-      const cashfree = new (window as any).Cashfree({
+      if (!(window as any).Cashfree) {
+        throw new Error("Payment gateway is still loading. Kripya apna Internet connection check karein.");
+      }
+
+      const cashfree = (window as any).Cashfree({
           mode: process.env.NEXT_PUBLIC_CASHFREE_MODE || "sandbox",
       });
 

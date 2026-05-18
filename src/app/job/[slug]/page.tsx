@@ -289,12 +289,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           </nav>
 
           {/* 1. Header Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 shadow-sm relative overflow-hidden">
-            {job.banner_url && (
-              <div className="absolute inset-0 opacity-10 dark:opacity-20 pointer-events-none">
-                <img src={job.banner_url} alt="Banner" className="w-full h-full object-cover blur-sm" />
-              </div>
-            )}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
             
             <div className="relative z-10">
@@ -325,60 +320,16 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             </div>
           </div>
 
-          {/* LIVE EXAM PROGRESS TRACKER (TIMELINE) */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm mb-6 overflow-hidden">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live Status Tracker
-            </h3>
-            <div className="relative flex flex-col md:flex-row justify-between w-full">
-              {/* Progress Line Background */}
-              <div className="absolute top-4 md:top-1/2 left-4 md:left-10 md:right-10 md:-translate-y-1/2 w-0.5 h-[calc(100%-2rem)] md:h-0.5 md:w-auto bg-gray-200 dark:bg-gray-800" />
-              
-              {/* Progress Line Active (Depends on Status) */}
-              <div 
-                className="absolute top-4 md:top-1/2 left-4 md:left-10 md:-translate-y-1/2 w-0.5 md:h-0.5 md:w-auto bg-green-500 transition-all duration-1000 z-0" 
-                style={{ 
-                  height: typeof window !== 'undefined' && window.innerWidth < 768 
-                    ? (job.status === 'Latest Jobs' ? '20%' : job.status === 'Admit Card' ? '60%' : job.status === 'Result' ? '100%' : '20%')
-                    : 'auto',
-                  width: typeof window !== 'undefined' && window.innerWidth >= 768 
-                    ? (job.status === 'Latest Jobs' ? '20%' : job.status === 'Admit Card' ? '60%' : job.status === 'Result' ? '100%' : '20%')
-                    : 'auto'
-                }} 
+          {/* 2. Job Banner (Thumbnail) */}
+          {job.banner_url && (
+            <div className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm bg-gray-50 dark:bg-gray-900 mb-6">
+              <img 
+                src={job.banner_url} 
+                alt={job.title} 
+                className="w-full h-auto object-contain max-h-[250px] sm:max-h-[350px] mx-auto" 
               />
-
-              {[
-                { title: "Notification Out", active: true, done: true },
-                { title: "Form Open", active: true, done: true },
-                { title: "Admit Card", active: job.status === 'Admit Card' || job.status === 'Result', done: job.status === 'Admit Card' || job.status === 'Result' },
-                { title: "Result Declared", active: job.status === 'Result', done: job.status === 'Result' },
-              ].map((step, index) => (
-                <div key={index} className="relative z-10 flex md:flex-col items-center gap-4 md:gap-2 mb-6 md:mb-0 w-full md:w-1/4">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-4 ${
-                    step.done 
-                      ? 'bg-green-500 border-green-100 dark:border-green-900/50 text-white shadow-lg shadow-green-500/30' 
-                      : 'bg-gray-100 dark:bg-gray-800 border-white dark:border-gray-900 text-gray-400'
-                  } transition-all duration-500`}>
-                    {step.done ? (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-                    )}
-                  </div>
-                  <div className="md:text-center mt-1">
-                    <p className={`text-xs md:text-sm font-bold ${step.active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}`}>
-                      {step.title}
-                    </p>
-                    {step.active && !step.done && (
-                      <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wider mt-0.5">Awaiting</p>
-                    )}
-                  </div>
-                </div>
-              ))}
             </div>
-          </div>
+          )}
 
           {/* Viral Share Module */}
           <div className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm relative overflow-hidden">

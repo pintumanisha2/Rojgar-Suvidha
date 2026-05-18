@@ -1,0 +1,199 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { ArrowLeft, MonitorSmartphone, CheckCircle2, Star, FileText, ShieldCheck } from "lucide-react";
+
+export default function ESuvidhaPage() {
+  const services = [
+    {
+      category: "Identity Cards (Pehchan Patra)",
+      items: [
+        { id: "pan-new", name: "New PAN Card", price: "150", icon: "💳", time: "3-5 Days" },
+        { id: "pan-correction", name: "PAN Card Correction", price: "150", icon: "✏️", time: "5-7 Days" },
+        { id: "voter-new", name: "New Voter ID", price: "100", icon: "🗳️", time: "10-15 Days" },
+        { id: "aadhaar-pvc", name: "Order Aadhaar PVC Card", price: "100", icon: "🪪", time: "7-10 Days" },
+      ]
+    },
+    {
+      category: "Sarkari Praman Patra (Certificates)",
+      items: [
+        { id: "income-cert", name: "Income Certificate (Aay)", price: "100", icon: "📄", time: "7 Days" },
+        { id: "caste-cert", name: "Caste Certificate (Jati)", price: "150", icon: "📜", time: "10-15 Days" },
+        { id: "domicile-cert", name: "Domicile (Niwas)", price: "100", icon: "🏠", time: "7 Days" },
+        { id: "pcc", name: "Police Clearance (Character Cert)", price: "200", icon: "👮", time: "10-15 Days" },
+      ]
+    },
+    {
+      category: "Sarkari Yojna (Govt Schemes)",
+      items: [
+        { id: "eshram", name: "E-Shram Card Registration", price: "80", icon: "👷", time: "24 Hours" },
+        { id: "ayushman", name: "Ayushman Bharat Card", price: "100", icon: "🏥", time: "24 Hours" },
+        { id: "pf-withdrawal", name: "PF Withdrawal Form", price: "200", icon: "💰", time: "48 Hours" },
+      ]
+    },
+    {
+      category: "Business & Tax",
+      items: [
+        { id: "udyam", name: "Udyam Aadhaar (MSME)", price: "200", icon: "🏢", time: "2-3 Days" },
+        { id: "itr-nil", name: "ITR Filing (Nil Return)", price: "300", icon: "📊", time: "3-5 Days" },
+      ]
+    },
+    {
+      category: "Student & Career Services",
+      items: [
+        { id: "admit-card", name: "Admit Card / Result Download", price: "30", icon: "📥", time: "1-2 Hours" },
+        { id: "resume-cv", name: "Professional Resume / CV Maker", price: "99", icon: "📄", time: "24 Hours" },
+      ]
+    },
+    {
+      category: "Premium Services",
+      items: [
+        { id: "passport", name: "Passport Appointment", price: "300", icon: "✈️", time: "24 Hours" },
+        { id: "driving-learner", name: "Learner License Apply", price: "250", icon: "🚗", time: "48 Hours" },
+      ]
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* Back Link */}
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 mb-6 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Home
+        </Link>
+
+        {/* Hero Section */}
+        <div className="bg-gradient-to-br from-blue-700 via-indigo-800 to-violet-900 rounded-3xl p-6 md:p-10 mb-10 text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full text-xs font-bold text-blue-100 mb-4 backdrop-blur-sm border border-white/20">
+                <MonitorSmartphone className="w-4 h-4" />
+                India's First Digital Cyber Cafe
+              </div>
+              <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 tracking-tight">
+                e-Suvidha Kendra Online
+              </h1>
+              <p className="text-blue-100 text-sm md:text-base leading-relaxed mb-6 max-w-xl">
+                Skip the traditional cyber cafe! Apply online for PAN Card, Voter ID, Domicile, and Passport directly from your mobile. Enjoy India's most secure and affordable online form filling service with 100% expert verification.
+              </p>
+              
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                <span className="flex items-center gap-1.5 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-lg">
+                  <ShieldCheck className="w-4 h-4 text-green-400" /> 100% Secure
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-green-400" /> No Rejection
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-lg">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" /> Trusted Experts
+                </span>
+              </div>
+            </div>
+            
+            <div className="shrink-0 w-32 h-32 md:w-48 md:h-48 bg-white/10 rounded-full flex items-center justify-center border-4 border-white/20 backdrop-blur-md shadow-2xl">
+              <span className="text-7xl md:text-8xl">🏠</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Services Grid */}
+        <div className="space-y-10">
+          {services.map((section, idx) => (
+            <div key={idx}>
+              <h2 className="text-xl font-extrabold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
+                {section.category}
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {section.items.map((item) => (
+                  <div key={item.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 group relative overflow-hidden flex flex-col justify-between h-full">
+                    
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150" />
+                    
+                    <div>
+                      <div className="text-4xl mb-4 relative z-10">{item.icon}</div>
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1 leading-tight relative z-10 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-4 relative z-10 flex items-center gap-1">
+                        ⏱️ Est. Time: {item.time}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 relative z-10 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Fees (Starting)</p>
+                        <p className="font-extrabold text-lg text-gray-900 dark:text-white">₹{item.price}</p>
+                      </div>
+                      <Link 
+                        href={`/e-suvidha/apply/${item.id}`}
+                        className="bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-sm"
+                      >
+                        Apply Now
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Info Banner */}
+        <div className="mt-12 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 mb-16">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center shrink-0">
+            <FileText className="w-8 h-8 text-amber-600 dark:text-amber-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">Important Note regarding Government Fees</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              The fees shown above are our <strong className="text-gray-800 dark:text-gray-200">Service Charges</strong> for filling out the forms accurately. Any official government fees (chalan) required for the service will be extra and communicated to you before final submission.
+            </p>
+          </div>
+        </div>
+
+        {/* SEO Content Section */}
+        <article className="mt-16 pt-10 border-t border-gray-200 dark:border-gray-800">
+          <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-400">
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-4">India's Safest Digital Cyber Cafe & Online e-Suvidha Kendra</h2>
+            <p className="mb-4">
+              Welcome to the <strong>Rojgar Suvidha e-Suvidha Portal</strong>, your one-stop solution for all government document applications and registrations. Whether you need to <strong>apply for a new PAN card online</strong>, request a <strong>Voter ID correction</strong>, or register for <strong>Udyam Aadhaar (MSME)</strong>, our expert team provides hassle-free online form filling services. We aim to eliminate the need for traditional cyber cafes by offering a 100% secure, mobile-friendly, and cost-effective digital alternative.
+            </p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6 mb-2">Why Choose Our Online Form Filling Service?</h3>
+            <ul className="list-disc pl-5 space-y-2 mb-6">
+              <li><strong>Zero Rejection Guarantee:</strong> Forms like <em>Passport Appointments</em> and <em>Police Clearance Certificates (PCC)</em> require strict accuracy. Our experts double-check every detail to ensure zero rejections.</li>
+              <li><strong>Lowest Fees:</strong> Get premium services like <em>Resume Making</em>, <em>Income Certificate Apply</em>, and <em>ITR Filing (Nil Return)</em> at pocket-friendly prices tailored for students and youth.</li>
+              <li><strong>Absolute Privacy:</strong> Unlike local shops, we utilize bank-level encryption. Your sensitive documents (Aadhaar, PAN, Bank Passbook) are automatically deleted from our servers post-processing.</li>
+            </ul>
+
+            <h3 className="text-xl font-black text-gray-900 dark:text-white mt-10 mb-4">Frequently Asked Questions (FAQs)</h3>
+            
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800">
+                <h4 className="font-bold text-gray-900 dark:text-white mb-2">Q1. How can I apply for a New PAN Card or Voter ID online?</h4>
+                <p className="text-sm">Simply select the service from our identity cards section above, fill in your basic details, and upload a clear photo of your Aadhaar card and signature. Our team will handle the complex official portal process for you.</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800">
+                <h4 className="font-bold text-gray-900 dark:text-white mb-2">Q2. Is my data safe with the Rojgar Suvidha e-Suvidha portal?</h4>
+                <p className="text-sm">Absolutely. Your data privacy is our highest priority. All uploaded documents are strictly used for your requested service (e.g., MSME Registration, E-Shram) and are purged from our secure servers within 72 hours of task completion.</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800">
+                <h4 className="font-bold text-gray-900 dark:text-white mb-2">Q3. What is the process for ITR Filing (Nil Return) or Udyam Aadhaar?</h4>
+                <p className="text-sm">For business and tax services, select the respective option, upload the required basic documents (PAN, Aadhaar, Bank Details), and pay the nominal service fee. Our tax experts will file your return or register your MSME and upload the official receipt directly to your user dashboard.</p>
+              </div>
+            </div>
+
+          </div>
+        </article>
+
+      </div>
+    </div>
+  );
+}

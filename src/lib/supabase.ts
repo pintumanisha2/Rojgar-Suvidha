@@ -6,9 +6,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 // Custom fetch with timeout to prevent endless hanging
 const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+  const id = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const response = await globalThis.fetch(url, { ...options, signal: controller.signal });
     clearTimeout(id);
     return response;
   } catch (error: any) {
