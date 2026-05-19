@@ -65,14 +65,17 @@ export async function GET(req: Request) {
     if (fileOwnerId === user.id) {
       isAuthorized = true;
     } else {
-      // Check if user is an admin
+      // Check if user is an admin/staff
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
       
-      if (profile && profile.role === "admin") {
+      const adminRoles = ["admin", "super_admin", "form_filler", "staff"];
+      const isStaffEmail = user.email === 'admin@rojgarsuvidha.com' || user.email === 'superadmin@rojgarsuvidha.com';
+      
+      if (isStaffEmail || (profile && adminRoles.includes(profile.role))) {
         isAuthorized = true;
       }
     }
