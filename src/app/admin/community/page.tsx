@@ -73,17 +73,31 @@ export default function AdminCommunityPage() {
 
   const deleteMessage = async (id: string) => {
     if (!confirm("Delete this message from public view?")) return;
-    await supabase.from("chat_messages").update({ is_deleted: true }).eq("id", id);
+    const { error } = await supabase.from("chat_messages").update({ is_deleted: true }).eq("id", id);
+    if (error) {
+      alert("Failed to delete message: " + error.message);
+    } else {
+      setMessages(prev => 
+        prev.map(m => m.id === id ? { ...m, is_deleted: true } : m)
+      );
+    }
   };
 
   const banUser = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to PERMANENTLY BAN ${userName}?\nThey will never be able to chat again.`)) return;
     
     // 1. Ban the user
-    await supabase.from("chat_users").update({ is_banned: true }).eq("id", userId);
+    const { error: banError } = await supabase.from("chat_users").update({ is_banned: true }).eq("id", userId);
+    if (banError) {
+      alert("Failed to ban user: " + banError.message);
+      return;
+    }
     
     // 2. Delete all their previous messages automatically
-    await supabase.from("chat_messages").update({ is_deleted: true }).eq("user_id", userId);
+    const { error: deleteError } = await supabase.from("chat_messages").update({ is_deleted: true }).eq("user_id", userId);
+    if (deleteError) {
+      console.warn("Failed to delete user's past messages:", deleteError.message);
+    }
     
     alert(`${userName} has been banned and all their messages deleted.`);
     fetchMessages();

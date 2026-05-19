@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2, ArrowDown } from "lucide-react";
+import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2, ArrowDown, Trash2 } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -18,11 +18,30 @@ interface ChatMessage {
   };
 }
 
-const BAD_WORDS = ["gali", "badword1", "badword2"]; // Add actual words here later
+const BAD_WORDS_SUBSTRING = [
+  "chutiya", "madarchod", "behenchod", "bhenchod", "harami", "kamina", "kamine",
+  "asshole", "bastard", "bhosdike", "bhosadi", "laundiya", "randi"
+];
+
+const BAD_WORDS_EXACT = [
+  "fuck", "bitch", "gandu", "bsdk", "mc", "bc", "chut", "lund", "lauda",
+  "kutta", "kutti", "saala", "saali", "gali"
+];
+
 const isMessageClean = (text: string) => {
-  const lower = text.toLowerCase();
-  if (BAD_WORDS.some(word => lower.includes(word))) return false;
+  // Convert to lowercase and normalize common spacer symbols to check substrings
+  const cleanText = text.toLowerCase().replace(/[\s\-_.*\n]/g, "");
+  
+  // 1. Check substring bad words
+  if (BAD_WORDS_SUBSTRING.some(word => cleanText.includes(word))) return false;
+  
+  // 2. Check exact words (split by common word boundaries)
+  const words = text.toLowerCase().split(/[\s\-_.*,\n]+/);
+  if (words.some(word => BAD_WORDS_EXACT.includes(word))) return false;
+  
+  // 3. Check for 10-digit mobile numbers (anti-spam)
   if (/\d{10}/.test(text.replace(/[\s-]/g, ""))) return false;
+  
   return true;
 };
 
@@ -336,6 +355,22 @@ export default function AspirantsCircleDrawer() {
     }
   };
 
+  const handleDeleteMessage = async (msgId: string) => {
+    if (!confirm("Are you sure you want to delete this message?")) return;
+    const { error } = await supabase
+      .from("chat_messages")
+      .update({ is_deleted: true })
+      .eq("id", msgId);
+      
+    if (error) {
+      alert("Failed to delete message: " + error.message);
+    } else {
+      setMessages(prev =>
+        prev.map(m => m.id === msgId ? { ...m, is_deleted: true } : m)
+      );
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -493,16 +528,28 @@ export default function AspirantsCircleDrawer() {
                           )}
 
                           {/* Text Bubble */}
-                          <div className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed ${
-                            isDeleted 
-                              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 italic border border-gray-200 dark:border-gray-700'
-                              : isAdmin
-                                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border border-indigo-200/50 dark:border-indigo-900/50'
-                                : isMe 
-                                  ? 'bg-indigo-600 text-white shadow-sm' 
-                                  : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 shadow-sm'
-                          } ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}>
-                            {isDeleted ? "This message was deleted by Admin." : msg.text_content}
+                          <div className={`flex items-center gap-1.5 group/msg ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed ${
+                              isDeleted 
+                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 italic border border-gray-200 dark:border-gray-700'
+                                : isAdmin
+                                  ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border border-indigo-200/50 dark:border-indigo-900/50'
+                                  : isMe 
+                                    ? 'bg-indigo-600 text-white shadow-sm' 
+                                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 shadow-sm'
+                            } ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}>
+                              {isDeleted ? "This message was deleted by Admin." : msg.text_content}
+                            </div>
+                            
+                            {myRole === 'admin' && !isDeleted && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="opacity-0 group-hover/msg:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all shrink-0 cursor-pointer"
+                                title="Delete Message"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                           
                           {/* Time */}
