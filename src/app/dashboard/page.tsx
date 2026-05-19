@@ -69,6 +69,15 @@ function DashboardContent() {
     fetchUser();
   }, [router]);
 
+  useEffect(() => {
+    if (searchParams.get("openChat") === "true") {
+      // Small timeout to ensure components are mounted and event listener is ready
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
+      }, 500);
+    }
+  }, [searchParams]);
+
   // Poll for live OTP requests (every 4 seconds)
   useEffect(() => {
     if (!user) return;
@@ -291,6 +300,10 @@ function DashboardContent() {
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <Lock className="w-5 h-5" /> Digital Locker
               </Link>
+              <button onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <span className="text-base shrink-0">💬</span> Aspirants Circle
+              </button>
               <button onClick={() => setActiveTab("applications")}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "applications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <Briefcase className="w-5 h-5" /> My Applications
@@ -374,6 +387,28 @@ function DashboardContent() {
                   </div>
                 </div>
               </Link>
+
+              {/* Aspirants Circle CTA Card */}
+              <div 
+                onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
+                className="group bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-7 text-white shadow-xl shadow-green-500/20 flex items-center gap-6 hover:scale-[1.01] transition-transform mt-6 cursor-pointer"
+              >
+                <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center shrink-0 border border-white/20 backdrop-blur-sm">
+                  <span className="text-3xl leading-none">💬</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-black">Aspirants Circle</h3>
+                    <span className="text-[10px] font-extrabold bg-green-400/20 text-green-200 border border-green-400/30 px-2 py-0.5 rounded-full uppercase tracking-widest">Live Group Chat</span>
+                  </div>
+                  <p className="text-green-100 text-sm font-medium">
+                    Discuss exams, syllabus, admit cards, and results with fellow aspirants from all over India!
+                  </p>
+                </div>
+                <div className="shrink-0 bg-white/10 hover:bg-white/20 rounded-xl px-4 py-2.5 font-bold text-sm border border-white/20 transition-colors">
+                  Join Chat →
+                </div>
+              </div>
 
               {/* Danger Zone (Account Deletion) */}
               <div className="mt-8 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200 dark:border-red-800/30 p-6 md:p-8">

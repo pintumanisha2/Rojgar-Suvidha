@@ -273,12 +273,14 @@ export default function Navbar() {
                 >
                   🏢 Private Jobs
                 </Link>
-                <Link 
-                  href="/community"
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${pathname === '/community' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
-                >
-                  💬 Chaupal
-                </Link>
+                {user && (
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all text-white/70 hover:text-white hover:bg-white/10"
+                  >
+                    💬 Aspirants Circle
+                  </button>
+                )}
               </div>
 
               {/* Right Controls */}
@@ -594,13 +596,17 @@ export default function Navbar() {
                 >
                   🏢 Private Jobs
                 </Link>
-                <Link 
-                  href="/community"
-                  onClick={() => setIsMobileOpen(false)}
-                  className={`w-full flex justify-center items-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-bold transition-all ${pathname === '/community' ? 'bg-green-500 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm'}`}
-                >
-                  💬 Live Chaupal
-                </Link>
+                {user && (
+                  <button 
+                    onClick={() => {
+                      setIsMobileOpen(false);
+                      window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
+                    }}
+                    className="w-full flex justify-center items-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-bold transition-all bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm"
+                  >
+                    💬 Live Aspirants Circle
+                  </button>
+                )}
               </div>
             </div>
 

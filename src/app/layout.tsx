@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { PublicHeader, PublicFooter } from "@/components/layout/PublicUI";
 import FloatingSocials from "@/components/layout/FloatingSocials";
 import AIChatBot from "@/components/layout/AIChatBot";
+import AspirantsCircleDrawer from "@/components/layout/AspirantsCircleDrawer";
 import PushNotificationPrompt from "@/components/layout/PushNotificationPrompt";
 import BottomNav from "@/components/layout/BottomNav";
 import TopLoader from "@/components/layout/TopLoader";
@@ -237,6 +238,7 @@ export default function RootLayout({
           <PublicFooter />
           <FloatingSocials />
           <AIChatBot />
+          <AspirantsCircleDrawer />
           <PushNotificationPrompt />
           <BottomNav />
           <AnalyticsTracker />
