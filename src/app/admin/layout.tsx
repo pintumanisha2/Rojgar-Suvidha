@@ -18,7 +18,9 @@ const navItems = [
   { href: "/admin/jobs", label: "Jobs Management", icon: BookOpen },
   { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
   { href: "/admin/banners", label: "Banner", icon: ImageIcon },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell }, // FIX: was missing from sidebar
+  { href: "/admin/community", label: "Community Chat", icon: Users },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/job-scout", label: "Job Scout (Auto Tracker)", icon: Bell },
   { href: "/admin/direct-form", label: "Direct Form", icon: BarChart2 },
   { href: "/admin/coupons", label: "Coupon", icon: Ticket },
   { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
@@ -198,7 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const getAllowedNavItems = () => {
     if (userRole === "super_admin") return navItems;
     if (userRole === "admin") return navItems.filter(item => item.href !== "/admin/payments");
-    if (userRole === "content_writer") return navItems.filter(item => ["/admin", "/admin/jobs", "/admin/ai-writer"].includes(item.href));
+    if (userRole === "content_writer") return navItems.filter(item => ["/admin", "/admin/jobs", "/admin/ai-writer", "/admin/job-scout"].includes(item.href));
     if (userRole === "form_filler") return navItems.filter(item => ["/admin", "/admin/applications"].includes(item.href));
     return [];
   };

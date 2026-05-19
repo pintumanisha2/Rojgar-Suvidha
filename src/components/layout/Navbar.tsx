@@ -260,19 +260,24 @@ export default function Navbar() {
                 </div>
               </Link>
 
-              {/* Central Premium Toggle (Desktop) */}
               <div className="hidden md:flex items-center bg-black/20 p-1 rounded-xl border border-white/10 backdrop-blur-md">
                 <Link 
                   href="/"
-                  className={`flex items-center gap-2 px-5 py-1.5 rounded-lg text-sm font-bold transition-all ${!isPrivate ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${!isPrivate && pathname !== '/community' ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
                 >
                   🏛️ Govt Jobs
                 </Link>
                 <Link 
                   href="/private-jobs"
-                  className={`flex items-center gap-2 px-5 py-1.5 rounded-lg text-sm font-bold transition-all ${isPrivate ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${isPrivate ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
                 >
                   🏢 Private Jobs
+                </Link>
+                <Link 
+                  href="/community"
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${pathname === '/community' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                >
+                  💬 Chaupal
                 </Link>
               </div>
 
@@ -574,20 +579,27 @@ export default function Navbar() {
             
             {/* Mobile Govt / Private Toggle */}
             <div className="p-4 pb-0">
-              <div className="flex items-center bg-gray-100 dark:bg-gray-900 p-1 rounded-xl w-full">
+              <div className="flex flex-wrap items-center bg-gray-100 dark:bg-gray-900 p-1 rounded-xl w-full gap-1">
                 <Link 
                   href="/"
                   onClick={() => setIsMobileOpen(false)}
-                  className={`flex-1 flex justify-center items-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${!isPrivate ? 'bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-500'}`}
+                  className={`flex-1 flex justify-center items-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${!isPrivate && pathname !== '/community' ? 'bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-500 hover:bg-white/50'}`}
                 >
                   🏛️ Govt Jobs
                 </Link>
                 <Link 
                   href="/private-jobs"
                   onClick={() => setIsMobileOpen(false)}
-                  className={`flex-1 flex justify-center items-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${isPrivate ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500'}`}
+                  className={`flex-1 flex justify-center items-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${isPrivate ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 hover:bg-white/50'}`}
                 >
                   🏢 Private Jobs
+                </Link>
+                <Link 
+                  href="/community"
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`w-full flex justify-center items-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-bold transition-all ${pathname === '/community' ? 'bg-green-500 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm'}`}
+                >
+                  💬 Live Chaupal
                 </Link>
               </div>
             </div>
