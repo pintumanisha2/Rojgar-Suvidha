@@ -32,6 +32,7 @@ export default function ApplyPage() {
   // Document Files State: { "Passport Size Photo": FileObject }
   const [documentFiles, setDocumentFiles] = useState<{[key: string]: File | null}>({});
   const [lockerDocs, setLockerDocs] = useState<{[key: string]: string}>({}); // URLs from locker
+  const [token, setToken] = useState("");
 
 
 
@@ -80,6 +81,7 @@ export default function ApplyPage() {
         }
 
         if (session) {
+          setToken(session.access_token);
           // Auto-fill profile data
           const { data: profileData } = await supabase
             .from("profiles")
@@ -219,26 +221,46 @@ export default function ApplyPage() {
     setIsSubmitting(true);
 
     try {
-      // 1. Upload Documents to Supabase Storage or use Locker URLs
+      // 1. Upload Documents to Backblaze B2 or use Locker URLs
       const uploadedUrls: {[key: string]: string} = { ...lockerDocs }; // Pre-fill with locker
       
       for (const [docName, file] of Object.entries(documentFiles)) {
         if (file) {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `${formData.phone}/${fileName}`;
+          // Request upload URL from Next.js backend API
+          const res = await fetch("/api/locker/upload-url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              contentType: file.type
+            })
+          });
 
-          const { error: uploadError } = await supabase.storage
-            .from('user_documents')
-            .upload(filePath, file);
-
-          if (uploadError) {
-            console.error("Upload error for", docName, uploadError);
-            throw new Error(`Failed to upload ${docName}`);
+          const resData = await res.json();
+          if (!res.ok) {
+            throw new Error(resData.error || `Failed to get upload URL for ${docName}`);
           }
 
-          const { data: publicUrlData } = supabase.storage.from('user_documents').getPublicUrl(filePath);
-          uploadedUrls[docName] = publicUrlData.publicUrl;
+          const { uploadUrl, key } = resData;
+
+          // Upload file directly to Backblaze B2 using PUT request
+          const uploadRes = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": file.type
+            },
+            body: file
+          });
+
+          if (!uploadRes.ok) {
+            throw new Error(`Failed to upload ${docName} to Backblaze`);
+          }
+
+          // Construct the secure relative view URL
+          uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;
         }
       }
 
