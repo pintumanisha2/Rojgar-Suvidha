@@ -338,14 +338,12 @@ export default function Navbar() {
                 </button>
 
                 {/* Aspirants Adda (Desktop only) */}
-                {user && (
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
-                    className="hidden sm:flex items-center gap-2 ml-1 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 hover:text-white rounded-xl text-sm font-bold transition-all duration-200 border border-emerald-400/20"
-                  >
-                    <span>💬 Aspirants Adda</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
+                  className="hidden sm:flex items-center gap-2 ml-1 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 hover:text-white rounded-xl text-sm font-bold transition-all duration-200 border border-emerald-400/20"
+                >
+                  <span>💬 Aspirants Adda</span>
+                </button>
 
                 {/* Track Application (Desktop only) */}
                 <Link
@@ -598,17 +596,15 @@ export default function Navbar() {
                 >
                   🏢 Private Jobs
                 </Link>
-                {user && (
-                  <button 
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
-                    }}
-                    className="w-full flex justify-center items-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-bold transition-all bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm"
-                  >
-                    💬 Live Aspirants Adda
-                  </button>
-                )}
+                <button 
+                  onClick={() => {
+                    setIsMobileOpen(false);
+                    window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
+                  }}
+                  className="w-full flex justify-center items-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-bold transition-all bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm"
+                >
+                  💬 Live Aspirants Adda
+                </button>
               </div>
             </div>
 
