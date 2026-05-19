@@ -67,13 +67,17 @@ function LoginContent() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
-    // FIX: Redirect to profile-setup only for new users.
-    // We send to /profile-setup which already checks if profile exists and
-    // redirects to dashboard if it does. So returning users are handled correctly.
+    
+    // Determine redirect base: default to window.location.origin, but fallback to Vercel if running in Capacitor local webview
+    let redirectBase = typeof window !== "undefined" ? window.location.origin : "https://rojgar-suvidha.vercel.app";
+    if (redirectBase.includes("localhost") || redirectBase.includes("capacitor://")) {
+      redirectBase = "https://rojgar-suvidha.vercel.app";
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`,
+        redirectTo: `${redirectBase}/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`,
       }
     });
     if (error) setError(error.message);
