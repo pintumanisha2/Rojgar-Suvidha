@@ -337,13 +337,13 @@ export default function Navbar() {
                   {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
 
-                {/* Aspirants Circle (Desktop only) */}
+                {/* Aspirants Adda (Desktop only) */}
                 {user && (
                   <button
                     onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
                     className="hidden sm:flex items-center gap-2 ml-1 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 hover:text-white rounded-xl text-sm font-bold transition-all duration-200 border border-emerald-400/20"
                   >
-                    <span>💬 Aspirants Circle</span>
+                    <span>💬 Aspirants Adda</span>
                   </button>
                 )}
 
@@ -606,7 +606,7 @@ export default function Navbar() {
                     }}
                     className="w-full flex justify-center items-center gap-2 py-2.5 mt-1 rounded-lg text-sm font-bold transition-all bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm"
                   >
-                    💬 Live Aspirants Circle
+                    💬 Live Aspirants Adda
                   </button>
                 )}
               </div>

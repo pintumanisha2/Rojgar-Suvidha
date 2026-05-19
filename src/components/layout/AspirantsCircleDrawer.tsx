@@ -283,7 +283,7 @@ export default function AspirantsCircleDrawer() {
             </div>
             <div>
               <h2 className="font-extrabold text-white text-base leading-tight flex items-center gap-2">
-                Aspirants Circle
+                Aspirants Adda
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-green-500 text-white animate-pulse">LIVE</span>
               </h2>
               <p className="text-[11px] text-indigo-100 mt-0.5">India's Live Student Discussion Forum</p>
@@ -312,7 +312,7 @@ export default function AspirantsCircleDrawer() {
             </div>
             <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Login Required</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6 leading-relaxed">
-              Aspirants Circle is exclusive to registered students. Log in to discuss exams, results, and syllabus with other aspirants.
+              Aspirants Adda is exclusive to registered students. Log in to discuss exams, results, and syllabus with other aspirants.
             </p>
             <a 
               href="/login?redirect=/dashboard"
