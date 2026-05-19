@@ -52,6 +52,10 @@ export default function AspirantsCircleDrawer() {
   }, []);
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent("aspirantsCircleStateChange", { detail: { isOpen } }));
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
     
     // Check session and profile when drawer opens

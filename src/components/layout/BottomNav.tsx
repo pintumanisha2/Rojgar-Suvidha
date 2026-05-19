@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, Bookmark, UserCircle } from "lucide-react";
+import { Home, Briefcase, Bookmark, UserCircle, MessageSquare } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 export default function BottomNav() {
@@ -10,6 +10,7 @@ export default function BottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [tappedItem, setTappedItem] = useState<string | null>(null);
   const lastScrollYRef = useRef(0);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // FIX: All hooks MUST be called before any conditional return
   useEffect(() => {
@@ -30,6 +31,21 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [pathname]);
 
+  useEffect(() => {
+    const handleStateChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsChatOpen(!!customEvent.detail?.isOpen);
+    };
+    window.addEventListener("aspirantsCircleStateChange", handleStateChange);
+    
+    // Check initial search param
+    if (typeof window !== "undefined" && window.location.search.includes("openChat=true")) {
+      setIsChatOpen(true);
+    }
+
+    return () => window.removeEventListener("aspirantsCircleStateChange", handleStateChange);
+  }, []);
+
   if (pathname.startsWith("/admin")) return null;
 
   const navItems = [
@@ -37,26 +53,33 @@ export default function BottomNav() {
       name: "Home",
       href: "/",
       icon: Home,
-      // Psychology: Active state is clear, matches mental model
-      activeCheck: pathname === "/",
+      activeCheck: !isChatOpen && pathname === "/",
     },
     {
       name: "Jobs",
       href: "/latest-jobs",
       icon: Briefcase,
-      activeCheck: pathname === "/latest-jobs" || pathname.startsWith("/latest-jobs/") || pathname.startsWith("/job/"),
+      activeCheck: !isChatOpen && (pathname === "/latest-jobs" || pathname.startsWith("/latest-jobs/") || pathname.startsWith("/job/")),
+    },
+    {
+      name: "Adda",
+      onClick: () => {
+        window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
+      },
+      icon: MessageSquare,
+      activeCheck: isChatOpen,
     },
     {
       name: "Saved",
       href: "/saved-jobs",
       icon: Bookmark,
-      activeCheck: pathname === "/saved-jobs" || pathname.startsWith("/saved-jobs/"),
+      activeCheck: !isChatOpen && (pathname === "/saved-jobs" || pathname.startsWith("/saved-jobs/")),
     },
     {
-      name: "My Account",
+      name: "Account",
       href: "/dashboard",
       icon: UserCircle,
-      activeCheck: pathname === "/dashboard" || pathname.startsWith("/dashboard/"),
+      activeCheck: !isChatOpen && (pathname === "/dashboard" || pathname.startsWith("/dashboard/")),
     },
   ];
 
@@ -85,15 +108,8 @@ export default function BottomNav() {
               const isActive = item.activeCheck;
               const isTapped = tappedItem === item.name;
 
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => handleTap(item.name)}
-                  className="flex flex-col items-center justify-center flex-1 gap-0.5 relative py-1 transition-all"
-                  aria-label={item.name}
-                  aria-current={isActive ? "page" : undefined}
-                >
+              const content = (
+                <>
                   {/* Psychology: Active pill indicator — clear, unambiguous feedback */}
                   {isActive && (
                     <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-500 rounded-full" />
@@ -126,6 +142,35 @@ export default function BottomNav() {
                   >
                     {item.name}
                   </span>
+                </>
+              );
+
+              if ('onClick' in item && item.onClick) {
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      handleTap(item.name);
+                      item.onClick();
+                    }}
+                    className="flex flex-col items-center justify-center flex-1 gap-0.5 relative py-1 transition-all outline-none"
+                    aria-label={item.name}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.name}
+                  href={'href' in item ? item.href : '#'}
+                  onClick={() => handleTap(item.name)}
+                  className="flex flex-col items-center justify-center flex-1 gap-0.5 relative py-1 transition-all"
+                  aria-label={item.name}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {content}
                 </Link>
               );
             })}
