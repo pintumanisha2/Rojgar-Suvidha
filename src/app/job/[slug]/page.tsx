@@ -11,6 +11,7 @@ import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
 import SaveJobButton from "@/components/ui/SaveJobButton";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import TrackJobViewWrapper from "@/components/ui/TrackJobViewWrapper";
+import AgeCalculator from "@/components/ui/AgeCalculator";
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -395,6 +396,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               </div>
             );
           })()}
+
+          {/* Age Calculator (Lightweight & SEO Friendly) */}
+          <AgeCalculator />
 
           {/* Blog Post Content Area */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-8 shadow-sm">
