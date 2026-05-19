@@ -97,6 +97,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
   };
 
   const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState("");
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -126,6 +127,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
           return;
         }
         setUser(session.user);
+        setToken(session.access_token);
         const { data: profileData } = await supabase
           .from("profiles").select("*").eq("id", session.user.id).single();
         setProfile(profileData);
@@ -175,26 +177,45 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
     setError(null);
 
     try {
-      // 1. Upload Files to Cloudinary
+      // 1. Upload Files to Backblaze B2
       const uploadedUrls: Record<string, string> = {};
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "demo";
-      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "unsigned_preset";
 
       for (const [docName, file] of Object.entries(files)) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", uploadPreset);
-        
-        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        // Request upload URL from Next.js backend API
+        const res = await fetch("/api/locker/upload-url", {
           method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            contentType: file.type
+          })
         });
 
-        const uploadData = await uploadRes.json();
-        
-        if (!uploadRes.ok) throw new Error(`Document upload failed (${docName}): ${uploadData.error?.message || "Unknown error"}`);
-        
-        uploadedUrls[docName] = uploadData.secure_url;
+        const resData = await res.json();
+        if (!res.ok) {
+          throw new Error(resData.error || `Failed to get upload URL for ${docName}`);
+        }
+
+        const { uploadUrl, key } = resData;
+
+        // Upload file directly to Backblaze B2 using PUT request
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type
+          },
+          body: file
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Failed to upload ${docName} to Backblaze`);
+        }
+
+        // Construct the secure relative view URL
+        uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;
       }
 
       let formattedNotes = Object.entries(extraData).map(([k, v]) => `${k}: ${v}`).join('\n');

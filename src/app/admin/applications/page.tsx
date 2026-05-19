@@ -31,6 +31,7 @@ export default function AdminApplicationsPage() {
   const [docsLoading, setDocsLoading] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [token, setToken] = useState("");
   // OTP system
   const [otpRequest, setOtpRequest] = useState<any>(null);
   const [otpTimer, setOtpTimer] = useState(0);
@@ -41,19 +42,37 @@ export default function AdminApplicationsPage() {
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user.email) {
-        setCurrentUserEmail(session.user.email);
-        const { data } = await supabase.from('admin_roles').select('role').eq('email', session.user.email).single();
-        if (data) setCurrentUserRole(data.role);
-        // Fallback for primary owner
-        if (session.user.email === 'admin@rojgarsuvidha.com' || session.user.email === 'superadmin@rojgarsuvidha.com') {
-           setCurrentUserRole('super_admin');
+      if (session) {
+        setToken(session.access_token);
+        if (session.user.email) {
+          setCurrentUserEmail(session.user.email);
+          
+          // Fetch role from profiles
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", session.user.id)
+            .single();
+            
+          if (profile?.role) {
+            setCurrentUserRole(profile.role);
+          }
+          // Fallback for primary owner
+          if (session.user.email === 'admin@rojgarsuvidha.com' || session.user.email === 'superadmin@rojgarsuvidha.com') {
+             setCurrentUserRole('super_admin');
+          }
         }
       }
       fetchRequests();
     };
     init();
   }, []);
+
+  const getDocUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url;
+    return `${url}&token=${token}`;
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -131,9 +150,12 @@ export default function AdminApplicationsPage() {
         
         const docLines = subparts[1].trim().split('\n');
         for (const line of docLines) {
-          const idx = line.indexOf(': http');
+          const idx = line.indexOf(': ');
           if (idx !== -1) {
-            esDocs.push({ name: line.substring(0, idx).trim(), url: line.substring(idx + 2).trim() });
+            const urlVal = line.substring(idx + 2).trim();
+            if (urlVal.startsWith('http') || urlVal.startsWith('/api/locker/view')) {
+              esDocs.push({ name: line.substring(0, idx).trim(), url: urlVal });
+            }
           }
         }
       } else {
@@ -558,7 +580,7 @@ export default function AdminApplicationsPage() {
                         const key = doc.name.split(".")[0];
                         const label = docLabels[key] || doc.name;
                         return (
-                          <a key={doc.name} href={doc.url} target="_blank" rel="noopener noreferrer"
+                          <a key={doc.name} href={getDocUrl(doc.url)} target="_blank" rel="noopener noreferrer"
                             className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-indigo-400 transition-all group">
                             <span className="text-sm font-bold text-gray-800 dark:text-white">{label}</span>
                             <span className="text-xs font-bold text-indigo-600 group-hover:underline flex items-center gap-1">
