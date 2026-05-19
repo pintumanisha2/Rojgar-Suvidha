@@ -26,6 +26,13 @@ export default function DigitalLockerPage() {
   const [loading, setLoading] = useState(true);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
+  // Custom documents state
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customFile, setCustomFile] = useState<File | null>(null);
+  const [uploadingCustom, setUploadingCustom] = useState(false);
+  const [customUploadError, setCustomUploadError] = useState("");
+
   useEffect(() => {
     const fetchLocker = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -61,15 +68,18 @@ export default function DigitalLockerPage() {
     setUploadingDoc(docType);
     
     try {
-      // 1. Compress Image (Max 200KB) to save storage
-      const options = {
-        maxSizeMB: 0.2, // 200 KB
-        maxWidthOrHeight: 1200,
-        useWebWorker: true,
-      };
-      
-      const compressedFile = await imageCompression(file, options);
-      console.log(`Compressed ${docType} from ${file.size/1024}KB to ${compressedFile.size/1024}KB`);
+      let fileToUpload = file;
+      if (file.type.startsWith("image/")) {
+        // 1. Compress Image (Max 200KB) to save storage
+        const options = {
+          maxSizeMB: 0.2, // 200 KB
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        };
+        
+        fileToUpload = await imageCompression(file, options);
+        console.log(`Compressed ${docType} from ${file.size/1024}KB to ${fileToUpload.size/1024}KB`);
+      }
 
       // 2. Request upload URL from Next.js backend API
       const res = await fetch("/api/locker/upload-url", {
@@ -80,7 +90,7 @@ export default function DigitalLockerPage() {
         },
         body: JSON.stringify({
           fileName: file.name,
-          contentType: compressedFile.type
+          contentType: fileToUpload.type
         })
       });
 
@@ -95,9 +105,9 @@ export default function DigitalLockerPage() {
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": compressedFile.type
+          "Content-Type": fileToUpload.type
         },
-        body: compressedFile
+        body: fileToUpload
       });
 
       if (!uploadRes.ok) {
@@ -167,6 +177,79 @@ export default function DigitalLockerPage() {
     return `${url}&token=${token}`; // Relative backend secure URL
   };
 
+  const handleCustomUpload = async () => {
+    if (!customName.trim()) {
+      setCustomUploadError("Please enter a document name.");
+      return;
+    }
+    if (!customFile) {
+      setCustomUploadError("Please select a file to upload.");
+      return;
+    }
+    if (lockerDocs[customName.trim()]) {
+      setCustomUploadError("A document with this name already exists.");
+      return;
+    }
+
+    setUploadingCustom(true);
+    setCustomUploadError("");
+
+    try {
+      let fileToUpload = customFile;
+      if (customFile.type.startsWith("image/")) {
+        const options = {
+          maxSizeMB: 0.2,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        };
+        fileToUpload = await imageCompression(customFile, options);
+      }
+
+      const res = await fetch("/api/locker/upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fileName: customFile.name,
+          contentType: fileToUpload.type
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to get upload URL");
+
+      const { uploadUrl, key } = resData;
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fileToUpload.type },
+        body: fileToUpload
+      });
+
+      if (!uploadRes.ok) throw new Error("Failed to upload file to Backblaze");
+
+      const newUrl = `/api/locker/view?key=${encodeURIComponent(key)}`;
+      const updatedDocs = { ...lockerDocs, [customName.trim()]: newUrl };
+
+      const { error: dbError } = await supabase
+        .from("user_locker")
+        .upsert({ user_id: user.id, documents: updatedDocs });
+
+      if (dbError) throw dbError;
+
+      setLockerDocs(updatedDocs);
+      setShowAddCustom(false);
+      setCustomName("");
+      setCustomFile(null);
+    } catch (err: any) {
+      setCustomUploadError(err.message || "Upload failed");
+    } finally {
+      setUploadingCustom(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
 
   return (
@@ -212,6 +295,8 @@ export default function DigitalLockerPage() {
           {STANDARD_DOCS.map((docType) => {
             const isUploaded = !!lockerDocs[docType];
             const isUploading = uploadingDoc === docType;
+            const fileUrl = lockerDocs[docType];
+            const isPdf = fileUrl && (fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("application%2Fpdf"));
 
             return (
               <div 
@@ -227,8 +312,12 @@ export default function DigitalLockerPage() {
                       </button>
                     </div>
                     
-                    <div className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden mb-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <img src={getDocUrl(lockerDocs[docType])} alt={docType} className="w-full h-full object-cover" />
+                    <div className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden mb-4 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                      {isPdf ? (
+                        <FileText className="w-12 h-12 text-indigo-500" />
+                      ) : (
+                        <img src={getDocUrl(fileUrl)} alt={docType} className="w-full h-full object-cover" />
+                      )}
                     </div>
                     
                     <h3 className="font-bold text-gray-900 dark:text-white mb-1">{docType}</h3>
@@ -250,13 +339,13 @@ export default function DigitalLockerPage() {
                           <UploadCloud className="w-8 h-8" />
                         </div>
                         <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">{docType}</h3>
-                        <p className="text-xs text-gray-400 font-medium">Click to upload (JPG/PNG)</p>
+                        <p className="text-xs text-gray-400 font-medium">Click to upload (JPG/PNG/PDF)</p>
                       </>
                     )}
                     <input 
                       type="file" 
                       className="hidden" 
-                      accept="image/*" 
+                      accept="image/*,application/pdf" 
                       disabled={isUploading}
                       onChange={(e) => handleFileUpload(docType, e.target.files?.[0] || null)} 
                     />
@@ -265,6 +354,108 @@ export default function DigitalLockerPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Custom Documents Section */}
+        <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-500" /> Other Documents / Certificates
+              </h2>
+              <p className="text-xs text-gray-500">Upload custom files that are not in the standard list above.</p>
+            </div>
+            <button 
+              onClick={() => setShowAddCustom(true)}
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-indigo-500/20"
+            >
+              + Add Custom Document
+            </button>
+          </div>
+
+          {/* Inline form to add custom document */}
+          {showAddCustom && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-md max-w-md space-y-4">
+              <h3 className="font-bold text-gray-900 dark:text-white">New Custom Document</h3>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Document Label (e.g. Income Certificate)</label>
+                <input 
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 dark:text-white"
+                  placeholder="Enter name..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">Select File (Image / PDF)</label>
+                <input 
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setCustomFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
+                />
+              </div>
+              {customUploadError && (
+                <p className="text-xs font-bold text-red-500">{customUploadError}</p>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={handleCustomUpload}
+                  disabled={uploadingCustom}
+                  className="flex-1 py-2 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {uploadingCustom ? <Loader2 className="w-4 h-4 animate-spin" /> : "Upload"}
+                </button>
+                <button 
+                  onClick={() => { setShowAddCustom(false); setCustomName(""); setCustomFile(null); setCustomUploadError(""); }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {Object.keys(lockerDocs).filter(key => !STANDARD_DOCS.includes(key)).length === 0 ? (
+            <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/10 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl">
+              <FileText className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm font-bold text-gray-500">No other documents uploaded yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Object.keys(lockerDocs).filter(key => !STANDARD_DOCS.includes(key)).map((docType) => {
+                const fileUrl = lockerDocs[docType];
+                const isPdf = fileUrl && (fileUrl.toLowerCase().includes(".pdf") || fileUrl.includes("application%2Fpdf"));
+
+                return (
+                  <div 
+                    key={docType} 
+                    className="relative overflow-hidden rounded-3xl border-2 border-indigo-500 bg-white dark:bg-gray-900 p-6 h-full flex flex-col items-center text-center justify-center shadow-lg shadow-indigo-500/5"
+                  >
+                    <div className="absolute top-4 right-4">
+                      <button onClick={() => handleDelete(docType)} className="p-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-500 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden mb-4 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                      {isPdf ? (
+                        <FileText className="w-12 h-12 text-indigo-500" />
+                      ) : (
+                        <img src={getDocUrl(fileUrl)} alt={docType} className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                    
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-1 truncate max-w-full px-2">{docType}</h3>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Safely Stored
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

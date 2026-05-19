@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud } from "lucide-react";
 import Script from "next/script";
+import imageCompression from "browser-image-compression";
 
 // Database of Services
 const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: string[]; docsOptional?: string[]; extraFields: string[] }> = {
@@ -181,6 +182,21 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
       const uploadedUrls: Record<string, string> = {};
 
       for (const [docName, file] of Object.entries(files)) {
+        let fileToUpload = file;
+        if (file.type.startsWith("image/")) {
+          try {
+            const options = {
+              maxSizeMB: 0.2, // 200 KB
+              maxWidthOrHeight: 1200,
+              useWebWorker: true,
+            };
+            fileToUpload = await imageCompression(file, options);
+            console.log(`Compressed ${docName} from ${file.size/1024}KB to ${fileToUpload.size/1024}KB`);
+          } catch (err) {
+            console.error("Compression failed, using original file:", err);
+          }
+        }
+
         // Request upload URL from Next.js backend API
         const res = await fetch("/api/locker/upload-url", {
           method: "POST",
@@ -190,7 +206,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
           },
           body: JSON.stringify({
             fileName: file.name,
-            contentType: file.type
+            contentType: fileToUpload.type
           })
         });
 
@@ -205,9 +221,9 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
         const uploadRes = await fetch(uploadUrl, {
           method: "PUT",
           headers: {
-            "Content-Type": file.type
+            "Content-Type": fileToUpload.type
           },
-          body: file
+          body: fileToUpload
         });
 
         if (!uploadRes.ok) {
