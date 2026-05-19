@@ -108,6 +108,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
   const [extraData, setExtraData] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, File>>({});
   const [lockerDocs, setLockerDocs] = useState<Record<string, string>>({}); // From digital locker
+  const [overriddenDocs, setOverriddenDocs] = useState<Set<string>>(new Set()); // User dismissed locker
   const [trackingId, setTrackingId] = useState("");
   
   const [applicantName, setApplicantName] = useState("");
@@ -162,6 +163,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
   const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
 
   const findLockerMatch = (docName: string): string | null => {
+    if (overriddenDocs.has(docName)) return null; // User dismissed this match
     const target = normalize(docName);
     if (lockerDocs[docName]) return lockerDocs[docName];
     const exactCI = Object.keys(lockerDocs).find(k => normalize(k) === target);
@@ -425,29 +427,74 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
                     const hasFile = !!files[doc];
                     const hasLocker = !!lockerMatch && !hasFile;
                     return (
-                    <div key={`req-${idx}`} className={`relative bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${hasFile || hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
-                      {hasLocker && (
-                        <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">
-                          From Locker 🔒
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{doc} <span className="text-red-500">*</span></p>
-                        {hasLocker ? (
-                          <p className="text-xs text-green-600 font-bold mt-0.5">✅ Auto-filled from your locker</p>
-                        ) : (
-                          <p className="text-xs text-gray-500">Max size 5MB (JPG, PNG, PDF)</p>
+                    <div key={`req-${idx}`} className={`relative bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl border flex flex-col transition-all ${hasFile ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/10' : hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
+                      
+                      {/* Top Badges and Clear buttons */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{doc} <span className="text-red-500">*</span></span>
+                        {hasLocker && (
+                          <div className="flex items-center gap-2">
+                            <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              From Locker 🔒
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setOverriddenDocs(prev => { const n = new Set(prev); n.add(doc); return n; })}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline"
+                            >
+                              ✕ Use different file
+                            </button>
+                          </div>
+                        )}
+                        {hasFile && (
+                          <div className="flex items-center gap-2">
+                            <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              📎 New File
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setFiles(prev => { const n = { ...prev }; delete n[doc]; return n; })}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline"
+                            >
+                              ✕ Remove
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors text-center shrink-0">
-                        {hasFile ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Uploaded</span> : hasLocker ? "Replace" : "Select File"}
-                        <input 
-                          type="file" 
-                          accept=".jpg,.jpeg,.png,.pdf"
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          onChange={(e) => handleFileChange(doc, e)}
-                        />
-                      </label>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-1">
+                        <div>
+                          {hasFile ? (
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Uploaded: {files[doc].name}
+                            </p>
+                          ) : hasLocker ? (
+                            <p className="text-xs text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> ✅ Auto-filled from your locker
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Max size 5MB (JPG, PNG, PDF)</p>
+                          )}
+                          {overriddenDocs.has(doc) && !hasFile && (
+                            <button
+                              type="button"
+                              onClick={() => setOverriddenDocs(prev => { const n = new Set(prev); n.delete(doc); return n; })}
+                              className="mt-1 text-[10px] font-bold text-indigo-500 hover:underline block text-left"
+                            >
+                              ↩ Use locker file instead
+                            </button>
+                          )}
+                        </div>
+                        <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 transition-colors text-center shrink-0">
+                          {hasFile ? "Change File" : hasLocker ? "Replace File" : "Select File"}
+                          <input 
+                            type="file" 
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={(e) => handleFileChange(doc, e)}
+                          />
+                        </label>
+                      </div>
                     </div>
                     );
                   })}
@@ -458,29 +505,74 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
                     const hasFile = !!files[doc];
                     const hasLocker = !!lockerMatch && !hasFile;
                     return (
-                    <div key={`opt-${idx}`} className={`relative bg-white dark:bg-gray-800/10 p-4 rounded-xl border border-dashed flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${hasFile || hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 dark:border-gray-700 opacity-80 hover:opacity-100'}`}>
-                      {hasLocker && (
-                        <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">
-                          From Locker 🔒
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{doc} <span className="text-gray-400 text-xs font-normal">(Optional)</span></p>
-                        {hasLocker ? (
-                          <p className="text-xs text-green-600 font-bold mt-0.5">✅ Auto-filled from your locker</p>
-                        ) : (
-                          <p className="text-xs text-gray-500">Max size 5MB (JPG, PNG, PDF)</p>
+                    <div key={`opt-${idx}`} className={`relative bg-white dark:bg-gray-800/10 p-4 rounded-xl border border-dashed flex flex-col transition-all ${hasFile ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/10' : hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 dark:border-gray-700 opacity-80 hover:opacity-100'}`}>
+                      
+                      {/* Top Badges and Clear buttons */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{doc} <span className="text-gray-400 text-xs font-normal">(Optional)</span></span>
+                        {hasLocker && (
+                          <div className="flex items-center gap-2">
+                            <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              From Locker 🔒
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setOverriddenDocs(prev => { const n = new Set(prev); n.add(doc); return n; })}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline"
+                            >
+                              ✕ Use different file
+                            </button>
+                          </div>
+                        )}
+                        {hasFile && (
+                          <div className="flex items-center gap-2">
+                            <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              📎 New File
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setFiles(prev => { const n = { ...prev }; delete n[doc]; return n; })}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline"
+                            >
+                              ✕ Remove
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors text-center shrink-0">
-                        {hasFile ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Uploaded</span> : hasLocker ? "Replace" : "Select File"}
-                        <input 
-                          type="file" 
-                          accept=".jpg,.jpeg,.png,.pdf"
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          onChange={(e) => handleFileChange(doc, e)}
-                        />
-                      </label>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-1">
+                        <div>
+                          {hasFile ? (
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Uploaded: {files[doc].name}
+                            </p>
+                          ) : hasLocker ? (
+                            <p className="text-xs text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> ✅ Auto-filled from your locker
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Max size 5MB (JPG, PNG, PDF)</p>
+                          )}
+                          {overriddenDocs.has(doc) && !hasFile && (
+                            <button
+                              type="button"
+                              onClick={() => setOverriddenDocs(prev => { const n = new Set(prev); n.delete(doc); return n; })}
+                              className="mt-1 text-[10px] font-bold text-indigo-500 hover:underline block text-left"
+                            >
+                              ↩ Use locker file instead
+                            </button>
+                          )}
+                        </div>
+                        <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 transition-colors text-center shrink-0">
+                          {hasFile ? "Change File" : hasLocker ? "Replace File" : "Select File"}
+                          <input 
+                            type="file" 
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={(e) => handleFileChange(doc, e)}
+                          />
+                        </label>
+                      </div>
                     </div>
                     );
                   })}

@@ -33,6 +33,7 @@ export default function ApplyPage() {
   // Document Files State: { "Passport Size Photo": FileObject }
   const [documentFiles, setDocumentFiles] = useState<{[key: string]: File | null}>({});
   const [lockerDocs, setLockerDocs] = useState<{[key: string]: string}>({}); // URLs from locker
+  const [overriddenDocs, setOverriddenDocs] = useState<Set<string>>(new Set()); // User dismissed locker match
   const [token, setToken] = useState("");
 
 
@@ -197,6 +198,7 @@ export default function ApplyPage() {
   const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
 
   const findLockerMatch = (docName: string): string | null => {
+    if (overriddenDocs.has(docName)) return null; // User dismissed this match
     const target = normalize(docName);
     // 1. Exact match first
     if (lockerDocs[docName]) return lockerDocs[docName];
@@ -603,21 +605,45 @@ export default function ApplyPage() {
                   const hasFile = !!documentFiles[doc];
                   
                   return (
-                    <div key={idx} className={`relative p-4 border border-dashed rounded-2xl transition-colors ${hasFile || hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                    <div key={idx} className={`relative p-4 border rounded-2xl transition-colors ${hasFile ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/10' : hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                      
+                      {/* Locker Badge + Clear Button */}
                       {hasLocker && !hasFile && (
-                        <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">
-                          From Locker 🔒
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-bold bg-indigo-500 text-white px-2 py-0.5 rounded-full">From Locker 🔒</span>
+                          <button
+                            type="button"
+                            onClick={() => setOverriddenDocs(prev => new Set([...prev, doc]))}
+                            className="text-[10px] font-bold text-red-400 hover:text-red-600 underline"
+                          >
+                            ✕ Use different file
+                          </button>
                         </div>
                       )}
-                      <label className="flex flex-col items-center justify-center cursor-pointer min-h-[5rem] text-center">
+
+                      {/* File Badge + Clear Button */}
+                      {hasFile && (
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">📎 New File</span>
+                          <button
+                            type="button"
+                            onClick={() => setDocumentFiles(prev => { const n = {...prev}; delete n[doc]; return n; })}
+                            className="text-[10px] font-bold text-red-400 hover:text-red-600 underline"
+                          >
+                            ✕ Remove
+                          </button>
+                        </div>
+                      )}
+
+                      <label className={`flex flex-col items-center justify-center cursor-pointer min-h-[4rem] text-center ${hasFile || hasLocker ? '' : ''}`}>
                         <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{doc}</span>
                         {hasFile ? (
-                          <span className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
+                          <span className="text-xs text-blue-600 font-bold mt-1 flex items-center gap-1">
                             <CheckCircle2 className="h-3 w-3" /> {documentFiles[doc]?.name}
                           </span>
                         ) : hasLocker ? (
                           <span className="text-xs text-green-600 font-bold mt-1 flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Auto-filled securely
+                            <CheckCircle2 className="h-3 w-3" /> Auto-filled from locker
                           </span>
                         ) : (
                           <span className="text-xs text-indigo-500 mt-1">Click to Upload (PDF/JPG)</span>
@@ -629,6 +655,17 @@ export default function ApplyPage() {
                           onChange={(e) => handleFileChange(doc, e.target.files?.[0] || null)} 
                         />
                       </label>
+
+                      {/* Restore locker match option */}
+                      {overriddenDocs.has(doc) && !hasFile && (
+                        <button
+                          type="button"
+                          onClick={() => setOverriddenDocs(prev => { const n = new Set(prev); n.delete(doc); return n; })}
+                          className="mt-1 text-[10px] font-bold text-indigo-500 hover:underline"
+                        >
+                          ↩ Use locker file instead
+                        </button>
+                      )}
                     </div>
                   );
                 })}
