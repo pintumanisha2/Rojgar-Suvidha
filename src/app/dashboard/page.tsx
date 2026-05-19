@@ -1,12 +1,13 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import {
   UserCircle, FileText, Bookmark, ClipboardCheck,
-  LogOut, CheckCircle2, Loader2, ShieldCheck, Lock, Briefcase, Camera, Trash2
+  LogOut, CheckCircle2, Loader2, ShieldCheck, Lock, Briefcase, Camera, Trash2,
+  ShieldAlert, AlertTriangle, Clock
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
@@ -30,6 +31,50 @@ function DashboardContent() {
   const [otpSubmitting, setOtpSubmitting] = useState(false);
   const [otpSubmitted, setOtpSubmitted] = useState(false);
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0);
+  const [chkSecret, setChkSecret] = useState(false);
+  const [chkNotBank, setChkNotBank] = useState(false);
+  const [chkNoScreenShare, setChkNoScreenShare] = useState(false);
+
+  const lastNotifiedOtpId = useRef<string | null>(null);
+  const lastNotifiedStatus = useRef<Record<string, string>>({});
+
+  const playChimeSound = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start();
+      osc1.stop(ctx.currentTime + 0.25);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
+      gain2.gain.setValueAtTime(0.08, ctx.currentTime + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + 0.12);
+      osc2.stop(ctx.currentTime + 0.4);
+    } catch (e) {
+      console.error("Audio failed to play:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -52,6 +97,13 @@ function DashboardContent() {
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
         setMyRequests(reqData || []);
+
+        // Initialize status notification ref to prevent initial page-load alerts
+        if (reqData) {
+          reqData.forEach((req: any) => {
+            lastNotifiedStatus.current[req.id] = req.status;
+          });
+        }
 
         // FIX: Fetch applications by user_id first, fallback to phone number
         const { data: appData } = await supabase
@@ -78,6 +130,47 @@ function DashboardContent() {
     }
   }, [searchParams]);
 
+  // Poll for live apply requests status changes (every 8 seconds)
+  useEffect(() => {
+    if (!user) return;
+    const checkRequestsStatus = async () => {
+      try {
+        const { data: reqData } = await supabase
+          .from("apply_for_me_requests")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (reqData) {
+          reqData.forEach((req: any) => {
+            const prevStatus = lastNotifiedStatus.current[req.id];
+            
+            // Only trigger alert if status transitions from something else to "in_progress"
+            if (req.status === "in_progress" && prevStatus !== "in_progress") {
+              playChimeSound();
+              if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                new Notification("✍️ Form Filling Started!", {
+                  body: `Aapke "${req.job_title}" form fill hona shuru ho gaya hai. Phone ready rakhein!`,
+                  icon: "/logo-blue.png"
+                });
+              }
+            }
+
+            // Sync the ref
+            lastNotifiedStatus.current[req.id] = req.status;
+          });
+
+          setMyRequests(reqData);
+        }
+      } catch (e) {
+        console.error("Failed to poll requests status:", e);
+      }
+    };
+
+    const poll = setInterval(checkRequestsStatus, 8000);
+    return () => clearInterval(poll);
+  }, [user]);
+
   // Poll for live OTP requests (every 4 seconds)
   useEffect(() => {
     if (!user) return;
@@ -90,11 +183,28 @@ function DashboardContent() {
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       if (data) {
         setOtpAlert(data);
         const secsLeft = Math.max(0, Math.floor((new Date(data.expires_at).getTime() - Date.now()) / 1000));
         setOtpSecondsLeft(secsLeft);
+
+        // Notify user about pending OTP request
+        if (lastNotifiedOtpId.current !== data.id) {
+          lastNotifiedOtpId.current = data.id;
+          playChimeSound();
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            new Notification("🔑 OTP Required - Rojgar Suvidha", {
+              body: `Kripya live verification ke liye OTP enter karein. Secret trust code: ${data.verification_code || "None"}.`,
+              icon: "/logo-blue.png"
+            });
+          }
+        }
+      } else {
+        setOtpAlert(null);
+        setChkSecret(false);
+        setChkNotBank(false);
+        setChkNoScreenShare(false);
       }
     };
     checkOtp();
@@ -118,6 +228,9 @@ function DashboardContent() {
     setOtpSubmitting(false);
     setOtpSubmitted(true);
     setOtpAlert(null);
+    setChkSecret(false);
+    setChkNotBank(false);
+    setChkNoScreenShare(false);
   };
 
   const handleLogout = async () => {
@@ -189,31 +302,85 @@ function DashboardContent() {
       {/* ── LIVE OTP ALERT — appears when team needs OTP ── */}
       {otpAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-red-400 w-full max-w-sm p-6 text-center">
-            {/* Pulsing indicator */}
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <span className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
-              <span className="text-sm font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">LIVE — Team Form Fill Kar Rahi Hai!</span>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-red-500 w-full max-w-md p-6 text-center animate-in zoom-in-95 duration-200">
+            {/* Header Shield */}
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-905 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
+              <ShieldAlert className="w-10 h-10 text-red-600 shrink-0" />
+              <div>
+                <p className="text-[10px] font-extrabold text-red-650 dark:text-red-405 uppercase tracking-wider">⚠️ FRAUD SE BACHEIN (ANTI-SCAM)</p>
+                <p className="text-[11px] text-red-750/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
+                  Hum <strong>KABHI BHI</strong> bank/UPI, Paytm ya payment OTP nahi mangte. Yeh OTP sirf <strong>{otpAlert.job_title}</strong> ke form login ke liye hai.
+                </p>
+              </div>
             </div>
-            <p className="text-gray-700 dark:text-gray-300 text-sm mb-1">
-              <strong className="text-gray-900 dark:text-white">{otpAlert.job_title}</strong>
-            </p>
-            <p className="text-xs text-gray-500 mb-3">
-              Apne phone par SMS/Email dekho — OTP aaya hoga. Yahan enter karo:
+
+            {/* Pulsing indicator */}
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+              <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest">LIVE OTP Request Active</span>
+            </div>
+
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 font-semibold">
+              Apne mobile par government/exam portal se aaya SMS OTP yahan enter karein:
             </p>
 
             {/* Verification code — trust signal */}
             {otpAlert.verification_code && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-xl px-3 py-2 mb-4 text-left flex items-start gap-2">
-                <span className="text-base shrink-0">✅</span>
-                <p className="text-xs text-green-700 dark:text-green-300 leading-relaxed">
-                  <strong>Aapka Secret Code:</strong>{" "}
-                  <span className="font-mono font-extrabold tracking-widest text-green-800 dark:text-green-200">{otpAlert.verification_code}</span>
-                  <br />
-                  Yeh popup genuine hai — team ne yahan se request ki hai.
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800 rounded-2xl p-4 mb-4 text-left">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400">🛡️ SECRET TRUST CODE</p>
+                </div>
+                <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-150 dark:border-emerald-800/60 rounded-xl px-3 py-2">
+                  <span className="text-[11px] text-gray-500 font-bold">Representative se pucho:</span>
+                  <span className="font-mono font-extrabold tracking-widest text-emerald-600 dark:text-emerald-400 text-base">{otpAlert.verification_code}</span>
+                </div>
+                <p className="text-[10px] text-emerald-700/80 dark:text-emerald-300/80 font-semibold mt-2 leading-relaxed">
+                  Call par baithe agent se poochiye ki unka screen code kya hai. Agar woh same yahi code batayein tabhi trust karein.
                 </p>
               </div>
             )}
+
+            {/* Anti-Fraud Security Checklist */}
+            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-150 dark:border-gray-800 rounded-2xl p-4 mb-4 text-left space-y-2.5">
+              <p className="text-[10px] font-extrabold text-gray-450 dark:text-gray-400 uppercase tracking-wider">🔒 SAFETY VERIFICATION CHECKLIST</p>
+              
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={chkSecret}
+                  onChange={(e) => setChkSecret(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                />
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                  Representative ne mujhe same Secret Trust Code bol kar sunaya hai.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={chkNotBank}
+                  onChange={(e) => setChkNotBank(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                />
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                  Yeh OTP bank account, ATM card ya Google Pay/Paytm se related nahi hai.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={chkNoScreenShare}
+                  onChange={(e) => setChkNoScreenShare(e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                />
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                  Kisi ne mujhe screen-share (e.g. AnyDesk, TeamViewer) download nahi karwaya.
+                </span>
+              </label>
+            </div>
 
             {/* OTP Input */}
             <input
@@ -222,23 +389,24 @@ function DashboardContent() {
               maxLength={8}
               value={otpInput}
               onChange={e => setOtpInput(e.target.value.replace(/\D/g, ""))}
-              placeholder="OTP yahan likho"
+              placeholder="OTP yahan likhein"
               className="w-full text-center text-2xl font-extrabold font-mono tracking-widest py-3 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 mb-4"
             />
 
             {/* Submit */}
             <button
               onClick={handleSubmitOtp}
-              disabled={otpInput.length < 4 || otpSubmitting}
-              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-extrabold text-base transition-all active:scale-95 mb-3"
+              disabled={otpInput.length < 4 || otpSubmitting || !chkSecret || !chkNotBank || !chkNoScreenShare}
+              className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:dark:bg-gray-800 disabled:opacity-60 text-white rounded-2xl font-extrabold text-base transition-all active:scale-95 mb-3 flex items-center justify-center gap-2 shadow-lg shadow-red-500/10"
             >
-              {otpSubmitting ? "Bhej rahe hain..." : "✅ OTP Submit Karo"}
+              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ Verified OTP Submit Karein"}
             </button>
 
             {/* Countdown */}
-            <p className="text-xs text-gray-400">
-              ⏱️ {Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")} mein expire hoga
-            </p>
+            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 font-semibold">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")} mein request expire hogi</span>
+            </div>
           </div>
         </div>
       )}
@@ -551,9 +719,21 @@ function DashboardContent() {
                               <div className="mt-3 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl px-3 py-2">
                                 <span className="text-red-500 text-sm">🔐</span>
                                 <div>
-                                  <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider leading-none">Secret Verification Code</p>
+                                  <p className="text-[10px] font-extrabold text-red-650 dark:text-red-400 uppercase tracking-wider leading-none">Secret Verification Code</p>
                                   <p className="text-base font-extrabold text-red-700 dark:text-red-300 font-mono tracking-widest mt-0.5">{req.verification_code}</p>
                                   <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">Call pe yeh code maango — nahi pata = Scammer!</p>
+                                </div>
+                              </div>
+                            )}
+                            {/* in_progress: live form filling and OTP pre-alert */}
+                            {req.status === "in_progress" && (
+                              <div className="mt-2 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2.5 animate-pulse flex items-start gap-2.5">
+                                <span className="text-base shrink-0">✍️</span>
+                                <div>
+                                  <p className="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Form Filling Started — Phone Ready Rakhein!</p>
+                                  <p className="text-[11px] text-indigo-900/80 dark:text-indigo-300/80 font-semibold mt-0.5 leading-relaxed">
+                                    Humare expert abhi official portal par aapka form fill kar rahe hain. Form ke last stage par OTP ki zaroorat padegi, isliye kripya apne phone ke paas rahein taaki OTP aate hi aap verified tareeqe se submit kar sakein.
+                                  </p>
                                 </div>
                               </div>
                             )}

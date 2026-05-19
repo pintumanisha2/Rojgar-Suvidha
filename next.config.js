@@ -1,3 +1,5 @@
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   
@@ -60,6 +62,8 @@ const nextConfig = {
   experimental: {
     optimizeCss: false, // Keep false to avoid build issues; enable after testing
   },
+
+  outputFileTracingRoot: path.join(__dirname),
 
   // ── Skip ESLint checks during build to prevent Vercel CI failures ──
   eslint: {

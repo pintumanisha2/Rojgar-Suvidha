@@ -3,6 +3,7 @@ import SocialPromo from "@/components/home/SocialPromo";
 import Highlights from "@/components/home/Highlights";
 import TrustSignals from "@/components/home/TrustSignals";
 import MainContent from "@/components/home/MainContent";
+import AspirantsAddaPromo from "@/components/home/AspirantsAddaPromo";
 import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
 import type { Metadata } from "next";
 
@@ -114,6 +115,9 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <AdSensePlaceholder format="responsive" />
       </div>
+
+      {/* Aspirants Adda Live Chat Promotion Banner */}
+      <AspirantsAddaPromo />
 
       {/* Trust Building Signals (Stats + Reviews) - Moved below advertisement */}
       <TrustSignals />

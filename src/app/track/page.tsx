@@ -178,6 +178,19 @@ export default function TrackPage() {
                   </div>
                 </div>
               )}
+
+              {/* in_progress: live form filling and OTP pre-alert */}
+              {result.status === "in_progress" && (
+                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3.5 animate-pulse flex items-start gap-2.5">
+                  <span className="text-base shrink-0">✍️</span>
+                  <div>
+                    <p className="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Form Filling Started — Phone Ready Rakhein!</p>
+                    <p className="text-[11px] text-indigo-900/80 dark:text-indigo-305 font-semibold mt-0.5 leading-relaxed">
+                      Humare expert abhi official portal par aapka form fill kar rahe hain. Form ke last stage par OTP ki zaroorat padegi, isliye kripya apne phone ke paas rahein taaki OTP aate hi aap verified tareeqe se submit kar sakein.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Link href="/dashboard?tab=requests"

@@ -37,7 +37,45 @@ export default function AdminApplicationsPage() {
   const [otpTimer, setOtpTimer] = useState(0);
   const [requestingOtp, setRequestingOtp] = useState(false);
 
+  // WhatsApp Assistant states
+  const [whatsappPreviewText, setWhatsappPreviewText] = useState("");
+  const [activePreset, setActivePreset] = useState("");
+
   const [serviceType, setServiceType] = useState("all"); // all | sarkari | esuvidha
+
+  const handleSelectWhatsappPreset = (preset: string, req: any) => {
+    if (!req) return;
+    const name = req.applicant_name || "Candidate";
+    const jobTitle = req.job_title || "Form Filling Service";
+    let text = "";
+
+    if (preset === "in_progress") {
+      text = `Hi ${name}, main Rojgar Suvidha se bol raha hoon. Aapke "${jobTitle}" ka form humne bharna shuru kar diya hai! Form bharne ke aakhri step par OTP ki zaroorat padegi, isliye kripya apna phone apne paas rakhein aur alert rahein taaki OTP aate hi aap portal par daal sakein ya hume bata sakein taaki form filling bina delay complete ho sake. Dhanyawad!`;
+    } else if (preset === "needs_info") {
+      text = `Hi ${name}, aapke "${jobTitle}" form filling ke liye kuch documents/details clear nahi hain ya missing hain.
+
+Kripya direct apne dashboard ya tracking page par visit karke corrected file upload kar dein ya hume WhatsApp par reply karein taaki hum form jaldi complete kar sakein. Dhanyawad!`;
+    } else if (preset === "otp_alert") {
+      text = `Hi ${name}, aapke "${jobTitle}" ke verification ke liye portal se ek OTP bheja gaya hai. Kripya correct OTP yahan WhatsApp par send karein ya direct portal dashboard par verify karein taaki completion delay na ho. Dhanyawad!`;
+    } else if (preset === "success") {
+      const receiptLink = req.final_receipt_url || "";
+      text = `Congratulations ${name}! 🎉 Aapka "${jobTitle}" ka form successfully fill aur submit ho gaya hai.
+
+Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suvidha App dashboard se"}. Dhanyawad!`;
+    }
+    
+    setActivePreset(preset);
+    setWhatsappPreviewText(text);
+  };
+
+  const handleSendWhatsapp = (req: any) => {
+    if (!req || !whatsappPreviewText.trim()) return;
+    const rawPhone = req.phone_number || "";
+    const cleanPhone = rawPhone.replace(/\D/g, "");
+    const finalPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    const encodedText = encodeURIComponent(whatsappPreviewText.trim());
+    window.open(`https://wa.me/${finalPhone}?text=${encodedText}`, "_blank");
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -134,6 +172,8 @@ export default function AdminApplicationsPage() {
     setNewStatus(req.status);
     setStudentDocs([]);
     setESuvidhaData("");
+    setWhatsappPreviewText("");
+    setActivePreset("");
 
     let note = req.admin_notes || "";
     let esDocs: {name: string; url: string}[] = [];
@@ -524,6 +564,59 @@ export default function AdminApplicationsPage() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* WhatsApp Messaging Assistant */}
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-5 space-y-3">
+                  <h3 className="font-extrabold text-emerald-800 dark:text-emerald-400 text-sm uppercase tracking-wider flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    WhatsApp Messaging Assistant
+                  </h3>
+                  <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 font-medium">
+                    Student ko automatic details ke saath pre-filled messages bhejein. Niche diye presets par click karein:
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: "in_progress", label: "🔄 In Progress Alert", color: "bg-blue-600 hover:bg-blue-700 text-white" },
+                      { id: "needs_info", label: "⚠️ Missing Doc Request", color: "bg-amber-600 hover:bg-amber-700 text-white" },
+                      { id: "otp_alert", label: "🔐 OTP Request", color: "bg-purple-600 hover:bg-purple-700 text-white" },
+                      { id: "success", label: "✅ Receipt Delivery", color: "bg-emerald-600 hover:bg-emerald-700 text-white" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleSelectWhatsappPreset(preset.id, selected)}
+                        className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                          activePreset === preset.id
+                            ? "ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900 " + preset.color
+                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {whatsappPreviewText && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <label className="block text-[11px] font-bold text-gray-400 uppercase">Message Preview (Aap edit bhi kar sakte hain)</label>
+                      <textarea
+                        value={whatsappPreviewText}
+                        onChange={(e) => setWhatsappPreviewText(e.target.value)}
+                        rows={4}
+                        className="w-full p-3 bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-gray-850 dark:text-gray-150 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Yahan apna custom message likhein..."
+                      />
+                      <button
+                        onClick={() => handleSendWhatsapp(selected)}
+                        type="button"
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-600/10 active:scale-95 transition-all"
+                      >
+                        <MessageSquare className="w-4 h-4" /> Student Ko WhatsApp Bhejein
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Job Info */}
