@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { compressImage } from "@/lib/image-utils";
+import BannerGenerator from "@/components/admin/BannerGenerator";
 
 // Load rich text editor only on client side
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
@@ -485,22 +486,38 @@ export default function NewJobPage() {
           <SectionCard icon={<FileText className="h-5 w-5" />} title="Blog Content">
             <div className="mb-5">
               <Field label="Featured / Banner Image">
-                <div className="flex flex-col md:flex-row gap-4 items-start">
-                  <div className="flex-1 w-full">
-                    <div className="relative">
-                      <input type="url" value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="Paste image URL or upload →" className={`${inputCls} pr-12`} />
-                      <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors">
-                        <UploadCloud className="h-5 w-5" />
-                        <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
-                      </label>
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tight">Recommended: 1200x630</p>
+                <div className="flex flex-col gap-3">
+                  {/* Auto-Generate Button */}
+                  <div className="flex items-center gap-3">
+                    <BannerGenerator
+                      title={title}
+                      lastDate={lastDate}
+                      appFee={appFee}
+                      totalPosts={totalPosts}
+                      category={category}
+                      onBannerGenerated={(url) => setBannerUrl(url)}
+                    />
+                    <span className="text-xs text-gray-400 font-medium">ya neeche manually upload karein</span>
                   </div>
-                  {bannerUrl && (
-                    <div className="h-24 w-44 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
-                      <img src={bannerUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+
+                  {/* Manual URL / Upload */}
+                  <div className="flex flex-col md:flex-row gap-4 items-start">
+                    <div className="flex-1 w-full">
+                      <div className="relative">
+                        <input type="url" value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="Paste image URL or upload →" className={`${inputCls} pr-12`} />
+                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors">
+                          <UploadCloud className="h-5 w-5" />
+                          <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
+                        </label>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tight">Recommended: 1200x630</p>
                     </div>
-                  )}
+                    {bannerUrl && (
+                      <div className="h-24 w-44 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+                        <img src={bannerUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Field>
             </div>
