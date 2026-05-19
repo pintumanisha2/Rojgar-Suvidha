@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2, ArrowDown, Trash2 } from "lucide-react";
+import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2, ArrowDown, Trash2, Pin, Plus, BarChart3, Flag } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -10,12 +10,20 @@ interface ChatMessage {
   text_content: string;
   is_deleted: boolean;
   created_at: string;
+  is_pinned?: boolean;
+  is_poll?: boolean;
+  poll_question?: string | null;
+  poll_options?: string[] | null;
+  reports_count?: number;
   chat_users: {
     display_name: string;
     avatar: string;
     role: string;
     is_banned: boolean;
   };
+  votes?: { [option: string]: number };
+  myVote?: string | null;
+  reactions?: { [emoji: string]: { count: number; users: string[] } };
 }
 
 const BAD_WORDS_SUBSTRING = [
@@ -101,6 +109,11 @@ export default function AspirantsCircleDrawer() {
   const [myRole, setMyRole] = useState("student");
   const [isBanned, setIsBanned] = useState(false);
   const [setupMode, setSetupMode] = useState(false);
+
+  // Poll state variables
+  const [isCreatePollOpen, setIsCreatePollOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
 
   useEffect(() => {
     // Listen for global open event
@@ -267,6 +280,8 @@ export default function AspirantsCircleDrawer() {
     setLoading(false);
   };
 
+  const [pinnedMessage, setPinnedMessage] = useState<ChatMessage | null>(null);
+
   const fetchMessages = async () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -282,18 +297,114 @@ export default function AspirantsCircleDrawer() {
     }
 
     // 2. Query only messages from the last 7 days
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("chat_messages")
       .select(`
-        id, text_content, is_deleted, created_at, user_id,
+        id, text_content, is_deleted, created_at, user_id, is_pinned, is_poll, poll_question, poll_options, reports_count,
         chat_users ( display_name, avatar, role, is_banned )
       `)
       .gte("created_at", sevenDaysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(100);
       
+    if (error) {
+      console.error("Error fetching messages:", error);
+      return;
+    }
+
     if (data) {
-      setMessages(data.reverse() as unknown as ChatMessage[]);
+      const chatMsgs = data as unknown as ChatMessage[];
+      const msgIds = chatMsgs.map(m => m.id);
+
+      // 3. Fetch poll votes in a single query
+      let votesList: any[] = [];
+      if (msgIds.length > 0) {
+        const { data: votesData } = await supabase
+          .from("chat_poll_votes")
+          .select("message_id, selected_option, user_id")
+          .in("message_id", msgIds);
+        if (votesData) votesList = votesData;
+      }
+
+      // 4. Fetch reactions in a single query
+      let reactionsList: any[] = [];
+      if (msgIds.length > 0) {
+        const { data: reactionsData } = await supabase
+          .from("chat_reactions")
+          .select("message_id, reaction_type, user_id")
+          .in("message_id", msgIds);
+        if (reactionsData) reactionsList = reactionsData;
+      }
+
+      // 5. Enrich messages with votes & reactions counts
+      const enriched = chatMsgs.map(msg => {
+        const votesMap: { [opt: string]: number } = {};
+        let myVote: string | null = null;
+        
+        if (msg.is_poll && msg.poll_options) {
+          const options = Array.isArray(msg.poll_options) 
+            ? msg.poll_options 
+            : typeof msg.poll_options === 'string'
+              ? JSON.parse(msg.poll_options)
+              : [];
+          
+          msg.poll_options = options;
+          options.forEach((opt: string) => {
+            votesMap[opt] = 0;
+          });
+
+          const msgVotes = votesList.filter(v => v.message_id === msg.id);
+          msgVotes.forEach(v => {
+            if (votesMap[v.selected_option] !== undefined) {
+              votesMap[v.selected_option]++;
+            }
+            if (myUserId && v.user_id === myUserId) {
+              myVote = v.selected_option;
+            }
+          });
+        }
+
+        const rxMap: { [emoji: string]: { count: number; users: string[] } } = {};
+        const msgRx = reactionsList.filter(r => r.message_id === msg.id);
+        msgRx.forEach(r => {
+          if (!rxMap[r.reaction_type]) {
+            rxMap[r.reaction_type] = { count: 0, users: [] };
+          }
+          rxMap[r.reaction_type].count++;
+          rxMap[r.reaction_type].users.push(r.user_id);
+        });
+
+        return {
+          ...msg,
+          votes: votesMap,
+          myVote,
+          reactions: rxMap
+        };
+      });
+
+      // Update pinned message
+      const activePinned = enriched.find(m => m.is_pinned);
+      if (activePinned) {
+        setPinnedMessage(activePinned);
+      } else {
+        const { data: separatePinned } = await supabase
+          .from("chat_messages")
+          .select(`
+            id, text_content, is_deleted, created_at, user_id, is_pinned, is_poll, poll_question, poll_options, reports_count,
+            chat_users ( display_name, avatar, role, is_banned )
+          `)
+          .eq("is_pinned", true)
+          .limit(1)
+          .maybeSingle();
+
+        if (separatePinned) {
+          setPinnedMessage(separatePinned as unknown as ChatMessage);
+        } else {
+          setPinnedMessage(null);
+        }
+      }
+
+      setMessages(enriched.reverse());
     }
   };
 
@@ -301,17 +412,78 @@ export default function AspirantsCircleDrawer() {
     const { data } = await supabase
       .from("chat_messages")
       .select(`
-        id, text_content, is_deleted, created_at, user_id,
+        id, text_content, is_deleted, created_at, user_id, is_pinned, is_poll, poll_question, poll_options, reports_count,
         chat_users ( display_name, avatar, role, is_banned )
       `)
       .eq("id", msgId)
       .maybeSingle();
       
     if (data) {
+      const msg = data as unknown as ChatMessage;
+
+      let votesMap: { [opt: string]: number } = {};
+      let myVote: string | null = null;
+      if (msg.is_poll && msg.poll_options) {
+        const options = Array.isArray(msg.poll_options) 
+          ? msg.poll_options 
+          : typeof msg.poll_options === 'string'
+            ? JSON.parse(msg.poll_options)
+            : [];
+        msg.poll_options = options;
+        options.forEach((opt: string) => {
+          votesMap[opt] = 0;
+        });
+
+        const { data: votesData } = await supabase
+          .from("chat_poll_votes")
+          .select("selected_option, user_id")
+          .eq("message_id", msgId);
+        
+        if (votesData) {
+          votesData.forEach(v => {
+            if (votesMap[v.selected_option] !== undefined) {
+              votesMap[v.selected_option]++;
+            }
+            if (myUserId && v.user_id === myUserId) {
+              myVote = v.selected_option;
+            }
+          });
+        }
+      }
+
+      const rxMap: { [emoji: string]: { count: number; users: string[] } } = {};
+      const { data: rxData } = await supabase
+        .from("chat_reactions")
+        .select("reaction_type, user_id")
+        .eq("message_id", msgId);
+      
+      if (rxData) {
+        rxData.forEach(r => {
+          if (!rxMap[r.reaction_type]) {
+            rxMap[r.reaction_type] = { count: 0, users: [] };
+          }
+          rxMap[r.reaction_type].count++;
+          rxMap[r.reaction_type].users.push(r.user_id);
+        });
+      }
+
+      const enrichedMsg = {
+        ...msg,
+        votes: votesMap,
+        myVote,
+        reactions: rxMap
+      };
+
       setMessages(prev => {
-        if (prev.some(m => m.id === data.id)) return prev;
-        return [...prev, data as unknown as ChatMessage];
+        if (prev.some(m => m.id === enrichedMsg.id)) {
+          return prev.map(m => m.id === enrichedMsg.id ? enrichedMsg : m);
+        }
+        return [...prev, enrichedMsg];
       });
+      
+      if (enrichedMsg.is_pinned) {
+        setPinnedMessage(enrichedMsg);
+      }
     }
   };
 
@@ -410,6 +582,151 @@ export default function AspirantsCircleDrawer() {
     }
   };
 
+  const handlePinMessage = async (msgId: string) => {
+    if (myRole !== 'admin') return;
+    if (!confirm("Pin this message to the top of the chat?")) return;
+    
+    // Unpin any existing message first
+    await supabase.from("chat_messages").update({ is_pinned: false }).eq("is_pinned", true);
+    
+    // Pin the new one
+    const { error } = await supabase.from("chat_messages").update({ is_pinned: true }).eq("id", msgId);
+    if (error) {
+      alert("Failed to pin message: " + error.message);
+    } else {
+      fetchMessages();
+    }
+  };
+
+  const handleUnpinMessage = async (msgId: string) => {
+    if (myRole !== 'admin') return;
+    const { error } = await supabase.from("chat_messages").update({ is_pinned: false }).eq("id", msgId);
+    if (error) {
+      alert("Failed to unpin message: " + error.message);
+    } else {
+      setPinnedMessage(null);
+    }
+  };
+
+  const handleVote = async (msgId: string, option: string) => {
+    if (!myUserId) {
+      alert("Please login/join the Adda first to vote.");
+      return;
+    }
+    
+    const { data: existing } = await supabase
+      .from("chat_poll_votes")
+      .select("id, selected_option")
+      .eq("message_id", msgId)
+      .eq("user_id", myUserId)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.selected_option === option) {
+        await supabase.from("chat_poll_votes").delete().eq("id", existing.id);
+      } else {
+        await supabase.from("chat_poll_votes").update({ selected_option: option }).eq("id", existing.id);
+      }
+    } else {
+      const { error } = await supabase
+        .from("chat_poll_votes")
+        .insert([{
+          message_id: msgId,
+          user_id: myUserId,
+          selected_option: option
+        }]);
+      if (error) {
+        console.error("Error voting:", error);
+      }
+    }
+    fetchMessages();
+  };
+
+  const handleToggleReaction = async (msgId: string, reactionType: string) => {
+    if (!myUserId) {
+      alert("Please login/join the Adda first to react.");
+      return;
+    }
+    
+    const { data: existing } = await supabase
+      .from("chat_reactions")
+      .select("id")
+      .eq("message_id", msgId)
+      .eq("user_id", myUserId)
+      .eq("reaction_type", reactionType)
+      .maybeSingle();
+      
+    if (existing) {
+      await supabase.from("chat_reactions").delete().eq("id", existing.id);
+    } else {
+      const { error } = await supabase.from("chat_reactions").insert([{
+        message_id: msgId,
+        user_id: myUserId,
+        reaction_type: reactionType
+      }]);
+      if (error) {
+        console.error("Error adding reaction:", error);
+      }
+    }
+    fetchMessages();
+  };
+
+  const handleReportMessage = async (msgId: string) => {
+    if (!confirm("Are you sure you want to report this message? If a message gets 3 reports, it will be automatically hidden for review.")) return;
+    
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("reports_count")
+      .eq("id", msgId)
+      .single();
+      
+    const currentCount = data?.reports_count || 0;
+    const { error } = await supabase
+      .from("chat_messages")
+      .update({ reports_count: currentCount + 1 })
+      .eq("id", msgId);
+      
+    if (error) {
+      alert("Failed to report message: " + error.message);
+    } else {
+      alert("Thank you. The message has been reported for review.");
+      fetchMessages();
+    }
+  };
+
+  const handleCreatePoll = async () => {
+    if (!myUserId || isBanned) return;
+    
+    const question = pollQuestion.trim();
+    const options = pollOptions.map(o => o.trim()).filter(o => o.length > 0);
+    
+    if (!question) {
+      alert("Please enter a question.");
+      return;
+    }
+    if (options.length < 2) {
+      alert("Please provide at least 2 options.");
+      return;
+    }
+
+    const { error } = await supabase.from("chat_messages").insert([{
+      user_id: myUserId,
+      is_poll: true,
+      poll_question: question,
+      poll_options: options,
+      text_content: `Poll: ${question}`
+    }]);
+
+    if (error) {
+      alert("Failed to create poll: " + error.message);
+    } else {
+      setPollQuestion("");
+      setPollOptions(["", ""]);
+      setIsCreatePollOpen(false);
+      fetchMessages();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -446,6 +763,43 @@ export default function AspirantsCircleDrawer() {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Pinned Message Bar */}
+        {pinnedMessage && (
+          <div className="bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 px-4 py-2.5 flex items-center justify-between gap-2 text-xs text-indigo-900 dark:text-indigo-200 shrink-0 relative z-10 shadow-sm animate-fadeIn">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Pin className="w-3.5 h-3.5 text-indigo-500 shrink-0 transform rotate-45" />
+              <span className="font-extrabold text-[9px] uppercase tracking-wider bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-1.5 py-0.5 rounded">Pinned</span>
+              <span className="truncate flex-1 font-semibold">
+                {pinnedMessage.is_poll ? `📊 Poll: ${pinnedMessage.poll_question}` : pinnedMessage.text_content}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  const element = document.getElementById(`msg-${pinnedMessage.id}`);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  } else {
+                    alert("Message is older than current loaded messages.");
+                  }
+                }}
+                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 underline shrink-0 cursor-pointer"
+              >
+                View
+              </button>
+              {myRole === 'admin' && (
+                <button 
+                  onClick={() => handleUnpinMessage(pinnedMessage.id)}
+                  className="p-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded shrink-0 cursor-pointer text-indigo-400 hover:text-indigo-600"
+                  title="Unpin Message"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Setup/Loading States */}
         {loading ? (
@@ -537,9 +891,10 @@ export default function AspirantsCircleDrawer() {
                   const isMe = msg.user_id === myUserId;
                   const isDeleted = msg.is_deleted;
                   const isAdmin = msg.chat_users?.role === 'admin';
+                  const isReportedAndHidden = (msg.reports_count || 0) >= 3 && myRole !== 'admin';
                   
                   return (
-                    <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div id={`msg-${msg.id}`} key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
                       <div className={`flex max-w-[85%] gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                         
                         {/* Avatar */}
@@ -563,38 +918,170 @@ export default function AspirantsCircleDrawer() {
                                   <CheckCircle2 className="w-2 h-2" /> Admin
                                 </span>
                               )}
+                              {(msg.reports_count || 0) > 0 && myRole === 'admin' && (
+                                <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded font-black flex items-center gap-0.5 tracking-wider">
+                                  <Flag className="w-2 h-2" /> {msg.reports_count} Reports
+                                </span>
+                              )}
                             </div>
                           )}
 
-                          {/* Text Bubble */}
+                          {/* Bubble Container with Actions */}
                           <div className={`flex items-center gap-1.5 group/msg ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                            <div className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed ${
-                              isDeleted 
-                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 italic border border-gray-200 dark:border-gray-700'
-                                : isAdmin
-                                  ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border border-indigo-200/50 dark:border-indigo-900/50'
-                                  : isMe 
-                                    ? 'bg-indigo-600 text-white shadow-sm' 
-                                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 shadow-sm'
-                            } ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}>
-                              {isDeleted ? "This message was deleted by Admin." : msg.text_content}
-                            </div>
-                            
-                            {myRole === 'admin' && !isDeleted && (
-                              <button
-                                onClick={() => handleDeleteMessage(msg.id)}
-                                className="opacity-0 group-hover/msg:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all shrink-0 cursor-pointer"
-                                title="Delete Message"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                            {isReportedAndHidden ? (
+                              <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30 px-3 py-2 rounded-2xl text-[11px] font-semibold flex items-center gap-1.5 leading-normal max-w-full">
+                                <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                <span>Hidden for review due to multiple reports.</span>
+                              </div>
+                            ) : msg.is_poll ? (
+                              <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/60 dark:border-indigo-900/40 p-3.5 rounded-2xl max-w-sm w-full shadow-sm relative">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <BarChart3 className="w-4 h-4 text-indigo-500 shrink-0" />
+                                  <span className="font-extrabold text-[11px] uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Aspirants Poll</span>
+                                </div>
+                                <p className="font-black text-gray-900 dark:text-white text-xs mb-3 leading-normal">{msg.poll_question}</p>
+                                
+                                <div className="space-y-2">
+                                  {msg.poll_options?.map((opt: string) => {
+                                    const votes = msg.votes?.[opt] || 0;
+                                    const totalVotes = Object.values(msg.votes || {}).reduce((a, b) => a + b, 0);
+                                    const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+                                    const isMyVote = msg.myVote === opt;
+                                    const hasVoted = !!msg.myVote;
+
+                                    return (
+                                      <button
+                                        key={opt}
+                                        onClick={() => handleVote(msg.id, opt)}
+                                        className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all duration-200 text-xs font-bold leading-normal flex items-center justify-between cursor-pointer ${
+                                          isMyVote 
+                                            ? 'border-green-500/80 bg-green-50/50 dark:bg-green-950/20 text-green-900 dark:text-green-200' 
+                                            : hasVoted
+                                              ? 'border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200'
+                                              : 'border-indigo-200 dark:border-indigo-900 hover:border-indigo-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:shadow-sm'
+                                        }`}
+                                      >
+                                        {hasVoted && (
+                                          <div 
+                                            className={`absolute top-0 left-0 bottom-0 z-0 opacity-15 dark:opacity-20 transition-all duration-500 ${isMyVote ? 'bg-green-500' : 'bg-indigo-500'}`}
+                                            style={{ width: `${pct}%` }}
+                                          />
+                                        )}
+                                        <span className="relative z-10 flex items-center gap-1.5 min-w-0 pr-2">
+                                          {isMyVote && <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />}
+                                          <span className="truncate">{opt}</span>
+                                        </span>
+                                        {hasVoted && (
+                                          <span className="relative z-10 font-black text-indigo-900 dark:text-indigo-300 text-[10px] shrink-0">
+                                            {pct}% ({votes})
+                                          </span>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <p className="text-[9px] text-gray-400 dark:text-gray-500 font-bold mt-2 flex justify-between items-center">
+                                  <span>Total: {Object.values(msg.votes || {}).reduce((a, b) => a + b, 0)} votes</span>
+                                  {msg.myVote && <span className="text-green-600 dark:text-green-400">Vote Casted</span>}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed break-words max-w-full ${
+                                isDeleted 
+                                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 italic border border-gray-200 dark:border-gray-700'
+                                  : isAdmin
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border border-indigo-200/50 dark:border-indigo-900/50'
+                                    : isMe 
+                                      ? 'bg-indigo-600 text-white shadow-sm' 
+                                      : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800 shadow-sm'
+                              } ${isMe ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}>
+                                {isDeleted ? "This message was deleted by Admin." : msg.text_content}
+                              </div>
+                            )}
+
+                            {/* Actions on hover */}
+                            {!isDeleted && (
+                              <div className={`flex items-center gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-all shrink-0 ${isMe ? 'flex-row' : 'flex-row-reverse'}`}>
+                                {myRole === 'admin' && (
+                                  <>
+                                    <button
+                                      onClick={() => handlePinMessage(msg.id)}
+                                      className="p-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all cursor-pointer"
+                                      title="Pin message"
+                                    >
+                                      <Pin className="w-3.5 h-3.5 transform rotate-45" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteMessage(msg.id)}
+                                      className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all cursor-pointer"
+                                      title="Delete message"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
+                                {myRole !== 'admin' && !isMe && (
+                                  <button
+                                    onClick={() => handleReportMessage(msg.id)}
+                                    className="p-1 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-950/30 text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-all cursor-pointer"
+                                    title="Report message"
+                                  >
+                                    <Flag className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                           
-                          {/* Time */}
-                          <span className="text-[8px] text-gray-400 dark:text-gray-500 mt-1 mx-1">
-                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          {/* Reactions & Time Row */}
+                          <div className={`flex items-center gap-2 mt-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <span className="text-[8px] text-gray-400 dark:text-gray-500 font-semibold shrink-0">
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+
+                            {!isDeleted && !isReportedAndHidden && (
+                              <div className="flex flex-wrap items-center gap-1 shrink-0">
+                                {msg.reactions && Object.entries(msg.reactions).map(([emoji, data]) => {
+                                  const hasReacted = myUserId && data.users.includes(myUserId);
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => handleToggleReaction(msg.id, emoji)}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-all border cursor-pointer ${
+                                        hasReacted
+                                          ? 'bg-indigo-100/85 dark:bg-indigo-900/40 border-indigo-400/60 text-indigo-900 dark:text-indigo-200 shadow-sm'
+                                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 text-gray-600 dark:text-gray-400'
+                                      }`}
+                                    >
+                                      <span>{emoji}</span>
+                                      <span className="text-[9px] font-black">{data.count}</span>
+                                    </button>
+                                  );
+                                })}
+
+                                <div className="relative group/react inline-block">
+                                  <button
+                                    className="w-4 h-4 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-all cursor-pointer"
+                                    title="Add reaction"
+                                  >
+                                    <Plus className="w-2.5 h-2.5" />
+                                  </button>
+                                  
+                                  <div className="hidden group-hover/react:flex absolute left-0 bottom-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-full shadow-lg gap-1 z-50 animate-fadeIn">
+                                    {['👍', '❤️', '🙏', '👏', '🔥', '📚'].map(emoji => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => handleToggleReaction(msg.id, emoji)}
+                                        className="hover:scale-125 transition-transform duration-100 text-xs cursor-pointer p-0.5"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -621,8 +1108,18 @@ export default function AspirantsCircleDrawer() {
             </div>
 
             {/* Input Form */}
-            <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0">
+            <div className="p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0 relative">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                {myRole === 'admin' && (
+                  <button 
+                    type="button"
+                    onClick={() => setIsCreatePollOpen(true)}
+                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 p-3 rounded-full transition-colors flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/50 cursor-pointer"
+                    title="Create Poll"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </button>
+                )}
                 <input 
                   type="text" 
                   value={inputText}
@@ -634,7 +1131,7 @@ export default function AspirantsCircleDrawer() {
                 <button 
                   type="submit"
                   disabled={!inputText.trim()}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white p-3 rounded-full transition-colors flex items-center justify-center shrink-0 shadow-md"
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white p-3 rounded-full transition-colors flex items-center justify-center shrink-0 shadow-md cursor-pointer"
                 >
                   <Send className="w-4 h-4 ml-0.5" />
                 </button>
@@ -643,6 +1140,96 @@ export default function AspirantsCircleDrawer() {
                 Please remain respectful. Phone numbers and abuse are prohibited.
               </p>
             </div>
+
+            {/* Create Poll Dialog Overlay */}
+            {isCreatePollOpen && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60]">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5 shadow-2xl w-full max-w-sm animate-fadeIn">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <BarChart3 className="w-4 h-4 text-indigo-600" /> Create GK Poll
+                    </h3>
+                    <button 
+                      onClick={() => setIsCreatePollOpen(false)}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Question</label>
+                    <input 
+                      type="text"
+                      placeholder="e.g. Which country hosts the 2026 Winter Olympics?"
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                      maxLength={120}
+                    />
+                  </div>
+
+                  <div className="space-y-3 mb-5">
+                    <label className="block text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">Options</label>
+                    {pollOptions.map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 w-4">{idx + 1}.</span>
+                        <input 
+                          type="text"
+                          placeholder={`Option ${idx + 1}`}
+                          value={opt}
+                          onChange={(e) => {
+                            const newOpts = [...pollOptions];
+                            newOpts[idx] = e.target.value;
+                            setPollOptions(newOpts);
+                          }}
+                          className="flex-1 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                          maxLength={60}
+                        />
+                        {pollOptions.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPollOptions(pollOptions.filter((_, i) => i !== idx));
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {pollOptions.length < 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setPollOptions([...pollOptions, ""])}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center gap-1 mt-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" /> Add Option
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatePollOpen(false)}
+                      className="flex-1 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold py-2 rounded-xl text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreatePoll}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs transition-all shadow-md cursor-pointer"
+                    >
+                      Post Poll
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

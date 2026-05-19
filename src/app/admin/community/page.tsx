@@ -73,9 +73,11 @@ export default function AdminCommunityPage() {
 
   const deleteMessage = async (id: string) => {
     if (!confirm("Delete this message from public view?")) return;
-    const { error } = await supabase.from("chat_messages").update({ is_deleted: true }).eq("id", id);
+    const { data, error } = await supabase.from("chat_messages").update({ is_deleted: true }).eq("id", id).select();
     if (error) {
       alert("Failed to delete message: " + error.message);
+    } else if (!data || data.length === 0) {
+      alert("Permission Denied: Database RLS policies are preventing you from deleting this message. Please run the SQL command in Supabase Dashboard.");
     } else {
       setMessages(prev => 
         prev.map(m => m.id === id ? { ...m, is_deleted: true } : m)
@@ -87,9 +89,12 @@ export default function AdminCommunityPage() {
     if (!confirm(`Are you sure you want to PERMANENTLY BAN ${userName}?\nThey will never be able to chat again.`)) return;
     
     // 1. Ban the user
-    const { error: banError } = await supabase.from("chat_users").update({ is_banned: true }).eq("id", userId);
+    const { data: banData, error: banError } = await supabase.from("chat_users").update({ is_banned: true }).eq("id", userId).select();
     if (banError) {
       alert("Failed to ban user: " + banError.message);
+      return;
+    } else if (!banData || banData.length === 0) {
+      alert("Permission Denied: Database RLS policies are preventing you from banning this user. Please run the SQL command in Supabase Dashboard.");
       return;
     }
     
