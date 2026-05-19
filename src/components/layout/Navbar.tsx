@@ -273,14 +273,6 @@ export default function Navbar() {
                 >
                   🏢 Private Jobs
                 </Link>
-                {user && (
-                  <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
-                    className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all text-white/70 hover:text-white hover:bg-white/10"
-                  >
-                    💬 Aspirants Circle
-                  </button>
-                )}
               </div>
 
               {/* Right Controls */}
@@ -344,6 +336,16 @@ export default function Navbar() {
                 >
                   {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
+
+                {/* Aspirants Circle (Desktop only) */}
+                {user && (
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
+                    className="hidden sm:flex items-center gap-2 ml-1 px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 hover:text-white rounded-xl text-sm font-bold transition-all duration-200 border border-emerald-400/20"
+                  >
+                    <span>💬 Aspirants Circle</span>
+                  </button>
+                )}
 
                 {/* Track Application (Desktop only) */}
                 <Link
