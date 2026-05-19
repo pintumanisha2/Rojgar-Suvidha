@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import {
   Smartphone, Monitor, TrendingUp, Users, Eye, Globe,
   Tablet, Clock, MousePointerClick, RefreshCw, Wifi,
-  Activity, BarChart2, Chrome, ArrowUpRight, ArrowDownRight, Zap
+  Activity, BarChart2, ArrowUpRight, ArrowDownRight, Zap
 } from "lucide-react";
 
 interface Row {
