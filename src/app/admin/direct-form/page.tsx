@@ -98,9 +98,9 @@ export default function AdminDirectFormPage() {
                       >
                         Copy Link
                       </button>
-                      <button className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="View Submissions">
+                      <Link href={`/admin/direct-form/${row.id}/submissions`} className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="View Submissions">
                         <Eye className="h-5 w-5" />
-                      </button>
+                      </Link>
                       <button onClick={() => handleDelete(row.id)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete Form">
                         <Trash2 className="h-5 w-5" />
                       </button>

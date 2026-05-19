@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, Users, CreditCard, BookOpen,
   Image as ImageIcon, BarChart2, Ticket, MessageSquareWarning,
-  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles
+  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles, Activity
 } from "lucide-react";
 
 const navItems = [
@@ -23,6 +23,7 @@ const navItems = [
   { href: "/admin/coupons", label: "Coupon", icon: Ticket },
   { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
   { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
+  { href: "/admin/analytics", label: "Deep Analytics", icon: Activity },
 ];
 
 export type Role = "super_admin" | "admin" | "content_writer" | "form_filler" | "unauthorized";

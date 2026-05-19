@@ -8,6 +8,7 @@ import AIChatBot from "@/components/layout/AIChatBot";
 import PushNotificationPrompt from "@/components/layout/PushNotificationPrompt";
 import BottomNav from "@/components/layout/BottomNav";
 import TopLoader from "@/components/layout/TopLoader";
+import AnalyticsTracker from "@/components/layout/AnalyticsTracker";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -238,6 +239,7 @@ export default function RootLayout({
           <AIChatBot />
           <PushNotificationPrompt />
           <BottomNav />
+          <AnalyticsTracker />
           
           {/* Auto-update Service Worker to prevent caching issues for users */}
           <script

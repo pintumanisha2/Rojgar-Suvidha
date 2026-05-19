@@ -27,6 +27,7 @@ import {
   MessageSquareWarning,
   Bookmark,
   MapPin,
+  Sparkles,
 } from 'lucide-react';
 
 const navSections = [
@@ -37,6 +38,7 @@ const navSections = [
   { name: "Admission", href: "/admission", icon: GraduationCap, color: "text-blue-500" },
   { name: "News", href: "/news", icon: Newspaper, color: "text-rose-500" },
   { name: "e-Suvidha", href: "/e-suvidha", icon: Landmark, color: "text-emerald-500" },
+  { name: "AI Resume", href: "/resume-builder", icon: Sparkles, color: "text-violet-500" },
 ];
 
 // Jobs by sector — links to /jobs/[type] dynamic pages
@@ -449,16 +451,16 @@ export default function Navbar() {
             <div className="flex items-center justify-between">
 
               {/* Nav Links */}
-              <nav className="flex items-center gap-1" aria-label="Main navigation">
+              <nav className="flex items-center" aria-label="Main navigation">
                 {navSections.map((section) => {
                   const Icon = section.icon;
                   return (
                     <Link
                       key={section.name}
                       href={section.href}
-                      className="group flex items-center gap-1.5 px-3 py-3.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all relative"
+                      className="group flex items-center gap-1 px-2 py-3 text-[11px] font-semibold text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all relative whitespace-nowrap"
                     >
-                      <Icon className={`w-4 h-4 ${section.color} opacity-60 group-hover:opacity-100 transition-opacity`} />
+                      <Icon className={`w-3 h-3 ${section.color} opacity-60 group-hover:opacity-100 transition-opacity shrink-0`} />
                       {section.name}
                       <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-indigo-500 group-hover:w-3/4 transition-all duration-300 rounded-full"></span>
                     </Link>
@@ -468,12 +470,12 @@ export default function Navbar() {
                 {/* Jobs by Category Dropdown */}
                 <div className="relative group">
                   <button
-                    className="flex items-center gap-1.5 px-3 py-3.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all relative"
+                    className="flex items-center gap-1 px-2 py-3 text-[11px] font-semibold text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all relative whitespace-nowrap"
                     aria-label="Jobs by Category"
                   >
-                    <Briefcase className="w-4 h-4 text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    <Briefcase className="w-3 h-3 text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
                     By Category
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-200" />
+                    <ChevronDown className="w-3 h-3 opacity-60 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-200" />
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-indigo-500 group-hover:w-3/4 transition-all duration-300 rounded-full"></span>
                   </button>
 

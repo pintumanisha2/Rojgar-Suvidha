@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Rojgar Suvidha',
   webDir: 'public',
   server: {
-    url: 'https://www.rojgarsuvidha.com',
+    url: 'https://rojgar-suvidha.vercel.app',
     cleartext: true
   }
 };

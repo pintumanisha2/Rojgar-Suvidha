@@ -69,6 +69,12 @@ export default function TrackApplicationPage() {
     const cfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
     const stepIdx = STATUS_STEPS.indexOf(req.status);
 
+    const TIMELINE_STEPS = [
+      { key: "pending", label: "Application Received", desc: "Aapki request hume mil gayi", icon: "📥", color: "indigo" },
+      { key: "in_progress", label: "Form Filling Started", desc: "Team ne kaam shuru kar diya", icon: "✍️", color: "blue" },
+      { key: "completed", label: "Form Submitted! ✅", desc: "Sarkari form successfully bhar diya gaya", icon: "🎉", color: "green" },
+    ];
+
     return (
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
         {/* Card Header */}
@@ -84,37 +90,58 @@ export default function TrackApplicationPage() {
           </span>
         </div>
 
-        {/* Progress Bar (only for non-rejected) */}
+        {/* Visual Timeline */}
         {req.status !== "rejected" && (
-          <div className="px-5 pt-5">
-            <div className="flex items-center gap-0">
-              {STATUS_STEPS.map((step, i) => {
-                const done = i <= stepIdx;
-                const isCurrent = i === stepIdx;
-                return (
-                  <div key={step} className="flex items-center flex-1">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold border-2 transition-all shrink-0
-                      ${done ? "bg-indigo-600 border-indigo-600 text-white" : "bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-400"}
-                      ${isCurrent ? "ring-4 ring-indigo-200 dark:ring-indigo-900" : ""}`}>
-                      {done && !isCurrent ? "✓" : i + 1}
+          <div className="px-5 pt-5 pb-2">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Application Timeline</p>
+            <div className="relative">
+              {/* Vertical line */}
+              <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-100 dark:bg-gray-800" />
+              <div className="space-y-4">
+                {TIMELINE_STEPS.map((step, i) => {
+                  const done = i <= stepIdx;
+                  const isCurrent = i === stepIdx;
+                  return (
+                    <div key={step.key} className="flex items-start gap-4 relative">
+                      {/* Circle */}
+                      <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 transition-all
+                        ${done ? "bg-indigo-600 shadow-lg shadow-indigo-600/30" : "bg-gray-100 dark:bg-gray-800"}
+                        ${isCurrent ? "ring-4 ring-indigo-100 dark:ring-indigo-900 animate-pulse" : ""}`}>
+                        {done ? <span className="text-white text-xs">{i < stepIdx ? "✓" : step.icon}</span>
+                               : <span className="text-gray-400 text-xs">{i + 1}</span>}
+                      </div>
+                      {/* Content */}
+                      <div className={`flex-1 pb-2 ${done ? "" : "opacity-40"}`}>
+                        <p className={`text-sm font-bold ${done ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>
+                          {step.label}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{step.desc}</p>
+                        {isCurrent && (
+                          <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse inline-block" /> Current Status
+                          </span>
+                        )}
+                        {i === 0 && done && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {new Date(req.created_at).toLocaleString("en-IN")}
+                          </p>
+                        )}
+                        {i === stepIdx && i > 0 && req.updated_at && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {new Date(req.updated_at).toLocaleString("en-IN")}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    {i < STATUS_STEPS.length - 1 && (
-                      <div className={`flex-1 h-1 mx-1 rounded transition-all ${i < stepIdx ? "bg-indigo-600" : "bg-gray-200 dark:bg-gray-700"}`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-between mt-1.5 mb-4">
-              <span className="text-xs text-gray-400 font-medium">Received</span>
-              <span className="text-xs text-gray-400 font-medium">Filling</span>
-              <span className="text-xs text-gray-400 font-medium">Done</span>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
         {/* Status Description & Admin Note */}
-        <div className="px-5 pb-5 space-y-3">
+        <div className="px-5 pb-5 space-y-3 mt-2">
           <div className={`rounded-xl p-4 ${cfg.bg}`}>
             <p className={`text-sm font-bold ${cfg.color}`}>{cfg.desc}</p>
           </div>
@@ -148,6 +175,8 @@ export default function TrackApplicationPage() {
       </div>
     );
   };
+
+
 
   if (loading) {
     return (
