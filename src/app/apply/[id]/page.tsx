@@ -193,6 +193,28 @@ export default function ApplyPage() {
     setDocumentFiles(prev => ({ ...prev, [docName]: file }));
   };
 
+  // Smart Fuzzy Locker Match — handles spelling mistakes, case differences, extra spaces
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+
+  const findLockerMatch = (docName: string): string | null => {
+    const target = normalize(docName);
+    // 1. Exact match first
+    if (lockerDocs[docName]) return lockerDocs[docName];
+    // 2. Case-insensitive exact match
+    const exactCI = Object.keys(lockerDocs).find(k => normalize(k) === target);
+    if (exactCI) return lockerDocs[exactCI];
+    // 3. Fuzzy: locker key contains or is contained in doc name
+    const fuzzy = Object.keys(lockerDocs).find(k => {
+      const kn = normalize(k);
+      return kn.includes(target) || target.includes(kn) ||
+        // Check if 80%+ characters match (handles 1-2 typos)
+        (target.length > 4 && kn.length > 4 && (
+          target.split("").filter(c => kn.includes(c)).length / Math.max(target.length, kn.length) > 0.8
+        ));
+    });
+    return fuzzy ? lockerDocs[fuzzy] : null;
+  };
+
   // Calculate Discount
   let discountAmount = 0;
   if (appliedCoupon) {
@@ -210,9 +232,9 @@ export default function ApplyPage() {
     e.preventDefault();
     setSubmitError("");
     
-    // Validate Required Documents (Must have either File or Locker URL)
+    // Validate Required Documents (Must have either File or Locker URL, using fuzzy match)
     if (formConfig.documents && formConfig.documents.length > 0) {
-      const missingDocs = formConfig.documents.filter((doc: string) => !documentFiles[doc] && !lockerDocs[doc]);
+      const missingDocs = formConfig.documents.filter((doc: string) => !documentFiles[doc] && !findLockerMatch(doc));
       if (missingDocs.length > 0) {
         setSubmitError(`Please upload the following required documents: ${missingDocs.join(", ")}`);
         return;
@@ -223,7 +245,14 @@ export default function ApplyPage() {
 
     try {
       // 1. Upload Documents to Backblaze B2 or use Locker URLs
-      const uploadedUrls: {[key: string]: string} = { ...lockerDocs }; // Pre-fill with locker
+      // Pre-fill with fuzzy-matched locker docs
+      const uploadedUrls: {[key: string]: string} = {};
+      if (formConfig.documents) {
+        for (const doc of formConfig.documents) {
+          const matched = findLockerMatch(doc);
+          if (matched) uploadedUrls[doc] = matched;
+        }
+      }
       
       for (const [docName, file] of Object.entries(documentFiles)) {
         if (file) {
@@ -569,7 +598,8 @@ export default function ApplyPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {formConfig.documents.map((doc: string, idx: number) => {
-                  const hasLocker = !!lockerDocs[doc];
+                  const lockerMatch = findLockerMatch(doc);
+                  const hasLocker = !!lockerMatch;
                   const hasFile = !!documentFiles[doc];
                   
                   return (
