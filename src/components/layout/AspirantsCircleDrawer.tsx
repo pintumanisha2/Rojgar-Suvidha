@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2 } from "lucide-react";
+import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2, ArrowDown } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -33,6 +33,12 @@ export default function AspirantsCircleDrawer() {
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Smart scroll and unread tracking
+  const [showScrollDownButton, setShowScrollDownButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLengthRef = useRef(0);
 
   // User Auth & Session State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -83,14 +89,64 @@ export default function AspirantsCircleDrawer() {
       )
       .subscribe();
 
+    // POLLING FALLBACK: Poll for new messages every 8 seconds in case Realtime isn't enabled
+    const pollInterval = setInterval(() => {
+      fetchMessages();
+    }, 8000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [isOpen]);
 
+  // Smart auto-scroll logic (WhatsApp/Telegram style)
   useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    if (messages.length > prevMessagesLengthRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isScrolledUp = scrollHeight - scrollTop - clientHeight > 200;
+      
+      const lastMessage = messages[messages.length - 1];
+      const isMyOwnMessage = lastMessage?.user_id === myUserId;
+
+      if (!isScrolledUp || isMyOwnMessage) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 50);
+        setUnreadCount(0);
+      } else {
+        setUnreadCount(prev => prev + 1);
+      }
+    } else if (messages.length > 0 && prevMessagesLengthRef.current === 0) {
+      // Initial load scroll
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 50);
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages, myUserId]);
+
+  const handleScroll = () => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 150;
+    setShowScrollDownButton(isScrolledUp);
+
+    if (!isScrolledUp) {
+      setUnreadCount(0);
+    }
+  };
+
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    setUnreadCount(0);
+    setShowScrollDownButton(false);
+  };
 
   const checkUserSession = async () => {
     setLoading(true);
@@ -158,14 +214,29 @@ export default function AspirantsCircleDrawer() {
   };
 
   const fetchMessages = async () => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // 1. Clean up messages older than 7 days from DB
+    try {
+      await supabase
+        .from("chat_messages")
+        .delete()
+        .lt("created_at", sevenDaysAgo.toISOString());
+    } catch (err) {
+      console.warn("Cleanup of old messages failed:", err);
+    }
+
+    // 2. Query only messages from the last 7 days
     const { data } = await supabase
       .from("chat_messages")
       .select(`
         id, text_content, is_deleted, created_at, user_id,
         chat_users ( display_name, avatar, role, is_banned )
       `)
+      .gte("created_at", sevenDaysAgo.toISOString())
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
       
     if (data) {
       setMessages(data.reverse() as unknown as ChatMessage[]);
@@ -378,7 +449,11 @@ export default function AspirantsCircleDrawer() {
           // Active Chat view
           <>
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-950 scrollbar-thin">
+            <div 
+              ref={chatContainerRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-950 scrollbar-thin relative"
+            >
               {messages.length === 0 ? (
                 <div className="text-center text-gray-400 dark:text-gray-500 my-10 text-xs font-semibold">
                   No messages yet. Say hello to start the discussion!
@@ -441,6 +516,22 @@ export default function AspirantsCircleDrawer() {
                 })
               )}
               <div ref={messagesEndRef} />
+
+              {/* Floating Scroll Down Arrow */}
+              {showScrollDownButton && (
+                <button
+                  type="button"
+                  onClick={scrollToBottom}
+                  className="absolute bottom-4 right-4 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-2xl transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center gap-1.5 z-40 border border-indigo-500/20"
+                >
+                  <ArrowDown className="w-4 h-4 animate-bounce" />
+                  {unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-black min-w-[15px] h-[15px] flex items-center justify-center shadow-sm">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Input Form */}
