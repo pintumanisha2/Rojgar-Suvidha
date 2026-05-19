@@ -21,6 +21,7 @@ const STANDARD_DOCS = [
 
 export default function DigitalLockerPage() {
   const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string>("");
   const [lockerDocs, setLockerDocs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function DigitalLockerPage() {
         return;
       }
       setUser(session.user);
+      setToken(session.access_token);
 
       // Fetch from user_locker table
       const { data, error } = await supabase
@@ -54,7 +56,7 @@ export default function DigitalLockerPage() {
   }, []);
 
   const handleFileUpload = async (docType: string, file: File | null) => {
-    if (!file || !user) return;
+    if (!file || !user || !token) return;
     
     setUploadingDoc(docType);
     
@@ -69,23 +71,43 @@ export default function DigitalLockerPage() {
       const compressedFile = await imageCompression(file, options);
       console.log(`Compressed ${docType} from ${file.size/1024}KB to ${compressedFile.size/1024}KB`);
 
-      // 2. Upload to Supabase Storage
-      const fileExt = compressedFile.name.split('.').pop() || 'jpg';
-      const fileName = `locker/${user.id}/${docType.replace(/\s+/g, '_')}_${Date.now()}.${fileExt}`;
+      // 2. Request upload URL from Next.js backend API
+      const res = await fetch("/api/locker/upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          contentType: compressedFile.type
+        })
+      });
 
-      const { error: uploadError } = await supabase.storage
-        .from('user_documents')
-        .upload(fileName, compressedFile, { upsert: true });
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || "Failed to get upload URL");
+      }
 
-      if (uploadError) throw uploadError;
+      const { uploadUrl, key } = resData;
 
-      const { data: publicUrlData } = supabase.storage
-        .from('user_documents')
-        .getPublicUrl(fileName);
+      // 3. Upload file directly to Backblaze B2 using PUT request
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": compressedFile.type
+        },
+        body: compressedFile
+      });
 
-      const newUrl = publicUrlData.publicUrl;
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload file to Backblaze");
+      }
 
-      // 3. Update Database (JSON merge)
+      // 4. Construct the secure relative view URL
+      const newUrl = `/api/locker/view?key=${encodeURIComponent(key)}`;
+
+      // 5. Update Database (JSON merge)
       const updatedDocs = { ...lockerDocs, [docType]: newUrl };
       
       const { error: dbError } = await supabase
@@ -104,6 +126,28 @@ export default function DigitalLockerPage() {
 
   const handleDelete = async (docType: string) => {
     if (!confirm(`Delete your ${docType}?`)) return;
+
+    const fileUrl = lockerDocs[docType];
+    
+    // If it's a Backblaze B2 file, let's delete it from B2
+    if (fileUrl && fileUrl.startsWith("/api/locker/view")) {
+      try {
+        const urlParams = new URL(fileUrl, window.location.origin);
+        const key = urlParams.searchParams.get("key");
+        if (key && token) {
+          await fetch("/api/locker/delete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ key })
+          });
+        }
+      } catch (err) {
+        console.error("Failed to delete file from Backblaze:", err);
+      }
+    }
     
     const updatedDocs = { ...lockerDocs };
     delete updatedDocs[docType];
@@ -115,6 +159,12 @@ export default function DigitalLockerPage() {
     if (!error) {
       setLockerDocs(updatedDocs);
     }
+  };
+
+  const getDocUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url; // Old public Supabase URL
+    return `${url}&token=${token}`; // Relative backend secure URL
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
@@ -178,7 +228,7 @@ export default function DigitalLockerPage() {
                     </div>
                     
                     <div className="w-24 h-24 rounded-2xl bg-gray-100 dark:bg-gray-800 overflow-hidden mb-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <img src={lockerDocs[docType]} alt={docType} className="w-full h-full object-cover" />
+                      <img src={getDocUrl(lockerDocs[docType])} alt={docType} className="w-full h-full object-cover" />
                     </div>
                     
                     <h3 className="font-bold text-gray-900 dark:text-white mb-1">{docType}</h3>

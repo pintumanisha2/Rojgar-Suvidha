@@ -32,9 +32,16 @@ export default function FormSubmissionsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
+  const [token, setToken] = useState("");
 
   useEffect(() => {
     if (!formId) return;
+    
+    // Fetch session token
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setToken(session.access_token);
+    });
+
     Promise.all([
       supabase.from("custom_forms").select("title").eq("id", formId).single(),
       supabase.from("user_applications").select("*").eq("form_id", formId).order("created_at", { ascending: false })
@@ -44,6 +51,12 @@ export default function FormSubmissionsPage() {
       setLoading(false);
     });
   }, [formId]);
+
+  const getDocUrl = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith("http")) return url; // Old public Supabase URL
+    return `${url}&token=${token}`; // Secure API URL with token
+  };
 
   function exportCSV() {
     const rows = [
@@ -189,7 +202,7 @@ export default function FormSubmissionsPage() {
                   <p className="text-gray-500 font-bold mb-2">Documents:</p>
                   <div className="space-y-2">
                     {Object.entries(selected.documents_urls).map(([doc, url]) => (
-                      <a key={doc} href={url} target="_blank" rel="noopener noreferrer"
+                      <a key={doc} href={getDocUrl(url)} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-2 text-indigo-600 hover:underline">
                         <FileText className="w-4 h-4" /> {doc}
                       </a>
