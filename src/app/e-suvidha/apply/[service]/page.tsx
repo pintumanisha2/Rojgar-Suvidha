@@ -107,6 +107,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
   
   const [extraData, setExtraData] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, File>>({});
+  const [lockerDocs, setLockerDocs] = useState<Record<string, string>>({}); // From digital locker
   const [trackingId, setTrackingId] = useState("");
   
   const [applicantName, setApplicantName] = useState("");
@@ -134,6 +135,14 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
         setProfile(profileData);
         if (profileData?.full_name) setApplicantName(profileData.full_name);
         if (profileData?.mobile_number) setApplicantPhone(profileData.mobile_number);
+
+        // Fetch Digital Locker documents
+        const { data: lockerData } = await supabase
+          .from("user_locker")
+          .select("documents")
+          .eq("user_id", session.user.id)
+          .single();
+        if (lockerData?.documents) setLockerDocs(lockerData.documents);
       } catch (err) {
         console.error(err);
       } finally {
@@ -147,6 +156,24 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
     if (e.target.files && e.target.files[0]) {
       setFiles(prev => ({ ...prev, [docName]: e.target.files![0] }));
     }
+  };
+
+  // Smart Fuzzy Locker Match — handles spelling mistakes, case differences
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+
+  const findLockerMatch = (docName: string): string | null => {
+    const target = normalize(docName);
+    if (lockerDocs[docName]) return lockerDocs[docName];
+    const exactCI = Object.keys(lockerDocs).find(k => normalize(k) === target);
+    if (exactCI) return lockerDocs[exactCI];
+    const fuzzy = Object.keys(lockerDocs).find(k => {
+      const kn = normalize(k);
+      return kn.includes(target) || target.includes(kn) ||
+        (target.length > 4 && kn.length > 4 &&
+          target.split("").filter(c => kn.includes(c)).length / Math.max(target.length, kn.length) > 0.8
+        );
+    });
+    return fuzzy ? lockerDocs[fuzzy] : null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,9 +193,9 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
       return;
     }
 
-    // Validate if all required documents are uploaded
+    // Validate if all required documents are uploaded (file OR locker match)
     for (const doc of serviceDetails.docsRequired) {
-      if (!files[doc]) {
+      if (!files[doc] && !findLockerMatch(doc)) {
         setError(`Please upload required document: ${doc}`);
         return;
       }
@@ -178,8 +205,15 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
     setError(null);
 
     try {
-      // 1. Upload Files to Backblaze B2
+      // 1. Upload Files to Backblaze B2 (or use locker match)
       const uploadedUrls: Record<string, string> = {};
+
+      // Pre-fill with fuzzy locker matches
+      const allDocs = [...serviceDetails.docsRequired, ...(serviceDetails.docsOptional || [])];
+      for (const doc of allDocs) {
+        const match = findLockerMatch(doc);
+        if (match) uploadedUrls[doc] = match;
+      }
 
       for (const [docName, file] of Object.entries(files)) {
         let fileToUpload = file;
@@ -386,34 +420,60 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
                   <UploadCloud className="w-5 h-5 text-indigo-500" /> Upload Documents
                 </h3>
                 <div className="space-y-4">
-                  {serviceDetails.docsRequired.map((doc, idx) => (
-                    <div key={`req-${idx}`} className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {serviceDetails.docsRequired.map((doc, idx) => {
+                    const lockerMatch = findLockerMatch(doc);
+                    const hasFile = !!files[doc];
+                    const hasLocker = !!lockerMatch && !hasFile;
+                    return (
+                    <div key={`req-${idx}`} className={`relative bg-gray-50 dark:bg-gray-800/30 p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${hasFile || hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-200 dark:border-gray-700'}`}>
+                      {hasLocker && (
+                        <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">
+                          From Locker 🔒
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{doc} <span className="text-red-500">*</span></p>
-                        <p className="text-xs text-gray-500">Max size 5MB (JPG, PNG, PDF)</p>
+                        {hasLocker ? (
+                          <p className="text-xs text-green-600 font-bold mt-0.5">✅ Auto-filled from your locker</p>
+                        ) : (
+                          <p className="text-xs text-gray-500">Max size 5MB (JPG, PNG, PDF)</p>
+                        )}
                       </div>
-                      <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors text-center">
-                        {files[doc] ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Uploaded</span> : "Select File"}
+                      <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors text-center shrink-0">
+                        {hasFile ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Uploaded</span> : hasLocker ? "Replace" : "Select File"}
                         <input 
                           type="file" 
                           accept=".jpg,.jpeg,.png,.pdf"
-                          required
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           onChange={(e) => handleFileChange(doc, e)}
                         />
                       </label>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Optional Documents */}
-                  {serviceDetails.docsOptional?.map((doc, idx) => (
-                    <div key={`opt-${idx}`} className="bg-white dark:bg-gray-800/10 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 opacity-80 hover:opacity-100 transition-opacity">
+                  {serviceDetails.docsOptional?.map((doc, idx) => {
+                    const lockerMatch = findLockerMatch(doc);
+                    const hasFile = !!files[doc];
+                    const hasLocker = !!lockerMatch && !hasFile;
+                    return (
+                    <div key={`opt-${idx}`} className={`relative bg-white dark:bg-gray-800/10 p-4 rounded-xl border border-dashed flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${hasFile || hasLocker ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 dark:border-gray-700 opacity-80 hover:opacity-100'}`}>
+                      {hasLocker && (
+                        <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-xl">
+                          From Locker 🔒
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{doc} <span className="text-gray-400 text-xs font-normal">(Optional)</span></p>
-                        <p className="text-xs text-gray-500">Max size 5MB (JPG, PNG, PDF)</p>
+                        {hasLocker ? (
+                          <p className="text-xs text-green-600 font-bold mt-0.5">✅ Auto-filled from your locker</p>
+                        ) : (
+                          <p className="text-xs text-gray-500">Max size 5MB (JPG, PNG, PDF)</p>
+                        )}
                       </div>
-                      <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors text-center">
-                        {files[doc] ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Uploaded</span> : "Select File"}
+                      <label className="relative cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-indigo-600 transition-colors text-center shrink-0">
+                        {hasFile ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Uploaded</span> : hasLocker ? "Replace" : "Select File"}
                         <input 
                           type="file" 
                           accept=".jpg,.jpeg,.png,.pdf"
@@ -422,7 +482,8 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
                         />
                       </label>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
