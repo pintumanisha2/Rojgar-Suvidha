@@ -28,21 +28,56 @@ const BAD_WORDS_EXACT = [
   "kutta", "kutti", "saala", "saali", "gali"
 ];
 
-const isMessageClean = (text: string) => {
-  // Convert to lowercase and normalize common spacer symbols to check substrings
-  const cleanText = text.toLowerCase().replace(/[\s\-_.*\n]/g, "");
+const isMessageClean = (text: string): { clean: boolean; reason: string | null } => {
+  const lowerText = text.toLowerCase();
   
-  // 1. Check substring bad words
-  if (BAD_WORDS_SUBSTRING.some(word => cleanText.includes(word))) return false;
+  // 1. Check for External Links/URLs
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|in|net|org|co|info|xyz|io|me|us|biz|edu|gov|online|app)\b)/gi;
+  const urls = text.match(urlRegex);
+  if (urls) {
+    const isOurDomain = urls.every(url => 
+      url.includes("rojgarsuvidha.com") || url.includes("rojgar-suvidha")
+    );
+    if (!isOurDomain) {
+      return { clean: false, reason: "External links/URLs are not allowed in community chat for safety reasons." };
+    }
+  }
+
+  // 2. Check for Email Addresses
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi;
+  if (emailRegex.test(text)) {
+    return { clean: false, reason: "Sharing email addresses is prohibited to protect your privacy." };
+  }
+
+  // 3. Check for 10-digit mobile numbers (anti-spam / anti-dox)
+  if (/\d{10}/.test(text.replace(/[\s-]/g, ""))) {
+    return { clean: false, reason: "Sharing phone numbers is strictly prohibited to prevent spam and preserve privacy." };
+  }
+
+  // 4. Check for substring bad words (Hindi/English)
+  const cleanText = lowerText.replace(/[\s\-_.*\n]/g, "");
+  if (BAD_WORDS_SUBSTRING.some(word => cleanText.includes(word))) {
+    return { clean: false, reason: "Please maintain respect. Abusive or inappropriate language is not allowed." };
+  }
   
-  // 2. Check exact words (split by common word boundaries)
-  const words = text.toLowerCase().split(/[\s\-_.*,\n]+/);
-  if (words.some(word => BAD_WORDS_EXACT.includes(word))) return false;
-  
-  // 3. Check for 10-digit mobile numbers (anti-spam)
-  if (/\d{10}/.test(text.replace(/[\s-]/g, ""))) return false;
-  
-  return true;
+  // 5. Check exact bad words
+  const words = lowerText.split(/[\s\-_.*,\n]+/);
+  if (words.some(word => BAD_WORDS_EXACT.includes(word))) {
+    return { clean: false, reason: "Please maintain respect. Abusive or inappropriate language is not allowed." };
+  }
+
+  // 6. Check for repeated character flooding (e.g. "!!!!!!!!", "hellooooooo", "......")
+  const repeatRegex = /(.)\1{4,}/g;
+  if (repeatRegex.test(lowerText)) {
+    return { clean: false, reason: "Flooding the chat with repeating characters/symbols is not allowed." };
+  }
+
+  // 7. Check for layout breaking excessively long words
+  if (words.some(w => w.length > 35)) {
+    return { clean: false, reason: "Words longer than 35 characters are not allowed to keep the layout responsive." };
+  }
+
+  return { clean: true, reason: null };
 };
 
 export default function AspirantsCircleDrawer() {
@@ -336,8 +371,9 @@ export default function AspirantsCircleDrawer() {
     e.preventDefault();
     if (!inputText.trim() || !myUserId || isBanned) return;
 
-    if (!isMessageClean(inputText)) {
-      alert("⚠️ Warning: Phone numbers, emails, or bad words are strictly prohibited for safety reasons.");
+    const validation = isMessageClean(inputText);
+    if (!validation.clean) {
+      alert(`⚠️ Safety Alert: ${validation.reason}`);
       return;
     }
 
@@ -357,13 +393,16 @@ export default function AspirantsCircleDrawer() {
 
   const handleDeleteMessage = async (msgId: string) => {
     if (!confirm("Are you sure you want to delete this message?")) return;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("chat_messages")
       .update({ is_deleted: true })
-      .eq("id", msgId);
+      .eq("id", msgId)
+      .select();
       
     if (error) {
       alert("Failed to delete message: " + error.message);
+    } else if (!data || data.length === 0) {
+      alert("Permission Denied: Database RLS policies are preventing you from deleting this message. Please run the SQL command in Supabase Dashboard.");
     } else {
       setMessages(prev =>
         prev.map(m => m.id === msgId ? { ...m, is_deleted: true } : m)
