@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calculator, Calendar, ChevronDown, CheckCircle2 } from "lucide-react";
 
 export default function AgeCalculator() {
   const [dob, setDob] = useState("");
-  const [targetDate, setTargetDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0]; // YYYY-MM-DD format
-  });
+  const [targetDate, setTargetDate] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setTargetDate(new Date().toISOString().split("T")[0]);
+  }, []);
   
   const calculateAge = () => {
     if (!dob || !targetDate) return null;
@@ -39,6 +42,9 @@ export default function AgeCalculator() {
   };
 
   const age = calculateAge();
+
+  // Return a skeleton or null during SSR to avoid mismatch
+  if (!isMounted) return null;
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 p-0 shadow-sm overflow-hidden mt-6 mb-6">

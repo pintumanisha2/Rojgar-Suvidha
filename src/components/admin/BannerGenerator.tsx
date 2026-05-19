@@ -264,9 +264,9 @@ export default function BannerGenerator({
     setUploading(true);
     setUploaded(false);
     try {
-      const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), "image/png", 1));
-      const fileName = `auto_banner_${Date.now()}.png`;
-      const { error } = await supabase.storage.from("blog_images").upload(fileName, blob, { contentType: "image/png" });
+      const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), "image/webp", 0.85));
+      const fileName = `auto_banner_${Date.now()}.webp`;
+      const { error } = await supabase.storage.from("blog_images").upload(fileName, blob, { contentType: "image/webp" });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from("blog_images").getPublicUrl(fileName);
       onBannerGenerated(publicUrl);
