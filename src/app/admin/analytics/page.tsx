@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>("7d");
-  const [activeTab, setActiveTab] = useState<"overview" | "pages" | "audience" | "behavior">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "pages" | "audience" | "behavior" | "services">("overview");
 
   const fetchData = useCallback(async () => {
     setLoading(true);

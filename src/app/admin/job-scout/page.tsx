@@ -23,6 +23,7 @@ interface ScoutAlert {
   id: string;
   site_id: string;
   site_name: string;
+  site_url: string;
   link_text: string;
   link_url: string;
   detected_at: string;

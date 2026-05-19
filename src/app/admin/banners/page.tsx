@@ -168,10 +168,9 @@ export default function AdminBannersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Status & Placement</label>
+                <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">Status</label>
                 <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
-                  <option value="active">Active (Homepage Slider)</option>
-                  <option value="mini_active">Global Mini Banner (Visible on all pages)</option>
+                  <option value="active">Active (Visible)</option>
                   <option value="hidden">Hidden</option>
                 </select>
               </div>
@@ -232,14 +231,8 @@ export default function AdminBannersPage() {
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full capitalize ${
-                        banner.status === 'active' 
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                          : banner.status === 'mini_active'
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
-                        {banner.status.replace("_", " ")}
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full capitalize ${banner.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}`}>
+                        {banner.status}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-right">
