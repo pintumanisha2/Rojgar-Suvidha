@@ -13,6 +13,7 @@ import {
 // FIX: Removed hardcoded stats array (was always showing 0). Now using dynamic statCounts state fetched from Supabase.
 
 const quickActions = [
+  { label: "Job Scout (Auto Tracker)", icon: BellRing, href: "/admin/job-scout", color: "bg-purple-600 hover:bg-purple-700 text-white" },
   { label: "Create New Post", icon: PlusCircle, href: "/admin/jobs/new", color: "bg-indigo-600 hover:bg-indigo-700 text-white" },
   { label: "Send Job Alerts", icon: BellRing, href: "/admin/notifications", color: "bg-blue-600 hover:bg-blue-700 text-white" },
   { label: "Manage Banners", icon: FileText, href: "/admin/banners", color: "bg-green-600 hover:bg-green-700 text-white" },

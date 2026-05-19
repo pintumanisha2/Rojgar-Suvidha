@@ -8,6 +8,7 @@ import {
   Briefcase, Trophy, CreditCard, Newspaper, GraduationCap, ClipboardList
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect } from "react";
 
 const CATEGORIES = [
   { value: "latest-jobs",  label: "Latest Jobs",   icon: Briefcase,     color: "bg-indigo-100 text-indigo-700 border-indigo-200",    activeColor: "bg-indigo-600 text-white border-indigo-600" },
@@ -27,6 +28,17 @@ export default function AIWriterPage() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [result, setResult] = useState<any>(null);
+
+  // Load payload from Job Scout if applicable
+  useEffect(() => {
+    if (window.location.search.includes("source=scout")) {
+      const scoutData = localStorage.getItem("scout_to_ai");
+      if (scoutData) {
+        setRawText(scoutData);
+        localStorage.removeItem("scout_to_ai");
+      }
+    }
+  }, []);
 
   const handleScan = async () => {
     if (!rawText || rawText.length < 50) {
