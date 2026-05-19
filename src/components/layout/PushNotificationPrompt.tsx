@@ -93,7 +93,7 @@ export default function PushNotificationPrompt() {
     return (
       <button 
         onClick={() => setShowPrompt(true)}
-        className="fixed bottom-6 left-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-2xl hover:scale-110 transition-transform group"
+        className="fixed bottom-[110px] md:bottom-[90px] right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-full shadow-2xl hover:scale-110 transition-transform group"
         title="Get Job Alerts"
       >
         <Bell className="w-6 h-6 animate-pulse group-hover:animate-none" />
@@ -104,34 +104,48 @@ export default function PushNotificationPrompt() {
   // The main prompt
   if (showPrompt && !isSubscribed) {
     return (
-      <div className="fixed bottom-6 left-6 z-50 w-[340px] max-w-[calc(100vw-48px)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl p-5 overflow-hidden">
-        {/* Decorative background */}
-        <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl"></div>
-        
-        <button 
-          onClick={dismissPrompt}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-        >
-          <X className="w-4 h-4" />
-        </button>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="relative w-full max-w-md bg-white dark:bg-gray-900 border border-indigo-100 dark:border-gray-800 rounded-3xl shadow-2xl p-6 md:p-8 overflow-hidden transform animate-in zoom-in-95 duration-300">
+          
+          {/* Decorative background */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <button 
+            onClick={dismissPrompt}
+            className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 rounded-full transition-colors z-20"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
-        <div className="flex items-start gap-4 relative z-10">
-          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center shrink-0">
-            <BellRing className="w-6 h-6 text-indigo-600 dark:text-indigo-400 animate-[wiggle_1s_ease-in-out_infinite]" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-gray-900 dark:text-white text-sm">Want Free Job Alerts?</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-3">
-              Never miss a Govt Job or Admit Card. Get instant notifications directly on your device.
+          <div className="flex flex-col items-center text-center relative z-10">
+            <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-5 relative">
+              <div className="absolute inset-0 rounded-full border-2 border-indigo-500/30 animate-ping"></div>
+              <BellRing className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-[wiggle_1s_ease-in-out_infinite]" />
+            </div>
+            
+            <h3 className="font-extrabold text-gray-900 dark:text-white text-xl md:text-2xl mb-2">
+              Govt Job Updates Chahiye?
+            </h3>
+            
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+              Koi bhi **Vacancy, Admit Card** ya **Result** aate hi turant aapke phone me notification aayega. Ab form chootne ka dar khatam!
             </p>
-            <div className="flex items-center gap-2">
+            
+            <div className="flex flex-col sm:flex-row w-full gap-3">
               <button 
                 onClick={subscribeToPush}
                 disabled={loading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded-lg transition-colors disabled:opacity-70"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-70 flex items-center justify-center gap-2"
               >
-                {loading ? "Activating..." : "Yes, Enable Alerts"}
+                {loading ? "Chalu ho raha hai..." : "Haan, Chalu Karein"}
+              </button>
+              
+              <button 
+                onClick={dismissPrompt}
+                className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold py-3.5 px-6 rounded-xl transition-all"
+              >
+                Nahi, Baad me
               </button>
             </div>
           </div>

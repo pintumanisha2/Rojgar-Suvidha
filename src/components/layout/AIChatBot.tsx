@@ -161,7 +161,7 @@ export default function AIChatBot() {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shrink-0 shadow-sm relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-center gap-3 relative z-10">
                 <div className="relative">
                   <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
@@ -176,7 +176,7 @@ export default function AIChatBot() {
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-white/15 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-white/15 rounded-lg transition-colors relative z-20"
               >
                 <X className="w-4 h-4" />
               </button>
