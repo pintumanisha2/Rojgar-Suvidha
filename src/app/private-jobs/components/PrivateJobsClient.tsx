@@ -201,7 +201,7 @@ export default function PrivateJobsClient({ initialJobs }: PrivateJobsClientProp
  <div className="absolute top-1/2 right-1/10 w-[35rem] h-[35rem] bg-indigo-500/10 rounded-full blur-[150px] -z-10 pointer-events-none"/>
  <div className="absolute bottom-10 left-1/4 w-[25rem] h-[25rem] bg-violet-500/10 rounded-full blur-[100px] -z-10 pointer-events-none"/>
  
- <div className="max-w-6xl mx-auto flex flex-col gap-12 md:gap-20">
+ <div className="max-w-6xl mx-auto flex flex-col gap-6 md:gap-12">
  
  {/* 1. Hero Banner */}
  <PrivateJobsHero />
@@ -224,7 +224,7 @@ export default function PrivateJobsClient({ initialJobs }: PrivateJobsClientProp
  />
 
  {/* 4. Main Listings Section */}
- <div className="flex flex-col gap-12 md:gap-16">
+ <div className="flex flex-col gap-8 md:gap-12">
  {/* Recommended Jobs (AI-personalised) */}
  <RecommendedJobsSection 
  searchQuery={searchQuery} 
