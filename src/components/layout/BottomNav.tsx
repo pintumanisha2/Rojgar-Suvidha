@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, Bookmark, UserCircle, MessageSquare } from "lucide-react";
+import { Home, Briefcase, Bookmark, UserCircle, MessageSquare, MessageCircle } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -11,6 +12,8 @@ export default function BottomNav() {
   const [tappedItem, setTappedItem] = useState<string | null>(null);
   const lastScrollYRef = useRef(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isCommunityOpen, setIsCommunityOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // FIX: All hooks MUST be called before any conditional return
   useEffect(() => {
@@ -46,20 +49,52 @@ export default function BottomNav() {
     return () => window.removeEventListener("aspirantsCircleStateChange", handleStateChange);
   }, []);
 
-  if (pathname.startsWith("/admin")) return null;
+  // Track community drawer open state
+  useEffect(() => {
+    const handleCommunityOpen = () => setIsCommunityOpen(true);
+    const handleCommunityClosed = () => setIsCommunityOpen(false);
+    window.addEventListener("openCommunityChat", handleCommunityOpen);
+    // Close listener — CommunityChatDrawer dispatches this on X click
+    window.addEventListener("closeCommunityChat", handleCommunityClosed);
+    return () => {
+      window.removeEventListener("openCommunityChat", handleCommunityOpen);
+      window.removeEventListener("closeCommunityChat", handleCommunityClosed);
+    };
+  }, []);
+
+  // Check auth state
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+    checkAuth();
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      setIsLoggedIn(!!session);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/private-jobs") ||
+    pathname.startsWith("/employer")
+  ) {
+    return null;
+  }
 
   const navItems = [
     {
       name: "Home",
       href: "/",
       icon: Home,
-      activeCheck: !isChatOpen && pathname === "/",
+      activeCheck: !isChatOpen && !isCommunityOpen && pathname === "/",
     },
     {
       name: "Jobs",
       href: "/latest-jobs",
       icon: Briefcase,
-      activeCheck: !isChatOpen && (pathname === "/latest-jobs" || pathname.startsWith("/latest-jobs/") || pathname.startsWith("/job/")),
+      activeCheck: !isChatOpen && !isCommunityOpen && (pathname === "/latest-jobs" || pathname.startsWith("/latest-jobs/") || pathname.startsWith("/job/")),
     },
     {
       name: "Adda",
@@ -69,17 +104,26 @@ export default function BottomNav() {
       icon: MessageSquare,
       activeCheck: isChatOpen,
     },
+    // Show Community Chat only for logged-in users
+    ...(isLoggedIn ? [{
+      name: "Community",
+      onClick: () => {
+        window.dispatchEvent(new CustomEvent("openCommunityChat"));
+      },
+      icon: MessageCircle,
+      activeCheck: isCommunityOpen,
+    }] : []),
     {
       name: "Saved",
       href: "/saved-jobs",
       icon: Bookmark,
-      activeCheck: !isChatOpen && (pathname === "/saved-jobs" || pathname.startsWith("/saved-jobs/")),
+      activeCheck: !isChatOpen && !isCommunityOpen && (pathname === "/saved-jobs" || pathname.startsWith("/saved-jobs/")),
     },
     {
       name: "Account",
       href: "/dashboard",
       icon: UserCircle,
-      activeCheck: !isChatOpen && (pathname === "/dashboard" || pathname.startsWith("/dashboard/")),
+      activeCheck: !isChatOpen && !isCommunityOpen && (pathname === "/dashboard" || pathname.startsWith("/dashboard/")),
     },
   ];
 

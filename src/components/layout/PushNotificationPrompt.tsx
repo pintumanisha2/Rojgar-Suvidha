@@ -2,30 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Bell, BellRing, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export default function PushNotificationPrompt() {
+  const pathname = usePathname();
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    // Check if push messaging is supported
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      setIsSupported(true);
-      checkSubscription();
-      
-      // Delay showing the prompt by a few seconds so it doesn't annoy the user immediately
-      const timer = setTimeout(() => {
-        const hasPrompted = localStorage.getItem("push_prompted");
-        if (!hasPrompted && Notification.permission === "default") {
-          setShowPrompt(true);
-        }
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   const checkSubscription = async () => {
     try {
@@ -85,6 +69,35 @@ export default function PushNotificationPrompt() {
     setShowPrompt(false);
     localStorage.setItem("push_prompted", "true");
   };
+
+
+  useEffect(() => {
+    // Check if push messaging is supported
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      setIsSupported(true);
+      checkSubscription();
+      
+      // Delay showing the prompt by a few seconds so it doesn't annoy the user immediately
+      const timer = setTimeout(() => {
+        const hasPrompted = localStorage.getItem("push_prompted");
+        if (!hasPrompted && Notification.permission === "default") {
+          setShowPrompt(true);
+        }
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/private-jobs") ||
+    pathname?.startsWith("/employer")
+  ) {
+    return null;
+  }
+
+
 
   if (!isSupported) return null;
 

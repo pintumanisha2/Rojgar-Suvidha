@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
     try {
       const host = new URL(r.referrer!).hostname;
       refMap[host] = (refMap[host] || 0) + 1;
-    } catch {}
+    } catch { }
   });
   const topRefs = Object.entries(refMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
 

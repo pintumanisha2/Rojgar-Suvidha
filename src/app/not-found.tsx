@@ -32,7 +32,7 @@ export default function NotFound() {
           </p>
           {[
             { href: "/", label: "🏠 Home — Sarkari Jobs, Results" },
-            { href: "/latest-jobs", label: "💼 Latest Government Jobs" },
+            { href: "/latest-jobs", label: "Latest Government Jobs" },
             { href: "/results", label: "🏆 Exam Results 2025" },
             { href: "/admit-card", label: "🎫 Admit Card Download" },
             { href: "/e-suvidha", label: "🏛️ e-Suvidha — Cyber Cafe Services" },

@@ -13,7 +13,7 @@ const quickLinks = [
   { href: "/answer-key", label: "Answer Key 2025" },
   { href: "/admission", label: "University Admission 2025" },
   { href: "/news", label: "Govt Job News Today" },
-  { href: "/private-jobs", label: "Private Jobs India" },
+  // { href: "/private-jobs", label: "Private Jobs India" },
   { href: "/apply-for-me", label: "Apply For Me Service" },
   { href: "/track-application", label: "Track Application" },
 ];
@@ -97,6 +97,18 @@ export default function Footer() {
           {/* Quick Links – SEO Anchor Texts */}
           <div>
             <h3 className="text-sm font-bold mb-4 text-gray-200 uppercase tracking-wider">Quick Links</h3>
+            
+            {/* HIGHLIGHTED HR LOGIN BUTTON */}
+            <Link
+              href="/employer/login"
+              className="group flex items-center justify-between p-1 pl-3 pr-1 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg shadow-md hover:shadow-emerald-500/20 transition-all mb-4 border border-emerald-400/30 hover:scale-105 active:scale-95"
+            >
+              <span className="font-extrabold text-white text-[11px] tracking-widest uppercase">HR / Recruiter Login</span>
+              <span className="w-6 h-6 rounded flex items-center justify-center text-white bg-white/20 group-hover:bg-white group-hover:text-emerald-600 transition-colors">
+                →
+              </span>
+            </Link>
+
             <ul className="space-y-2.5">
               {quickLinks.map(link => (
                 <li key={link.href}>

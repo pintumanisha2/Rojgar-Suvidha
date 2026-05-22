@@ -66,7 +66,7 @@ export default function Highlights() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-900 text-white shadow-lg border border-emerald-500/40 flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-36 h-36 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute top-3 right-3 z-10">
-            <span className="bg-emerald-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-xl uppercase tracking-wider shadow border border-emerald-400/50">New 🚀</span>
+            <span className="bg-emerald-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-xl uppercase tracking-wider shadow border border-emerald-400/50">New</span>
           </div>
           <div className="relative z-10 p-5 md:p-6 flex-1 flex flex-col">
             <div className="flex items-center gap-2.5 mb-3">

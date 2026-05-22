@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Loader2, Download, Sparkles, CheckCircle2, User, GraduationCap, Briefcase, ChevronRight, ChevronLeft, Eye, FileText, Shield, Clock, Star } from "lucide-react";
 import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
+import { generateLocalResume } from "@/utils/localResumeGenerator";
 
 // ⚠️ MUST be outside the component — otherwise re-renders cause cursor to jump
 function InputBox({ label, value, onChange, type = "text", placeholder = "" }: {
@@ -41,6 +42,8 @@ export default function ResumeBuilderPage() {
   const [aiData, setAiData] = useState<any>(null);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const [engine, setEngine] = useState<"local" | "groq">("local");
+  const [fallbackBanner, setFallbackBanner] = useState(false);
   const resumeRef = useRef<HTMLDivElement>(null);
 
   function update(field: string, value: string) {
@@ -54,17 +57,33 @@ export default function ResumeBuilderPage() {
     setGenerating(true);
     setError("");
     try {
-      const res = await fetch("/api/generate-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setAiData(data.data);
-      setStep(3);
+      if (engine === "local") {
+        const localData = generateLocalResume(form);
+        setAiData(localData);
+        setFallbackBanner(false);
+        setStep(3);
+      } else {
+        const res = await fetch("/api/generate-resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setAiData(data.data);
+        setFallbackBanner(false);
+        setStep(3);
+      }
     } catch (e: any) {
-      setError(e.message || "Failed to generate");
+      console.warn("AI generation failed, falling back to offline smart synthesis:", e);
+      try {
+        const localData = generateLocalResume(form);
+        setAiData(localData);
+        setFallbackBanner(true);
+        setStep(3);
+      } catch (fallbackErr: any) {
+        setError(e.message || "Failed to generate");
+      }
     }
     setGenerating(false);
   }
@@ -227,6 +246,54 @@ export default function ResumeBuilderPage() {
               </div>
               <InputBox label="Languages Known" value={form.languages} onChange={(v: string) => update("languages", v)} placeholder="Hindi, English, Bhojpuri" />
 
+              {/* Engine Selector */}
+              <div className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-gray-800/40 dark:to-indigo-950/20 p-5 rounded-2xl border border-indigo-100/80 dark:border-gray-800 space-y-3.5 shadow-sm">
+                <label className="block text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">
+                  Choose Generation Engine
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setEngine("local")}
+                    className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
+                      engine === "local"
+                        ? "bg-white dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md"
+                        : "bg-gray-50/50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center border text-xs font-bold ${
+                        engine === "local" ? "bg-indigo-500 border-indigo-500 text-white" : "border-gray-300 text-gray-500"
+                      }`}>
+                        {engine === "local" ? "✓" : "⚡"}
+                      </span>
+                      <span className="font-extrabold text-sm text-gray-900 dark:text-white">⚡ Local Engine</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">100% Free & Unlimited. Instant generation, saves API limits.</p>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setEngine("groq")}
+                    className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
+                      engine === "groq"
+                        ? "bg-white dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md"
+                        : "bg-gray-50/50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center border text-xs font-bold ${
+                        engine === "groq" ? "bg-indigo-500 border-indigo-500 text-white" : "border-gray-300 text-gray-500"
+                      }`}>
+                        {engine === "groq" ? "✓" : "🤖"}
+                      </span>
+                      <span className="font-extrabold text-sm text-gray-900 dark:text-white">🤖 Groq AI Engine</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Uses server AI capabilities. Consumes rate-limited API quota.</p>
+                  </button>
+                </div>
+              </div>
+
               {error && <p className="text-red-500 text-sm font-bold bg-red-50 dark:bg-red-900/20 p-3 rounded-xl">{error}</p>}
 
               <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-800">
@@ -234,10 +301,10 @@ export default function ResumeBuilderPage() {
                   <Sparkles className="w-4 h-4" /> AI Resume Builder kya karega:
                 </p>
                 <ul className="mt-2 space-y-1 text-xs text-indigo-600 dark:text-indigo-300">
-                  <li>✨ Professional Career Objective statement likhega</li>
-                  <li>✨ Career Summary auto-generate karega</li>
-                  <li>✨ Skills ko professional format me present karega</li>
-                  <li>✨ Achievements aur Hobbies suggest karega</li>
+                  <li>• Professional Career Objective statement likhega</li>
+                  <li>• Career Summary auto-generate karega</li>
+                  <li>• Skills ko professional format me present karega</li>
+                  <li>• Achievements aur Hobbies suggest karega</li>
                 </ul>
               </div>
             </div>
@@ -246,6 +313,17 @@ export default function ResumeBuilderPage() {
           {/* STEP 4: Resume Preview */}
           {step === 3 && aiData && (
             <div>
+              {fallbackBanner && (
+                <div className="mb-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-4 rounded-2xl flex items-start gap-3 shadow-sm animate-fadeIn">
+                  <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm text-amber-800 dark:text-amber-300">⚡ API Rate-Limit Saved!</h4>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed font-medium font-sans">
+                      Groq AI model rate limit or server quota was reached. Our high-speed local smart engine automatically synthesized a premium, domain-optimized resume for you instantly!
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                   <Eye className="w-5 h-5 text-indigo-500" /> Resume Preview
@@ -423,18 +501,25 @@ export default function ResumeBuilderPage() {
         {/* Features Section — SEO content */}
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: Sparkles, title: "AI-Powered Content", desc: "Our advanced AI automatically generates your Career Objective, Professional Summary, and Achievements — perfectly crafted for Indian government job applications.", color: "indigo" },
-            { icon: Shield, title: "100% Free & Secure", desc: "No hidden charges, no registration required. Your personal information is never stored — the resume is built entirely within your browser session.", color: "green" },
-            { icon: Clock, title: "Ready in 2 Minutes", desc: "Just 3 simple steps and your professional resume is ready to download. Perfect format for SSC, Railway, Banking, Police, and all government exams.", color: "blue" },
-          ].map(({ icon: Icon, title, desc, color }) => (
-            <div key={title} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-${color}-100 dark:bg-${color}-900/30`}>
-                <Icon className={`w-5 h-5 text-${color}-600`} />
+            { icon: Sparkles, title: "AI-Powered Content", desc: "Our advanced AI automatically generates your Career Objective, Professional Summary, and Achievements — perfectly crafted for Indian government job applications.", color: "indigo" as const },
+            { icon: Shield, title: "100% Free & Secure", desc: "No hidden charges, no registration required. Your personal information is never stored — the resume is built entirely within your browser session.", color: "green" as const },
+            { icon: Clock, title: "Ready in 2 Minutes", desc: "Just 3 simple steps and your professional resume is ready to download. Perfect format for SSC, Railway, Banking, Police, and all government exams.", color: "blue" as const },
+          ].map(({ icon: Icon, title, desc, color }) => {
+            const styles = {
+              indigo: { bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-600 dark:text-indigo-400" },
+              green: { bg: "bg-emerald-100 dark:bg-emerald-900/30", text: "text-emerald-600 dark:text-emerald-400" },
+              blue: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" }
+            }[color];
+            return (
+              <div key={title} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${styles.bg}`}>
+                  <Icon className={`w-5 h-5 ${styles.text}`} />
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{title}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
               </div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{title}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* AdSense — Rectangle Middle */}

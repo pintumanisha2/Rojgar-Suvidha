@@ -12,17 +12,22 @@ export async function POST(req: Request) {
     // Initialize Supabase admin client (we use the Anon key here since we just want to signUp a user, 
     // it will work if signups are enabled in Supabase, without modifying the browser session)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
-    // Create a fresh supabase client specifically for this server request
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false } // Crucial: Do not persist session on server!
+    if (!serviceRoleKey) {
+      return NextResponse.json({ error: "Missing SUPABASE_SERVICE_ROLE_KEY in .env.local. Required to auto-verify admin users." }, { status: 500 });
+    }
+
+    // Create a client with the Service Role Key to bypass email confirmation
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
     });
 
-    // 1. Create the user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // 1. Create the user in Supabase Auth and auto-confirm them
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
+      email_confirm: true, // This is the magic flag that bypasses the email verification requirement!
     });
 
     if (authError) {
@@ -30,7 +35,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Insert role into admin_roles table
-    const { error: dbError } = await supabase.from("admin_roles").insert([{
+    const { error: dbError } = await supabaseAdmin.from("admin_roles").insert([{
       name: name.trim(),
       email: email.toLowerCase(),
       role: role,
@@ -39,7 +44,7 @@ export async function POST(req: Request) {
 
     // If the record already exists, update it instead
     if (dbError && dbError.code === "23505") { // unique violation
-      await supabase.from("admin_roles").update({ name: name.trim(), role, status: "Active" }).eq("email", email.toLowerCase());
+      await supabaseAdmin.from("admin_roles").update({ name: name.trim(), role, status: "Active" }).eq("email", email.toLowerCase());
     } else if (dbError) {
       return NextResponse.json({ error: "User created, but failed to assign role: " + dbError.message }, { status: 500 });
     }

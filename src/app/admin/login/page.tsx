@@ -81,8 +81,13 @@ export default function AdminLoginPage() {
         }
 
         setFailedAttempts(0); // Reset on success
-        setLoading(false); // FIX: Stop spinner before redirect
-        router.push("/admin");
+        setLoading(false); // Stop spinner before redirect
+        
+        if (roleData?.role?.startsWith("private_")) {
+          router.push("/admin/private-portal");
+        } else {
+          router.push("/admin");
+        }
         return;
       }
     } catch (err: any) {

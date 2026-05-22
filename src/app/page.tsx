@@ -1,4 +1,5 @@
 import HeroBanner from "@/components/home/HeroBanner";
+import JobPreferenceToggle from "@/components/home/JobPreferenceToggle";
 import SocialPromo from "@/components/home/SocialPromo";
 import Highlights from "@/components/home/Highlights";
 import TrustSignals from "@/components/home/TrustSignals";
@@ -94,6 +95,9 @@ export default function Home() {
       {/* JSON-LD for Homepage SEO + AEO */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageFaqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+      {/* Smart Tab Toggle for Govt vs Private Jobs (Moved to very top for App Users) */}
+      <JobPreferenceToggle />
+
       {/* Auto-Sliding Hero Banner */}
       <HeroBanner />
 
@@ -128,19 +132,19 @@ export default function Home() {
           <div className="prose dark:prose-invert max-w-none prose-indigo prose-headings:font-extrabold prose-h2:text-2xl md:prose-h2:text-3xl prose-p:text-gray-600 dark:prose-p:text-gray-400">
             <h2>Welcome to Rojgar Suvidha: India's No. 1 Portal for Sarkari Naukri & Government Jobs 2025</h2>
             <p>
-              In a rapidly growing digital economy, finding accurate and timely information about <strong className="text-gray-900 dark:text-white">government jobs (Sarkari Naukri)</strong> is a challenge for millions of students. Misinformation, fake links, and delayed updates often lead to missed opportunities. <strong>Rojgar Suvidha</strong> was built to solve exactly this problem. We are India's most trusted, fastest, and most comprehensive platform dedicated to bringing you the <strong>latest government job notifications, admit cards, exam results, answer keys, and university admissions</strong>—all under one roof, with zero clutter and maximum accuracy.
+              Finding accurate and timely information about <strong className="text-gray-900 dark:text-white">government jobs (Sarkari Naukri)</strong> shouldn't be difficult. Unfortunately, misinformation, fake links, and delayed updates often lead to missed opportunities. That's why we built <strong>Rojgar Suvidha</strong>. We are a trusted, fast, and comprehensive platform dedicated to bringing you the <strong>latest government job notifications, admit cards, exam results, answer keys, and university admissions</strong>—all under one roof, with zero clutter and maximum accuracy.
             </p>
 
             <h3>Why Choose Rojgar Suvidha for Your Career Updates?</h3>
             <p>
-              Navigating through multiple official websites—SSC, UPSC, RRB, IBPS, or State PSCs—can be exhausting. We streamline this process. Here is why millions of aspirants trust Rojgar Suvidha daily:
+              Checking multiple official websites—SSC, UPSC, RRB, IBPS, or State PSCs—every single day can be exhausting. We streamline this process for you. Here is why millions of students trust Rojgar Suvidha daily:
             </p>
             <ul>
-              <li><strong>Lightning Fast Updates:</strong> Whether it's a midnight SSC result declaration or an early morning Railway notification, our team updates the portal instantly. You will be the first to know.</li>
-              <li><strong>Exclusive "Apply For Me" Service:</strong> Afraid of making mistakes in your application form? Don't have access to a cyber cafe? Upload your documents securely to Rojgar Suvidha, and our expert team will carefully fill and submit your government job forms with 100% accuracy.</li>
-              <li><strong>Clean & Ad-lite Experience:</strong> Unlike other platforms cluttered with misleading ads and pop-ups, we prioritize user experience with a clean, modern, and mobile-friendly interface.</li>
+              <li><strong>Fast Updates:</strong> Whether it's a midnight SSC result declaration or an early morning Railway notification, our team updates the portal instantly. You will be the first to know.</li>
+              <li><strong>Exclusive "Apply For Me" Service:</strong> Afraid of making mistakes in your application form? Don't have access to a cyber cafe? Upload your documents securely to Rojgar Suvidha, and our expert team will carefully fill and submit your government job forms with complete accuracy.</li>
+              <li><strong>Clean Experience:</strong> Unlike other platforms cluttered with misleading ads and pop-ups, we prioritize user experience with a clean, modern, and mobile-friendly interface.</li>
               <li><strong>Comprehensive Coverage:</strong> From 10th pass jobs like MTS and GD Constable to highly prestigious exams like UPSC Civil Services, NDA, and Bank PO, we cover opportunities for every educational background.</li>
-              <li><strong>Direct & Verified Links:</strong> We absolutely hate clickbait. Every link provided on our platform redirects you straight to the official PDF notification, official apply online portal, or official result PDF.</li>
+              <li><strong>Direct & Verified Links:</strong> We hate clickbait. Every link provided on our platform redirects you straight to the official PDF notification, official apply online portal, or official result PDF.</li>
             </ul>
 
             <h3>Our Major Categories</h3>

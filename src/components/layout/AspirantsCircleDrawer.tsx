@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Send, Users, ShieldAlert, CheckCircle2, UserCheck, AlertTriangle, X, Loader2, ArrowDown, Trash2, Pin, Plus, BarChart3, Flag } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 interface ChatMessage {
   id: string;
@@ -89,6 +90,7 @@ const isMessageClean = (text: string): { clean: boolean; reason: string | null }
 };
 
 export default function AspirantsCircleDrawer() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
@@ -114,6 +116,8 @@ export default function AspirantsCircleDrawer() {
   const [isCreatePollOpen, setIsCreatePollOpen] = useState(false);
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [pinnedMessage, setPinnedMessage] = useState<ChatMessage | null>(null);
+
 
   useEffect(() => {
     // Listen for global open event
@@ -195,6 +199,14 @@ export default function AspirantsCircleDrawer() {
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages, myUserId]);
+
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/private-jobs") ||
+    pathname?.startsWith("/employer")
+  ) {
+    return null;
+  }
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
@@ -280,7 +292,6 @@ export default function AspirantsCircleDrawer() {
     setLoading(false);
   };
 
-  const [pinnedMessage, setPinnedMessage] = useState<ChatMessage | null>(null);
 
   const fetchMessages = async () => {
     const sevenDaysAgo = new Date();

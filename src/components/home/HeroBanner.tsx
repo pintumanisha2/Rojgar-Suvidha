@@ -108,7 +108,6 @@ export default function HeroBanner() {
               src={main.image_url}
               alt={main.title}
               fill
-              unoptimized
               className="object-fill object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
@@ -175,7 +174,6 @@ export default function HeroBanner() {
                   src={side1.image_url}
                   alt={side1.title}
                   fill
-                  unoptimized
                   className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
@@ -198,7 +196,6 @@ export default function HeroBanner() {
                   src={side2.image_url}
                   alt={side2.title}
                   fill
-                  unoptimized
                   className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
-  LayoutDashboard, FileText, Users, CreditCard, BookOpen,
+  LayoutDashboard, FileText, Users, CreditCard, BookOpen, Briefcase,
   Image as ImageIcon, BarChart2, Ticket, MessageSquareWarning,
-  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles, Activity
+  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles, Activity, Radar, Inbox
 } from "lucide-react";
 
 const navItems = [
@@ -15,7 +16,7 @@ const navItems = [
   { href: "/admin/applications", label: "User Applications", icon: FileText },
   { href: "/admin/users", label: "Admin Users", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
-  { href: "/admin/jobs", label: "Jobs Management", icon: BookOpen },
+  { href: "/admin/jobs", label: "Govt Jobs (Sarkari)", icon: BookOpen },
   { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
   { href: "/admin/banners", label: "Banner", icon: ImageIcon },
   { href: "/admin/community", label: "Community Chat", icon: Users },
@@ -26,9 +27,66 @@ const navItems = [
   { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
   { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
   { href: "/admin/analytics", label: "Deep Analytics", icon: Activity },
+  // Private Portal Items
+  { href: "/admin/private-portal", label: "Platform Overview", icon: LayoutDashboard, exact: true },
+  { href: "/admin/private-portal/employers", label: "HR Approvals", icon: Users },
+  { href: "/admin/private-portal/jobs", label: "Private Jobs Moderation", icon: Briefcase },
+  { href: "/admin/private-portal/candidates", label: "Candidate Directory", icon: FileText },
+  { href: "/admin/private-portal/job-scout", label: "Private Job Scout", icon: Radar },
+  { href: "/admin/private-portal/applications", label: "Application Tracker", icon: Inbox },
 ];
 
-export type Role = "super_admin" | "admin" | "content_writer" | "form_filler" | "unauthorized";
+const navSections = [
+  {
+    title: "🏛️ SARKARI SERVICES",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/applications", label: "User Applications", icon: FileText },
+      { href: "/admin/jobs?type=sarkari", label: "Govt Jobs (Sarkari)", icon: BookOpen },
+      { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
+      { href: "/admin/job-scout", label: "Job Scout (Auto Tracker)", icon: Bell },
+    ]
+  },
+  {
+    title: "⚙️ GENERAL SETTINGS",
+    items: [
+      { href: "/admin/users", label: "Admin Users", icon: Users },
+      { href: "/admin/payments", label: "Payments", icon: CreditCard },
+      { href: "/admin/banners", label: "Banner", icon: ImageIcon },
+      { href: "/admin/community", label: "Community Chat", icon: Users },
+      { href: "/admin/notifications", label: "Notifications", icon: Bell },
+      { href: "/admin/direct-form", label: "Direct Form", icon: BarChart2 },
+      { href: "/admin/coupons", label: "Coupon", icon: Ticket },
+      { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
+      { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
+      { href: "/admin/analytics", label: "Deep Analytics", icon: Activity },
+    ]
+  }
+];
+
+const privateNavSections = [
+  {
+    title: "🏢 PRIVATE PORTAL",
+    items: [
+      { href: "/admin/private-portal", label: "Platform Overview", icon: LayoutDashboard, exact: true },
+      { href: "/admin/private-portal/employers", label: "HR Approvals", icon: Users },
+      { href: "/admin/private-portal/jobs", label: "Private Jobs Moderation", icon: Briefcase },
+      { href: "/admin/private-portal/candidates", label: "Candidate Directory", icon: FileText },
+      { href: "/admin/private-portal/job-scout", label: "Private Job Scout", icon: Radar },
+      { href: "/admin/private-portal/applications", label: "Application Tracker 🔴", icon: Inbox },
+      { href: "/admin/private-portal/community", label: "Private Community Chat", icon: Users },
+    ]
+  },
+  {
+    title: "⚙️ GENERAL SETTINGS",
+    items: [
+      { href: "/admin/users", label: "Admin Users", icon: Users },
+      { href: "/admin/analytics", label: "Deep Analytics", icon: Activity },
+    ]
+  }
+];
+
+export type Role = "super_admin" | "admin" | "govt_manager" | "govt_data_entry" | "private_manager" | "private_data_entry" | "unauthorized";
 
 // Function to fetch role from Supabase 'admin_roles' table
 const getRoleFromEmail = async (email: string | null): Promise<Role> => {
@@ -200,15 +258,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const getAllowedNavItems = () => {
     if (userRole === "super_admin") return navItems;
     if (userRole === "admin") return navItems.filter(item => item.href !== "/admin/payments");
-    if (userRole === "content_writer") return navItems.filter(item => ["/admin", "/admin/jobs", "/admin/ai-writer", "/admin/job-scout"].includes(item.href));
-    if (userRole === "form_filler") return navItems.filter(item => ["/admin", "/admin/applications"].includes(item.href));
+    
+    // Govt Roles
+    if (userRole === "govt_manager") return navItems.filter(item => ["/admin", "/admin/applications", "/admin/jobs", "/admin/ai-writer", "/admin/banners", "/admin/community", "/admin/notifications", "/admin/job-scout", "/admin/direct-form", "/admin/coupons", "/admin/ticker", "/admin/complaints"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
+    if (userRole === "govt_data_entry") return navItems.filter(item => ["/admin", "/admin/jobs", "/admin/applications", "/admin/ai-writer", "/admin/job-scout"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
+    
+    // Private Roles
+    if (userRole === "private_manager") return navItems.filter(item => ["/admin/private-portal", "/admin/private-portal/employers", "/admin/private-portal/jobs", "/admin/private-portal/candidates", "/admin/private-portal/job-scout", "/admin/private-portal/applications", "/admin/private-portal/community"].includes(item.href));
+    if (userRole === "private_data_entry") return navItems.filter(item => ["/admin/private-portal", "/admin/private-portal/jobs", "/admin/private-portal/job-scout"].includes(item.href));
+    
     return [];
   };
 
   const allowedNavItems = getAllowedNavItems();
 
   // Route Protection: Redirect if user tries to access a restricted URL manually
-  const isAllowedPath = allowedNavItems.some(item => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)));
+  const isAllowedPath = allowedNavItems.some(item => {
+    const basePath = item.href.split("?")[0];
+    return pathname === basePath || (basePath !== "/admin" && pathname.startsWith(basePath));
+  });
   
   if (userRole === "unauthorized") {
     return (
@@ -238,9 +306,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const isActive = (item: { href: string; exact?: boolean }) => {
-    if (item.exact) return pathname === item.href;
-    return pathname.startsWith(item.href);
+    const [pathPart, queryPart] = item.href.split("?");
+    const pathMatches = item.exact ? pathname === pathPart : pathname.startsWith(pathPart);
+    if (!pathMatches) return false;
+    
+    if (queryPart) {
+      if (typeof window !== "undefined") {
+        const searchParams = new URLSearchParams(window.location.search);
+        const [key, value] = queryPart.split("=");
+        return searchParams.get(key) === value;
+      }
+      return false;
+    }
+    
+    if (pathPart === "/admin/jobs") {
+      if (typeof window !== "undefined") {
+        const searchParams = new URLSearchParams(window.location.search);
+        const type = searchParams.get("type");
+        return !type || type === "sarkari";
+      }
+      return true;
+    }
+    
+    return true;
   };
+
+  const isPrivateMode = pathname.startsWith("/admin/private-portal");
+
+  const getAllowedNavSections = () => {
+    const activeSections = isPrivateMode ? privateNavSections : navSections;
+    return activeSections.map(section => {
+      const allowedItems = section.items.filter(item => {
+        const basePath = item.href.split("?")[0];
+        return allowedNavItems.some(allowed => {
+          return allowed.href === item.href || allowed.href === basePath;
+        });
+      });
+      return { ...section, items: allowedItems };
+    }).filter(section => section.items.length > 0);
+  };
+
+  const allowedNavSections = getAllowedNavSections();
 
   return (
     <div className="h-screen w-full bg-gray-100 dark:bg-gray-950 flex overflow-hidden">
@@ -256,12 +362,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-30 flex flex-col transform transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0`}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
-          <div className="bg-indigo-600 p-2 rounded-xl">
-            <ShieldCheck className="h-6 w-6 text-white" />
+          <div className="bg-white rounded-xl p-1 shrink-0 shadow-sm border border-gray-200">
+            <Image src="/logo-blue.png" alt="Rojgar Suvidha Logo" width={32} height={32} className="object-contain" priority />
           </div>
           <div>
-            <span className="font-extrabold text-lg text-gray-900 dark:text-white tracking-tight">Rojgar Admin</span>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-none">Content Management</p>
+            <span className="font-extrabold text-lg text-gray-900 dark:text-white tracking-tight leading-none block">Rojgar Suvidha</span>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5 font-bold uppercase tracking-widest">Admin Portal</p>
           </div>
           <button
             className="ml-auto lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -271,28 +377,56 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          {allowedNavItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item);
-            return (
-              // FIX: Using Next.js Link instead of <a> to prevent full page reloads
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${active
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                  }`}
+        {/* Global Admin Mode Toggle (Sarkari vs Private) */}
+        {(userRole === "super_admin" || userRole === "admin") && (
+          <div className="px-4 pt-4 shrink-0">
+            <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex items-center relative">
+              <button 
+                onClick={() => router.push("/admin")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all z-10 ${!isPrivateMode ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700"}`}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                {item.label}
-                {active && <ChevronRight className="h-4 w-4 ml-auto" />}
-              </Link>
-            );
-          })}
+                🏛️ Sarkari
+              </button>
+              <button 
+                onClick={() => router.push("/admin/private-portal")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all z-10 ${isPrivateMode ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                💼 Private
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-4">
+          {allowedNavSections.map((section) => (
+            <div key={section.title} className="space-y-1.5">
+              <span className="block text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 mb-1">
+                {section.title}
+              </span>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsSidebarOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group ${active
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                        }`}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {item.label}
+                      {active && <ChevronRight className="h-4 w-4 ml-auto" />}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Admin Profile */}

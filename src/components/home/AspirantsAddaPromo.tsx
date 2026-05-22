@@ -116,7 +116,7 @@ export default function AspirantsAddaPromo() {
                       <span className="text-[9px] text-gray-500 font-medium">1 min ago</span>
                     </div>
                     <div className="bg-gradient-to-r from-indigo-600/30 to-violet-600/30 border border-indigo-500/20 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs text-indigo-100 leading-relaxed shadow-sm">
-                      Haan bhai! Direct download link <span className="text-emerald-300 font-bold">Rojgar Suvidha</span> ke homepage par active hai. 🚀
+                      Haan bhai! Direct download link <span className="text-emerald-300 font-bold">Rojgar Suvidha</span> ke homepage par active hai.
                     </div>
                   </div>
                 </div>

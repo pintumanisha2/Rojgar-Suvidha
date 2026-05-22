@@ -304,11 +304,11 @@ function DashboardContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-red-500 w-full max-w-md p-6 text-center animate-in zoom-in-95 duration-200">
             {/* Header Shield */}
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-905 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
               <ShieldAlert className="w-10 h-10 text-red-600 shrink-0" />
               <div>
-                <p className="text-[10px] font-extrabold text-red-650 dark:text-red-405 uppercase tracking-wider">⚠️ FRAUD SE BACHEIN (ANTI-SCAM)</p>
-                <p className="text-[11px] text-red-750/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
+                <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">⚠️ FRAUD SE BACHEIN (ANTI-SCAM)</p>
+                <p className="text-[11px] text-red-700/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
                   Hum <strong>KABHI BHI</strong> bank/UPI, Paytm ya payment OTP nahi mangte. Yeh OTP sirf <strong>{otpAlert.job_title}</strong> ke form login ke liye hai.
                 </p>
               </div>
@@ -331,7 +331,7 @@ function DashboardContent() {
                   <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400">🛡️ SECRET TRUST CODE</p>
                 </div>
-                <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-150 dark:border-emerald-800/60 rounded-xl px-3 py-2">
+                <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-3 py-2">
                   <span className="text-[11px] text-gray-500 font-bold">Representative se pucho:</span>
                   <span className="font-mono font-extrabold tracking-widest text-emerald-600 dark:text-emerald-400 text-base">{otpAlert.verification_code}</span>
                 </div>
@@ -342,15 +342,15 @@ function DashboardContent() {
             )}
 
             {/* Anti-Fraud Security Checklist */}
-            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-150 dark:border-gray-800 rounded-2xl p-4 mb-4 text-left space-y-2.5">
-              <p className="text-[10px] font-extrabold text-gray-450 dark:text-gray-400 uppercase tracking-wider">🔒 SAFETY VERIFICATION CHECKLIST</p>
+            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 mb-4 text-left space-y-2.5">
+              <p className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">🔒 SAFETY VERIFICATION CHECKLIST</p>
               
               <label className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={chkSecret}
                   onChange={(e) => setChkSecret(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
                   Representative ne mujhe same Secret Trust Code bol kar sunaya hai.
@@ -362,7 +362,7 @@ function DashboardContent() {
                   type="checkbox"
                   checked={chkNotBank}
                   onChange={(e) => setChkNotBank(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
                   Yeh OTP bank account, ATM card ya Google Pay/Paytm se related nahi hai.
@@ -374,7 +374,7 @@ function DashboardContent() {
                   type="checkbox"
                   checked={chkNoScreenShare}
                   onChange={(e) => setChkNoScreenShare(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
                   Kisi ne mujhe screen-share (e.g. AnyDesk, TeamViewer) download nahi karwaya.
@@ -719,7 +719,7 @@ function DashboardContent() {
                               <div className="mt-3 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl px-3 py-2">
                                 <span className="text-red-500 text-sm">🔐</span>
                                 <div>
-                                  <p className="text-[10px] font-extrabold text-red-650 dark:text-red-400 uppercase tracking-wider leading-none">Secret Verification Code</p>
+                                  <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider leading-none">Secret Verification Code</p>
                                   <p className="text-base font-extrabold text-red-700 dark:text-red-300 font-mono tracking-widest mt-0.5">{req.verification_code}</p>
                                   <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">Call pe yeh code maango — nahi pata = Scammer!</p>
                                 </div>

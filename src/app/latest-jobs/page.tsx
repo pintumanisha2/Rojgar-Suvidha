@@ -112,7 +112,7 @@ export default function LatestJobsPage() {
 
       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-xl border-l-4 border-indigo-600 mt-8">
         <h4 className="text-lg font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
-          🚀 Save Time & Avoid Mistakes with "Apply For Me"
+          Save Time & Avoid Mistakes with "Apply For Me"
         </h4>
         <p className="text-indigo-800 dark:text-indigo-200 mt-2 text-sm">
           Are you worried about making a mistake in your application form? Or perhaps you don't have time to visit a cyber cafe? <strong>Rojgar Suvidha</strong> introduces the exclusive <strong>Apply For Me</strong> service. Simply upload your documents securely to our portal, and our expert team will carefully fill out your government job application form with 100% accuracy. We handle the image resizing, data entry, and form submission, providing you with the final printout. Focus on your exam preparation; leave the form-filling hassle to us!

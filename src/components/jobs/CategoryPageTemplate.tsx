@@ -77,7 +77,7 @@ export default async function CategoryPageTemplate({ category, title, descriptio
               href="/apply-for-me"
               className="flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-indigo-900 px-8 py-3.5 rounded-2xl font-extrabold text-sm sm:text-base transition-all shadow-lg hover:shadow-yellow-400/50 hover:-translate-y-1 w-full"
             >
-              🚀 Use "Apply For Me"
+              Use "Apply For Me"
               <ChevronRight className="w-5 h-5" />
             </Link>
           </div>

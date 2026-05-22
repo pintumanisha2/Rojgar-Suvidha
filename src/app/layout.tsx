@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Toaster } from "react-hot-toast";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -6,10 +7,13 @@ import { PublicHeader, PublicFooter } from "@/components/layout/PublicUI";
 import FloatingSocials from "@/components/layout/FloatingSocials";
 import AIChatBot from "@/components/layout/AIChatBot";
 import AspirantsCircleDrawer from "@/components/layout/AspirantsCircleDrawer";
+import CommunityChatDrawer from "@/components/layout/CommunityChatDrawer";
 import PushNotificationPrompt from "@/components/layout/PushNotificationPrompt";
 import BottomNav from "@/components/layout/BottomNav";
 import TopLoader from "@/components/layout/TopLoader";
 import AnalyticsTracker from "@/components/layout/AnalyticsTracker";
+import JobPreferenceModal from "@/components/layout/JobPreferenceModal";
+import GlobalBehaviorTracker from "@/components/layout/GlobalBehaviorTracker";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -224,10 +228,22 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300">
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster 
+            position="top-center" 
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+                borderRadius: '16px',
+                fontWeight: '600',
+              },
+            }} 
+          />
           <Suspense fallback={null}>
             <TopLoader />
           </Suspense>
@@ -239,9 +255,12 @@ export default function RootLayout({
           <FloatingSocials />
           <AIChatBot />
           <AspirantsCircleDrawer />
+          <CommunityChatDrawer />
           <PushNotificationPrompt />
           <BottomNav />
           <AnalyticsTracker />
+          <JobPreferenceModal />
+          <GlobalBehaviorTracker />
           
           {/* Auto-update Service Worker to prevent caching issues for users */}
           <script

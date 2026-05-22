@@ -43,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/answer-key',
     '/admission',
     '/news',
-    '/private-jobs',
+    // '/private-jobs',
     '/about-us',
     '/contact-us',
     '/privacy',

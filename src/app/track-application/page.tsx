@@ -420,7 +420,7 @@ export default function TrackApplicationPage() {
     };
 
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-150 dark:border-gray-800 shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300">
         
         {/* Dynamic Gradient Card Header */}
         <div className={`p-6 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-4 flex-wrap bg-gradient-to-r ${
@@ -532,10 +532,10 @@ export default function TrackApplicationPage() {
 
           {/* ── LIVE FORM FILLING / OTP WARNING ALERT (For In Progress Alert) ── */}
           {req.status === "in_progress" && (
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-250 dark:border-indigo-850 rounded-2xl p-4 flex items-start gap-3 animate-pulse">
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 flex items-start gap-3 animate-pulse">
               <span className="text-lg shrink-0">✍️</span>
               <div>
-                <p className="text-xs font-extrabold text-indigo-750 dark:text-indigo-400 uppercase tracking-wider">Form Filling Started — Phone Ready Rakhein!</p>
+                <p className="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Form Filling Started — Phone Ready Rakhein!</p>
                 <p className="text-[11px] text-indigo-900/80 dark:text-indigo-300/85 font-semibold mt-1 leading-relaxed">
                   Humare expert abhi official portal par aapka form fill kar rahe hain. Form ke last stage par OTP ki zaroorat padegi, isliye kripya apne phone ke paas rahein taaki OTP aate hi aap verified tareeqe se submit kar sakein.
                 </p>
@@ -567,7 +567,7 @@ export default function TrackApplicationPage() {
                     <select
                       value={selectedDocType}
                       onChange={(e) => setSelectedDocType(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-amber-250 dark:border-amber-900 rounded-xl text-xs font-bold text-gray-800 dark:text-gray-250 focus:outline-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-900 rounded-xl text-xs font-bold text-gray-800 dark:text-gray-300 focus:outline-none"
                     >
                       <option value="photo">🖼️ Passport Size Photo</option>
                       <option value="signature">✍️ Signature (Sign Copy)</option>
@@ -579,7 +579,7 @@ export default function TrackApplicationPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 border border-amber-250 dark:border-amber-900 hover:border-amber-400 dark:hover:border-amber-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 cursor-pointer transition-all">
+                    <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-900 hover:border-amber-400 dark:hover:border-amber-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 cursor-pointer transition-all">
                       <FileUp className="w-4 h-4 text-amber-500" />
                       {selectedFile ? selectedFile.name.slice(0, 20) + "..." : "Sahi File Select Karein"}
                       <input
@@ -655,11 +655,11 @@ export default function TrackApplicationPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-red-500 w-full max-w-md p-6 text-center animate-in zoom-in-95 duration-200">
             {/* Header Shield */}
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-905 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
-              <ShieldAlert className="w-10 h-10 text-red-650 shrink-0 animate-pulse" />
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
+              <ShieldAlert className="w-10 h-10 text-red-600 shrink-0 animate-pulse" />
               <div>
-                <p className="text-[10px] font-extrabold text-red-650 dark:text-red-405 uppercase tracking-wider">⚠️ FRAUD SE BACHEIN (ANTI-SCAM)</p>
-                <p className="text-[11px] text-red-750/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
+                <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">⚠️ FRAUD SE BACHEIN (ANTI-SCAM)</p>
+                <p className="text-[11px] text-red-700/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
                   Hum <strong>KABHI BHI</strong> bank/UPI, Paytm ya payment OTP nahi mangte. Yeh OTP sirf <strong>{otpAlert.job_title}</strong> ke form login ke liye hai.
                 </p>
               </div>
@@ -682,7 +682,7 @@ export default function TrackApplicationPage() {
                   <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <p className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400">🛡️ SECRET TRUST CODE</p>
                 </div>
-                <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-150 dark:border-emerald-800/60 rounded-xl px-3 py-2">
+                <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-3 py-2">
                   <span className="text-[11px] text-gray-500 font-bold">Representative se pucho:</span>
                   <span className="font-mono font-extrabold tracking-widest text-emerald-600 dark:text-emerald-400 text-base">{otpAlert.verification_code}</span>
                 </div>
@@ -693,15 +693,15 @@ export default function TrackApplicationPage() {
             )}
 
             {/* Anti-Fraud Security Checklist */}
-            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-150 dark:border-gray-800 rounded-2xl p-4 mb-4 text-left space-y-2.5">
-              <p className="text-[10px] font-extrabold text-gray-450 dark:text-gray-400 uppercase tracking-wider">🔒 SAFETY VERIFICATION CHECKLIST</p>
+            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 mb-4 text-left space-y-2.5">
+              <p className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">🔒 SAFETY VERIFICATION CHECKLIST</p>
               
               <label className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={chkSecret}
                   onChange={(e) => setChkSecret(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
                   Representative ne mujhe same Secret Trust Code bol kar sunaya hai.
@@ -713,7 +713,7 @@ export default function TrackApplicationPage() {
                   type="checkbox"
                   checked={chkNotBank}
                   onChange={(e) => setChkNotBank(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
                   Yeh OTP bank account, ATM card ya Google Pay/Paytm se related nahi hai.
@@ -725,7 +725,7 @@ export default function TrackApplicationPage() {
                   type="checkbox"
                   checked={chkNoScreenShare}
                   onChange={(e) => setChkNoScreenShare(e.target.checked)}
-                  className="w-4 h-4 rounded text-indigo-650 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
+                  className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
                   Kisi ne mujhe screen-share (e.g. AnyDesk, TeamViewer) download nahi karwaya.

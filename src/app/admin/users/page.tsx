@@ -11,7 +11,7 @@ export default function AdminUsersPage() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState("content_writer");
+  const [newRole, setNewRole] = useState("govt_data_entry");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,17 +107,33 @@ export default function AdminUsersPage() {
       {showAddForm && (
         <form onSubmit={handleAddRole} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white">Create New Admin User</h3>
-          <p className="text-sm text-gray-500">Provide an email and password. They will be able to log in immediately with the assigned role.</p>
+          
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex gap-3 text-amber-700 dark:text-amber-400 text-sm">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <div>
+              <p className="font-bold">Important Note Regarding Login Issues:</p>
+              <p>If new users are getting "Invalid Login Credentials", you must turn OFF <strong>"Confirm email"</strong> in your Supabase Dashboard (Authentication {`>`} Providers {`>`} Email). Otherwise, they cannot log in until they verify their email.</p>
+            </div>
+          </div>
+
           {error && <p className="text-sm text-red-500 font-bold">{error}</p>}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <input type="text" required value={newName} onChange={e => setNewName(e.target.value)} placeholder="Full Name" className="col-span-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
             <input type="email" required value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="user@rojgarsuvidha.com" className="col-span-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
             <input type="text" required value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Set Password (Min 6 chars)" className="col-span-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
             <select value={newRole} onChange={e => setNewRole(e.target.value)} className="col-span-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
-              <option value="super_admin">Super Admin</option>
-              <option value="admin">Admin (No Pay)</option>
-              <option value="content_writer">Content Writer</option>
-              <option value="form_filler">Form Filler</option>
+              <optgroup label="Full Access">
+                <option value="super_admin">Super Admin (All Access)</option>
+                <option value="admin">Admin (No Payments)</option>
+              </optgroup>
+              <optgroup label="Sarkari Team">
+                <option value="govt_manager">Sarkari Manager</option>
+                <option value="govt_data_entry">Sarkari Data Entry</option>
+              </optgroup>
+              <optgroup label="Private Portal Team">
+                <option value="private_manager">Private Portal Manager</option>
+                <option value="private_data_entry">Private Job Scout</option>
+              </optgroup>
             </select>
             <button type="submit" disabled={isSaving} className="col-span-1 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}

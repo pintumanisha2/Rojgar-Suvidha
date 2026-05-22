@@ -318,7 +318,7 @@ function ApplyForMeContent() {
               <div>
                 <p className="text-sm font-extrabold text-white">Job page par jaao aur "Apply For Me" button dhundho</p>
                 <p className="text-xs text-indigo-200 mt-0.5">
-                  Job detail page par neeche scroll karo — wahan ek <span className="bg-orange-500/30 text-orange-300 font-bold px-1.5 py-0.5 rounded">🚀 Apply For Me</span> button hoga.
+                  Job detail page par neeche scroll karo — wahan ek <span className="bg-orange-500/30 text-orange-300 font-bold px-1.5 py-0.5 rounded">Apply For Me</span> button hoga.
                   Usi par click karo.
                 </p>
               </div>
@@ -357,7 +357,7 @@ function ApplyForMeContent() {
 
           {/* Tip */}
           <div className="mt-4 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-4 py-2.5 flex items-start gap-2">
-            <span className="text-lg shrink-0">💡</span>
+            <span className="text-lg shrink-0 text-amber-500 font-bold">Note:</span>
             <p className="text-xs text-yellow-200">
               <strong className="text-yellow-300">Seedha yahan aaye hain?</strong> Neeche apna form manually bhi fill kar sakte ho —
               bas job ka naam aur link do, hum baki sambhal lenge.

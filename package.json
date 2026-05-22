@@ -32,12 +32,17 @@
     "@tiptap/pm": "^3.23.1",
     "@tiptap/react": "^3.23.1",
     "@tiptap/starter-kit": "^3.23.1",
+    "@types/canvas-confetti": "^1.9.0",
     "browser-image-compression": "^2.0.2",
+    "canvas-confetti": "^1.9.4",
+    "cheerio": "^1.2.0",
     "lucide-react": "^1.14.0",
     "next": "^15.3.2",
     "next-cloudinary": "^6.17.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.8.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

@@ -8,7 +8,13 @@ import { GoogleTranslate } from "@/components/GoogleTranslate";
 
 export function PublicHeader() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/admin")) return null;
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/private-jobs") ||
+    pathname?.startsWith("/employer")
+  ) {
+    return null;
+  }
   
   return (
     <>
@@ -21,7 +27,13 @@ export function PublicHeader() {
 
 export function PublicFooter() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/admin")) return null;
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/private-jobs") ||
+    pathname?.startsWith("/employer")
+  ) {
+    return null;
+  }
   
   return <Footer />;
 }

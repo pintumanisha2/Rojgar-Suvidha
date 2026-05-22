@@ -13,7 +13,13 @@ export default function FloatingSocials() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (pathname.startsWith('/admin')) return null;
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/private-jobs') ||
+    pathname.startsWith('/employer')
+  ) {
+    return null;
+  }
 
   return (
     <div

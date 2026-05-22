@@ -45,35 +45,54 @@ Generate the clean HTML content now:`;
       return NextResponse.json({ error: "Gemini API Key missing in .env.local" }, { status: 500 });
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 4096,
-          },
-        }),
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+    let blogHtml = "";
+    let lastError = "";
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 4096,
+              },
+            }),
+            signal: AbortSignal.timeout(30000),
+          }
+        );
+
+        const data = await response.json();
+        
+        if (data.error) {
+          lastError = data.error.message || "Unknown error";
+          console.warn(`Model ${model} failed:`, lastError);
+          continue;
+        }
+
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (rawText) {
+          blogHtml = rawText;
+          break;
+        }
+      } catch (modelError: any) {
+        lastError = modelError.message;
+        console.warn(`Model ${model} error:`, modelError);
+        continue;
       }
-    );
-
-    const data = await response.json();
-    
-    if (data.error) {
-       return NextResponse.json({ error: `API Error: ${data.error.message}` }, { status: 500 });
     }
-
-    let blogHtml = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    
-    // Clean up Markdown code blocks if AI still adds them
-    blogHtml = blogHtml.replace(/```html\n?/g, "").replace(/```\n?/g, "").trim();
 
     if (!blogHtml) {
-       return NextResponse.json({ error: "AI could not generate content. Please try again." }, { status: 500 });
+      return NextResponse.json({ error: `AI could not generate content: ${lastError}` }, { status: 500 });
     }
+
+    // Clean up Markdown code blocks if AI still adds them
+    blogHtml = blogHtml.replace(/```html\n?/g, "").replace(/```\n?/g, "").trim();
 
     return NextResponse.json({ blog: blogHtml });
   } catch (error: any) {

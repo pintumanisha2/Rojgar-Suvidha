@@ -5,8 +5,69 @@ import { supabase } from "@/lib/supabase";
 import { 
   ClipboardCheck, Clock, CheckCircle2, Loader2, 
   User, Phone, Mail, ExternalLink, Upload, 
-  MessageSquare, RefreshCw, FileDown, HandHeart, Trash2
+  MessageSquare, RefreshCw, FileDown, HandHeart, Trash2,
+  Sparkles
 } from "lucide-react";
+
+const parseCandidateData = (req: any, esuvidhaText: string) => {
+  const candidate = {
+    name: req.applicant_name || "",
+    dob: "",
+    father: "",
+    roll: ""
+  };
+
+  const fullText = `${req.admin_notes || ""} \n ${esuvidhaText || ""}`;
+  const lines = fullText.split('\n');
+
+  lines.forEach(line => {
+    const lower = line.toLowerCase().trim();
+    
+    if (lower.includes("dob:") || lower.includes("date of birth:") || lower.includes("birth date:")) {
+      const parts = line.split(':');
+      if (parts[1]) candidate.dob = parts[1].trim();
+    }
+    
+    if (lower.includes("father:") || lower.includes("fathers name:") || lower.includes("father's name:")) {
+      const parts = line.split(':');
+      if (parts[1]) candidate.father = parts[1].trim();
+    }
+
+    if (lower.includes("roll:") || lower.includes("roll no:") || lower.includes("roll number:") || lower.includes("roll_no:")) {
+      const parts = line.split(':');
+      if (parts[1]) {
+        candidate.roll = parts[1].replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+      }
+    }
+  });
+
+  // Fallbacks
+  if (!candidate.dob) {
+    const dobLine = lines.find(l => l.toLowerCase().includes("dob") || l.toLowerCase().includes("date of birth"));
+    if (dobLine) {
+      const parts = dobLine.split(':');
+      if (parts[1]) candidate.dob = parts[1].trim();
+    }
+  }
+
+  if (!candidate.father) {
+    const fatherLine = lines.find(l => l.toLowerCase().includes("father"));
+    if (fatherLine) {
+      const parts = fatherLine.split(':');
+      if (parts[1]) candidate.father = parts[1].trim();
+    }
+  }
+
+  if (!candidate.roll) {
+    const rollLine = lines.find(l => l.toLowerCase().includes("roll"));
+    if (rollLine) {
+      const parts = rollLine.split(':');
+      if (parts[1]) candidate.roll = parts[1].replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+    }
+  }
+
+  return candidate;
+};
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pending:     { label: "Pending",     color: "text-amber-700",  bg: "bg-amber-100 dark:bg-amber-900/30" },
@@ -564,6 +625,25 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                       </div>
                     )}
                   </div>
+
+                  {/* Rojgar Suvidha Form Guard Sync Connector */}
+                  <div className="border-t border-gray-300/20 dark:border-gray-700/50 pt-4 mt-2">
+                    {(() => {
+                      const candidateData = parseCandidateData(selected, eSuvidhaData);
+                      return (
+                        <>
+                          <div id="rs-active-candidate-sync-data" data-candidate={JSON.stringify(candidateData)} className="hidden" />
+                          <button
+                            id="rs-sync-form-guard-btn"
+                            type="button"
+                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md shadow-indigo-600/10 active:scale-98 hover:scale-[1.01] transition-all duration-200"
+                          >
+                            <Sparkles className="w-4.5 h-4.5 animate-pulse" /> Sync to Form Guard Extension
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* WhatsApp Messaging Assistant */}
@@ -590,7 +670,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                         className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
                           activePreset === preset.id
                             ? "ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900 " + preset.color
-                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"
+                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                         }`}
                       >
                         {preset.label}
@@ -605,7 +685,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                         value={whatsappPreviewText}
                         onChange={(e) => setWhatsappPreviewText(e.target.value)}
                         rows={4}
-                        className="w-full p-3 bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-gray-850 dark:text-gray-150 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full p-3 bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-gray-800 dark:text-gray-200 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         placeholder="Yahan apna custom message likhein..."
                       />
                       <button
