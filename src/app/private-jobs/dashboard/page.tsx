@@ -47,7 +47,9 @@ interface ChatMessage {
  company_name?: string;
 }
 
-export default function PrivateCandidateDashboardPage() {
+import { Suspense } from "react";
+
+function PrivateCandidateDashboardContent() {
  const router = useRouter();
  const searchParams = useSearchParams();
  const [activeTab, setActiveTab] = useState<"profile" | "messages" | "applications" | "mock-interview" | "ats-optimizer">("profile");
@@ -2470,4 +2472,12 @@ export default function PrivateCandidateDashboardPage() {
  </div>
  </div>
  );
+}
+
+export default function PrivateCandidateDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-8 text-sm font-bold text-slate-500">Loading Dashboard...</div>}>
+      <PrivateCandidateDashboardContent />
+    </Suspense>
+  );
 }
