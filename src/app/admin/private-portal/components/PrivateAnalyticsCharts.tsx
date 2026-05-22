@@ -232,7 +232,7 @@ export default function PrivateAnalyticsCharts() {
               <PieChart>
                 <Pie
                   data={skillsData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}
-                  dataKey="value" stroke="none" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  dataKey="value" stroke="none" label={({name, percent = 0}) => `${name} ${(percent * 100).toFixed(0)}%`}
                   labelLine={false} style={{fontSize: '10px', fontWeight: 'bold'}}
                 >
                   {skillsData.map((entry, index) => (
