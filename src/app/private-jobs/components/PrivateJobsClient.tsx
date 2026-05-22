@@ -268,5 +268,6 @@ export default function PrivateJobsClient({ initialJobs }: PrivateJobsClientProp
 
  </div>
  </div>
+ </div>
  );
 }
