@@ -30,7 +30,7 @@ export default function JobPreferenceToggle() {
   };
 
   return (
-    <div className="w-full bg-white dark:bg-gray-950 py-4 px-4 border-b border-gray-100 dark:border-gray-800 sticky top-16 z-40 shadow-sm">
+    <div className="w-full bg-white dark:bg-gray-950 py-4 px-4 border-b border-gray-100 dark:border-gray-800 sticky top-[60px] z-30 shadow-sm">
       <div className="max-w-xl mx-auto">
         <div className="flex items-center bg-gray-100 dark:bg-gray-900 p-1 rounded-2xl relative shadow-inner">
           
