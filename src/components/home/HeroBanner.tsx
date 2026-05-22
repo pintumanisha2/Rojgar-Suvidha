@@ -23,12 +23,18 @@ interface Banner {
   link_url: string;
 }
 
-export default function HeroBanner() {
-  const [banners, setBanners] = useState<Banner[]>([]);
+interface HeroBannerProps {
+  initialBanners?: Banner[];
+}
+
+export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
+  const [banners, setBanners] = useState<Banner[]>(initialBanners);
   const [current, setCurrent] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialBanners.length === 0);
 
   useEffect(() => {
+    if (initialBanners.length > 0) return; // Skip client fetch if SSR provided data
+    
     const fetchBanners = async () => {
       try {
         const { data, error } = await supabase
@@ -37,16 +43,15 @@ export default function HeroBanner() {
           .eq("status", "active")
           .order("created_at", { ascending: false });
 
-        // FIX: Only update state if data exists (prevents empty flash)
         if (!error && data && data.length > 0) setBanners(data);
       } catch (err) {
         console.error("Banner fetch error:", err);
       } finally {
-        setLoading(false); // FIX: Always stop skeleton, even on network error
+        setLoading(false);
       }
     };
     fetchBanners();
-  }, []);
+  }, [initialBanners.length]);
 
   const goTo = useCallback(
     (index: number) => {
@@ -108,6 +113,7 @@ export default function HeroBanner() {
               src={main.image_url}
               alt={main.title}
               fill
+              sizes="(max-width: 640px) 100vw, 66vw"
               className="object-fill object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
@@ -174,7 +180,9 @@ export default function HeroBanner() {
                   src={side1.image_url}
                   alt={side1.title}
                   fill
+                  sizes="(max-width: 640px) 0vw, 33vw"
                   className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-3 py-2 pointer-events-none">
@@ -196,7 +204,9 @@ export default function HeroBanner() {
                   src={side2.image_url}
                   alt={side2.title}
                   fill
+                  sizes="(max-width: 640px) 0vw, 33vw"
                   className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 px-3 py-2 pointer-events-none">

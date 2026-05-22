@@ -1,11 +1,15 @@
+import dynamic from "next/dynamic";
 import HeroBanner from "@/components/home/HeroBanner";
 import JobPreferenceToggle from "@/components/home/JobPreferenceToggle";
-import SocialPromo from "@/components/home/SocialPromo";
-import Highlights from "@/components/home/Highlights";
-import TrustSignals from "@/components/home/TrustSignals";
-import MainContent from "@/components/home/MainContent";
-import AspirantsAddaPromo from "@/components/home/AspirantsAddaPromo";
-import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
+import { supabase } from "@/lib/supabase";
+
+// Lazy load non-critical components for faster initial load
+const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"));
+const Highlights = dynamic(() => import("@/components/home/Highlights"));
+const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"));
+const MainContent = dynamic(() => import("@/components/home/MainContent"));
+const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
+const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -89,7 +93,22 @@ const itemListSchema = {
 
 export const revalidate = 60; // Revalidate the page every 60 seconds for lightning-fast speeds
 
-export default function Home() {
+async function getBanners() {
+  try {
+    const { data } = await supabase
+      .from("banners")
+      .select("id, title, image_url, link_url")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+    return data || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export default async function Home() {
+  const initialBanners = await getBanners();
+
   return (
     <div className="flex-1 bg-gray-50 dark:bg-gray-950">
       {/* JSON-LD for Homepage SEO + AEO */}
@@ -99,7 +118,7 @@ export default function Home() {
       <JobPreferenceToggle />
 
       {/* Auto-Sliding Hero Banner */}
-      <HeroBanner />
+      <HeroBanner initialBanners={initialBanners} />
 
       {/* Social Media Call to Action */}
       <SocialPromo />
