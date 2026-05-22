@@ -53,6 +53,14 @@ export default function PrivateCandidateDashboardPage() {
  const [activeTab, setActiveTab] = useState<"profile" | "messages" | "applications" | "mock-interview" | "ats-optimizer">("profile");
  const [loading, setLoading] = useState(false);
 
+ const scrollToField = (id: string) => {
+   const el = document.getElementById(id);
+   if (el) {
+     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+     el.focus();
+   }
+ };
+
  // Profile Form States
  const [fullName, setFullName] = useState("");
  const [email, setEmail] = useState("");
