@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Save, Loader2, Image as ImageIcon, Briefcase, X } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Image as ImageIcon, Briefcase, X, Upload } from "lucide-react";
 import Link from "next/link";
 import CompanyLogo from "@/components/layout/CompanyLogo";
 
