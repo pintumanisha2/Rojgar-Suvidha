@@ -19,6 +19,7 @@ interface SupabaseJob {
  is_featured?: boolean;
  status: string;
  created_at: string;
+ important_dates?: any[];
 }
 
 interface VerifiedJobCardProps {
