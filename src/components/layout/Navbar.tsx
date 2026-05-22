@@ -261,20 +261,6 @@ export default function Navbar() {
                 </div>
               </Link>
 
-              <div className="flex items-center bg-black/20 p-1 rounded-xl border border-white/10 backdrop-blur-md">
-                <Link 
-                  href="/"
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${!isPrivate && pathname !== '/community' ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
-                >
-                  🏛️ Govt Jobs
-                </Link>
-                <Link 
-                  href="/private-jobs"
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${isPrivate ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
-                >
-                  🏢 Private Jobs
-                </Link>
-              </div>
 
               {/* Right Controls */}
               <div className="flex items-center gap-1 sm:gap-2">
@@ -591,23 +577,9 @@ export default function Navbar() {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)}></div>
           <div className="absolute top-[60px] left-0 right-0 bg-white dark:bg-gray-950 shadow-2xl max-h-[calc(100vh-60px)] overflow-y-auto">
             
-            {/* Mobile Govt / Private Toggle */}
+            {/* Mobile Actions */}
             <div className="p-4 pb-0">
-              <div className="flex flex-wrap items-center bg-gray-100 dark:bg-gray-900 p-1 rounded-xl w-full gap-1">
-                <Link 
-                  href="/"
-                  onClick={() => setIsMobileOpen(false)}
-                  className={`flex-1 flex justify-center items-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${!isPrivate && pathname !== '/community' ? 'bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-500 hover:bg-white/50'}`}
-                >
-                  🏛️ Govt Jobs
-                </Link>
-                <Link 
-                  href="/private-jobs"
-                  onClick={() => setIsMobileOpen(false)}
-                  className={`flex-1 flex justify-center items-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${isPrivate ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 hover:bg-white/50'}`}
-                >
-                  🏢 Private Jobs
-                </Link>
+              <div className="flex flex-col gap-2 w-full">
                 <button 
                   onClick={() => {
                     setIsMobileOpen(false);

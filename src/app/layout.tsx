@@ -225,7 +225,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://dflnrfvngmquaqdtjjhh.supabase.co" />
         <link rel="dns-prefetch" href="https://dflnrfvngmquaqdtjjhh.supabase.co" />
       </head>
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300">
+      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 overflow-x-hidden w-full">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
