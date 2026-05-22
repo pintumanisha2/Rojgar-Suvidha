@@ -616,7 +616,7 @@ export default function PrivateCandidateDashboardPage() {
    try {
      localProfile = JSON.parse(localProfileStr);
      // If we loaded the legacy single-profile, verify the email matches
-     if (currentEmail && localProfile.email && localProfile.email !== currentEmail) {
+     if (currentEmail && localProfile && localProfile.email && localProfile.email !== currentEmail) {
        console.warn("Legacy sandbox profile belongs to different email. Ignoring.");
        localProfile = null;
      }
