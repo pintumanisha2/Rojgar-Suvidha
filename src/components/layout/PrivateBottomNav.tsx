@@ -13,6 +13,11 @@ export default function PrivateBottomNav() {
   const lastScrollYRef = useRef(0);
   const [isCommunityOpen, setIsCommunityOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -80,13 +85,13 @@ export default function PrivateBottomNav() {
       name: "Saved",
       href: "/private-jobs/dashboard?tab=saved-jobs",
       icon: Bookmark,
-      activeCheck: !isCommunityOpen && pathname === "/private-jobs/dashboard" && typeof window !== 'undefined' && window.location.search.includes("tab=saved-jobs"),
+      activeCheck: !isCommunityOpen && pathname === "/private-jobs/dashboard" && (mounted ? window.location.search.includes("tab=saved-jobs") : false),
     },
     {
       name: "Account",
       href: "/private-jobs/dashboard",
       icon: UserCircle,
-      activeCheck: !isCommunityOpen && pathname === "/private-jobs/dashboard" && typeof window !== 'undefined' && !window.location.search.includes("tab=saved-jobs"),
+      activeCheck: !isCommunityOpen && pathname === "/private-jobs/dashboard" && (mounted ? !window.location.search.includes("tab=saved-jobs") : true),
     },
   ];
 
