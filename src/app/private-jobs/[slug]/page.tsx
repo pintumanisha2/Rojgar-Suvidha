@@ -6,6 +6,7 @@ import ScoutedApplyButton from"./ScoutedApplyButton";
 import JobViewTracker from"./JobViewTracker";
 import CompanyLogo from"@/components/layout/CompanyLogo";
 
+const slugify = (text: string) => text ? text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : '';
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export async function generateMetadata({ params, searchParams }: any) {
