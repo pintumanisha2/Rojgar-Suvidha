@@ -577,7 +577,7 @@ export default function PrivateCandidateDashboardPage() {
  try {
  await supabase.auth.setSession({
  access_token,
- refresh_token: refresh_token || undefined
+ refresh_token: refresh_token || ""
  });
  } catch (err) {
  console.warn("Supabase setSession failed but forcing login anyway");
