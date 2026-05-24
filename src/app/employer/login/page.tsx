@@ -167,8 +167,10 @@ export default function EmployerLoginPage() {
   // --- SIGNUP STEP 2: VERIFY OTP ---
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp.trim() || otp.length < 8) {
-      setError("Please enter a valid 8-digit OTP.");
+    const cleanOtp = otp.replace(/\s+/g, '');
+    
+    if (!cleanOtp || cleanOtp.length < 6) {
+      setError("Please enter a valid OTP.");
       return;
     }
 
@@ -176,11 +178,17 @@ export default function EmployerLoginPage() {
     resetMessages();
 
     try {
-      const { error: verifyErr } = await supabase.auth.verifyOtp({
+      const verifyPromise = supabase.auth.verifyOtp({
         email: email.trim(),
-        token: otp.trim(),
+        token: cleanOtp,
         type: 'signup'
       });
+      
+      const timeoutPromise = new Promise<{error: any}>((_, reject) => 
+        setTimeout(() => reject(new Error("Supabase is taking too long to verify the OTP. Please check your internet or try again.")), 15000)
+      );
+
+      const { error: verifyErr } = await Promise.race([verifyPromise, timeoutPromise]);
 
       if (verifyErr) throw verifyErr;
 
@@ -292,24 +300,28 @@ export default function EmployerLoginPage() {
   };
 
   return (
-    <div className="flex-1 min-h-[90vh] bg-gray-50 dark:bg-gray-950 py-12 px-4 flex items-center justify-center relative overflow-hidden">
+    <div className="flex-1 min-h-[100vh] relative flex items-center justify-center overflow-hidden">
       
-      {/* Background abstract shapes */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -z-10"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -z-10"></div>
+      {/* Vibrant Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 z-0"></div>
+      
+      {/* Animated Glowing Orbs */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/40 rounded-full blur-[100px] mix-blend-screen animate-pulse -z-0"></div>
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-fuchsia-500/30 rounded-full blur-[120px] mix-blend-screen animate-pulse delay-1000 -z-0"></div>
+      <div className="absolute top-1/3 right-1/3 w-[300px] h-[300px] bg-blue-500/30 rounded-full blur-[80px] mix-blend-screen animate-pulse delay-500 -z-0"></div>
 
-      <div className="max-w-md w-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl shadow-xl p-6 sm:p-8 space-y-6 relative z-10">
+      <div className="max-w-md w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-3xl shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] p-6 sm:p-8 space-y-6 relative z-10 transition-all duration-300">
         
         {/* Header Icon & Title */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl">
+        <div className="text-center space-y-3">
+          <div className="inline-flex p-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl shadow-lg transform hover:scale-105 transition-transform duration-300">
             <Briefcase className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">
-            HR / Employer Portal
+          <h2 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+            Employer Portal
           </h2>
-          <p className="text-sm text-gray-500">
-            Post vacancies and find certified candidates.
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            Find the top 1% certified talent for your company.
           </p>
         </div>
 
@@ -358,31 +370,31 @@ export default function EmployerLoginPage() {
         {activeForm === "signin" ? (
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Company Email</label>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Company Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
                   type="email" 
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="hr@company.com" 
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-white/60 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:bg-white dark:focus:bg-gray-900 outline-none text-sm font-medium transition-all shadow-sm backdrop-blur-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
                   type="password" 
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••" 
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-white/60 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:bg-white dark:focus:bg-gray-900 outline-none text-sm font-medium transition-all shadow-sm backdrop-blur-sm"
                 />
               </div>
             </div>
@@ -390,7 +402,7 @@ export default function EmployerLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-indigo-500/30 flex items-center justify-center gap-2 disabled:opacity-70"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In to Dashboard"}
               {!loading && <ArrowRight className="w-4 h-4" />}
