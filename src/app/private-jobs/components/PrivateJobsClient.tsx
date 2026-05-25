@@ -60,6 +60,8 @@ export default function PrivateJobsClient({ initialJobs }: PrivateJobsClientProp
  const [searchQuery, setSearchQuery] = useState("");
  const [selectedLocation, setSelectedLocation] = useState("All India");
  const [selectedCategory, setSelectedCategory] = useState("All");
+ // Experience filter — ab parent mein manage ho raha hai taaki filtering kaam kare
+ const [experience, setExperience] = useState("");
 
  // Profile & Personalisation State
  const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -162,7 +164,26 @@ export default function PrivateJobsClient({ initialJobs }: PrivateJobsClientProp
   );
   }
 
- return titleMatch && locMatch && catMatch;
+   // Filter by experience
+   let expMatch = true;
+   if (experience) {
+    const expMap: Record<string, number[]> = {
+     "Fresher": [0, 0],
+     "1-3 Years": [1, 3],
+     "4-7 Years": [4, 7],
+     "8+ Years": [8, 99],
+    };
+    const range = expMap[experience];
+    if (range && job.experience_required) {
+     const numMatch = job.experience_required.match(/(\d+)/);
+     if (numMatch) {
+      const jobExp = parseInt(numMatch[1]);
+      expMatch = jobExp >= range[0] && jobExp <= range[1];
+     }
+    }
+   }
+
+  return titleMatch && locMatch && catMatch && expMatch;
  });
 
  // Sort verified jobs by match percentage score if profile is active
@@ -221,6 +242,8 @@ export default function PrivateJobsClient({ initialJobs }: PrivateJobsClientProp
  setSelectedLocation={setSelectedLocation}
  selectedCategory={selectedCategory}
  setSelectedCategory={setSelectedCategory}
+ experience={experience}
+ setExperience={setExperience}
  />
 
  {/* 4. Main Listings Section */}

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Settings as SettingsIcon, Building, ShieldCheck, CreditCard, Save, Loader2, Link as LinkIcon, FileText, Image as ImageIcon, Mail, Lock, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "billing">("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

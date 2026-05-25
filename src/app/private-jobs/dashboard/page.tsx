@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import ResumeUploader from "../components/ResumeUploader";
 import AvatarUploader from "../components/AvatarUploader";
+import PrivateApplicationTracker from "@/components/candidate/PrivateApplicationTracker";
 
 interface CandidateProfile {
  id: string;
@@ -1147,6 +1148,14 @@ function PrivateCandidateDashboardContent() {
  {/* APPLICATIONS TAB */}
  {activeTab ==="applications"&& (
  <div className="space-y-8 animate-fadeIn">
+ {userId ? (
+   <PrivateApplicationTracker userId={userId} />
+ ) : (
+   <div className="p-8 text-center text-slate-500 font-medium">
+     Please log in to track your applications.
+   </div>
+ )}
+
  {/* Smart Recommendations Engine */}
  <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md space-y-6">
  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

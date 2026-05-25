@@ -27,6 +27,7 @@ export default function QuickApplyModal({ job, onClose }: Props) {
  const [resumeUrl, setResumeUrl] = useState("");
  const [submitting, setSubmitting] = useState(false);
  const [success, setSuccess] = useState(false);
+ const [savedOffline, setSavedOffline] = useState(false); // DB fail, offline mein save hua
  const [error, setError] = useState<string | null>(null);
  const [candidateId, setCandidateId] = useState<string | null>(null);
 
@@ -99,8 +100,7 @@ export default function QuickApplyModal({ job, onClose }: Props) {
  created_at: new Date().toISOString(),
  };
 
- try {
- // Save details to Local Storage persistent memory
+ // Hamesha local storage mein details save karo (prefill ke liye)
  localStorage.setItem("rs_last_apply_details", JSON.stringify({
  name: name.trim(),
  email: email.trim(),
@@ -110,17 +110,24 @@ export default function QuickApplyModal({ job, onClose }: Props) {
  expectedSalary
  }));
 
- // Try saving to Supabase
+ try {
+ // Supabase mein save karo
  const { error: dbErr } = await supabase.from("private_job_applications_internal").insert([payload]);
  if (dbErr) throw dbErr;
- } catch (err) {
- console.warn("Saving to offline localStorage fallback:", err);
- const existing = JSON.parse(localStorage.getItem("rs_internal_applications") ||"[]");
- localStorage.setItem("rs_internal_applications", JSON.stringify([...existing, payload]));
- }
 
+ // DB save successful — proper success screen dikhao
  setSubmitting(false);
  setSuccess(true);
+ } catch (err: any) {
+ // DB fail hua — offline fallback mein save karo aur user ko clearly batao
+ console.warn("DB save failed, saving to offline localStorage fallback:", err);
+ const existing = JSON.parse(localStorage.getItem("rs_internal_applications") || "[]");
+ localStorage.setItem("rs_internal_applications", JSON.stringify([...existing, payload]));
+
+ setSubmitting(false);
+ // Alag state set karo — offline saved, proper success nahi
+ setSavedOffline(true);
+ }
  };
 
  return (
@@ -170,11 +177,37 @@ export default function QuickApplyModal({ job, onClose }: Props) {
  <ul className="text-xs text-slate-600 space-y-1.5 font-medium">
  <li>✅ Our team reviews your profile within 24–48 hours</li>
  <li>📞 We'll call you for a quick 10-min pre-screening</li>
- <li>📧 Job details & interview schedule sent to your email</li>
+ <li>📧 Job details &amp; interview schedule sent to your email</li>
  </ul>
  </div>
  <button onClick={onClose} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl transition-colors">
  Done
+ </button>
+ </div>
+ ) : savedOffline ? (
+ // ── Offline Save Screen (DB fail hua, locally save hua) ──────────
+ <div className="p-8 flex flex-col items-center text-center gap-4">
+ <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center">
+ <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+ </svg>
+ </div>
+ <div>
+ <h3 className="text-xl font-extrabold text-slate-900">Saved — Pending Sync</h3>
+ <p className="text-slate-500 text-sm mt-2 font-medium">
+ Network issue detected. Your application details have been <strong>saved locally</strong> on your device. It will be automatically submitted once connection is restored.
+ </p>
+ </div>
+ <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 w-full text-left">
+ <p className="text-xs font-black text-amber-700 uppercase tracking-wide mb-2">What to do?</p>
+ <ul className="text-xs text-slate-600 space-y-1.5 font-medium">
+ <li>📶 Check your internet connection</li>
+ <li>🔄 Retry applying once connected</li>
+ <li>📞 Or call us directly at our helpline</li>
+ </ul>
+ </div>
+ <button onClick={onClose} className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-xl transition-colors">
+ Okay, Got It
  </button>
  </div>
  ) : (

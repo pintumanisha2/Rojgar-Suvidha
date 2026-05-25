@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
+import PrivateApplicationTracker from "@/components/candidate/PrivateApplicationTracker";
 
 function DashboardContent() {
   const router = useRouter();
@@ -558,7 +559,11 @@ function DashboardContent() {
               </button>
               <button onClick={() => setActiveTab("applications")}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "applications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <Briefcase className="w-5 h-5" /> My Applications
+                <Briefcase className="w-5 h-5" /> Govt Job Apps
+              </button>
+              <button onClick={() => setActiveTab("private-applications")}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "private-applications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                <Briefcase className="w-5 h-5" /> Private Job Tracker
               </button>
               <button onClick={() => setActiveTab("saved")}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "saved" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
@@ -705,7 +710,7 @@ function DashboardContent() {
           {/* MY APPLICATIONS TAB */}
           {activeTab === "applications" && (
             <div className="space-y-5">
-              <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">My Direct Applications</h3>
+              <h3 className="text-xl font-extrabold text-gray-900 dark:text-white">Govt Job Applications</h3>
               {myApplications.length === 0 ? (
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-16 text-center">
                   <Briefcase className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
@@ -747,6 +752,11 @@ function DashboardContent() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* PRIVATE JOB TRACKER TAB */}
+          {activeTab === "private-applications" && user && (
+            <PrivateApplicationTracker userId={user.id} />
           )}
 
           {/* APPLY FOR ME REQUESTS TAB */}

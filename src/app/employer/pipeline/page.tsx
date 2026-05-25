@@ -133,6 +133,11 @@ export default function EmployerDashboardPage() {
   const [isAddColModalOpen, setIsAddColModalOpen] = useState(false);
   const [newColName, setNewColName] = useState("");
 
+  // Rejection Feedback State
+  const [rejectionModalData, setRejectionModalData] = useState<{ isOpen: boolean, appIds: string[], candidateNames: string } | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>("experience");
+  const [customRejectionText, setCustomRejectionText] = useState<string>("");
+
   // Column Toggle State
   const [showColToggle, setShowColToggle] = useState(false);
   const [visibleCols, setVisibleCols] = useState({
@@ -245,12 +250,26 @@ export default function EmployerDashboardPage() {
   }, [selectedJobForApps, activeTab, userId]);
 
   const handleUpdateApplicationStatus = async (appId: string, status: string) => {
+    if (status === 'rejected') {
+      const app = jobApplications.find(a => a.id === appId);
+      setRejectionModalData({ isOpen: true, appIds: [appId], candidateNames: app?.applicant_name || "Candidate" });
+      return;
+    }
+
     // Optimistic UI Update
     setJobApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
 
     // Attempt DB Update
     if (userId) {
-      supabase.from("private_job_applications").update({ status }).eq("id", appId).then();
+      supabase.from("private_job_applications_internal").update({ status }).eq("id", appId).then();
+    }
+    
+    // Update Local Storage Fallback
+    const local = localStorage.getItem("rs_internal_applications");
+    if (local) {
+      const parsed = JSON.parse(local);
+      const updated = parsed.map((a: any) => a.id === appId ? { ...a, status } : a);
+      localStorage.setItem("rs_internal_applications", JSON.stringify(updated));
     }
   };
 
@@ -275,16 +294,51 @@ export default function EmployerDashboardPage() {
     if (selectedApplications.size === 0) return;
     const ids = Array.from(selectedApplications);
 
-    setJobApplications(prev => prev.map(a => ids.includes(a.id) ? { ...a, status } : a));
-
     if (status === 'rejected') {
-      alert(`📨 Automated Rejection Emails sent to ${ids.length} candidates using your template.`);
+      setRejectionModalData({ isOpen: true, appIds: ids, candidateNames: `${ids.length} candidates` });
+      return;
     }
 
+    setJobApplications(prev => prev.map(a => ids.includes(a.id) ? { ...a, status } : a));
     setSelectedApplications(new Set());
 
     if (userId) {
-      await supabase.from("private_job_applications").update({ status }).in("id", ids);
+      await supabase.from("private_job_applications_internal").update({ status }).in("id", ids);
+    }
+    
+    const local = localStorage.getItem("rs_internal_applications");
+    if (local) {
+      const parsed = JSON.parse(local);
+      const updated = parsed.map((a: any) => ids.includes(a.id) ? { ...a, status } : a);
+      localStorage.setItem("rs_internal_applications", JSON.stringify(updated));
+    }
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!rejectionModalData) return;
+    const { appIds } = rejectionModalData;
+
+    let finalFeedback = customRejectionText;
+    if (!finalFeedback) {
+      if (rejectionReason === "experience") finalFeedback = "We appreciate your interest, but we are looking for someone with more relevant experience for this specific role.";
+      else if (rejectionReason === "skills") finalFeedback = "While your background is impressive, we require a stronger match with the core technical skills outlined in the job description.";
+      else if (rejectionReason === "location") finalFeedback = "Unfortunately, we are currently prioritizing local candidates or those willing to relocate independently for this on-site role.";
+    }
+
+    setJobApplications(prev => prev.map(a => appIds.includes(a.id) ? { ...a, status: 'rejected', feedback: finalFeedback } : a));
+    setSelectedApplications(new Set());
+    setRejectionModalData(null);
+    setCustomRejectionText("");
+
+    if (userId) {
+      await supabase.from("private_job_applications_internal").update({ status: 'rejected', feedback: finalFeedback }).in("id", appIds);
+    }
+    
+    const local = localStorage.getItem("rs_internal_applications");
+    if (local) {
+      const parsed = JSON.parse(local);
+      const updated = parsed.map((a: any) => appIds.includes(a.id) ? { ...a, status: 'rejected', feedback: finalFeedback } : a);
+      localStorage.setItem("rs_internal_applications", JSON.stringify(updated));
     }
   };
 
@@ -718,6 +772,18 @@ export default function EmployerDashboardPage() {
 
   const handleUpdateRemarks = (appId: string, remarks: string) => {
     setJobApplications(prev => prev.map(a => a.id === appId ? { ...a, hr_remarks: remarks } : a));
+    if (userId) {
+      supabase.from("private_job_applications").update({ hr_remarks: remarks }).eq("id", appId).then();
+    }
+  };
+
+  const handleUpdateField = (appId: string, field: string, value: string) => {
+    setJobApplications(prev => prev.map(a => a.id === appId ? { ...a, [field]: value } : a));
+    // Simulate updating backend for now
+    if (userId) {
+      // In a real scenario, make sure these columns exist in DB
+      console.log(`Updating ${field} to ${value} for app ${appId}`);
+    }
   };
 
   const handleShortlistFromScout = () => {
@@ -2112,6 +2178,77 @@ export default function EmployerDashboardPage() {
               >
                 Add Column
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Rejection Feedback Modal */}
+      {rejectionModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-bottom-4">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-black text-gray-900 dark:text-white">Provide Rejection Feedback</h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">
+                    Help {rejectionModalData.candidateNames} understand why they weren't selected. This builds immense trust.
+                  </p>
+                </div>
+                <button onClick={() => setRejectionModalData(null)} className="text-gray-400 hover:text-gray-500">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 block">Select primary reason</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: 'experience', label: 'Experience Mismatch' },
+                      { id: 'skills', label: 'Skill Gap (Missing core skills)' },
+                      { id: 'location', label: 'Location/Commute Issue' },
+                      { id: 'custom', label: 'Write Custom Feedback' }
+                    ].map(r => (
+                      <div 
+                        key={r.id}
+                        onClick={() => setRejectionReason(r.id)}
+                        className={`p-3 rounded-xl border ${rejectionReason === r.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'} cursor-pointer font-bold text-sm transition-colors`}
+                      >
+                        {r.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {rejectionReason === 'custom' && (
+                  <div>
+                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 block">Custom Feedback</label>
+                    <textarea 
+                      value={customRejectionText}
+                      onChange={e => setCustomRejectionText(e.target.value)}
+                      placeholder="e.g. We loved your energy but need someone who knows Next.js..."
+                      className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                      rows={3}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button 
+                  onClick={() => setRejectionModalData(null)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleConfirmRejection}
+                  className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-500/30 transition-all flex items-center gap-2"
+                >
+                  Confirm Rejection
+                </button>
+              </div>
             </div>
           </div>
         </div>

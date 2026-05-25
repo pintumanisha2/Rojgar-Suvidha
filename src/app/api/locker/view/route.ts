@@ -24,9 +24,16 @@ export async function GET(req: Request) {
     // Fallback 2: Check cookies
     if (!token) {
       const cookieHeader = req.headers.get("cookie") || "";
-      const cookies = Object.fromEntries(
-        cookieHeader.split(";").map(c => c.trim().split("="))
-      );
+      // FIX: split("=") galat tha — base64 tokens mein "=" hota hai jo value truncate kar deta tha
+      // Correct approach: sirf pehle "=" par split karo, baki sab value ka hissa hai
+      const cookies: Record<string, string> = {};
+      cookieHeader.split(";").forEach(c => {
+        const eqIdx = c.indexOf("=");
+        if (eqIdx === -1) return;
+        const key = c.slice(0, eqIdx).trim();
+        const val = c.slice(eqIdx + 1).trim();
+        cookies[key] = val;
+      });
       const supabaseCookieKey = Object.keys(cookies).find(k => k.includes("auth-token") || k.includes("access-token"));
       if (supabaseCookieKey) {
         try {

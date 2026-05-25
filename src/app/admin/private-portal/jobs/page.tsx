@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import toast, { Toaster } from "react-hot-toast";
 import { 
   Briefcase, CheckCircle, XCircle, Search, 
   MapPin, DollarSign, Star, Clock, AlertTriangle, ExternalLink,
@@ -43,9 +44,10 @@ export default function PrivateJobsModerationPage() {
         .getPublicUrl(fileName);
 
       setEditLogoUrl(publicUrl);
+      toast.success("Logo uploaded successfully!");
     } catch (err: any) {
       console.error("Logo upload error:", err);
-      alert("Logo upload failed: " + err.message);
+      toast.error("Logo upload failed: " + err.message);
     } finally {
       setIsUploadingLogo(false);
     }
@@ -53,6 +55,7 @@ export default function PrivateJobsModerationPage() {
 
   const handleSaveLogo = async () => {
     if (!editingJob) return;
+    const saveToast = toast.loading("Saving logo...");
     try {
       const { error } = await supabase
         .from("private_jobs")
@@ -64,9 +67,10 @@ export default function PrivateJobsModerationPage() {
       setJobs(prev => prev.map(job => job.id === editingJob.id ? { ...job, company_logo: editLogoUrl || null } : job));
       setEditingJob(null);
       setEditLogoUrl("");
+      toast.success("Logo saved successfully!", { id: saveToast });
     } catch (err: any) {
       console.error("Error saving logo:", err);
-      alert("Failed to save logo: " + err.message);
+      toast.error("Failed to save logo: " + err.message, { id: saveToast });
     }
   };
 
@@ -100,28 +104,47 @@ export default function PrivateJobsModerationPage() {
   }, []);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    // Optimistic update — pehle UI update karo
+    const previousJobs = jobs;
+    setJobs(prev => prev.map(job => job.id === id ? { ...job, status: newStatus } : job));
+
     try {
       const { error } = await supabase
         .from("private_jobs")
         .update({ status: newStatus })
         .eq("id", id);
-      
-      setJobs(prev => prev.map(job => job.id === id ? { ...job, status: newStatus } : job));
-    } catch (err) {
-      setJobs(prev => prev.map(job => job.id === id ? { ...job, status: newStatus } : job));
+
+      if (error) throw error;
+
+      const label = newStatus === "published" ? "✅ Job Approved" : "❌ Job Rejected";
+      toast.success(label);
+    } catch (err: any) {
+      // DB fail — UI rollback karo
+      setJobs(previousJobs);
+      console.error("Status update failed:", err);
+      toast.error("Status update failed: " + (err?.message || "Please try again."));
     }
   };
 
   const handleToggleFeature = async (id: string, currentFeatured: boolean) => {
+    // Optimistic update
+    const previousJobs = jobs;
+    setJobs(prev => prev.map(job => job.id === id ? { ...job, is_featured: !currentFeatured } : job));
+
     try {
       const { error } = await supabase
         .from("private_jobs")
         .update({ is_featured: !currentFeatured })
         .eq("id", id);
-      
-      setJobs(prev => prev.map(job => job.id === id ? { ...job, is_featured: !currentFeatured } : job));
-    } catch (err) {
-      setJobs(prev => prev.map(job => job.id === id ? { ...job, is_featured: !currentFeatured } : job));
+
+      if (error) throw error;
+
+      toast.success(!currentFeatured ? "⭐ Job Featured!" : "Feature removed");
+    } catch (err: any) {
+      // DB fail — rollback
+      setJobs(previousJobs);
+      console.error("Feature toggle failed:", err);
+      toast.error("Feature toggle failed: " + (err?.message || "Please try again."));
     }
   };
 
@@ -134,6 +157,7 @@ export default function PrivateJobsModerationPage() {
 
   return (
     <div className="space-y-6">
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">

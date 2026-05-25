@@ -10,6 +10,9 @@ interface PrivateJobsFiltersProps {
  setSelectedLocation: (val: string) => void;
  selectedCategory: string;
  setSelectedCategory: (val: string) => void;
+ // Experience filter — parent se aata hai taaki filtering actually kaam kare
+ experience: string;
+ setExperience: (val: string) => void;
 }
 
 export default function PrivateJobsFilters({
@@ -18,10 +21,11 @@ export default function PrivateJobsFilters({
  selectedLocation,
  setSelectedLocation,
  selectedCategory,
- setSelectedCategory
+ setSelectedCategory,
+ experience,
+ setExperience,
 }: PrivateJobsFiltersProps) {
  const [isExpanded, setIsExpanded] = useState(false);
- const [experience, setExperience] = useState("");
  const searchRef = useRef<HTMLDivElement>(null);
 
  const categories = ["All","🏡 WFH","💻 Tech & IT","📊 Data Entry","📞 BPO / Telecalling","🛵 Logistics & Delivery"];

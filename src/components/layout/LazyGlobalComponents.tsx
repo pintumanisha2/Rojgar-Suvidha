@@ -10,6 +10,7 @@ const CommunityChatDrawer = dynamic(() => import("@/components/layout/CommunityC
 const PushNotificationPrompt = dynamic(() => import("@/components/layout/PushNotificationPrompt"), { ssr: false });
 const AnalyticsTracker = dynamic(() => import("@/components/layout/AnalyticsTracker"), { ssr: false });
 const GlobalBehaviorTracker = dynamic(() => import("@/components/layout/GlobalBehaviorTracker"), { ssr: false });
+const FloatingInbox = dynamic(() => import("@/components/layout/FloatingInbox"), { ssr: false });
 
 export default function LazyGlobalComponents() {
   return (
@@ -21,6 +22,7 @@ export default function LazyGlobalComponents() {
       <PushNotificationPrompt />
       <AnalyticsTracker />
       <GlobalBehaviorTracker />
+      <FloatingInbox />
     </>
   );
 }

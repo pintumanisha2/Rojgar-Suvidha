@@ -14,6 +14,23 @@ export default function MessagesPage() {
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  // Update 'now' every minute for fresh active statuses
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper to format active status based on last message
+  const getActiveStatus = (timestamp: number) => {
+    if (!timestamp) return { text: "Offline", isOnline: false };
+    const diffInMins = Math.floor((now - timestamp) / 60000);
+    if (diffInMins < 5) return { text: "Online", isOnline: true };
+    if (diffInMins < 60) return { text: `Active ${diffInMins}m ago`, isOnline: false };
+    if (diffInMins < 1440) return { text: `Active ${Math.floor(diffInMins/60)}h ago`, isOnline: false };
+    return { text: `Active ${Math.floor(diffInMins/1440)}d ago`, isOnline: false };
+  };
 
   // ZegoCloud Call States
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
@@ -318,8 +335,13 @@ export default function MessagesPage() {
                     <h3 className="font-extrabold text-gray-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {selectedCandData?.name || "Candidate"}
                     </h3>
-                    <p className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
-                      Candidate <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></span> Online
+                    <p className="text-[10px] font-bold text-gray-500 flex items-center gap-1.5">
+                      {getActiveStatus(selectedCandData?.timestamp).isOnline ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ring-2 ring-emerald-500/20"></span>
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                      )}
+                      {getActiveStatus(selectedCandData?.timestamp).text}
                     </p>
                   </div>
                 </div>

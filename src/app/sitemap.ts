@@ -43,6 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/answer-key',
     '/admission',
     '/news',
+    '/exam-calendar',    // NEW: High-value AEO page for exam dates
     // '/private-jobs',
     '/about-us',
     '/contact-us',
@@ -64,8 +65,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
-    changeFrequency: route === '' ? 'hourly' as const : 'daily' as const,
-    priority: route === '' ? 1.0 : route.startsWith('/jobs/') ? 0.75 : 0.8,
+    changeFrequency: route === '' ? 'hourly' as const : route === '/exam-calendar' ? 'daily' as const : 'daily' as const,
+    priority: route === '' ? 1.0 : route === '/exam-calendar' ? 0.9 : route.startsWith('/jobs/') ? 0.75 : 0.8,
   }));
 
   // Fetch unique state codes from jobs to include state-specific pages in sitemap

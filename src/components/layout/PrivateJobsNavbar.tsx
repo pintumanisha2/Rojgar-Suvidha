@@ -30,11 +30,12 @@ import { supabase } from"@/lib/supabase";
 import Image from"next/image";
 
 const navSections = [
- { name:"Vetted Jobs", href:"/private-jobs", icon: Briefcase, color:"text-blue-500"},
- { name:"AI Resume Maker", href:"/private-jobs/resume-builder", icon: Sparkles, color:"text-violet-500"},
- { name:"AI Mock Interview", href:"/private-jobs/dashboard?tab=mock-interview", icon: BookOpen, color:"text-orange-500"},
- { name:"Inbox", href:"/private-jobs/dashboard?tab=messages", icon: ClipboardCheck, color:"text-emerald-500"},
- { name:"Community", onClick: () => window.dispatchEvent(new Event('openPrivateCommunity')), icon: MessageCircle, color:"text-rose-500"},
+  { name:"Vetted Jobs", href:"/private-jobs", icon: Briefcase, color:"text-blue-500"},
+  { name:"My Applications", href:"/private-jobs/dashboard?tab=applications", icon: ClipboardCheck, color:"text-indigo-500"},
+  { name:"AI Resume Maker", href:"/private-jobs/resume-builder", icon: Sparkles, color:"text-violet-500"},
+  { name:"AI Mock Interview", href:"/private-jobs/dashboard?tab=mock-interview", icon: BookOpen, color:"text-orange-500"},
+  { name:"Inbox", href:"/private-jobs/dashboard?tab=messages", icon: MessageCircle, color:"text-emerald-500"},
+  { name:"Community", onClick: () => window.dispatchEvent(new Event('openPrivateCommunity')), icon: MessageCircle, color:"text-rose-500"},
  { name:"Helpdesk", href:"/private-jobs/contact-us", icon: HelpCircle, color:"text-sky-500"},
 ];
 

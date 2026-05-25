@@ -76,6 +76,9 @@ CREATE TABLE IF NOT EXISTS private_job_applications_internal (
   -- Workflow status for admin tracker
   status              TEXT DEFAULT 'new', -- 'new', 'contacted', 'shortlisted', 'rejected'
   
+  -- AI Feedback or HR notes provided upon rejection/shortlisting
+  feedback            TEXT,
+  
   -- Optional: link to logged-in candidate profile
   candidate_id        UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   
