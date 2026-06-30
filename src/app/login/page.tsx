@@ -75,9 +75,9 @@ function LoginContent() {
     setError(null);
     
     // Determine redirect base: default to window.location.origin, but fallback to Vercel if running in Capacitor local webview
-    let redirectBase = typeof window !== "undefined" ? window.location.origin : "https://rojgar-suvidha.vercel.app";
-    if (redirectBase.includes("localhost") || redirectBase.includes("capacitor://")) {
-      redirectBase = "https://rojgar-suvidha.vercel.app";
+    let redirectBase = typeof window !== "undefined" ? window.location.origin : "https://www.rojgarsuvidha.com";
+    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+      redirectBase = "https://www.rojgarsuvidha.com";
     }
 
     const { error } = await supabase.auth.signInWithOAuth({

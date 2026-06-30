@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     description: "AI se seconds mein professional government job resume banayein. Free PDF download.",
     type: "website",
   },
-  alternates: { canonical: "https://rojgar-suvidha.vercel.app/resume-builder" },
+  alternates: { canonical: "https://www.rojgarsuvidha.com/resume-builder" },
 };
 
 export default function ResumeBuilderLayout({ children }: { children: React.ReactNode }) {
