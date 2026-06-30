@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -25,7 +25,7 @@ interface JobPosting {
   slug: string;
 }
 
-export default function EmployerDashboardPage() {
+function EmployerDashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -2253,8 +2253,22 @@ export default function EmployerDashboardPage() {
           </div>
         </div>
       )}
-
     </div>
+  );
+}
+
+export default function EmployerDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+          <p className="text-sm font-bold text-gray-500 animate-pulse">Loading ATS Pipeline...</p>
+        </div>
+      </div>
+    }>
+      <EmployerDashboardPageContent />
+    </Suspense>
   );
 }
 

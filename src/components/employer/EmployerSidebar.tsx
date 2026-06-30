@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { 
   LayoutDashboard, 
@@ -23,7 +23,6 @@ import { useEffect, useState } from "react";
 
 export default function EmployerSidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const [hrName, setHrName] = useState("HR Manager");
