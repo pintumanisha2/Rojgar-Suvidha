@@ -1,8 +1,3 @@
--- ============================================================
--- Rojgar Suvidha — Employer Team Members Schema
--- Run this ONCE in your Supabase Dashboard → SQL Editor
--- ============================================================
-
 CREATE TABLE IF NOT EXISTS employer_team_members (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employer_uid        TEXT NOT NULL, -- Ties to the company/employer account
