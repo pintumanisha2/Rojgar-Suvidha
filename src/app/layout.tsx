@@ -8,8 +8,8 @@ import { PublicHeader, PublicFooter } from "@/components/layout/PublicUI";
 import BottomNav from "@/components/layout/BottomNav";
 import TopLoader from "@/components/layout/TopLoader";
 import JobPreferenceModal from "@/components/layout/JobPreferenceModal";
-
 import LazyGlobalComponents from "@/components/layout/LazyGlobalComponents";
+import CountdownGate from "@/components/layout/CountdownGate";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -218,8 +218,8 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
         {/* Preconnect for performance (Core Web Vitals = SEO signal) */}
-        <link rel="preconnect" href="https://dflnrfvngmquaqdtjjhh.supabase.co" />
-        <link rel="dns-prefetch" href="https://dflnrfvngmquaqdtjjhh.supabase.co" />
+        <link rel="preconnect" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
+        <link rel="dns-prefetch" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
       </head>
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 overflow-x-hidden w-full">
         <ThemeProvider
@@ -243,14 +243,16 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <TopLoader />
           </Suspense>
-          <PublicHeader />
-          <main className="flex-grow flex flex-col">
-            {children}
-          </main>
-          <PublicFooter />
-          <BottomNav />
-          <JobPreferenceModal />
-          <LazyGlobalComponents />
+          <CountdownGate>
+            <PublicHeader />
+            <main className="flex-grow flex flex-col">
+              {children}
+            </main>
+            <PublicFooter />
+            <BottomNav />
+            <JobPreferenceModal />
+            <LazyGlobalComponents />
+          </CountdownGate>
           
           {/* Auto-update Service Worker to prevent caching issues for users */}
           <script
