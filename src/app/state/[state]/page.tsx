@@ -1,8 +1,33 @@
+import type { Metadata } from "next";
 import { MapPin, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import MainContent from "@/components/home/MainContent";
 import Highlights from "@/components/home/Highlights";
 import SocialPromo from "@/components/home/SocialPromo";
+
+const STATE_NAMES: Record<string, string> = {
+  up: "Uttar Pradesh", mp: "Madhya Pradesh", rj: "Rajasthan", bh: "Bihar",
+  hr: "Haryana", pb: "Punjab", uk: "Uttarakhand", jh: "Jharkhand",
+  mh: "Maharashtra", gu: "Gujarat", ka: "Karnataka", tn: "Tamil Nadu",
+  dl: "Delhi", wb: "West Bengal", od: "Odisha", as: "Assam",
+  hp: "Himachal Pradesh", ch: "Chandigarh", cg: "Chhattisgarh", ga: "Goa",
+};
+
+export async function generateMetadata({ params }: { params: Promise<{ state: string }> }): Promise<Metadata> {
+  const { state } = await params;
+  const stateName = STATE_NAMES[state.toLowerCase()] || state.toUpperCase();
+  return {
+    title: `${stateName} Govt Jobs 2025 | Sarkari Naukri ${stateName} – Rojgar Suvidha`,
+    description: `Latest government jobs in ${stateName} 2025. Find all Sarkari Naukri vacancies, results, admit cards and answer keys for ${stateName} state on Rojgar Suvidha.`,
+    alternates: { canonical: `https://www.rojgarsuvidha.com/state/${state.toLowerCase()}` },
+    openGraph: {
+      title: `${stateName} Sarkari Naukri 2025 – Rojgar Suvidha`,
+      description: `All latest government job vacancies, results and notifications from ${stateName} on Rojgar Suvidha.`,
+      url: `https://www.rojgarsuvidha.com/state/${state.toLowerCase()}`,
+    },
+  };
+}
+
 
 export default async function StateJobsPage({ params }: { params: Promise<{ state: string }> }) {
   const resolvedParams = await params;

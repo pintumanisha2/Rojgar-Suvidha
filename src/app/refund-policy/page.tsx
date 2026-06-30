@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { RefreshCcw } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Refund Policy – Rojgar Suvidha | Apply For Me Refund Terms",
+  description: "Read Rojgar Suvidha's refund policy for our Apply For Me form-filling service. Understand eligibility, process and timeline for refund requests.",
+  alternates: { canonical: "https://www.rojgarsuvidha.com/refund-policy" },
+  openGraph: {
+    title: "Refund Policy – Rojgar Suvidha",
+    description: "Refund policy and eligibility for Rojgar Suvidha's Apply For Me government form-filling service.",
+    url: "https://www.rojgarsuvidha.com/refund-policy",
+  },
+};
 
 export default function RefundPolicyPage() {
   return (

@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { FileText } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Terms & Conditions – Rojgar Suvidha | Usage Policy",
+  description: "Read the Terms and Conditions for using Rojgar Suvidha. Understand user responsibilities, service terms, and usage guidelines for India's #1 government job portal.",
+  alternates: { canonical: "https://www.rojgarsuvidha.com/terms" },
+  openGraph: {
+    title: "Terms & Conditions – Rojgar Suvidha",
+    description: "Terms and conditions for using Rojgar Suvidha's Sarkari Naukri and government job portal services.",
+    url: "https://www.rojgarsuvidha.com/terms",
+  },
+};
 
 export default function TermsPage() {
   return (

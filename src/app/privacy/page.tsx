@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { ShieldCheck } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy – Rojgar Suvidha | Data Protection & User Rights",
+  description: "Read Rojgar Suvidha's privacy policy. We are committed to protecting your personal data. Learn how we collect, use and safeguard your information on our government job portal.",
+  alternates: { canonical: "https://www.rojgarsuvidha.com/privacy" },
+  openGraph: {
+    title: "Privacy Policy – Rojgar Suvidha",
+    description: "Understand how Rojgar Suvidha protects your data and privacy while using our Sarkari Naukri job portal.",
+    url: "https://www.rojgarsuvidha.com/privacy",
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (
