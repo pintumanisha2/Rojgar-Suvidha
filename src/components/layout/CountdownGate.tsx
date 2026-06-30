@@ -20,6 +20,7 @@ export default function CountdownGate({ children }: { children: React.ReactNode 
   const [isLive, setIsLive] = useState<boolean | null>(null);
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
 
@@ -216,6 +217,14 @@ export default function CountdownGate({ children }: { children: React.ReactNode 
   };
 
   useEffect(() => {
+    // Check if test mode is enabled via URL search parameter (?test=true)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("test") === "true") {
+        setIsTestMode(true);
+      }
+    }
+
     if (isBypassed) {
       setIsLive(true);
       return;
@@ -365,14 +374,16 @@ export default function CountdownGate({ children }: { children: React.ReactNode 
         </div>
 
         {/* Secret Test Button for checking the firecracker effect immediately */}
-        <div className="mt-16 opacity-30 hover:opacity-100 transition-opacity">
-          <button
-            onClick={triggerLaunchCelebration}
-            className="px-4 py-2 border border-white/20 rounded-xl text-xs font-bold hover:bg-white/10 transition-colors flex items-center gap-1.5 mx-auto"
-          >
-            <Play className="w-3.5 h-3.5 fill-white" /> Test Live Launch Effect 🎆
-          </button>
-        </div>
+        {isTestMode && (
+          <div className="mt-16 opacity-30 hover:opacity-100 transition-opacity">
+            <button
+              onClick={triggerLaunchCelebration}
+              className="px-4 py-2 border border-white/20 rounded-xl text-xs font-bold hover:bg-white/10 transition-colors flex items-center gap-1.5 mx-auto"
+            >
+              <Play className="w-3.5 h-3.5 fill-white" /> Test Live Launch Effect 🎆
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Footer Disclaimer */}
