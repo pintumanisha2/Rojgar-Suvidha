@@ -170,7 +170,7 @@ export default function Navbar() {
 
     // FIX: Cross-tab auth sync — detect login/logout from other tabs via localStorage
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'sb-dflnrfvngmquaqdtjjhh-auth-token' || e.key?.includes('supabase.auth.token')) {
+      if (e.key === 'sb-kkfgdzaoukekhlijlfsw-auth-token' || e.key?.includes('supabase.auth.token')) {
         checkUser();
       }
     };
