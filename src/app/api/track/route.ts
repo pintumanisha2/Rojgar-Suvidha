@@ -1,49 +1,36 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-export async function POST(req: NextRequest) {
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const {
-      page, source, browser, os, device_type, screen_res,
-      session_id, user_type, referrer, event,
-      time_on_page, scroll_depth
-    } = body;
+    const { userId, action, path, metadata } = await req.json();
 
-    const userAgent = req.headers.get("user-agent") || "";
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ||
-               req.headers.get("x-real-ip") || "unknown";
-    const ipHash = Buffer.from(ip).toString("base64").slice(0, 16);
-
-    if (event === "exit") {
-      // Update existing pageview record with exit data
-      await supabase
-        .from("analytics")
-        .update({ time_on_page, scroll_depth })
-        .eq("session_id", session_id)
-        .eq("page", page)
-        .eq("event", "pageview");
-    } else {
-      await supabase.from("analytics").insert({
-        page: page || "/",
-        source: source || "web",
-        browser: browser || "Other",
-        os: os || "Other",
-        device_type: device_type || "Desktop",
-        screen_res: screen_res || null,
-        session_id: session_id || null,
-        user_type: user_type || "new",
-        user_agent: userAgent,
-        ip_hash: ipHash,
-        referrer: referrer || null,
-        event: event || "pageview",
-        created_at: new Date().toISOString(),
-      });
+    if (!userId || !action) {
+      return NextResponse.json({ error: "User ID and action are required." }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json({ ok: false }, { status: 500 });
+    const { error } = await supabaseAdmin.from("user_activities").insert({
+      user_id: userId,
+      action,
+      page_path: path || "",
+      user_agent: req.headers.get("user-agent") || "",
+      ip_address: req.headers.get("x-forwarded-for") || "",
+      meta_data: metadata || {},
+    });
+
+    if (error) {
+      console.error("Failed to insert activity log:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Track activity exception:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-
