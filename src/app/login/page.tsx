@@ -6,13 +6,25 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { 
   ArrowLeft, Mail, Loader2, ShieldCheck, KeyRound, 
-  GraduationCap, Building, Sparkles, ArrowRight 
+  GraduationCap, Building, Sparkles, ArrowRight, Eye, EyeOff 
 } from "lucide-react";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  
+  // Auto-redirect logged-in users to prevent rendering login screen unnecessarily
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push(redirectUrl);
+      }
+    };
+    checkActiveSession();
+  }, [router, redirectUrl]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -24,6 +36,7 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   // Forgot Password State
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -488,7 +501,7 @@ function LoginContent() {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <Mail className="h-5 w-5 text-gray-400" />
                         </div>
-                        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="student@example.com" />
+                        <input type="email" required value={email} disabled={loading} onChange={(e) => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-60" placeholder="student@example.com" />
                       </div>
                     </div>
 
@@ -496,7 +509,7 @@ function LoginContent() {
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Password</label>
                         {!isSignUp && (
-                          <button type="button" onClick={() => { resetFormState(); setIsForgotPassword(true); }} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
+                          <button type="button" disabled={loading} onClick={() => { resetFormState(); setIsForgotPassword(true); }} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors disabled:opacity-60">
                             Forgot Password?
                           </button>
                         )}
@@ -506,18 +519,27 @@ function LoginContent() {
                           <KeyRound className="h-5 w-5 text-gray-400" />
                         </div>
                         <input 
-                          type="password" 
+                          type={showPassword ? "text" : "password"} 
                           required 
                           value={password} 
+                          disabled={loading}
                           onChange={(e) => setPassword(e.target.value)} 
-                          className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" 
+                          className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-60" 
                           placeholder="••••••••" 
-                          minLength={8}
+                          minLength={6}
                         />
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-60"
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
                       </div>
                       {isSignUp && (
                         <p className="text-[11px] text-gray-500 mt-2 font-medium">
-                          Must be at least 8 chars, with 1 uppercase, 1 lowercase, 1 number & 1 special char.
+                          Must be at least 6 characters.
                         </p>
                       )}
                     </div>
