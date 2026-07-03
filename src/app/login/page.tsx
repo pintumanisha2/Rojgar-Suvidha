@@ -14,13 +14,25 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
   
-  // Auto-redirect logged-in users
+  // Auto-redirect logged-in users safely
   useEffect(() => {
+    let active = true;
     const checkActiveSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) router.push(redirectUrl);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn("Auth session check error (ignoring):", error.message);
+          return;
+        }
+        if (active && session) {
+          router.push(redirectUrl);
+        }
+      } catch (err) {
+        console.error("Session retrieval failed", err);
+      }
     };
     checkActiveSession();
+    return () => { active = false; };
   }, [router, redirectUrl]);
 
   const [loading, setLoading] = useState(false);
@@ -174,18 +186,32 @@ function LoginContent() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Invalid OTP. Please try again.");
-      } else if (data.magicLink) {
-        setMsg("OTP verified! Logging you in...");
-        window.location.href = data.magicLink;
+        setLoading(false);
       } else {
-        setError("Failed to create session. Please try again.");
+        // Set session directly using returned tokens
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.accessToken,
+          refresh_token: data.refreshToken,
+        });
+        if (sessionError) {
+          setError("Login failed. Please try again.");
+          setLoading(false);
+          return;
+        }
+        setMsg("Login successful! Redirecting...");
+        if (data.isNewUser || !data.hasProfile) {
+          router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
+        } else {
+          router.push(redirectUrl);
+        }
+        router.refresh();
       }
     } catch (err: any) {
-      setError(err.message || "Network error.");
-    } finally {
+      setError(err.message || "Network error. Please try again.");
       setLoading(false);
     }
   };
+
 
   // === PHONE OTP: Resend ===
   const handleResendPhoneOtp = async () => {
