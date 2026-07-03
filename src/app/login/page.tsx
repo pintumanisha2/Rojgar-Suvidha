@@ -93,6 +93,43 @@ function LoginContent() {
     setError(null);
     setMsg(null);
 
+    // 1. Email Typos Checker (e.g., gamil.com instead of gmail.com)
+    const checkEmailTypo = (emailStr: string): string | null => {
+      const parts = emailStr.split('@');
+      if (parts.length !== 2) return null;
+      const domain = parts[1].toLowerCase().trim();
+      
+      const commonTypos: Record<string, string> = {
+        'gamil.com': 'gmail.com',
+        'gmal.com': 'gmail.com',
+        'gmaill.com': 'gmail.com',
+        'gmeil.com': 'gmail.com',
+        'gmile.com': 'gmail.com',
+        'gimail.com': 'gmail.com',
+        'gmail.co': 'gmail.com',
+        'gnail.com': 'gmail.com',
+        'gamil.co': 'gmail.com',
+        'yaho.com': 'yahoo.com',
+        'yhoo.com': 'yahoo.com',
+        'yahomail.com': 'yahoo.com',
+        'hotmai.com': 'hotmail.com',
+        'hotmial.com': 'hotmail.com',
+        'redifmail.com': 'rediffmail.com',
+        'redif.com': 'rediffmail.com',
+      };
+      
+      if (commonTypos[domain]) {
+        return `${parts[0]}@${commonTypos[domain]}`;
+      }
+      return null;
+    };
+
+    const typoSuggestion = checkEmailTypo(email);
+    if (typoSuggestion) {
+      setError(`Email me spelling mistake hai: Kya aapka matlab "${typoSuggestion}" hai? Kripya ise thik karein.`);
+      return;
+    }
+
     if (isSignUp) {
       // Simplified Password Validation
       if (password.length < 6) {
