@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Toaster } from "react-hot-toast";
 import { Suspense } from "react";
 import "./globals.css";
@@ -222,6 +223,19 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
       </head>
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 overflow-x-hidden w-full">
+        {/* Google Analytics (gtag.js) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-NYNEZYFGD5"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-NYNEZYFGD5');
+          `}
+        </Script>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
