@@ -272,7 +272,7 @@ function LoginContent() {
 
   // Auto-submit OTP
   const handleOtpChange = (val: string) => {
-    const cleanVal = val.replace(/\D/g, '').slice(0, 8);
+    const cleanVal = val.replace(/\D/g, '').slice(0, 6);
     setOtp(cleanVal);
   };
 
