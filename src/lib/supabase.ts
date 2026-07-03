@@ -22,4 +22,10 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: { fetch: customFetch },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  }
 });

@@ -76,9 +76,6 @@ function LoginContent() {
     
     // Determine redirect base: default to window.location.origin, but fallback to Vercel if running in Capacitor local webview
     let redirectBase = typeof window !== "undefined" ? window.location.origin : "https://www.rojgarsuvidha.com";
-    if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      redirectBase = "https://www.rojgarsuvidha.com";
-    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -97,10 +94,9 @@ function LoginContent() {
     setMsg(null);
 
     if (isSignUp) {
-      // Strong Password Validation
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-      if (!passwordRegex.test(password)) {
-        setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+      // Simplified Password Validation
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters.");
         return;
       }
 
@@ -128,10 +124,16 @@ function LoginContent() {
           setError(error.message);
         }
       } else {
-        // Sign up successful, OTP sent to email for verification
-        setOtpSent(true);
-        setResendCooldown(60); // Start 60s cooldown
-        setMsg("Account created! A 6-digit OTP has been sent to your email to verify your account.");
+        if (data?.session) {
+          // If email confirmation is disabled in Supabase, the user is logged in instantly
+          setMsg("Account created successfully! Redirecting...");
+          await redirectAfterLogin(data.user!.id);
+        } else {
+          // Sign up successful, but requires OTP verification
+          setOtpSent(true);
+          setResendCooldown(60); // Start 60s cooldown
+          setMsg("Account created! A 6-digit OTP has been sent to your email to verify your account.");
+        }
       }
       setLoading(false);
     } else {
@@ -191,10 +193,9 @@ function LoginContent() {
     setError(null);
     setMsg(null);
 
-    // Validate new password
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
-      setError("New password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+    // Validate new password (Simplified)
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
       setLoading(false);
       return;
     }
