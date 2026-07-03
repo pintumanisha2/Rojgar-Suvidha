@@ -25,31 +25,41 @@ function ProfileSetupContent() {
   const [address, setAddress] = useState("");
 
   useEffect(() => {
+    let active = true;
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-        return;
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          router.push("/login");
+          return;
+        }
+        if (active) {
+          setUser(session.user);
+        }
+
+        // Check if profile already exists with try-catch resilience
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profile?.full_name) {
+          router.push(redirectUrl);
+          return;
+        }
+
+        if (active) {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Profile check failed:", err);
+        if (active) setLoading(false);
       }
-      setUser(session.user);
-
-      // Check if profile already exists
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .eq("id", session.user.id)
-        .single();
-
-      if (profile?.full_name) {
-        // Profile already complete, skip to target destination
-        router.push(redirectUrl);
-        return;
-      }
-
-      setLoading(false);
     };
     checkUser();
-  }, [router]);
+    return () => { active = false; };
+  }, [router, redirectUrl]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
