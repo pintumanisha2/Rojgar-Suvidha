@@ -226,6 +226,7 @@ export default function Footer() {
           <p className="text-gray-500 text-xs text-center md:text-left">
             © {new Date().getFullYear()} Rojgar Suvidha. All rights reserved. | 
             <span className="text-indigo-400 font-semibold mx-1">Owned & Operated by PINTU KUMAR</span> |
+            <span className="text-gray-400 font-medium mx-1">MSME Udyam Registration No. UDYAM-BR-27-0074756</span> |
             <span className="ml-1">Not affiliated with any government organization.</span>
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-x-5 gap-y-2">
