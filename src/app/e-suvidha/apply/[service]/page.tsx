@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud } from "lucide-react";
@@ -88,9 +88,10 @@ const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: s
   },
 };
 
-export default function ESuvidhaApply({ params }: { params: Promise<{ service: string }> }) {
+export default function ESuvidhaApply() {
   const router = useRouter();
-  const { service: rawServiceId } = use(params);
+  const params = useParams();
+  const rawServiceId = params.service as string;
 
   // SEO friendly slug mapping
   const SERVICE_SLUG_MAP: Record<string, string> = {
