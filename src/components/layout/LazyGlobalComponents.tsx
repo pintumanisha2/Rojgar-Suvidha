@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 
+import { usePathname } from "next/navigation";
+
 // 🔥 NUCLEAR OPTIMIZATION: Lazy-load all heavy background components and drawers to unblock Main Thread
 const FloatingSocials = dynamic(() => import("@/components/layout/FloatingSocials"), { ssr: false });
 const AIChatBot = dynamic(() => import("@/components/layout/AIChatBot"), { ssr: false });
@@ -13,6 +15,13 @@ const GlobalBehaviorTracker = dynamic(() => import("@/components/layout/GlobalBe
 const FloatingInbox = dynamic(() => import("@/components/layout/FloatingInbox"), { ssr: false });
 
 export default function LazyGlobalComponents() {
+  const pathname = usePathname() || "";
+
+  // Only render FloatingRecruiterInbox on Private Jobs or Recruiter/Employer portals
+  const isPrivateJobsOrRecruiterSection = 
+    pathname.startsWith("/private-jobs") || 
+    pathname.startsWith("/employer");
+
   return (
     <>
       <FloatingSocials />
@@ -22,7 +31,7 @@ export default function LazyGlobalComponents() {
       <PushNotificationPrompt />
       <AnalyticsTracker />
       <GlobalBehaviorTracker />
-      <FloatingInbox />
+      {isPrivateJobsOrRecruiterSection && <FloatingInbox />}
     </>
   );
 }
