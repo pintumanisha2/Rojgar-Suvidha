@@ -515,7 +515,7 @@ function ApplyForMeContent() {
                   <ShieldCheck className="w-6 h-6 text-orange-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">Service Charge: <span className="text-orange-600 dark:text-orange-400 text-lg">₹50/-</span></p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Service Charge: <span className="text-orange-600 dark:text-orange-400 text-lg">₹50/- INR</span></p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Proceed to pay securely via Cashfree (UPI, Cards, NetBanking).
                   </p>
@@ -569,12 +569,12 @@ function ApplyForMeContent() {
                 </div>
               </summary>
               <div className="p-5 h-64 overflow-y-auto text-xs text-gray-600 dark:text-gray-400 space-y-3 leading-relaxed custom-scrollbar bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800/50">
-                <p>1. <strong>"Apply For Me"</strong> is a paid service with a non-refundable service charge of ₹50.</p>
+                <p>1. <strong>"Apply For Me"</strong> is a paid service with a non-refundable service charge of ₹50 INR.</p>
                 <p>2. We only assist in filling out the application form. We are not responsible for your selection, exam scheduling, or admit card issuance.</p>
                 <p>3. All documents uploaded by you (Photo, Signature, Aadhar, etc.) must be clear and strictly adhere to the official notification guidelines.</p>
                 <p>4. Rojgar Suvidha will not be held liable if your application is rejected due to incorrect details provided by you.</p>
                 <p>5. We are not responsible if the deadline passes due to official website server crashes. (Please apply well before the last date).</p>
-                <p>6. The official examination fee (e.g., ₹100 for SSC) must be paid separately by you when our team shares the payment link.</p>
+                <p>6. The official examination fee (e.g., ₹100 INR for SSC) must be paid separately by you when our team shares the payment link.</p>
                 <p>7. The application submission process may take between 24 to 48 hours to complete.</p>
                 <p>8. Before final submission, our team will send a draft/preview to your WhatsApp for confirmation.</p>
                 <p>9. Once the form is finally submitted, no corrections can be made by us (You will have to wait for the official correction window).</p>
@@ -584,7 +584,7 @@ function ApplyForMeContent() {
                 <p>13. After your form is successfully submitted, you will have the option to auto-delete sensitive documents from our servers for security reasons.</p>
                 <p>14. You must independently verify your age eligibility and qualifications from the official notification. Our calculator is just a guide.</p>
                 <p>15. The final application PDF and Registration Number will be sent to you via SMS or WhatsApp.</p>
-                <p>16. If we are unable to fill out your form for any reason (e.g., vacancy cancellation), the ₹50 service charge will be refunded to your wallet.</p>
+                <p>16. If we are unable to fill out your form for any reason (e.g., vacancy cancellation), the ₹50 INR service charge will be refunded to your wallet.</p>
                 <p>17. Exam Center choices will be filled randomly unless you specify your preferences in the "Special Note" box.</p>
                 <p>18. In case of technical errors, please raise a support ticket. Call support is only available during working hours (10 AM - 6 PM).</p>
                 <p>19. PwD/Handicapped candidates must upload a clear PwD certificate; otherwise, they will be considered under the General category.</p>

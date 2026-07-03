@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud } from "lucide-react";
 import Script from "next/script";
 import imageCompression from "browser-image-compression";
+import { SERVICE_INFO_DB } from "@/lib/eSuvidhaContent";
 
 // Database of Services
 const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: string[]; docsOptional?: string[]; extraFields: string[] }> = {
@@ -89,12 +90,56 @@ const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: s
 
 export default function ESuvidhaApply({ params }: { params: Promise<{ service: string }> }) {
   const router = useRouter();
-  const { service: serviceId } = use(params);
+  const { service: rawServiceId } = use(params);
+
+  // SEO friendly slug mapping
+  const SERVICE_SLUG_MAP: Record<string, string> = {
+    "apply-new-pan-card-online": "pan-new",
+    "pan-card-correction-online": "pan-correction",
+    "apply-new-voter-id-card": "voter-new",
+    "order-aadhaar-pvc-card": "aadhaar-pvc",
+    "apply-income-certificate-online": "income-cert",
+    "apply-caste-certificate-online": "caste-cert",
+    "apply-domicile-certificate-online": "domicile-cert",
+    "apply-police-clearance-certificate-pcc": "pcc",
+    "eshram-card-registration-online": "eshram",
+    "ayushman-bharat-card-apply": "ayushman",
+    "pf-withdrawal-claim-online": "pf-withdrawal",
+    "msme-udyam-registration-online": "udyam",
+    "itr-filing-nil-return": "itr-nil",
+    "download-admit-card-result": "admit-card",
+    "professional-resume-cv-maker": "resume-cv",
+    "apply-passport-appointment-online": "passport",
+    "learner-driving-license-apply": "driving-learner",
+  };
+
+  const serviceId = SERVICE_SLUG_MAP[rawServiceId] || rawServiceId;
+
   const serviceDetails = SERVICE_DB[serviceId] || {
     title: "Cyber Cafe Service",
     price: 100,
     docsRequired: ["Aadhaar Card", "Passport Size Photo"],
     extraFields: ["Special Instructions / Any specific detail"]
+  };
+
+  const infoContent = SERVICE_INFO_DB[serviceId] || {
+    title: serviceDetails.title,
+    hindiTitle: "ऑनलाइन सुविधा केंद्र",
+    description: "Ghar baithe apni application submit karein. 100% secure aur expert verification.",
+    benefits: [
+      "Secured, rapid and expert-reviewed online application submissions.",
+      "Get complete guidance on required documents.",
+      "100% data confidentiality and privacy guarantee."
+    ],
+    steps: [
+      "Submit applicant name and contact details in the form.",
+      "Upload the required document scans or attachments.",
+      "Complete the nominal processing fee payment.",
+      "Our team reviews the files and completes the official portal submission."
+    ],
+    faqs: [
+      { q: "Is my data protected?", a: "Yes, all uploaded documents are automatically purged from our servers within 72 hours of completion." }
+    ]
   };
 
   const [user, setUser] = useState<any>(null);
@@ -361,32 +406,139 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
   return (
     <>
     <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
+
+    {/* FAQPage Structured Data (JSON-LD Schema) for Google Search Rich Snippets */}
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": infoContent.faqs.map((faq) => ({
+            "@type": "Question",
+            "name": faq.q,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.a,
+            },
+          })),
+        }),
+      }}
+    />
+
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <Link href="/e-suvidha" className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 mb-6">
           <ArrowLeft className="w-4 h-4" /> Wapas Jaao
         </Link>
 
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-6 mb-4 text-white shadow-lg">
-          <h1 className="text-2xl font-extrabold mb-2">{serviceDetails.title}</h1>
-          <p className="text-blue-100 text-sm">Ghar baithe apni application submit karein. 100% secure.</p>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Rich SEO Content */}
+          <div className="lg:col-span-7 space-y-6">
+             {/* Header */}
+             <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-violet-900 rounded-2xl p-6 text-white shadow-lg animate-fade-in">
+               <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">{infoContent.hindiTitle}</span>
+               <h1 className="text-2xl md:text-3xl font-extrabold mt-3 mb-2">{serviceDetails.title}</h1>
+               <p className="text-blue-100 text-sm leading-relaxed">{infoContent.description}</p>
+             </div>
 
-        {/* Data Privacy Trust Banner */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3 items-start mb-6 shadow-sm">
-          <ShieldCheck className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-extrabold text-green-800">100% Data Privacy & Security</p>
-            <p className="text-xs text-green-700 mt-1 leading-relaxed">
-              Hum aapka koi bhi personal data ya document save nahi karte hain. Aapke dwara upload kiye gaye sabhi documents kaam poora hone ke baad <strong className="font-bold text-green-900">72 ghante (3 days) ke andar automatically permanently delete</strong> ho jate hain. Aapka data yahan puri tarah safe hai.
-            </p>
+             {/* Work Process / Delivery Promise Banner */}
+             <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-5 md:p-6 shadow-sm">
+               <h2 className="text-sm md:text-base font-extrabold text-indigo-900 dark:text-indigo-300 flex items-center gap-2 mb-4">
+                 <span>⏱️</span> हमारा काम करने का तरीका और रसीद (Receiving) की गारंटी
+               </h2>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                 <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800/80 flex flex-col justify-between">
+                   <div>
+                     <span className="w-5 h-5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full flex items-center justify-center font-bold text-[10px] mb-2">1</span>
+                     <p className="font-extrabold text-gray-900 dark:text-white mb-1">Apply & Upload</p>
+                     <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                       Apne documents (Aadhaar Card, etc.) right side me upload karein aur form details fill karein.
+                     </p>
+                   </div>
+                 </div>
+                 
+                 <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800/80 flex flex-col justify-between">
+                   <div>
+                     <span className="w-5 h-5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full flex items-center justify-center font-bold text-[10px] mb-2">2</span>
+                     <p className="font-extrabold text-gray-900 dark:text-white mb-1">Secure Payment</p>
+                     <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                       Nominal service charges pay karein. Hum details double check karenge taaki form cancel na ho.
+                     </p>
+                   </div>
+                 </div>
+
+                 <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/80 flex flex-col justify-between relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-8 h-8 bg-emerald-500/10 rounded-bl-full flex items-center justify-center font-bold text-emerald-600">✓</div>
+                   <div>
+                     <span className="w-5 h-5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-full flex items-center justify-center font-bold text-[10px] mb-2">3</span>
+                     <p className="font-extrabold text-emerald-900 dark:text-emerald-300 mb-1">Receiving in 24 Hrs</p>
+                     <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                       Form submit hote hi official government portal ka **acknowledgement receipt (Receiving PDF)** aapke dashboard aur WhatsApp par **24 ghante ke andar** bhej di jayegi.
+                     </p>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             {/* Benefits */}
+             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+               <h2 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Key Benefits & Features (प्रमुख लाभ)</h2>
+               <ul className="space-y-3">
+                 {infoContent.benefits.map((benefit, i) => (
+                   <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-400">
+                     <span className="text-green-500 font-bold">✔</span>
+                     <span>{benefit}</span>
+                   </li>
+                 ))}
+               </ul>
+             </div>
+
+             {/* How it Works */}
+             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+               <h2 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Application Process (आवेदन प्रक्रिया)</h2>
+               <ol className="space-y-4">
+                 {infoContent.steps.map((step, i) => (
+                   <li key={i} className="flex gap-4 items-start text-sm text-gray-600 dark:text-gray-400">
+                     <span className="w-6 h-6 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full flex items-center justify-center shrink-0 font-bold text-xs">
+                       {i + 1}
+                     </span>
+                     <span className="leading-relaxed">{step}</span>
+                   </li>
+                 ))}
+               </ol>
+             </div>
+
+             {/* FAQs */}
+             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+               <h2 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4">Frequently Asked Questions (FAQs)</h2>
+               <div className="space-y-4">
+                 {infoContent.faqs.map((faq, i) => (
+                   <div key={i} className="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0 last:pb-0">
+                     <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-1">Q: {faq.q}</h3>
+                     <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">A: {faq.a}</p>
+                   </div>
+                 ))}
+               </div>
+             </div>
           </div>
-        </div>
 
-        {/* Form */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Right Column: Form */}
+          <div className="lg:col-span-5 space-y-6">
+             {/* Data Privacy Trust Banner */}
+             <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3 items-start shadow-sm">
+               <ShieldCheck className="w-6 h-6 text-green-600 shrink-0 mt-0.5" />
+               <div>
+                 <p className="text-sm font-extrabold text-green-800">100% Data Privacy & Security</p>
+                 <p className="text-xs text-green-700 mt-1 leading-relaxed">
+                   Hum aapka koi bhi personal data ya document save nahi karte hain. Aapke dwara upload kiye gaye sabhi documents kaam poora hone ke baad <strong className="font-bold text-green-900">72 ghante (3 days) ke andar automatically permanently delete</strong> ho jate hain.
+                 </p>
+               </div>
+             </div>
+
+             {/* Form */}
+             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+               <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Applicant Details (Editable) */}
             <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800 space-y-4">
@@ -603,7 +755,7 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
                   <p className="text-xs text-gray-500">Secure Cashfree Payment</p>
                 </div>
               </div>
-              <p className="text-2xl font-extrabold text-blue-600">₹{serviceDetails.price}</p>
+              <p className="text-2xl font-extrabold text-blue-600">₹{serviceDetails.price} INR</p>
             </div>
 
             {/* Security & Agreement */}
@@ -653,6 +805,8 @@ export default function ESuvidhaApply({ params }: { params: Promise<{ service: s
             </button>
           </form>
         </div>
+      </div>
+    </div>
 
       </div>
     </div>

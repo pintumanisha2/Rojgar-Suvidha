@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { supabase } from '@/lib/supabase';
+import { SERVICE_INFO_DB } from '@/lib/eSuvidhaContent';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Always use the real production domain for sitemap
@@ -107,6 +108,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticUrls, ...newsUrls, ...jobUrls, ...privateJobUrls, ...stateUrls];
+  // ── 6. e-Suvidha Service Pages ──────────────────────────────
+  const esuvidhaUrls: MetadataRoute.Sitemap = Object.keys(SERVICE_INFO_DB).map(slug => ({
+    url: `${baseUrl}/e-suvidha/apply/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
+  return [...staticUrls, ...newsUrls, ...jobUrls, ...privateJobUrls, ...stateUrls, ...esuvidhaUrls];
 }
 

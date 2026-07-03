@@ -51,6 +51,11 @@ export default function TermsPage() {
             While we strive to provide the most accurate and up-to-date information regarding jobs, results, and admit cards, we do not warrant its completeness or accuracy. Users are highly advised to verify information from the official websites of the respective departments before making any decisions.
           </p>
 
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">4. Merchant Legal Entity Name</h2>
+          <p className="mb-6">
+            Rojgar Suvidha, including the "Apply For Me" and "e-Suvidha" services, is legally owned, operated, and billed under the merchant entity name <strong>PINTU KUMAR</strong>. All legal matters, disputes, or business queries are handled under the sole proprietorship of PINTU KUMAR.
+          </p>
+
           <p className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-sm">
             These terms and conditions are governed by and construed in accordance with the laws of India.
           </p>

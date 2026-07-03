@@ -225,6 +225,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-5 flex flex-col md:flex-row justify-between items-center gap-3">
           <p className="text-gray-500 text-xs text-center md:text-left">
             © {new Date().getFullYear()} Rojgar Suvidha. All rights reserved. | 
+            <span className="text-indigo-400 font-semibold mx-1">Owned & Operated by PINTU KUMAR</span> |
             <span className="ml-1">Not affiliated with any government organization.</span>
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-x-5 gap-y-2">

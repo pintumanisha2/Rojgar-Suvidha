@@ -9,48 +9,48 @@ export default function ESuvidhaPage() {
     {
       category: "Identity Cards (Pehchan Patra)",
       items: [
-        { id: "pan-new", name: "New PAN Card", price: "150", icon: "💳", time: "3-5 Days" },
-        { id: "pan-correction", name: "PAN Card Correction", price: "150", icon: "✏️", time: "5-7 Days" },
-        { id: "voter-new", name: "New Voter ID", price: "100", icon: "🗳️", time: "10-15 Days" },
-        { id: "aadhaar-pvc", name: "Order Aadhaar PVC Card", price: "100", icon: "🪪", time: "7-10 Days" },
+        { id: "pan-new", slug: "apply-new-pan-card-online", name: "New PAN Card", desc: "Apply online for new PAN Card with Aadhaar card.", price: "150", icon: "💳", time: "3-5 Days" },
+        { id: "pan-correction", slug: "pan-card-correction-online", name: "PAN Card Correction", desc: "Change name, photo, signature or DOB in existing PAN.", price: "150", icon: "✏️", time: "5-7 Days" },
+        { id: "voter-new", slug: "apply-new-voter-id-card", name: "New Voter ID", desc: "Voter card registration form submission online.", price: "100", icon: "🗳️", time: "10-15 Days" },
+        { id: "aadhaar-pvc", slug: "order-aadhaar-pvc-card", name: "Order Aadhaar PVC Card", desc: "Order official plastic PVC Aadhaar card online.", price: "100", icon: "🪪", time: "7-10 Days" },
       ]
     },
     {
       category: "Sarkari Praman Patra (Certificates)",
       items: [
-        { id: "income-cert", name: "Income Certificate (Aay)", price: "100", icon: "📄", time: "7 Days" },
-        { id: "caste-cert", name: "Caste Certificate (Jati)", price: "150", icon: "📜", time: "10-15 Days" },
-        { id: "domicile-cert", name: "Domicile (Niwas)", price: "100", icon: "🏠", time: "7 Days" },
-        { id: "pcc", name: "Police Clearance (Character Cert)", price: "200", icon: "👮", time: "10-15 Days" },
+        { id: "income-cert", slug: "apply-income-certificate-online", name: "Income Certificate (Aay)", desc: "Aay Praman Patra online form filling service.", price: "100", icon: "📄", time: "7 Days" },
+        { id: "caste-cert", slug: "apply-caste-certificate-online", name: "Caste Certificate (Jati)", desc: "Jati Praman Patra online apply & verification.", price: "150", icon: "📜", time: "10-15 Days" },
+        { id: "domicile-cert", slug: "apply-domicile-certificate-online", name: "Domicile (Niwas)", desc: "Niwas Praman Patra / Residence Certificate apply.", price: "100", icon: "🏠", time: "7 Days" },
+        { id: "pcc", slug: "apply-police-clearance-certificate-pcc", name: "Police Clearance (Character Cert)", desc: "PCC and character certificate verification form.", price: "200", icon: "👮", time: "10-15 Days" },
       ]
     },
     {
       category: "Sarkari Yojna (Govt Schemes)",
       items: [
-        { id: "eshram", name: "E-Shram Card Registration", price: "80", icon: "👷", time: "24 Hours" },
-        { id: "ayushman", name: "Ayushman Bharat Card", price: "100", icon: "🏥", time: "24 Hours" },
-        { id: "pf-withdrawal", name: "PF Withdrawal Form", price: "200", icon: "💰", time: "48 Hours" },
+        { id: "eshram", slug: "eshram-card-registration-online", name: "E-Shram Card Registration", desc: "Shramik card self registration and download.", price: "80", icon: "👷", time: "24 Hours" },
+        { id: "ayushman", slug: "ayushman-bharat-card-apply", name: "Ayushman Bharat Card", desc: "PMJAY Golden Health Card check & apply online.", price: "100", icon: "🏥", time: "24 Hours" },
+        { id: "pf-withdrawal", slug: "pf-withdrawal-claim-online", name: "PF Withdrawal Form", desc: "EPFO PF withdrawal Form 31, 19, 10c online apply.", price: "200", icon: "💰", time: "48 Hours" },
       ]
     },
     {
       category: "Business & Tax",
       items: [
-        { id: "udyam", name: "Udyam Aadhaar (MSME)", price: "200", icon: "🏢", time: "2-3 Days" },
-        { id: "itr-nil", name: "ITR Filing (Nil Return)", price: "300", icon: "📊", time: "3-5 Days" },
+        { id: "udyam", slug: "msme-udyam-registration-online", name: "Udyam Aadhaar (MSME)", desc: "MSME Udyam registration certificate online.", price: "200", icon: "🏢", time: "2-3 Days" },
+        { id: "itr-nil", slug: "itr-filing-nil-return", name: "ITR Filing (Nil Return)", desc: "File Income Tax Return (ITR) Nil return online.", price: "300", icon: "📊", time: "3-5 Days" },
       ]
     },
     {
       category: "Student & Career Services",
       items: [
-        { id: "admit-card", name: "Admit Card / Result Download", price: "30", icon: "📥", time: "1-2 Hours" },
-        { id: "resume-cv", name: "Professional Resume / CV Maker", price: "99", icon: "📄", time: "24 Hours" },
+        { id: "admit-card", slug: "download-admit-card-result", name: "Admit Card / Result Download", desc: "Get Sarkari Result and admit card prints online.", price: "30", icon: "📥", time: "1-2 Hours" },
+        { id: "resume-cv", slug: "professional-resume-cv-maker", name: "Professional Resume / CV Maker", desc: "Create modern job CV or resume biodata format.", price: "99", icon: "📄", time: "24 Hours" },
       ]
     },
     {
       category: "Premium Services",
       items: [
-        { id: "passport", name: "Passport Appointment", price: "300", icon: "✈️", time: "24 Hours" },
-        { id: "driving-learner", name: "Learner License Apply", price: "250", icon: "🚗", time: "48 Hours" },
+        { id: "passport", slug: "apply-passport-appointment-online", name: "Passport Appointment", desc: "Fresh or renewal passport application booking.", price: "300", icon: "✈️", time: "24 Hours" },
+        { id: "driving-learner", slug: "learner-driving-license-apply", name: "Learner License Apply", desc: "Apply learning driving license online (Sarathi Parivahan).", price: "250", icon: "🚗", time: "48 Hours" },
       ]
     }
   ];
@@ -75,10 +75,10 @@ export default function ESuvidhaPage() {
                 India's First Digital Cyber Cafe
               </div>
               <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 tracking-tight">
-                e-Suvidha Kendra Online
+                Digital Cyber Cafe & e-Suvidha Kendra Online
               </h1>
               <p className="text-blue-100 text-sm md:text-base leading-relaxed mb-6 max-w-xl">
-                Skip the traditional cyber cafe! Apply online for PAN Card, Voter ID, Domicile, and Passport directly from your mobile. Enjoy India's most secure and affordable online form filling service with 100% expert verification.
+                Skip physical cyber cafe lines! Apply online for PAN Card, Voter ID, Income (Aay), Caste (Jati), Domicile (Niwas) Certificates, E-Shram, MSME, and Learner License directly from your mobile. Enjoy India's safest, fastest, and most affordable online form filling service with 100% expert verification.
               </p>
               
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
@@ -120,7 +120,10 @@ export default function ESuvidhaPage() {
                       <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1 leading-tight relative z-10 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {item.name}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-4 relative z-10 flex items-center gap-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed relative z-10">
+                        {item.desc}
+                      </p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 font-bold mb-4 relative z-10 flex items-center gap-1">
                         ⏱️ Est. Time: {item.time}
                       </p>
                     </div>
@@ -128,10 +131,10 @@ export default function ESuvidhaPage() {
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 relative z-10 flex items-center justify-between">
                       <div>
                         <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Fees (Starting)</p>
-                        <p className="font-extrabold text-lg text-gray-900 dark:text-white">₹{item.price}</p>
+                        <p className="font-extrabold text-lg text-gray-900 dark:text-white">₹{item.price} INR</p>
                       </div>
                       <Link 
-                        href={`/e-suvidha/apply/${item.id}`}
+                        href={`/e-suvidha/apply/${item.slug}`}
                         className="bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-sm"
                       >
                         Apply Now

@@ -52,6 +52,11 @@ export default function RefundPolicyPage() {
             Approved refunds will be processed and credited to the original method of payment within 5-7 business days. If you haven't received a refund yet, first check your bank account again, then contact your credit card company or bank, as it may take some time before your refund is officially posted.
           </p>
 
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">4. Merchant Ownership</h2>
+          <p className="mb-6">
+            Rojgar Suvidha is a sole proprietorship owned and operated by <strong>PINTU KUMAR</strong>. All refund transactions, chargebacks, and online payment billing will be processed under the merchant account of PINTU KUMAR.
+          </p>
+
           <p className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-sm">
             To request a refund, please contact our support team at <strong>support@rojgarsuvidha.com</strong> with your transaction ID.
           </p>

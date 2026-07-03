@@ -55,6 +55,11 @@ export default function PrivacyPolicyPage() {
             We value your trust in providing us your Personal Information, thus we are striving to use commercially acceptable means of protecting it. All documents uploaded for the "Apply For Me" feature are encrypted and deleted automatically after the application process is successfully completed.
           </p>
 
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">Ownership & Legal Entity</h2>
+          <p className="mb-6">
+            Rojgar Suvidha is owned and operated by <strong>PINTU KUMAR</strong>. All user data, files, and transaction details are handled under the sole proprietorship of PINTU KUMAR in accordance with the prevailing laws of India.
+          </p>
+
           <p className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-sm">
             If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.
           </p>

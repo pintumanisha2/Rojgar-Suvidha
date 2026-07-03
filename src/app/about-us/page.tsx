@@ -54,6 +54,11 @@ export default function AboutUsPage() {
             <li>User-friendly interface with state-wise filtering.</li>
           </ul>
 
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">Legal Ownership Information</h2>
+          <p className="mb-6">
+            Rojgar Suvidha is legally owned, operated, and billed under the sole proprietorship of <strong>PINTU KUMAR</strong>.
+          </p>
+
           <p className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
             If you have any questions or comments, please don't hesitate to <Link href="/contact-us" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">contact us</Link>.
           </p>

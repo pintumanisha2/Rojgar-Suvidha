@@ -167,6 +167,16 @@ export default function AboutFounderPage() {
         </div>
       </div>
 
+      {/* ── LEGAL OWNERSHIP SECTION ── */}
+      <div className="max-w-4xl mx-auto px-4 mt-16 text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm text-gray-500 dark:text-gray-400 text-xs">
+          <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Legal Ownership Information</p>
+          <p>
+            Rojgar Suvidha (including all premium services and the e-Suvidha Portal) is legally owned, operated, and billed under the sole proprietorship entity name <strong>PINTU KUMAR</strong>.
+          </p>
+        </div>
+      </div>
+
       {/* ── CTA SECTION ── */}
       <div className="max-w-4xl mx-auto px-4 mt-24">
         <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl p-10 text-center shadow-2xl relative overflow-hidden">

@@ -1,4 +1,4 @@
-import { PhoneCall, Mail, MapPin } from "lucide-react";
+import { PhoneCall, Mail, MapPin, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -66,6 +66,16 @@ export default function ContactUsPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">Office Address</h3>
                   <p className="text-gray-500 dark:text-gray-400">Sector 62, Noida,<br/>Uttar Pradesh, India - 201309</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-full">
+                  <ShieldCheck className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Merchant / Owner Legal Name</h3>
+                  <p className="text-gray-500 dark:text-gray-400">PINTU KUMAR</p>
                 </div>
               </div>
             </div>

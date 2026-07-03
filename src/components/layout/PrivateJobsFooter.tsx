@@ -157,7 +157,7 @@ export default function PrivateJobsFooter() {
       {/* Bottom Bar */}
       <div className="border-t border-gray-800/50 px-4 py-5">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-          <p>© {currentYear} Rojgar Suvidha Private Sector Portal. All rights reserved.</p>
+          <p>© {currentYear} Rojgar Suvidha Private Sector Portal. Owned & Operated by PINTU KUMAR. All rights reserved.</p>
           <p className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-green-600" />
             All listings manually reviewed for authenticity.
