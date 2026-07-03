@@ -71,7 +71,7 @@ export default function PrivateJobsContactPage() {
  </div>
  <div>
  <h3 className="font-bold text-slate-800 text-sm">Partner Helpline</h3>
- <p className="text-sm font-semibold text-slate-700 mt-0.5">+91 98765 00123</p>
+ <p className="text-sm font-semibold text-slate-700 mt-0.5">+91 88774 34088</p>
  <p className="text-xs text-slate-500 mt-0.5">Mon - Sat (09:00 AM - 07:00 PM)</p>
  </div>
  </div>

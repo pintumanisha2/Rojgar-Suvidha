@@ -54,7 +54,7 @@ export default function ContactUsPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">Phone Number</h3>
-                  <p className="text-gray-500 dark:text-gray-400">+91 98765 43210</p>
+                  <p className="text-gray-500 dark:text-gray-400">+91 88774 34088</p>
                   <p className="text-xs text-gray-400 mt-1">Mon - Sat (10:00 AM - 6:00 PM)</p>
                 </div>
               </div>
