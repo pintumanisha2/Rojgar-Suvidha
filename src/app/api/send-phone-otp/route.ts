@@ -57,26 +57,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to generate OTP. Please try again." }, { status: 500 });
     }
 
-    // Send SMS via APITxt.com
-    const smsMessage = `${otp} is your Rojgar Suvidha login OTP. Valid for 10 minutes. Do not share with anyone.`;
-    const phoneNumber = phone.replace("+91", "");
+    // Send OTP via APITxt.com sendOTP (GET with query params)
+    const phoneNumber = phone.replace("+", ""); // becomes 91XXXXXXXXXX
 
-    const smsResponse = await fetch("https://apitxt.com/api/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        to: phoneNumber,
-        message: smsMessage,
-        sender_id: "ROJGAR",
-      }),
-    });
+    const smsUrl = `https://apitxt.com/api/sendOTP?authkey=${encodeURIComponent(apiKey)}&mobile=${phoneNumber}&otp=${otp}&channel=sms`;
 
-    const smsData = await smsResponse.json();
+    const smsResponse = await fetch(smsUrl, { method: "GET" });
 
-    if (!smsResponse.ok) {
+    let smsData: any = {};
+    try {
+      smsData = await smsResponse.json();
+    } catch {
+      smsData = { type: "error" };
+    }
+
+    if (!smsResponse.ok || smsData.type === "error") {
       console.error("APITxt SMS Error:", smsData);
       return NextResponse.json(
         { error: "SMS bhejne me problem aayi. Please dobara try karein." },
