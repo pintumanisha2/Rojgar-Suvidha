@@ -407,7 +407,7 @@ function LoginContent() {
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <KeyRound className="h-5 w-5 text-gray-400" />
                           </div>
-                          <input type="text" required value={otp} onChange={(e) => handleOtpChange(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tracking-widest text-center text-lg" placeholder="12345678" maxLength={8} />
+                          <input type="text" required value={otp} onChange={(e) => handleOtpChange(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tracking-widest text-center text-lg" placeholder="123456" maxLength={6} />
                         </div>
                       </div>
                       <div>
@@ -416,7 +416,7 @@ function LoginContent() {
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <ShieldCheck className="h-5 w-5 text-gray-400" />
                           </div>
-                          <input type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="New Password" minLength={8} />
+                          <input type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="New Password" minLength={6} />
                         </div>
                       </div>
                       <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70 mt-2">
@@ -522,8 +522,8 @@ function LoginContent() {
                           value={otp} 
                           onChange={(e) => handleOtpChange(e.target.value)} 
                           className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tracking-widest text-center text-lg" 
-                          placeholder="12345678" 
-                          maxLength={8}
+                          placeholder="123456" 
+                          maxLength={6}
                         />
                       </div>
                       <p className="text-[11px] text-gray-500 mt-2 font-medium bg-gray-100 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
