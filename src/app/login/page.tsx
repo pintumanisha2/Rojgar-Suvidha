@@ -187,24 +187,20 @@ function LoginContent() {
       if (!res.ok) {
         setError(data.error || "Invalid OTP. Please try again.");
         setLoading(false);
+      } else if (data.actionLink) {
+        setMsg("OTP verified! Logging you in...");
+        
+        // Append dynamic redirect query parameters to action link safely
+        const redirectParam = encodeURIComponent(
+          data.isNewUser 
+            ? `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`
+            : redirectUrl
+        );
+        
+        window.location.href = `${data.actionLink}&next=${redirectParam}`;
       } else {
-        // Set session directly using returned tokens
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: data.accessToken,
-          refresh_token: data.refreshToken,
-        });
-        if (sessionError) {
-          setError("Login failed. Please try again.");
-          setLoading(false);
-          return;
-        }
-        setMsg("Login successful! Redirecting...");
-        if (data.isNewUser || !data.hasProfile) {
-          router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
-        } else {
-          router.push(redirectUrl);
-        }
-        router.refresh();
+        setError("Failed to create session. Please try again.");
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err.message || "Network error. Please try again.");
