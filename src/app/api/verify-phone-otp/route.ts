@@ -8,13 +8,13 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { phone, otp } = await req.json();
+    const { phone, otp, password, isForgotPassword } = await req.json();
 
     if (!phone || !otp) {
       return NextResponse.json({ error: "Phone number and OTP are required." }, { status: 400 });
     }
 
-    // Step 1: Find valid, unused, non-expired OTP
+    // Step 1: Find valid, unused, non-expired OTP record
     const { data: otpRecord, error: fetchError } = await supabaseAdmin
       .from("phone_otps")
       .select("*")
@@ -28,61 +28,79 @@ export async function POST(req: Request) {
 
     if (fetchError || !otpRecord) {
       return NextResponse.json(
-        { error: "Invalid or expired OTP. Please request a new one." },
+        { error: "Invalid or expired OTP. Please try again." },
         { status: 400 }
       );
     }
 
-    // Step 2: Mark OTP as used immediately
+    // Step 2: Mark OTP as used immediately to prevent replay
     await supabaseAdmin
       .from("phone_otps")
       .update({ used: true })
       .eq("id", otpRecord.id);
 
-    // Step 3: Create deterministic fake email + password from phone
     const digits = phone.replace(/\D/g, ""); // e.g. 919113362979
     const fakeEmail = `phone_${digits}@rojgarsuvidha.phone`;
-    const fakePassword = `RS_phone_${digits}_2024!`;
 
-    // Step 4: Check if auth user already exists to prevent duplicate creation errors
-    const { data: existingProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("id, full_name")
-      .eq("mobile_number", phone.replace("+91", ""))
-      .single();
+    // Step 3: Handle Password Reset
+    if (isForgotPassword) {
+      if (!password) {
+        return NextResponse.json({ error: "New password is required." }, { status: 400 });
+      }
 
-    let userId: string;
-    let isNewUser = false;
-
-    if (existingProfile) {
-      userId = existingProfile.id;
-    } else {
-      // Find auth user
+      // Check if user exists
       const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
       const existingAuthUser = existingUsers?.users?.find(u => u.email === fakeEmail);
 
-      if (existingAuthUser) {
-        userId = existingAuthUser.id;
-      } else {
-        // Create new auth user
-        const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: fakeEmail,
-          password: fakePassword,
-          email_confirm: true,
-          user_metadata: { phone, auth_method: "phone_otp" },
-        });
-
-        if (createError || !newAuthUser.user) {
-          console.error("Auth user creation error:", createError);
-          return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
-        }
-
-        userId = newAuthUser.user.id;
-        isNewUser = true;
+      if (!existingAuthUser) {
+        return NextResponse.json({ error: "Account not found." }, { status: 404 });
       }
+
+      // Update password
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        existingAuthUser.id,
+        { password: password }
+      );
+
+      if (updateError) {
+        return NextResponse.json({ error: "Failed to update password." }, { status: 500 });
+      }
+
+      // Generate action login link
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: fakeEmail,
+        options: {
+          redirectTo: `${req.headers.get("origin") || "http://localhost:3001"}/auth/callback`,
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        actionLink: linkData?.properties?.action_link || null,
+        message: "Password reset successful."
+      });
     }
 
-    // Step 5: Use magic link action token to sign user in securely
+    // Step 4: Handle standard Sign Up password registration
+    if (!password) {
+      return NextResponse.json({ error: "Password is required for registration." }, { status: 400 });
+    }
+
+    // Create auth user with actual password chosen by user
+    const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: fakeEmail,
+      password: password,
+      email_confirm: true,
+      user_metadata: { phone, auth_method: "phone_otp" },
+    });
+
+    if (createError || !newAuthUser.user) {
+      console.error("Auth user creation error:", createError);
+      return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
+    }
+
+    // Generate redirect action link
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: fakeEmail,
@@ -91,21 +109,10 @@ export async function POST(req: Request) {
       }
     });
 
-    if (linkError || !linkData?.properties?.action_link) {
-      console.error("Magic link generation error:", linkError);
-      return NextResponse.json({ error: "Failed to create session link. Please try again." }, { status: 500 });
-    }
-
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("full_name")
-      .eq("id", userId)
-      .single();
-
     return NextResponse.json({
       success: true,
-      actionLink: linkData.properties.action_link,
-      isNewUser: isNewUser || !profile?.full_name,
+      actionLink: linkData?.properties?.action_link || null,
+      isNewUser: true,
     });
 
   } catch (error: any) {

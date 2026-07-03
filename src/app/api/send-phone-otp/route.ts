@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Use service role key to bypass RLS for OTP storage
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -9,13 +8,45 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { phone } = await req.json();
+    const { phone, isForgotPassword } = await req.json();
 
     if (!phone || !/^\+91[6-9]\d{9}$/.test(phone)) {
       return NextResponse.json(
         { error: "Please enter a valid 10-digit Indian mobile number." },
         { status: 400 }
       );
+    }
+
+    const rawPhoneDigits = phone.replace("+91", "");
+
+    // Step 1: Duplicate validation check for Sign Up
+    if (!isForgotPassword) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("mobile_number", rawPhoneDigits)
+        .maybeSingle();
+
+      if (existingProfile) {
+        return NextResponse.json(
+          { error: "Mobile number already registered. Please Sign In." },
+          { status: 409 }
+        );
+      }
+    } else {
+      // For forgot password, ensure account actually exists
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("mobile_number", rawPhoneDigits)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        return NextResponse.json(
+          { error: "This mobile number does not exist. Please Sign Up first." },
+          { status: 404 }
+        );
+      }
     }
 
     const apiKey = process.env.APITXT_API_KEY;
@@ -36,7 +67,7 @@ export async function POST(req: Request) {
 
     if ((count ?? 0) >= 3) {
       return NextResponse.json(
-        { error: "Bahut zyada OTP requests. Please 10 minutes baad try karein." },
+        { error: "Too many OTP requests. Please try again after 10 minutes." },
         { status: 429 }
       );
     }
@@ -58,8 +89,7 @@ export async function POST(req: Request) {
     }
 
     // Send OTP via APITxt.com sendOTP (GET with query params)
-    const phoneNumber = phone.replace("+", ""); // becomes 91XXXXXXXXXX
-
+    const phoneNumber = phone.replace("+", ""); // 91XXXXXXXXXX
     const smsUrl = `https://apitxt.com/api/sendOTP?authkey=${encodeURIComponent(apiKey)}&mobile=${phoneNumber}&otp=${otp}&channel=sms`;
 
     const smsResponse = await fetch(smsUrl, { method: "GET" });
@@ -74,7 +104,7 @@ export async function POST(req: Request) {
     if (!smsResponse.ok || smsData.type === "error") {
       console.error("APITxt SMS Error:", smsData);
       return NextResponse.json(
-        { error: "SMS bhejne me problem aayi. Please dobara try karein." },
+        { error: "Failed to send SMS. Please try again." },
         { status: 500 }
       );
     }

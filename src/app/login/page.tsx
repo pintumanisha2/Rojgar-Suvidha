@@ -67,8 +67,13 @@ function LoginContent() {
     }
   }, [resendCooldown]);
 
-  // Phone OTP State
+  // Phone Auth State
   const [phone, setPhone] = useState("");
+  const [phonePassword, setPhonePassword] = useState("");
+  const [isPhoneSignUp, setIsPhoneSignUp] = useState(false);
+  const [isPhoneForgotPassword, setIsPhoneForgotPassword] = useState(false);
+  
+  // Phone OTP Flow State
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [phoneOtp, setPhoneOtp] = useState("");
   const [phoneResendCooldown, setPhoneResendCooldown] = useState(0);
@@ -88,9 +93,8 @@ function LoginContent() {
   useEffect(() => {
     setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
     setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
-  }, [isSignUp]);
+  }, [isSignUp, isPhoneSignUp]);
 
-  // Helper: Redirect after login
   const redirectAfterLogin = async (userId: string) => {
     try {
       const { data: profile, error } = await supabase
@@ -117,6 +121,9 @@ function LoginContent() {
     setIsForgotPassword(false);
     setPhoneOtpSent(false);
     setPhoneOtp("");
+    setPhonePassword("");
+    setIsPhoneSignUp(false);
+    setIsPhoneForgotPassword(false);
   };
 
   // === GOOGLE LOGIN ===
@@ -136,6 +143,42 @@ function LoginContent() {
     }
   };
 
+  // === PHONE PASSWORD SIGN IN ===
+  const handlePhonePasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+    if (phonePassword.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setMsg(null);
+
+    const fakeEmail = `phone_${digits}@rojgarsuvidha.phone`;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: fakeEmail,
+        password: phonePassword,
+      });
+
+      if (error) {
+        setError(error.message.includes("Invalid login credentials") ? "Incorrect Mobile Number or Password." : error.message);
+      } else if (data?.user) {
+        setMsg("Login successful! Redirecting...");
+        await redirectAfterLogin(data.user.id);
+      }
+    } catch (err: any) {
+      setError(err.message || "Login failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // === PHONE OTP: Send ===
   const handleSendPhoneOtp = async () => {
     const digits = phone.replace(/\D/g, '');
@@ -143,6 +186,11 @@ function LoginContent() {
       setError("Please enter a valid 10-digit mobile number.");
       return;
     }
+    if (isPhoneSignUp && parseInt(captchaInput) !== captchaNum1 + captchaNum2) {
+      setError("Incorrect security answer.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setMsg(null);
@@ -150,7 +198,10 @@ function LoginContent() {
       const res = await fetch("/api/send-phone-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: `+91${digits}` }),
+        body: JSON.stringify({
+          phone: `+91${digits}`,
+          isForgotPassword: isPhoneForgotPassword,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -167,10 +218,14 @@ function LoginContent() {
     }
   };
 
-  // === PHONE OTP: Verify ===
+  // === PHONE OTP: Verify & Register/Reset ===
   const handleVerifyPhoneOtp = async () => {
     if (phoneOtp.length !== 6) {
       setError("Please enter the 6-digit OTP.");
+      return;
+    }
+    if (phonePassword.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
     const digits = phone.replace(/\D/g, '');
@@ -181,33 +236,34 @@ function LoginContent() {
       const res = await fetch("/api/verify-phone-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: `+91${digits}`, otp: phoneOtp }),
+        body: JSON.stringify({
+          phone: `+91${digits}`,
+          otp: phoneOtp,
+          password: phonePassword,
+          isForgotPassword: isPhoneForgotPassword,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Invalid OTP. Please try again.");
         setLoading(false);
       } else if (data.actionLink) {
-        setMsg("OTP verified! Logging you in...");
-        
-        // Append dynamic redirect query parameters to action link safely
+        setMsg(isPhoneForgotPassword ? "Password updated! Logging you in..." : "Account created! Logging you in...");
         const redirectParam = encodeURIComponent(
           data.isNewUser 
             ? `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`
             : redirectUrl
         );
-        
         window.location.href = `${data.actionLink}&next=${redirectParam}`;
       } else {
         setError("Failed to create session. Please try again.");
         setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || "Network error. Please try again.");
+      setError(err.message || "Network error.");
       setLoading(false);
     }
   };
-
 
   // === PHONE OTP: Resend ===
   const handleResendPhoneOtp = async () => {
@@ -220,7 +276,10 @@ function LoginContent() {
       const res = await fetch("/api/send-phone-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: `+91${digits}` }),
+        body: JSON.stringify({
+          phone: `+91${digits}`,
+          isForgotPassword: isPhoneForgotPassword,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -242,7 +301,6 @@ function LoginContent() {
     setError(null);
     setMsg(null);
 
-    // Email typo checker
     const checkEmailTypo = (emailStr: string): string | null => {
       const parts = emailStr.split('@');
       if (parts.length !== 2) return null;
@@ -270,7 +328,7 @@ function LoginContent() {
         return;
       }
       if (parseInt(captchaInput) !== captchaNum1 + captchaNum2) {
-        setError("Incorrect security answer. Are you a robot?");
+        setError("Incorrect security answer.");
         setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
         setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
         setCaptchaInput("");
@@ -297,7 +355,7 @@ function LoginContent() {
           }
         }
       } catch (err: any) {
-        setError(err.message || "Signup failed. Please try again.");
+        setError(err.message || "Signup failed.");
       } finally {
         setLoading(false);
       }
@@ -324,14 +382,14 @@ function LoginContent() {
           await redirectAfterLogin(data.user.id);
         }
       } catch (err: any) {
-        setError(err.message || "Login failed. Please try again.");
+        setError(err.message || "Login failed.");
       } finally {
         setLoading(false);
       }
     }
   };
 
-  // === FORGOT PASSWORD ===
+  // === EMAIL FORGOT PASSWORD ===
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -379,7 +437,7 @@ function LoginContent() {
     }
   };
 
-  // === VERIFY EMAIL OTP ===
+  // === EMAIL VERIFY OTP ===
   const handleVerifyOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
@@ -399,7 +457,7 @@ function LoginContent() {
     }
   };
 
-  // === RESEND EMAIL OTP ===
+  // === EMAIL RESEND OTP ===
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     setLoading(true);
@@ -445,7 +503,6 @@ function LoginContent() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-white dark:bg-gray-900 py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-gray-100 dark:border-gray-800">
 
-          {/* GOVERNMENT PORTAL LOGIN */}
           {portalType === "govt" && (
             <div className="animate-in fade-in duration-200">
 
@@ -453,18 +510,18 @@ function LoginContent() {
               <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200 dark:border-gray-700 mb-6 gap-1">
                 <button
                   onClick={() => { resetFormState(); setAuthMethod("phone"); }}
-                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1 ${
+                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1.5 ${
                     authMethod === "phone"
                       ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
                       : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                   }`}
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Mobile OTP</span>
+                  <span>Mobile</span>
                 </button>
                 <button
                   onClick={() => { resetFormState(); setAuthMethod("google"); }}
-                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1 ${
+                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1.5 ${
                     authMethod === "google"
                       ? "bg-white dark:bg-gray-700 text-red-500 dark:text-red-400 shadow-sm"
                       : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -475,7 +532,7 @@ function LoginContent() {
                 </button>
                 <button
                   onClick={() => { resetFormState(); setAuthMethod("email"); }}
-                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1 ${
+                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1.5 ${
                     authMethod === "email"
                       ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
                       : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -490,11 +547,12 @@ function LoginContent() {
               {error && <div className="mb-4 text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-center border border-red-200 dark:border-red-800">{error}</div>}
               {msg && <div className="mb-4 text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center border border-green-200 dark:border-green-800">{msg}</div>}
 
-              {/* ─── PHONE OTP TAB ─── */}
+              {/* ─── PHONE PASSWORD & OTP TAB ─── */}
               {authMethod === "phone" && (
                 <div className="space-y-4">
                   {!phoneOtpSent ? (
-                    <>
+                    // NORMAL SIGN IN OR SEND OTP MODE
+                    <form onSubmit={isPhoneSignUp ? (e) => { e.preventDefault(); handleSendPhoneOtp(); } : handlePhonePasswordSignIn} className="space-y-4">
                       <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Mobile Number</label>
                         <div className="flex gap-2">
@@ -512,26 +570,94 @@ function LoginContent() {
                               onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                               className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-60"
                               placeholder="9876543210"
-                              maxLength={10}
+                              required
                             />
                           </div>
                         </div>
-                        <p className="text-[11px] text-gray-500 mt-1.5">Aapke phone par 6-digit OTP bheja jayega</p>
                       </div>
-                      <button
-                        onClick={handleSendPhoneOtp}
-                        disabled={loading || phone.replace(/\D/g, '').length !== 10}
-                        className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70"
-                      >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Phone className="w-4 h-4" /> Send OTP</>}
-                      </button>
-                    </>
+
+                      {!isPhoneSignUp && !isPhoneForgotPassword ? (
+                        // PASSWORD SIGN IN INPUT
+                        <>
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Password</label>
+                              <button type="button" disabled={loading} onClick={() => { setIsPhoneForgotPassword(true); }} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
+                                Forgot Password?
+                              </button>
+                            </div>
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <KeyRound className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <input
+                                type={showPassword ? "text" : "password"}
+                                value={phonePassword}
+                                disabled={loading}
+                                onChange={(e) => setPhonePassword(e.target.value)}
+                                className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                                placeholder="••••••••"
+                                required
+                              />
+                              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <button
+                            type="submit"
+                            disabled={loading || phone.length !== 10}
+                            className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all"
+                          >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+                          </button>
+
+                          <div className="text-center mt-3">
+                            <button type="button" onClick={() => { setIsPhoneSignUp(true); setError(null); }} className="text-sm font-bold text-indigo-600 hover:underline">
+                              Don&apos;t have an account? Create one
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        // SIGN UP OR FORGOT PASSWORD OTP TRIGGER
+                        <>
+                          {isPhoneSignUp && (
+                            <div className="pt-1">
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Security Check</label>
+                              <div className="flex items-center gap-4">
+                                <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl font-extrabold text-indigo-600 dark:text-indigo-400 border border-gray-200 dark:border-gray-700 text-center w-28">
+                                  {captchaNum1} + {captchaNum2}
+                                </div>
+                                <input type="number" required value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} className="block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-center" placeholder="=" />
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            type="submit"
+                            disabled={loading || phone.length !== 10}
+                            className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all"
+                          >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send OTP Verification"}
+                          </button>
+
+                          <div className="text-center mt-3">
+                            <button type="button" onClick={() => { setIsPhoneSignUp(false); setIsPhoneForgotPassword(false); setError(null); }} className="text-sm font-bold text-gray-600 hover:underline">
+                              ← Back to Sign In
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </form>
                   ) : (
-                    <>
-                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                        <p className="text-sm font-bold text-green-700 dark:text-green-400">OTP sent to <span className="font-black">+91 {phone}</span></p>
-                        <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); setError(null); setMsg(null); }} className="text-xs text-indigo-600 dark:text-indigo-400 font-bold mt-1 hover:underline">Change number</button>
+                    // OTP VERIFY + PASSWORD CREATION
+                    <div className="space-y-4">
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200">
+                        <p className="text-xs font-bold text-green-700">OTP sent to +91 {phone}</p>
+                        <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }} className="text-[10px] text-indigo-600 font-bold hover:underline">Change number</button>
                       </div>
+
                       <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Enter 6-digit OTP</label>
                         <input
@@ -539,30 +665,55 @@ function LoginContent() {
                           value={phoneOtp}
                           disabled={loading}
                           onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="appearance-none block w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-300 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-black text-3xl tracking-[0.6em] text-center disabled:opacity-60"
+                          className="appearance-none block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-center font-black text-2xl tracking-[0.4em]"
                           placeholder="------"
                           maxLength={6}
                         />
                       </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">
+                          {isPhoneForgotPassword ? "Create New Password" : "Create Password (for future logins)"}
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <KeyRound className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={phonePassword}
+                            disabled={loading}
+                            onChange={(e) => setPhonePassword(e.target.value)}
+                            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                            placeholder="Min 6 characters"
+                            required
+                          />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
+                      </div>
+
                       <button
                         onClick={handleVerifyPhoneOtp}
-                        disabled={loading || phoneOtp.length !== 6}
-                        className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70"
+                        disabled={loading || phoneOtp.length !== 6 || phonePassword.length < 6}
+                        className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all"
                       >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle className="w-4 h-4" /> Verify &amp; Login</>}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Save Password"}
                       </button>
+
                       <div className="flex items-center justify-between">
-                        <button type="button" onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }} className="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 transition-colors">← Go Back</button>
+                        <button type="button" onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }} className="text-sm font-bold text-gray-500 hover:underline">← Cancel</button>
                         <button
                           type="button"
                           onClick={handleResendPhoneOtp}
                           disabled={phoneResendCooldown > 0 || loading}
-                          className="text-sm font-bold text-indigo-600 hover:text-indigo-500 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                          className="text-sm font-bold text-indigo-600 disabled:text-gray-400"
                         >
                           {phoneResendCooldown > 0 ? `Resend in ${phoneResendCooldown}s` : "Resend OTP"}
                         </button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               )}
@@ -573,7 +724,7 @@ function LoginContent() {
                   <button
                     onClick={handleGoogleLogin}
                     disabled={loading}
-                    className="relative w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-md bg-white dark:bg-gray-800 text-sm font-extrabold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-300 transition-all overflow-hidden group disabled:opacity-70"
+                    className="relative w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-md bg-white dark:bg-gray-800 text-sm font-extrabold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-300 transition-all overflow-hidden group"
                   >
                     <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-bl-lg">Recommended</div>
                     <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -599,7 +750,7 @@ function LoginContent() {
                           </div>
                           <p className="text-[11px] text-gray-500 mt-2 font-medium">We will send an OTP to reset your password.</p>
                         </div>
-                        <button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70">
+                        <button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all">
                           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Reset OTP"}
                         </button>
                         <div className="text-center">
@@ -621,7 +772,7 @@ function LoginContent() {
                             <input type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="New Password" minLength={6} />
                           </div>
                         </div>
-                        <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70">
+                        <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all">
                           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Set New Password"}
                         </button>
                         <div className="text-center">
@@ -704,7 +855,7 @@ function LoginContent() {
                           <span className="font-bold text-gray-700 dark:text-gray-300">Note:</span> Check your <strong className="text-red-500 dark:text-red-400">Spam or Junk folder</strong> if you don&apos;t see it.
                         </p>
                       </div>
-                      <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70">
+                      <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all">
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Login"}
                       </button>
                       <div className="flex items-center justify-between mt-4">
