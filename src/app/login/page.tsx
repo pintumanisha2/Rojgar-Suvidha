@@ -166,63 +166,75 @@ function LoginContent() {
       }
 
       setLoading(true);
-      // Initiate Sign Up
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      try {
+        // Initiate Sign Up
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-      if (error) {
-        if (error.message.toLowerCase().includes("already registered") || error.message.toLowerCase().includes("already exists")) {
-          setError("This account already exists! Please Sign In instead.");
-          setIsSignUp(false);
+        if (error) {
+          if (error.message.toLowerCase().includes("already registered") || error.message.toLowerCase().includes("already exists")) {
+            setError("This account already exists! Please Sign In instead.");
+            setIsSignUp(false);
+          } else {
+            setError(error.message);
+          }
         } else {
-          setError(error.message);
+          if (data?.session) {
+            // If email confirmation is disabled in Supabase, the user is logged in instantly
+            setMsg("Account created successfully! Redirecting...");
+            await redirectAfterLogin(data.user!.id);
+          } else {
+            // Sign up successful, but requires OTP verification
+            setOtpSent(true);
+            setResendCooldown(60); // Start 60s cooldown
+            setMsg("Account created! A 6-digit OTP has been sent to your email to verify your account.");
+          }
         }
-      } else {
-        if (data?.session) {
-          // If email confirmation is disabled in Supabase, the user is logged in instantly
-          setMsg("Account created successfully! Redirecting...");
-          await redirectAfterLogin(data.user!.id);
-        } else {
-          // Sign up successful, but requires OTP verification
-          setOtpSent(true);
-          setResendCooldown(60); // Start 60s cooldown
-          setMsg("Account created! A 6-digit OTP has been sent to your email to verify your account.");
-        }
+      } catch (err: any) {
+        console.error("Signup failed:", err);
+        setError(err.message || "An unexpected error occurred during signup.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     } else {
       // Login Flow
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) {
-        if (error.message.includes("Email not confirmed")) {
-          // If they haven't verified their email, send another OTP and show verification screen
-          const { error: resendError } = await supabase.auth.resend({
-            type: 'signup',
-            email: email,
-          });
-          if (!resendError) {
-             setIsSignUp(true);
-             setOtpSent(true);
-             setResendCooldown(60);
-             setError("Your email is not verified yet. We just sent a new OTP to your email.");
+        if (error) {
+          if (error.message.includes("Email not confirmed")) {
+            // If they haven't verified their email, send another OTP and show verification screen
+            const { error: resendError } = await supabase.auth.resend({
+              type: 'signup',
+              email: email,
+            });
+            if (!resendError) {
+               setIsSignUp(true);
+               setOtpSent(true);
+               setResendCooldown(60);
+               setError("Your email is not verified yet. We just sent a new OTP to your email.");
+            } else {
+               setError(error.message);
+            }
           } else {
-             setError(error.message);
+            setError(error.message);
           }
-        } else {
-          setError(error.message);
+        } else if (data?.user) {
+          setMsg("Login successful! Redirecting...");
+          await redirectAfterLogin(data.user.id);
         }
-      } else if (data?.user) {
-        setMsg("Login successful! Redirecting...");
-        await redirectAfterLogin(data.user.id);
+      } catch (err: any) {
+        console.error("Login failed:", err);
+        setError(err.message || "An unexpected error occurred during login.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
   };
 
@@ -233,14 +245,20 @@ function LoginContent() {
     setError(null);
     setMsg(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) {
-      setError(error.message);
-    } else {
-      setOtpSent(true);
-      setMsg("Password reset OTP sent to your email!");
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        setError(error.message);
+      } else {
+        setOtpSent(true);
+        setMsg("Password reset OTP sent to your email!");
+      }
+    } catch (err: any) {
+      console.error("Forgot password request failed:", err);
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -256,31 +274,37 @@ function LoginContent() {
       return;
     }
 
-    // 1. Verify OTP
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: 'recovery'
-    });
+    try {
+      // 1. Verify OTP
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'recovery'
+      });
 
-    if (verifyError) {
-      setError(verifyError.message);
+      if (verifyError) {
+        setError(verifyError.message);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Update Password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (updateError) {
+        setError(updateError.message);
+      } else {
+        setMsg("Password reset successfully! Logging you in...");
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    } catch (err: any) {
+      console.error("Reset password failed:", err);
+      setError(err.message || "An unexpected error occurred during password reset.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // 2. Update Password
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-
-    if (updateError) {
-      setError(updateError.message);
-    } else {
-      setMsg("Password reset successfully! Logging you in...");
-      setTimeout(() => window.location.reload(), 1500);
-    }
-    setLoading(false);
   };
 
   // === 3. VERIFY OTP (ONLY FOR SIGNUP) ===
@@ -319,18 +343,24 @@ function LoginContent() {
     setError(null);
     setMsg(null);
     
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-    });
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setMsg("A new OTP has been sent to your email!");
-      setResendCooldown(60);
+      if (error) {
+        setError(error.message);
+      } else {
+        setMsg("A new OTP has been sent to your email!");
+        setResendCooldown(60);
+      }
+    } catch (err: any) {
+      console.error("Resend OTP failed:", err);
+      setError(err.message || "Failed to resend verification code.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Auto-submit OTP
