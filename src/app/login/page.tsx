@@ -55,15 +55,21 @@ function LoginContent() {
 
   // Helper: Check profile and redirect
   const redirectAfterLogin = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId)
+        .single();
 
-    if (profile?.full_name) {
-      router.push(redirectUrl);
-    } else {
+      if (!error && profile?.full_name) {
+        router.push(redirectUrl);
+      } else {
+        router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
+      }
+    } catch (err) {
+      console.error("Profile check failed:", err);
+      // Safe fallback redirect
       router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
     }
     router.refresh();
@@ -270,19 +276,26 @@ function LoginContent() {
     setLoading(true);
     setError(null);
     
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email,
-      token: otp,
-      type: 'signup',
-    });
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: otp,
+        type: 'signup',
+      });
 
-    if (error) {
-      setError(error.message);
-    } else if (data?.user) {
-      setMsg("Email verified successfully! Redirecting...");
-      await redirectAfterLogin(data.user.id);
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      } else if (data?.user) {
+        setMsg("Email verified successfully! Redirecting...");
+        await redirectAfterLogin(data.user.id);
+      }
+    } catch (err: any) {
+      console.error("OTP Verification Error:", err);
+      setError(err.message || "An unexpected error occurred during verification.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // === 4. RESEND OTP ===
