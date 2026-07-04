@@ -279,12 +279,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   });
   
   if (userRole === "unauthorized") {
+    if (typeof window !== "undefined") {
+      router.replace("/");
+    }
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center justify-center p-6 text-center">
-        <ShieldCheck className="h-16 w-16 text-red-500 mb-4" />
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Access Denied (Unauthorized)</h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">This account is a normal student account. It does not have admin privileges to access this area.</p>
-        <Link href="/" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold">Return to Homepage</Link>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-red-500" />
       </div>
     );
   }
