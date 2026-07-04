@@ -30,6 +30,7 @@ import {
   Sparkles,
   MessageCircle,
 } from 'lucide-react';
+import NotificationBell from '@/components/layout/NotificationBell';
 
 const navSections = [
   { name: "Latest Jobs", href: "/latest-jobs", icon: Briefcase, color: "text-indigo-500" },
@@ -361,6 +362,15 @@ export default function Navbar() {
                   <MessageSquareWarning className="w-4 h-4" />
                   <span className="hidden lg:inline">Help</span>
                 </Link>
+
+                {/* Notification Bell (Logged-in only, desktop) */}
+                {user && (
+                  <div className="hidden sm:flex items-center ml-1">
+                    <div className="bg-white/10 hover:bg-white/20 rounded-xl p-0.5 transition-colors [&_svg]:text-white [&_button]:hover:bg-transparent">
+                      <NotificationBell userId={user.id} />
+                    </div>
+                  </div>
+                )}
 
                 {/* Login / Dashboard */}
                 {user ? (

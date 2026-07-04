@@ -9,6 +9,7 @@ import {
   ShieldCheck, FileText, ClipboardList, Clock, Sparkles, Download, MessageSquare
 } from "lucide-react";
 import Script from "next/script";
+import { triggerPaymentSuccessNotification } from "@/lib/notificationTriggers";
 
 function ApplyForMeContent() {
   const router = useRouter();
@@ -243,6 +244,8 @@ function ApplyForMeContent() {
               setSubmitted(true);
               setTrackingId(orderId);
               logUserActivity(user.id, "application_order_placed_success", "/apply-for-me", { orderId });
+              // 🔔 Trigger payment success notification
+              triggerPaymentSuccessNotification(user.id, jobTitleParam || "Vacancy", orderId);
               fetchUserOrders(user.id);
               setActiveTab("orders");
             } else {
