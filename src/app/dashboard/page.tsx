@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   UserCircle, FileText, Bookmark, ClipboardCheck,
   LogOut, CheckCircle2, Loader2, ShieldCheck, Lock, Briefcase, Camera, Trash2, MessageSquare, Send, Paperclip,
-  ShieldAlert, AlertTriangle, Clock
+  ShieldAlert, AlertTriangle, Clock, Settings
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
@@ -45,6 +45,56 @@ function DashboardContent() {
 
   const lastNotifiedOtpId = useRef<string | null>(null);
   const lastNotifiedStatus = useRef<Record<string, string>>({});
+
+  // Preferences State
+  const [prefCats, setPrefCats] = useState<string[]>([]);
+  const [prefChannels, setPrefChannels] = useState<string[]>(["push", "bell"]);
+  const [prefTypes, setPrefTypes] = useState<string[]>(["jobs", "results", "admit-card"]);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefsMsg, setPrefsMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPrefs = localStorage.getItem(`notification_prefs_${user?.id || 'guest'}`);
+      if (savedPrefs) {
+        try {
+          const parsed = JSON.parse(savedPrefs);
+          if (parsed.categories) setPrefCats(parsed.categories);
+          if (parsed.channels) setPrefChannels(parsed.channels);
+          if (parsed.types) setPrefTypes(parsed.types);
+        } catch (e) {
+          console.error("Failed to parse saved preferences", e);
+        }
+      } else {
+        setPrefCats(["ssc", "railway", "state-psc"]);
+      }
+    }
+  }, [user, activeTab]);
+
+  const handleSavePreferences = () => {
+    setSavingPrefs(true);
+    setPrefsMsg(null);
+    try {
+      const payload = {
+        categories: prefCats,
+        channels: prefChannels,
+        types: prefTypes,
+        updated_at: new Date().toISOString()
+      };
+      localStorage.setItem(`notification_prefs_${user?.id || 'guest'}`, JSON.stringify(payload));
+      if (user?.id) {
+        supabase.auth.updateUser({
+          data: { notification_prefs: payload }
+        }).catch(() => null);
+      }
+      setPrefsMsg("✓ Preferences successfully save ho gaye!");
+      setTimeout(() => setPrefsMsg(null), 3000);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
 
   const loadMessages = () => {
     const mockStr = localStorage.getItem("rs_candidate_mock_messages");
@@ -577,6 +627,10 @@ function DashboardContent() {
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "messages" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <MessageSquare className="w-5 h-5" /> Messages
               </button>
+              <button onClick={() => setActiveTab("preferences")}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "preferences" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                <Settings className="w-5 h-5" /> Preferences
+              </button>
             </div>
 
             <div className="p-3 border-t border-gray-100 dark:border-gray-800">
@@ -983,6 +1037,137 @@ function DashboardContent() {
                   <p className="text-sm text-gray-500">Select a conversation from the left to start chatting</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* PREFERENCES TAB */}
+          {activeTab === "preferences" && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+              <div>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <Settings className="w-6 h-6 text-indigo-500" /> Notification & Alert Preferences
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Chunki aap premium user hain, aap customize kar sakte hain kab aur kaise notification aana chahiye.
+                </p>
+              </div>
+
+              {prefsMsg && (
+                <div className="p-4 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 font-bold border border-green-200 dark:border-green-800 rounded-xl text-sm transition-all animate-in fade-in duration-300">
+                  {prefsMsg}
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                {/* Channels & Types */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-extrabold text-gray-800 dark:text-white text-sm mb-3">Notification Channels</h3>
+                    <div className="space-y-3">
+                      {[
+                        { key: "bell", label: "In-App Notification Bell", desc: "Website ke bell icon me alert dikhein" },
+                        { key: "push", label: "Web Browser Push Notification", desc: "Chrome/Safari bar me notification float ho" },
+                      ].map((ch) => {
+                        const checked = prefChannels.includes(ch.key);
+                        return (
+                          <label key={ch.key} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setPrefChannels(checked ? prefChannels.filter(c => c !== ch.key) : [...prefChannels, ch.key]);
+                              }}
+                              className="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-350"
+                            />
+                            <div className="ml-1">
+                              <p className="text-xs font-black text-gray-800 dark:text-gray-200 leading-tight">{ch.label}</p>
+                              <p className="text-[10px] text-gray-500 mt-0.5">{ch.desc}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-extrabold text-gray-800 dark:text-white text-sm mb-3">Alert Types</h3>
+                    <div className="space-y-3">
+                      {[
+                        { key: "jobs", label: "Nayi Sarkari & Private Jobs", desc: "Naye vacancies launch hote hi alert aaye" },
+                        { key: "results", label: "Results Declared Alerts", desc: "Exam results aate hi turant alert" },
+                        { key: "admit-card", label: "Admit Cards Out Alerts", desc: "Hall tickets/Admit card release par alert" },
+                      ].map((t) => {
+                        const checked = prefTypes.includes(t.key);
+                        return (
+                          <label key={t.key} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setPrefTypes(checked ? prefTypes.filter(tp => tp !== t.key) : [...prefTypes, t.key]);
+                              }}
+                              className="mt-1 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-350"
+                            />
+                            <div className="ml-1">
+                              <p className="text-xs font-black text-gray-800 dark:text-gray-200 leading-tight">{t.label}</p>
+                              <p className="text-[10px] text-gray-500 mt-0.5">{t.desc}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categories */}
+                <div>
+                  <h3 className="font-extrabold text-gray-800 dark:text-white text-sm mb-3">Sarkari Exams of Interest</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { key: "ssc", label: "🏛️ SSC Exams" },
+                      { key: "railway", label: "🚂 Railway (RRB)" },
+                      { key: "banking", label: "🏦 Banking & IBPS" },
+                      { key: "upsc", label: "🎖️ UPSC & IAS" },
+                      { key: "police", label: "👮 Police Jobs" },
+                      { key: "defence", label: "🛡️ Defence Services" },
+                      { key: "teaching", label: "📚 CTET & Teaching" },
+                      { key: "state-psc", label: "🏢 State PSC" },
+                    ].map((cat) => {
+                      const checked = prefCats.includes(cat.key);
+                      return (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => {
+                            setPrefCats(checked ? prefCats.filter(c => c !== cat.key) : [...prefCats, cat.key]);
+                          }}
+                          className={`p-3 rounded-xl border-2 font-bold text-xs text-left transition-all ${
+                            checked
+                              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400"
+                              : "border-gray-150 dark:border-gray-800 hover:border-gray-300 text-gray-600 dark:text-gray-400"
+                          }`}
+                        >
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-4 leading-normal">
+                    * Hum keval aapki select ki gayi categories ke exams ke notifications hi bhejenge taaki aapko spam na mile.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSavePreferences}
+                  disabled={savingPrefs}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {savingPrefs ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Preferences →"}
+                </button>
+              </div>
             </div>
           )}
 

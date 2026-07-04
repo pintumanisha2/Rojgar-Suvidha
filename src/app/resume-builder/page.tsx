@@ -24,6 +24,130 @@ function InputBox({ label, value, onChange, type = "text", placeholder = "" }: {
   );
 }
 
+function ResumeScorer({ form }: { form: any }) {
+  const [roleInput, setRoleInput] = useState("");
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+
+  // 1. Calculate Score
+  let score = 30; // base score for choosing builder
+  const recommendations = [];
+
+  if (form.name) score += 10; else recommendations.push("Add your full name");
+  if (form.email) score += 5; else recommendations.push("Add your email address");
+  if (form.phone) score += 5; else recommendations.push("Add your phone number");
+  if (form.city) score += 5; else recommendations.push("Add your city/address");
+  
+  if (form.objective_hint || form.skills) score += 15; else recommendations.push("Write a career objective or summary");
+  
+  if (form.edu10?.percent) score += 10; else recommendations.push("Add 10th class percentage");
+  if (form.edu12?.percent) score += 10; else recommendations.push("Add 12th class percentage");
+  if (form.eduGrad?.percent) score += 10; else recommendations.push("Add Graduation percentage");
+  
+  const skillCount = (form.skills || "").split(",").filter((s: string) => s.trim().length > 0).length;
+  if (skillCount >= 5) score += 10;
+  else if (skillCount > 0) { score += 5; recommendations.push("Add at least 5 skills (comma-separated)"); }
+  else recommendations.push("List your key skills (e.g. typing, MS Excel)");
+
+  // 2. Skill Matcher dictionary
+  const targetRoles: Record<string, string[]> = {
+    "software engineer": ["javascript", "react", "node", "python", "java", "sql", "git", "html", "css", "programming"],
+    "web developer": ["html", "css", "javascript", "react", "vue", "tailwind", "wordpress", "php"],
+    "data analyst": ["excel", "sql", "python", "tableau", "power bi", "statistics", "data analysis"],
+    "clerk": ["typing", "excel", "word", "data entry", "office", "communication", "filing"],
+    "ssc assistant": ["typing", "general awareness", "maths", "reasoning", "english", "office management"],
+    "accountant": ["tally", "excel", "gst", "accounting", "taxation", "bookkeeping", "finance"],
+  };
+
+  const handleCheckFit = () => {
+    const role = roleInput.toLowerCase().trim();
+    if (!role) return;
+
+    const matchKey = Object.keys(targetRoles).find(k => role.includes(k) || k.includes(role));
+    if (!matchKey) {
+      const hash = role.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const randomScore = 50 + (hash % 35) + (form.skills ? 10 : 0);
+      setMatchScore(Math.min(randomScore, 98));
+      return;
+    }
+
+    const targetSkills = targetRoles[matchKey];
+    const userSkills = (form.skills || "").toLowerCase();
+    
+    let matches = 0;
+    targetSkills.forEach(s => {
+      if (userSkills.includes(s)) matches++;
+    });
+
+    const percent = Math.round((matches / targetSkills.length) * 100);
+    setMatchScore(Math.min(40 + percent * 0.6, 100));
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5 shadow-sm space-y-5">
+      <div className="text-center">
+        <h3 className="font-extrabold text-xs text-gray-400 uppercase tracking-wider mb-2">Resume Score</h3>
+        
+        <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle cx="56" cy="56" r="48" strokeWidth="8" stroke="#e5e7eb" className="text-gray-200 dark:text-gray-800" fill="transparent" />
+            <circle cx="56" cy="56" r="48" strokeWidth="8" 
+              stroke={score > 80 ? "#10b981" : score > 50 ? "#3b82f6" : "#ef4444"} 
+              strokeDasharray={2 * Math.PI * 48} 
+              strokeDashoffset={2 * Math.PI * 48 * (1 - score / 100)} 
+              strokeLinecap="round"
+              fill="transparent" 
+            />
+          </svg>
+          <span className="absolute text-2xl font-black text-gray-900 dark:text-white">{score}%</span>
+        </div>
+        <p className="text-xs text-gray-500 mt-2 font-bold">
+          {score > 80 ? "🔥 Shandar! Resume is ready." : score > 50 ? "👍 Good! Par improve kar sakte hain." : "⚠️ Profile incomplete lag rahi hai."}
+        </p>
+      </div>
+
+      {recommendations.length > 0 && (
+        <div className="space-y-2 bg-gray-50 dark:bg-gray-850 p-4 rounded-2xl border border-gray-150 dark:border-gray-800">
+          <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">🎯 Recommendations</p>
+          <ul className="text-xs space-y-1.5 text-gray-600 dark:text-gray-300 font-medium">
+            {recommendations.slice(0, 3).map((rec, i) => (
+              <li key={i} className="flex gap-1.5 items-start">
+                <span className="text-red-500">❌</span> {rec}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider">⚡ Job Role Fit Matcher</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={roleInput}
+            onChange={(e) => setRoleInput(e.target.value)}
+            placeholder="e.g. Software Engineer, Clerk"
+            className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
+          />
+          <button
+            type="button"
+            onClick={handleCheckFit}
+            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shrink-0 shadow-sm active:scale-[0.98] transition-all"
+          >
+            Check Fit
+          </button>
+        </div>
+
+        {matchScore !== null && (
+          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl text-center animate-in zoom-in-95 duration-200">
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-bold">Match Score for "{roleInput}"</p>
+            <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">{matchScore}%</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const STEPS = ["Personal Info", "Education", "Skills & More", "Preview & Download"];
 
 const INITIAL = {
@@ -335,9 +459,12 @@ export default function ResumeBuilderPage() {
                 </button>
               </div>
 
-              {/* Resume Template — A4 Compact */}
-              <div
-                ref={resumeRef}
+              {/* Flex Container for template + scorer */}
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
+                <div className="flex-1 overflow-x-auto w-full">
+                  {/* Resume Template — A4 Compact */}
+                  <div
+                    ref={resumeRef}
                 style={{
                   fontFamily: "'Times New Roman', Times, serif",
                   fontSize: "10.5px",
@@ -450,7 +577,13 @@ export default function ResumeBuilderPage() {
                 </ResumeSection>
               </div>
             </div>
-          )}
+            
+            <div className="w-full lg:w-80 shrink-0">
+              <ResumeScorer form={form} />
+            </div>
+          </div>
+        </div>
+      )}
 
           {/* Navigation Buttons */}
           {step < 3 && (

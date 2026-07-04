@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Script from "next/script";
 import { triggerPaymentSuccessNotification } from "@/lib/notificationTriggers";
+import confetti from "canvas-confetti";
 
 function ApplyForMeContent() {
   const router = useRouter();
@@ -244,8 +245,21 @@ function ApplyForMeContent() {
               setSubmitted(true);
               setTrackingId(orderId);
               logUserActivity(user.id, "application_order_placed_success", "/apply-for-me", { orderId });
+              
               // 🔔 Trigger payment success notification
               triggerPaymentSuccessNotification(user.id, jobTitleParam || "Vacancy", orderId);
+              
+              // 🎉 Trigger Confetti micro-interaction
+              try {
+                confetti({
+                  particleCount: 150,
+                  spread: 80,
+                  origin: { y: 0.6 }
+                });
+              } catch (e) {
+                console.error("Confetti error:", e);
+              }
+              
               fetchUserOrders(user.id);
               setActiveTab("orders");
             } else {

@@ -29,6 +29,7 @@ import {
   MapPin,
   Sparkles,
   MessageCircle,
+  Calculator,
 } from 'lucide-react';
 import NotificationBell from '@/components/layout/NotificationBell';
 
@@ -39,6 +40,7 @@ const navSections = [
   { name: "Answer Key", href: "/answer-key", icon: Key, color: "text-purple-500" },
   { name: "Admission", href: "/admission", icon: GraduationCap, color: "text-blue-500" },
   { name: "News", href: "/news", icon: Newspaper, color: "text-rose-500" },
+  { name: "Eligibility", href: "/eligibility", icon: Calculator, color: "text-amber-500" },
   { name: "Exam Calendar", href: "/exam-calendar", icon: ClipboardCheck, color: "text-teal-500" },
   { name: "e-Suvidha", href: "/e-suvidha", icon: Landmark, color: "text-emerald-500" },
   { name: "AI Resume", href: "/resume-builder", icon: Sparkles, color: "text-violet-500" },
