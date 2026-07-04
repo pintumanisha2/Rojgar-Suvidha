@@ -10,41 +10,88 @@ function CallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    let active = true;
+    let subscription: any = null;
+
     const handleAuthCallback = async () => {
-      // Catch error parameters if any
-      const error = searchParams.get("error");
-      const errorDescription = searchParams.get("error_description");
-      const nextRedirect = searchParams.get("next") || "/dashboard";
+      // 1. Check redirects: both 'redirect' and 'next' parameter support
+      const nextRedirect = searchParams.get("redirect") || searchParams.get("next") || "/dashboard";
 
-      if (error) {
-        console.error("Auth callback error:", error, errorDescription);
-        router.push(`/login?error=${encodeURIComponent(errorDescription || "Authentication failed")}`);
-        return;
-      }
+      try {
+        const error = searchParams.get("error");
+        const errorDescription = searchParams.get("error_description");
 
-      // Check active session check
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        router.push(nextRedirect);
-      } else {
-        // Fallback wait for session load
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-          if (newSession) {
-            subscription.unsubscribe();
+        if (error) {
+          console.error("Auth callback error:", error, errorDescription);
+          if (active) router.push(`/login?error=${encodeURIComponent(errorDescription || "Authentication failed")}`);
+          return;
+        }
+
+        // 2. Explicit manual hash parsing fallback (Ensures fast session setup from OAuth hash redirects)
+        if (typeof window !== "undefined" && window.location.hash) {
+          const hash = window.location.hash.substring(1);
+          const hashParams = new URLSearchParams(hash);
+          const token = hashParams.get("access_token");
+          const refresh = hashParams.get("refresh_token");
+
+          if (token && refresh) {
+            console.log("Found OAuth tokens in URL hash, explicitly setting session...");
+            await supabase.auth.setSession({
+              access_token: token,
+              refresh_token: refresh,
+            });
+          }
+        }
+
+        // 3. Check session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          if (active) router.push(nextRedirect);
+          return;
+        }
+
+        // 4. Fallback listener for dynamic updates
+        const authResponse = supabase.auth.onAuthStateChange((event, newSession) => {
+          if (newSession && active) {
+            if (subscription) {
+              if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
+              else if (typeof subscription === "function") subscription(); // older versions callback format
+            }
             router.push(nextRedirect);
           }
         });
         
-        // Timeout safety fallback
+        subscription = authResponse.data?.subscription || authResponse;
+
+        // 5. Ultimate timeout fallback (Never let the page hang forever)
         setTimeout(() => {
-          subscription.unsubscribe();
-          router.push(nextRedirect);
-        }, 3000);
+          if (active) {
+            console.log("Callback timeout fallback triggered, redirecting to:", nextRedirect);
+            if (subscription) {
+              if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
+              else if (typeof subscription === "function") subscription();
+            }
+            router.push(nextRedirect);
+          }
+        }, 1500);
+
+      } catch (err) {
+        console.error("Error in auth callback wrapper:", err);
+        // Safely redirect anyway
+        if (active) router.push(nextRedirect);
       }
     };
 
     handleAuthCallback();
+
+    return () => {
+      active = false;
+      if (subscription) {
+        if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
+        else if (typeof subscription === "function") subscription();
+      }
+    };
   }, [router, searchParams]);
 
   return (
