@@ -11,6 +11,7 @@ import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
 import SaveJobButton from "@/components/ui/SaveJobButton";
 import CopyLinkButton from "@/components/ui/CopyLinkButton";
 import TrackJobViewWrapper from "@/components/ui/TrackJobViewWrapper";
+import JobAbandonTracker from "@/components/ui/JobAbandonTracker";
 import AgeCalculator from "@/components/ui/AgeCalculator";
 import type { Metadata } from "next";
 
@@ -276,6 +277,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
       {/* Track this job visit for Recently Viewed feature (client-side) */}
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
+      <JobAbandonTracker jobTitle={job.title} jobSlug={job.slug} />
 
       <div className="bg-gray-50 dark:bg-gray-950 min-h-screen py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">

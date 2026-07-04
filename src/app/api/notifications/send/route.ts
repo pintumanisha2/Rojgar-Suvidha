@@ -18,54 +18,57 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 // POST: Send personalized notification to one user or all users
 export async function POST(req: Request) {
   try {
-    const { userId, title, body, icon = "🔔", actionUrl = "/", type = "general", sendPush = true } = await req.json();
+    const {
+      userId,
+      title,
+      body,
+      icon = "🔔",
+      actionUrl = "/",
+      type = "general",
+      sendPush = true,
+      pushExtras = {},   // ← category, tag, actionLabel, jobTitle from triggers
+    } = await req.json();
 
     if (!title || !body) {
       return NextResponse.json({ error: "title and body required" }, { status: 400 });
     }
 
-    // --- Step 1: Save In-App notification(s) to DB ---
+    // ── Step 1: Save In-App notification(s) to DB ──────────
     if (userId) {
-      // Single user
       await supabaseAdmin.from("notifications").insert({
-        user_id: userId,
-        title,
-        body,
-        icon,
-        action_url: actionUrl,
-        type,
+        user_id: userId, title, body, icon, action_url: actionUrl, type,
       });
     } else {
-      // Broadcast to ALL users via profiles table
-      const { data: profiles } = await supabaseAdmin
-        .from("profiles")
-        .select("id");
-
+      // Broadcast to ALL users
+      const { data: profiles } = await supabaseAdmin.from("profiles").select("id");
       if (profiles && profiles.length > 0) {
-        const bulkInsert = profiles.map((p: any) => ({
-          user_id: p.id,
-          title,
-          body,
-          icon,
-          action_url: actionUrl,
-          type,
-        }));
-        await supabaseAdmin.from("notifications").insert(bulkInsert);
+        await supabaseAdmin.from("notifications").insert(
+          profiles.map((p: any) => ({ user_id: p.id, title, body, icon, action_url: actionUrl, type }))
+        );
       }
     }
 
-    // --- Step 2: Send Web Push ---
+    // ── Step 2: Send Premium Web Push ─────────────────────
     if (sendPush) {
-      let subsQuery = supabaseAdmin.from("push_subscriptions").select("subscription_data");
-
-      if (userId) {
-        subsQuery = subsQuery.eq("user_id", userId);
-      }
+      let subsQuery = supabaseAdmin.from("push_subscriptions").select("subscription_data, user_id");
+      if (userId) subsQuery = subsQuery.eq("user_id", userId);
 
       const { data: subs } = await subsQuery;
 
       if (subs && subs.length > 0) {
-        const pushPayload = JSON.stringify({ title, body, url: actionUrl, icon: "/logo-blue.png" });
+        // Rich push payload — merged with pushExtras for category personalization
+        const pushPayload = JSON.stringify({
+          title,
+          body,
+          url:         actionUrl,
+          icon:        "/logo-blue.png",
+          tag:         pushExtras.tag         || "rojgar-suvidha",
+          actionLabel: pushExtras.actionLabel || "Abhi Dekho",
+          jobTitle:    pushExtras.jobTitle    || "",
+          category:    pushExtras.category    || "general",
+          requireInteraction: false,
+        });
+
         const pushResults = await Promise.allSettled(
           subs.map((sub: any) =>
             webpush.sendNotification(sub.subscription_data, pushPayload).catch(() => null)
