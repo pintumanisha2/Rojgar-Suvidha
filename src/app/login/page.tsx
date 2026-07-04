@@ -4,10 +4,9 @@ import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Mail, Loader2, ShieldCheck, KeyRound,
-  GraduationCap, Building, Sparkles, ArrowRight,
+  Building, ArrowRight,
   Eye, EyeOff, Phone, CheckCircle, ArrowLeft,
   Lock, Users, Star, Zap,
 } from "lucide-react";
@@ -162,7 +161,7 @@ function LoginContent() {
   const [error, setError]         = useState<string | null>(null);
   const [msg, setMsg]             = useState<string | null>(null);
   const [authMethod, setAuthMethod] = useState<"phone" | "google" | "email">("phone");
-  const [portalType, setPortalType] = useState<"govt" | "private" | "employer">("govt");
+  const [portalType, setPortalType] = useState<"user" | "employer">("user");
 
   // ── Email state ───────────────────────────────────────
   const [email, setEmail]           = useState("");
@@ -410,12 +409,11 @@ function LoginContent() {
         </div>
 
         <div className="w-full max-w-md">
-          {/* Portal type selector */}
+          {/* Portal type selector — User (Sarkari + Private) vs Employer */}
           <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-1 gap-1 mb-6 shadow-sm">
             {[
-              { key: "govt",     label: "🏛️ Sarkari Naukri" },
-              { key: "private",  label: "🎓 Private Jobs" },
-              { key: "employer", label: "🏢 Employer" },
+              { key: "user",     label: "👤 User Login" },
+              { key: "employer", label: "🏢 Employer / HR" },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => { reset(); setPortalType(key as any); }}
                 className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${portalType === key ? "bg-indigo-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
@@ -426,17 +424,18 @@ function LoginContent() {
 
           {/* Auth card */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl shadow-black/5 border border-gray-100 dark:border-gray-800 overflow-hidden">
-            {/* ── GOVT PORTAL ── */}
-            {portalType === "govt" && (
+            {/* ── UNIFIED USER PORTAL (Sarkari + Private Jobs) ── */}
+            {portalType === "user" && (
               <div className="p-7">
                 <div className="mb-6">
                   <h1 className="text-2xl font-black text-gray-900 dark:text-white">
                     {isSignUp && authMethod === "email" ? "Create Account" : "Welcome Back"}
                   </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {authMethod === "phone" ? "Mobile number pe OTP se instant login karein" :
-                     authMethod === "google" ? "Google account se 1-click me sign in karein" :
-                     isSignUp ? "Email se naya account banayein" : "Email aur password se sign in karein"}
+                    {authMethod === "phone" ? "Mobile OTP se login karein — Sarkari aur Private Jobs dono access hongi" :
+                     authMethod === "google" ? "Google se 1-click login — Sarkari aur Private Jobs dono ke liye" :
+                     isSignUp ? "Naya account banayein — Sarkari aur Private Jobs dono access milegi" :
+                     "Sign in karein — Sarkari aur Private Jobs dono ke liye same account"}
                   </p>
                 </div>
 
@@ -493,7 +492,7 @@ function LoginContent() {
                           Send OTP →
                         </PrimaryBtn>
                         <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-                          📱 OTP aapke number pe SMS me aayega. Naya account? Automatically ban jayega.
+                          📱 Ek account — Sarkari Naukri aur Private Jobs dono access. OTP se login, koi password nahi.
                         </p>
                       </>
                     ) : (
@@ -694,26 +693,7 @@ function LoginContent() {
               </div>
             )}
 
-            {/* ── PRIVATE JOBS PORTAL ── */}
-            {portalType === "private" && (
-              <div className="p-7 space-y-6">
-                <div className="text-center space-y-3">
-                  <div className="inline-flex p-4 bg-violet-50 dark:bg-violet-950/30 rounded-2xl border border-violet-100 dark:border-violet-900/50">
-                    <GraduationCap className="w-9 h-9 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center justify-center gap-2">
-                    Private Candidate Portal <Sparkles className="w-5 h-5 text-amber-500" />
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Resume banayein, skills add karein, aur MNC HRs se directly connect karein.
-                  </p>
-                </div>
-                <Link href="/private-jobs/login"
-                  className="w-full py-4 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
-                  Candidate Login / Register <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            )}
+
 
             {/* ── EMPLOYER PORTAL ── */}
             {portalType === "employer" && (
