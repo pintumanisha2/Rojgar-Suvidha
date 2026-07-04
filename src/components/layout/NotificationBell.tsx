@@ -47,6 +47,32 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const [markingAll, setMarkingAll] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const prevUnreadCountRef = useRef(0);
+
+  // Play a soft, clean notification ting sound using offline Web Audio API
+  const playDing = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+      
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      console.warn("Audio Context failed to play notification alert:", e);
+    }
+  };
 
   const fetchNotifications = useCallback(async () => {
     if (!userId) return;
@@ -54,12 +80,31 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       const res = await fetch(`/api/notifications?userId=${userId}`);
       if (!res.ok) return;
       const data = await res.json();
+      const currentUnread = data.unreadCount || 0;
       setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
+      setUnreadCount(currentUnread);
+
+      // Play audio ding if a new alert arrives in the background
+      if (currentUnread > prevUnreadCountRef.current) {
+        playDing();
+      }
+      prevUnreadCountRef.current = currentUnread;
     } catch (err) {
-      // Silent fail — don't block UI
+      // Silent fail
     }
   }, [userId]);
+
+  // Update browser tab title with unread notifications count badge
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const originalTitle = document.title.replace(/^\(\d+\+?\)\s*/, "");
+      if (unreadCount > 0) {
+        document.title = `(${unreadCount > 99 ? "99+" : unreadCount}) ${originalTitle}`;
+      } else {
+        document.title = originalTitle;
+      }
+    }
+  }, [unreadCount]);
 
   // Initial fetch + 30-second polling
   useEffect(() => {
