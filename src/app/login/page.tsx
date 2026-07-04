@@ -1,930 +1,777 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { 
-  ArrowLeft, Mail, Loader2, ShieldCheck, KeyRound, 
-  GraduationCap, Building, Sparkles, ArrowRight, Eye, EyeOff, Phone, CheckCircle
+import Image from "next/image";
+import {
+  Mail, Loader2, ShieldCheck, KeyRound,
+  GraduationCap, Building, Sparkles, ArrowRight,
+  Eye, EyeOff, Phone, CheckCircle, ArrowLeft,
+  Lock, Users, Star, Zap,
 } from "lucide-react";
 
+// ── OTP 6-box component (banking-app style) ──────────────
+function OtpBoxes({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !value[i] && i > 0) refs.current[i - 1]?.focus();
+  };
+
+  const handleChange = (i: number, v: string) => {
+    const digit = v.replace(/\D/g, "").slice(-1);
+    const arr = value.split("");
+    arr[i] = digit;
+    const next = arr.join("").slice(0, 6);
+    onChange(next);
+    if (digit && i < 5) refs.current[i + 1]?.focus();
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    onChange(pasted);
+    const nextIdx = Math.min(pasted.length, 5);
+    refs.current[nextIdx]?.focus();
+  };
+
+  return (
+    <div className="flex gap-2 justify-center">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <input
+          key={i}
+          ref={(el) => { refs.current[i] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[i] || ""}
+          disabled={disabled}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKey(i, e)}
+          onPaste={handlePaste}
+          className={`w-11 h-12 text-center text-xl font-black rounded-xl border-2 transition-all outline-none
+            ${value[i]
+              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300"
+              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            }
+            focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20
+            disabled:opacity-50`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Password strength meter ───────────────────────────────
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null;
+  const score = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter(r => r.test(password)).length;
+  const levels = ["Weak", "Fair", "Good", "Strong"];
+  const colors = ["bg-red-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
+  const textColors = ["text-red-600", "text-yellow-600", "text-blue-600", "text-green-600"];
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex gap-1">
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < score ? colors[score - 1] : "bg-gray-200 dark:bg-gray-700"}`} />
+        ))}
+      </div>
+      <p className={`text-[11px] font-bold ${textColors[score - 1] || "text-gray-400"}`}>{score > 0 ? levels[score - 1] : ""}</p>
+    </div>
+  );
+}
+
+// ── Left brand panel ──────────────────────────────────────
+function BrandPanel() {
+  return (
+    <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white p-10 relative overflow-hidden min-h-full">
+      {/* Decorative blobs */}
+      <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-500/20 rounded-full translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(139,92,246,0.3),transparent_60%)]" />
+
+      {/* Logo */}
+      <div className="relative z-10">
+        <Link href="/" className="flex items-center gap-3 mb-12">
+          <div className="w-11 h-11 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+            <ShieldCheck className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <p className="font-black text-lg leading-tight">Rojgar Suvidha</p>
+            <p className="text-indigo-200 text-xs font-medium">Your Career Partner</p>
+          </div>
+        </Link>
+
+        <h2 className="text-3xl font-black leading-tight mb-4">
+          India's #1<br />
+          <span className="text-yellow-300">Sarkari Naukri</span><br />
+          Portal
+        </h2>
+        <p className="text-indigo-200 text-sm leading-relaxed mb-8">
+          SSC, UPSC, Railway, Banking, Police — latest government jobs, results, and admit cards, all in one place.
+        </p>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { icon: Users, label: "Registered Users", value: "5 Lakh+" },
+            { icon: Star,  label: "Jobs Listed",      value: "10,000+" },
+            { icon: Zap,   label: "Daily Updates",    value: "200+" },
+            { icon: Lock,  label: "Secure & Trusted", value: "100%" },
+          ].map(({ icon: Icon, label, value }) => (
+            <div key={label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+              <Icon className="w-5 h-5 text-indigo-200 mb-2" />
+              <p className="text-lg font-black">{value}</p>
+              <p className="text-indigo-300 text-[11px] font-medium">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Testimonial */}
+      <div className="relative z-10 bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 mt-8">
+        <div className="flex gap-1 mb-2">
+          {[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />)}
+        </div>
+        <p className="text-sm text-indigo-100 italic leading-relaxed">
+          "Rojgar Suvidha ki wajah se mujhe SSC CGL ka result sabse pehle mila. Bahut helpful platform hai!"
+        </p>
+        <p className="text-indigo-300 text-xs font-bold mt-2">— Ravi Kumar, UP</p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
-  
-  // Auto-redirect logged-in users safely
+
   useEffect(() => {
     let active = true;
-    const checkActiveSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.warn("Auth session check error (ignoring):", error.message);
-          return;
-        }
-        if (active && session) {
-          router.push(redirectUrl);
-        }
-      } catch (err) {
-        console.error("Session retrieval failed", err);
-      }
-    };
-    checkActiveSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active && session) router.push(redirectUrl);
+    });
     return () => { active = false; };
   }, [router, redirectUrl]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  // Portal Type
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [msg, setMsg]             = useState<string | null>(null);
+  const [authMethod, setAuthMethod] = useState<"phone" | "google" | "email">("phone");
   const [portalType, setPortalType] = useState<"govt" | "private" | "employer">("govt");
 
-  // Auth Method Tab (Phone | Google | Email)
-  const [authMethod, setAuthMethod] = useState<"phone" | "google" | "email">("phone");
-
-  // Email Auth State
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Forgot Password State
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  // ── Email state ───────────────────────────────────────
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [isSignUp, setIsSignUp]     = useState(false);
+  const [showPass, setShowPass]     = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isForgotPass, setIsForgotPass] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-
-  // Email OTP State
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0);
-
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtp, setEmailOtp]     = useState("");
+  const [emailCooldown, setEmailCooldown] = useState(0);
   useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
+    if (emailCooldown > 0) { const t = setTimeout(() => setEmailCooldown(c => c - 1), 1000); return () => clearTimeout(t); }
+  }, [emailCooldown]);
 
-  // Phone Auth State
-  const [phone, setPhone] = useState("");
-  const [phonePassword, setPhonePassword] = useState("");
-  const [isPhoneSignUp, setIsPhoneSignUp] = useState(false);
-  const [isPhoneForgotPassword, setIsPhoneForgotPassword] = useState(false);
-  
-  // Phone OTP Flow State
+  // ── Phone OTP-only state ──────────────────────────────
+  const [phone, setPhone]           = useState("");
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [phoneOtp, setPhoneOtp] = useState("");
-  const [phoneResendCooldown, setPhoneResendCooldown] = useState(0);
-
+  const [phoneOtp, setPhoneOtp]     = useState("");
+  const [phoneCooldown, setPhoneCooldown] = useState(0);
   useEffect(() => {
-    if (phoneResendCooldown > 0) {
-      const timer = setTimeout(() => setPhoneResendCooldown(phoneResendCooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [phoneResendCooldown]);
+    if (phoneCooldown > 0) { const t = setTimeout(() => setPhoneCooldown(c => c - 1), 1000); return () => clearTimeout(t); }
+  }, [phoneCooldown]);
 
-  // Captcha State
-  const [captchaNum1, setCaptchaNum1] = useState(0);
-  const [captchaNum2, setCaptchaNum2] = useState(0);
-  const [captchaInput, setCaptchaInput] = useState("");
-
-  useEffect(() => {
-    setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
-    setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
-  }, [isSignUp, isPhoneSignUp]);
+  const reset = () => {
+    setError(null); setMsg(null);
+    setPhoneOtpSent(false); setPhoneOtp(""); setPhone("");
+    setEmailOtpSent(false); setEmailOtp(""); setEmail("");
+    setPassword(""); setConfirmPass(""); setNewPassword("");
+    setIsForgotPass(false); setIsSignUp(false);
+  };
 
   const redirectAfterLogin = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", userId)
-        .single();
-      if (!error && profile?.full_name) {
-        router.push(redirectUrl);
-      } else {
-        router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
-      }
-    } catch (err) {
-      router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
-    }
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+      if (profile?.full_name) router.push(redirectUrl);
+      else router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
+    } catch { router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`); }
     router.refresh();
   };
 
-  const resetFormState = () => {
-    setError(null);
-    setMsg(null);
-    setOtpSent(false);
-    setOtp("");
-    setIsForgotPassword(false);
-    setPhoneOtpSent(false);
-    setPhoneOtp("");
-    setPhonePassword("");
-    setIsPhoneSignUp(false);
-    setIsPhoneForgotPassword(false);
+  // ── Google ────────────────────────────────────────────
+  const handleGoogle = async () => {
+    setLoading(true); setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectUrl)}` },
+    });
+    if (error) { setError(error.message); setLoading(false); }
   };
 
-  // === GOOGLE LOGIN ===
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectUrl)}` },
-      });
-      if (error) setError(error.message);
-    } catch (err: any) {
-      setError(err.message || "Google login failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // === PHONE PASSWORD SIGN IN ===
-  const handlePhonePasswordSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      setError("Please enter a valid 10-digit mobile number.");
-      return;
-    }
-    if (phonePassword.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setMsg(null);
-
-    const fakeEmail = `phone_${digits}@rojgarsuvidha.phone`;
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: fakeEmail,
-        password: phonePassword,
-      });
-
-      if (error) {
-        setError(error.message.includes("Invalid login credentials") ? "Incorrect Mobile Number or Password." : error.message);
-      } else if (data?.user) {
-        setMsg("Login successful! Redirecting...");
-        await redirectAfterLogin(data.user.id);
-      }
-    } catch (err: any) {
-      setError(err.message || "Login failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // === PHONE OTP: Send ===
+  // ── Phone OTP: Send ───────────────────────────────────
   const handleSendPhoneOtp = async () => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      setError("Please enter a valid 10-digit mobile number.");
-      return;
-    }
-    if (isPhoneSignUp && parseInt(captchaInput) !== captchaNum1 + captchaNum2) {
-      setError("Incorrect security answer.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setMsg(null);
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length !== 10) { setError("Valid 10-digit mobile number enter karein."); return; }
+    setLoading(true); setError(null); setMsg(null);
     try {
       const res = await fetch("/api/send-phone-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: `+91${digits}`,
-          isForgotPassword: isPhoneForgotPassword,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: `+91${digits}` }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to send OTP.");
-      } else {
-        setPhoneOtpSent(true);
-        setPhoneResendCooldown(60);
-        setMsg(`OTP sent to +91 ${digits}!`);
-      }
-    } catch (err: any) {
-      setError(err.message || "Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+      if (!res.ok) { setError(data.error || "OTP send nahi hua."); }
+      else { setPhoneOtpSent(true); setPhoneCooldown(60); setMsg(`OTP +91 ${digits} pe bheja gaya!`); }
+    } catch { setError("Network error. Dobara try karein."); }
+    finally { setLoading(false); }
   };
 
-  // === PHONE OTP: Verify & Register/Reset ===
+  // ── Phone OTP: Verify (auto detect new/existing user) ─
   const handleVerifyPhoneOtp = async () => {
-    if (phoneOtp.length !== 6) {
-      setError("Please enter the 6-digit OTP.");
-      return;
-    }
-    if (phonePassword.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    const digits = phone.replace(/\D/g, '');
-    setLoading(true);
-    setError(null);
-    setMsg(null);
+    if (phoneOtp.length !== 6) { setError("6-digit OTP enter karein."); return; }
+    const digits = phone.replace(/\D/g, "");
+    setLoading(true); setError(null); setMsg(null);
     try {
       const res = await fetch("/api/verify-phone-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: `+91${digits}`,
-          otp: phoneOtp,
-          password: phonePassword,
-          isForgotPassword: isPhoneForgotPassword,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: `+91${digits}`, otp: phoneOtp }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Invalid OTP. Please try again.");
-        setLoading(false);
+      if (!res.ok) { setError(data.error || "OTP galat hai."); setLoading(false); return; }
+      if (data.accessToken && data.refreshToken) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: data.accessToken,
+          refresh_token: data.refreshToken,
+        });
+        if (sessionError) { setError("Session error. Dobara try karein."); setLoading(false); return; }
+        if (sessionData?.user) {
+          setMsg(data.isNewUser ? "Account ban gaya! Profile setup ho raha hai..." : "Login ho gaya! Redirect ho raha hai...");
+          await redirectAfterLogin(sessionData.user.id);
+        }
       } else if (data.actionLink) {
-        setMsg(isPhoneForgotPassword ? "Password updated! Logging you in..." : "Account created! Logging you in...");
-        const redirectParam = encodeURIComponent(
-          data.isNewUser 
-            ? `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`
-            : redirectUrl
-        );
+        setMsg(data.isNewUser ? "Account ban gaya! Login ho raha hai..." : "Login ho gaya!");
+        const redirectParam = encodeURIComponent(data.isNewUser ? `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}` : redirectUrl);
         window.location.href = `${data.actionLink}&next=${redirectParam}`;
       } else {
-        setError("Failed to create session. Please try again.");
+        setError("Session create nahi hua. Dobara try karein.");
         setLoading(false);
       }
-    } catch (err: any) {
-      setError(err.message || "Network error.");
-      setLoading(false);
-    }
+    } catch { setError("Network error. Dobara try karein."); setLoading(false); }
   };
 
-  // === PHONE OTP: Resend ===
   const handleResendPhoneOtp = async () => {
-    if (phoneResendCooldown > 0) return;
-    const digits = phone.replace(/\D/g, '');
-    setLoading(true);
-    setError(null);
-    setMsg(null);
+    if (phoneCooldown > 0) return;
+    const digits = phone.replace(/\D/g, "");
+    setLoading(true); setError(null);
     try {
       const res = await fetch("/api/send-phone-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: `+91${digits}`,
-          isForgotPassword: isPhoneForgotPassword,
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: `+91${digits}` }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to resend OTP.");
-      } else {
-        setMsg("New OTP sent!");
-        setPhoneResendCooldown(60);
-      }
-    } catch (err: any) {
-      setError(err.message || "Network error.");
-    } finally {
-      setLoading(false);
-    }
+      if (res.ok) { setMsg("Naya OTP bheja gaya!"); setPhoneCooldown(60); }
+      else { const d = await res.json(); setError(d.error || "OTP resend failed."); }
+    } catch { setError("Network error."); }
+    finally { setLoading(false); }
   };
 
-  // === EMAIL LOGIN / SIGNUP ===
+  // ── Email auth ────────────────────────────────────────
+  const checkEmailTypo = (e: string) => {
+    const domain = e.split("@")[1]?.toLowerCase();
+    const typos: Record<string,string> = { "gamil.com":"gmail.com","gmal.com":"gmail.com","gnail.com":"gmail.com","gmail.co":"gmail.com","yaho.com":"yahoo.com","hotmai.com":"hotmail.com" };
+    return typos[domain] ? `${e.split("@")[0]}@${typos[domain]}` : null;
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setMsg(null);
-
-    const checkEmailTypo = (emailStr: string): string | null => {
-      const parts = emailStr.split('@');
-      if (parts.length !== 2) return null;
-      const domain = parts[1].toLowerCase().trim();
-      const commonTypos: Record<string, string> = {
-        'gamil.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmaill.com': 'gmail.com',
-        'gmeil.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmail.co': 'gmail.com',
-        'yaho.com': 'yahoo.com', 'yhoo.com': 'yahoo.com',
-        'hotmai.com': 'hotmail.com', 'hotmial.com': 'hotmail.com',
-        'redifmail.com': 'rediffmail.com',
-      };
-      if (commonTypos[domain]) return `${parts[0]}@${commonTypos[domain]}`;
-      return null;
-    };
-
-    const typoSuggestion = checkEmailTypo(email);
-    if (typoSuggestion) {
-      setError(`Email spelling mistake: Did you mean "${typoSuggestion}"?`);
-      return;
-    }
-
+    setError(null); setMsg(null);
+    const typo = checkEmailTypo(email);
+    if (typo) { setError(`Email me typo? "${typo}" mean kar rahe ho?`); return; }
     if (isSignUp) {
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters.");
-        return;
-      }
-      if (parseInt(captchaInput) !== captchaNum1 + captchaNum2) {
-        setError("Incorrect security answer.");
-        setCaptchaNum1(Math.floor(Math.random() * 10) + 1);
-        setCaptchaNum2(Math.floor(Math.random() * 10) + 1);
-        setCaptchaInput("");
-        return;
-      }
+      if (password.length < 8) { setError("Password minimum 8 characters ka hona chahiye."); return; }
+      if (password !== confirmPass) { setError("Passwords match nahi kar rahe."); return; }
       setLoading(true);
       try {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
-          if (error.message.toLowerCase().includes("already registered") || error.message.toLowerCase().includes("already exists")) {
-            setError("This account already exists! Please Sign In instead.");
-            setIsSignUp(false);
-          } else {
-            setError(error.message);
-          }
+          if (error.message.toLowerCase().includes("already")) { setError("Account already exist karta hai! Sign In karein."); setIsSignUp(false); }
+          else setError(error.message);
+        } else if (data?.session) {
+          setMsg("Account ban gaya! Redirect ho raha hai...");
+          await redirectAfterLogin(data.user!.id);
         } else {
-          if (data?.session) {
-            setMsg("Account created! Redirecting...");
-            await redirectAfterLogin(data.user!.id);
-          } else {
-            setOtpSent(true);
-            setResendCooldown(60);
-            setMsg("Account created! A 6-digit OTP has been sent to your email.");
-          }
+          setEmailOtpSent(true); setEmailCooldown(60);
+          setMsg("Account ban gaya! Email pe 6-digit OTP aaya hai — verify karein.");
         }
-      } catch (err: any) {
-        setError(err.message || "Signup failed.");
-      } finally {
-        setLoading(false);
-      }
+      } catch (err: any) { setError(err.message); }
+      finally { setLoading(false); }
     } else {
       setLoading(true);
       try {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           if (error.message.includes("Email not confirmed")) {
-            const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
-            if (!resendError) {
-              setIsSignUp(true);
-              setOtpSent(true);
-              setResendCooldown(60);
-              setError("Email not verified yet. We sent a new OTP to your email.");
-            } else {
-              setError(error.message);
-            }
-          } else {
-            setError(error.message);
-          }
+            await supabase.auth.resend({ type: "signup", email });
+            setIsSignUp(true); setEmailOtpSent(true); setEmailCooldown(60);
+            setError("Email verify nahi hua. Naya OTP bheja gaya.");
+          } else if (error.message.includes("Invalid login credentials")) {
+            setError("Email ya Password galat hai. Dobara check karein.");
+          } else setError(error.message);
         } else if (data?.user) {
-          setMsg("Login successful! Redirecting...");
+          setMsg("Login ho gaya! Redirect ho raha hai...");
           await redirectAfterLogin(data.user.id);
         }
-      } catch (err: any) {
-        setError(err.message || "Login failed.");
-      } finally {
-        setLoading(false);
-      }
+      } catch (err: any) { setError(err.message); }
+      finally { setLoading(false); }
     }
   };
 
-  // === EMAIL FORGOT PASSWORD ===
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMsg(null);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) {
-        setError(error.message);
-      } else {
-        setOtpSent(true);
-        setMsg("Password reset OTP sent to your email!");
-      }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setError(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) setError(error.message);
+    else { setEmailOtpSent(true); setMsg("Password reset OTP email pe bheja gaya!"); }
+    setLoading(false);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMsg(null);
-    if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
-      setLoading(false);
-      return;
-    }
-    try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({ email, token: otp, type: 'recovery' });
-      if (verifyError) { setError(verifyError.message); setLoading(false); return; }
-      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-      if (updateError) {
-        setError(updateError.message);
-      } else {
-        setMsg("Password reset successfully! Logging you in...");
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    } catch (err: any) {
-      setError(err.message || "Password reset failed.");
-    } finally {
-      setLoading(false);
-    }
+    if (newPassword.length < 8) { setError("New password minimum 8 characters."); return; }
+    setLoading(true); setError(null);
+    const { error: ve } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "recovery" });
+    if (ve) { setError(ve.message); setLoading(false); return; }
+    const { error: ue } = await supabase.auth.updateUser({ password: newPassword });
+    if (ue) setError(ue.message);
+    else { setMsg("Password reset ho gaya! Login ho raha hai..."); setTimeout(() => window.location.reload(), 1500); }
+    setLoading(false);
   };
 
-  // === EMAIL VERIFY OTP ===
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'signup' });
-      if (error) {
-        setError(error.message);
-      } else if (data?.user) {
-        setMsg("Email verified! Redirecting...");
-        await redirectAfterLogin(data.user.id);
-      }
-    } catch (err: any) {
-      setError(err.message || "OTP verification failed.");
-    } finally {
-      setLoading(false);
-    }
+  const handleVerifyEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setError(null);
+    const { data, error } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "signup" });
+    if (error) setError(error.message);
+    else if (data?.user) { setMsg("Email verify ho gaya! Redirect ho raha hai..."); await redirectAfterLogin(data.user.id); }
+    setLoading(false);
   };
 
-  // === EMAIL RESEND OTP ===
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0) return;
-    setLoading(true);
-    setError(null);
-    setMsg(null);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
-      if (error) {
-        setError(error.message);
-      } else {
-        setMsg("A new OTP has been sent to your email!");
-        setResendCooldown(60);
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to resend OTP.");
-    } finally {
-      setLoading(false);
-    }
+  const handleResendEmailOtp = async () => {
+    if (emailCooldown > 0) return;
+    setLoading(true); setError(null);
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    if (error) setError(error.message);
+    else { setMsg("Naya OTP bheja gaya!"); setEmailCooldown(60); }
+    setLoading(false);
   };
 
-  const handleOtpChange = (val: string) => {
-    setOtp(val.replace(/\D/g, '').slice(0, 6));
-  };
+  // ── Shared primary button ─────────────────────────────
+  const PrimaryBtn = ({ children, onClick, disabled, type = "button" }: any) => (
+    <button type={type} onClick={onClick} disabled={disabled || loading}
+      className="w-full flex justify-center items-center gap-2 py-3.5 px-4 rounded-xl text-sm font-black text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]">
+      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : children}
+    </button>
+  );
+
+  const InputField = ({ icon: Icon, ...props }: any) => (
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+        <Icon className="h-4.5 w-4.5 text-gray-400" />
+      </div>
+      <input {...props} className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 outline-none transition-all font-medium text-sm
+        ${props.error ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20" : "border-gray-200 dark:border-gray-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"}
+        disabled:opacity-60 ${props.className || ""}`} />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-96 bg-indigo-600 rounded-b-[40%] scale-150 transform -translate-y-1/2 opacity-10 dark:opacity-20 pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <Link href="/" className="flex justify-center mb-6 hover:scale-105 transition-transform">
-          <div className="bg-indigo-600 p-3 rounded-2xl shadow-xl shadow-indigo-600/30">
-            <ShieldCheck className="w-10 h-10 text-white" />
-          </div>
-        </Link>
-        <h2 className="text-center text-3xl font-extrabold text-gray-900 dark:text-white">Welcome to Rojgar Suvidha</h2>
-        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400 font-medium">
-          {portalType === "govt" && "Sign in or create an account to access your digital locker and saved govt jobs."}
-          {portalType === "private" && "Connect directly with MNC recruiters & build professional portfolios."}
-          {portalType === "employer" && "Verify your company GSTIN, post openings, and scout vetted talent."}
-        </p>
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
+      {/* Left brand panel (desktop only) */}
+      <div className="w-[420px] shrink-0">
+        <BrandPanel />
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-white dark:bg-gray-900 py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-gray-100 dark:border-gray-800">
+      {/* Right auth panel */}
+      <div className="flex-1 flex flex-col items-center justify-center py-10 px-4 sm:px-8 relative overflow-y-auto">
+        {/* Mobile logo */}
+        <div className="lg:hidden mb-6 text-center">
+          <Link href="/" className="inline-flex items-center gap-2">
+            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-black text-lg text-gray-900 dark:text-white">Rojgar Suvidha</span>
+          </Link>
+        </div>
 
-          {portalType === "govt" && (
-            <div className="animate-in fade-in duration-200">
+        <div className="w-full max-w-md">
+          {/* Portal type selector */}
+          <div className="flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-1 gap-1 mb-6 shadow-sm">
+            {[
+              { key: "govt",     label: "🏛️ Sarkari Naukri" },
+              { key: "private",  label: "🎓 Private Jobs" },
+              { key: "employer", label: "🏢 Employer" },
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => { reset(); setPortalType(key as any); }}
+                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${portalType === key ? "bg-indigo-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
 
-              {/* 3-Method Auth Tabs */}
-              <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200 dark:border-gray-700 mb-6 gap-1">
-                <button
-                  onClick={() => { resetFormState(); setAuthMethod("phone"); }}
-                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1.5 ${
-                    authMethod === "phone"
-                      ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>Mobile</span>
-                </button>
-                <button
-                  onClick={() => { resetFormState(); setAuthMethod("google"); }}
-                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1.5 ${
-                    authMethod === "google"
-                      ? "bg-white dark:bg-gray-700 text-red-500 dark:text-red-400 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
-                >
-                  <img src="https://www.google.com/favicon.ico" alt="G" className="w-4 h-4" />
-                  <span>Google</span>
-                </button>
-                <button
-                  onClick={() => { resetFormState(); setAuthMethod("email"); }}
-                  className={`flex-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all flex flex-col items-center gap-1.5 ${
-                    authMethod === "email"
-                      ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                      : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Email</span>
-                </button>
-              </div>
+          {/* Auth card */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl shadow-black/5 border border-gray-100 dark:border-gray-800 overflow-hidden">
+            {/* ── GOVT PORTAL ── */}
+            {portalType === "govt" && (
+              <div className="p-7">
+                <div className="mb-6">
+                  <h1 className="text-2xl font-black text-gray-900 dark:text-white">
+                    {isSignUp && authMethod === "email" ? "Create Account" : "Welcome Back"}
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {authMethod === "phone" ? "Mobile number pe OTP se instant login karein" :
+                     authMethod === "google" ? "Google account se 1-click me sign in karein" :
+                     isSignUp ? "Email se naya account banayein" : "Email aur password se sign in karein"}
+                  </p>
+                </div>
 
-              {/* Error & Success Messages */}
-              {error && <div className="mb-4 text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-center border border-red-200 dark:border-red-800">{error}</div>}
-              {msg && <div className="mb-4 text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-center border border-green-200 dark:border-green-800">{msg}</div>}
+                {/* Method tabs */}
+                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl gap-1 mb-6">
+                  {[
+                    { key: "phone",  icon: "📱", label: "Mobile OTP" },
+                    { key: "google", icon: "G",  label: "Google", isImg: true },
+                    { key: "email",  icon: "✉️", label: "Email" },
+                  ].map(({ key, icon, label, isImg }) => (
+                    <button key={key} onClick={() => { reset(); setAuthMethod(key as any); }}
+                      className={`flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-[11px] font-black transition-all ${authMethod === key ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                      {isImg
+                        ? <img src="https://www.google.com/favicon.ico" alt="G" className="w-4 h-4" />
+                        : <span className="text-base">{icon}</span>}
+                      {label}
+                    </button>
+                  ))}
+                </div>
 
-              {/* ─── PHONE PASSWORD & OTP TAB ─── */}
-              {authMethod === "phone" && (
-                <div className="space-y-4">
-                  {!phoneOtpSent ? (
-                    // NORMAL SIGN IN OR SEND OTP MODE
-                    <form onSubmit={isPhoneSignUp ? (e) => { e.preventDefault(); handleSendPhoneOtp(); } : handlePhonePasswordSignIn} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Mobile Number</label>
-                        <div className="flex gap-2">
-                          <div className="flex items-center px-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-300 font-bold text-sm select-none whitespace-nowrap">
-                            🇮🇳 +91
-                          </div>
-                          <div className="relative flex-1">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Phone className="h-5 w-5 text-gray-400" />
+                {/* Alerts */}
+                {error && (
+                  <div className="mb-4 flex items-start gap-2 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-4 py-3 rounded-xl">
+                    <span className="shrink-0 mt-0.5">⚠️</span> {error}
+                  </div>
+                )}
+                {msg && !error && (
+                  <div className="mb-4 flex items-start gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-4 py-3 rounded-xl">
+                    <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" /> {msg}
+                  </div>
+                )}
+
+                {/* ── PHONE OTP (password-free) ── */}
+                {authMethod === "phone" && (
+                  <div className="space-y-5">
+                    {!phoneOtpSent ? (
+                      <>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Mobile Number</label>
+                          <div className="flex gap-2">
+                            <div className="flex items-center px-3 bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap select-none">
+                              🇮🇳 +91
                             </div>
                             <input
-                              type="tel"
-                              value={phone}
-                              disabled={loading}
-                              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                              className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-60"
-                              placeholder="9876543210"
-                              required
+                              type="tel" value={phone} disabled={loading}
+                              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                              onKeyDown={(e) => { if (e.key === "Enter" && phone.length === 10) handleSendPhoneOtp(); }}
+                              className="flex-1 py-3 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-medium text-lg tracking-widest outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-60"
+                              placeholder="9876543210" maxLength={10}
                             />
                           </div>
                         </div>
-                      </div>
+                        <PrimaryBtn onClick={handleSendPhoneOtp} disabled={phone.replace(/\D/g,"").length !== 10}>
+                          Send OTP →
+                        </PrimaryBtn>
+                        <p className="text-center text-xs text-gray-400 dark:text-gray-500">
+                          📱 OTP aapke number pe SMS me aayega. Naya account? Automatically ban jayega.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-center">
+                          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300">📲 OTP sent to +91 {phone}</p>
+                          <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); setMsg(null); }}
+                            className="text-xs text-indigo-500 hover:underline font-bold mt-1">Change number</button>
+                        </div>
 
-                      {!isPhoneSignUp && !isPhoneForgotPassword ? (
-                        // PASSWORD SIGN IN INPUT
-                        <>
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Password</label>
-                              <button type="button" disabled={loading} onClick={() => { setIsPhoneForgotPassword(true); }} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">6-digit OTP Enter Karein</label>
+                          <OtpBoxes value={phoneOtp} onChange={setPhoneOtp} disabled={loading} />
+                        </div>
+
+                        <PrimaryBtn onClick={handleVerifyPhoneOtp} disabled={phoneOtp.length !== 6}>
+                          Verify & Login →
+                        </PrimaryBtn>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }}
+                            className="font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                            ← Wapas
+                          </button>
+                          <button onClick={handleResendPhoneOtp} disabled={phoneCooldown > 0 || loading}
+                            className="font-bold text-indigo-600 dark:text-indigo-400 disabled:text-gray-400 transition-colors">
+                            {phoneCooldown > 0 ? `Resend in ${phoneCooldown}s` : "Resend OTP"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* ── GOOGLE ── */}
+                {authMethod === "google" && (
+                  <div className="space-y-4">
+                    <button onClick={handleGoogle} disabled={loading}
+                      className="relative w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm font-black text-gray-800 dark:text-gray-200 hover:border-indigo-400 hover:bg-gray-50 transition-all shadow-sm overflow-hidden group">
+                      <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg">
+                        Recommended
+                      </div>
+                      <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue with Google"}
+                    </button>
+                    <p className="text-center text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                      Google account se 1 click me instant login. <br />
+                      Koi password yaad nahi karna padega. ✨
+                    </p>
+                  </div>
+                )}
+
+                {/* ── EMAIL ── */}
+                {authMethod === "email" && (
+                  <div className="space-y-4">
+                    {/* Forgot password flow */}
+                    {isForgotPass && !emailOtpSent && (
+                      <form onSubmit={handleForgotPassword} className="space-y-4">
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-700 dark:text-amber-400 font-medium">
+                          🔑 Apna email enter karein — password reset link aur OTP bhejenge.
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                          <InputField icon={Mail} type="email" required value={email} onChange={(e: any) => setEmail(e.target.value)} placeholder="student@example.com" disabled={loading} />
+                        </div>
+                        <PrimaryBtn type="submit">Send Reset OTP →</PrimaryBtn>
+                        <button type="button" onClick={() => { resetForm(); }}
+                          className="w-full text-center text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">
+                          ← Sign In pe wapas
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Forgot password OTP verify */}
+                    {isForgotPass && emailOtpSent && (
+                      <form onSubmit={handleResetPassword} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">Email OTP Enter Karein</label>
+                          <OtpBoxes value={emailOtp} onChange={setEmailOtp} disabled={loading} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">New Password</label>
+                          <div className="relative">
+                            <InputField icon={Lock} type={showPass ? "text" : "password"} required value={newPassword}
+                              onChange={(e: any) => setNewPassword(e.target.value)} placeholder="Min 8 characters" disabled={loading} />
+                            <button type="button" onClick={() => setShowPass(!showPass)}
+                              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600">
+                              {showPass ? <EyeOff className="h-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <PasswordStrength password={newPassword} />
+                        </div>
+                        <PrimaryBtn type="submit" disabled={emailOtp.length < 6 || newPassword.length < 8}>
+                          Set New Password →
+                        </PrimaryBtn>
+                        <button type="button" onClick={() => { setIsForgotPass(false); setEmailOtpSent(false); setEmailOtp(""); }}
+                          className="w-full text-center text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">
+                          ← Wapas
+                        </button>
+                      </form>
+                    )}
+
+                    {/* Sign In / Create Account */}
+                    {!isForgotPass && !emailOtpSent && (
+                      <form onSubmit={handleEmailAuth} className="space-y-4">
+                        {/* Sign In / Create tabs */}
+                        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl gap-1">
+                          <button type="button" onClick={() => { setIsSignUp(false); setError(null); setMsg(null); }}
+                            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${!isSignUp ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"}`}>
+                            Sign In
+                          </button>
+                          <button type="button" onClick={() => { setIsSignUp(true); setError(null); setMsg(null); }}
+                            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${isSignUp ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"}`}>
+                            Create Account
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                          <InputField icon={Mail} type="email" required value={email} onChange={(e: any) => setEmail(e.target.value)}
+                            placeholder="student@example.com" disabled={loading} />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Password</label>
+                            {!isSignUp && (
+                              <button type="button" onClick={() => { setIsForgotPass(true); setError(null); }}
+                                className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors">
                                 Forgot Password?
                               </button>
-                            </div>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <InputField icon={Lock} type={showPass ? "text" : "password"} required value={password}
+                              onChange={(e: any) => setPassword(e.target.value)}
+                              placeholder={isSignUp ? "Min 8 characters" : "••••••••"}
+                              minLength={isSignUp ? 8 : 6} disabled={loading} />
+                            <button type="button" onClick={() => setShowPass(!showPass)}
+                              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600">
+                              {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          {isSignUp && <PasswordStrength password={password} />}
+                        </div>
+
+                        {isSignUp && (
+                          <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
                             <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <KeyRound className="h-5 w-5 text-gray-400" />
-                              </div>
-                              <input
-                                type={showPassword ? "text" : "password"}
-                                value={phonePassword}
-                                disabled={loading}
-                                onChange={(e) => setPhonePassword(e.target.value)}
-                                className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
-                                placeholder="••••••••"
-                                required
-                              />
-                              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              <InputField icon={Lock} type={showConfirm ? "text" : "password"} required value={confirmPass}
+                                onChange={(e: any) => setConfirmPass(e.target.value)} placeholder="Password dobara enter karein" disabled={loading} />
+                              <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600">
+                                {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
                             </div>
+                            {confirmPass && (
+                              <p className={`text-[11px] font-bold mt-1 ${password === confirmPass ? "text-green-600" : "text-red-500"}`}>
+                                {password === confirmPass ? "✓ Passwords match" : "✗ Passwords match nahi kar rahe"}
+                              </p>
+                            )}
                           </div>
-                          
-                          <button
-                            type="submit"
-                            disabled={loading || phone.length !== 10}
-                            className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all"
-                          >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
-                          </button>
+                        )}
 
-                          <div className="text-center mt-3">
-                            <button type="button" onClick={() => { setIsPhoneSignUp(true); setError(null); }} className="text-sm font-bold text-indigo-600 hover:underline">
-                              Don&apos;t have an account? Create one
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        // SIGN UP OR FORGOT PASSWORD OTP TRIGGER
-                        <>
-                          {isPhoneSignUp && (
-                            <div className="pt-1">
-                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Security Check</label>
-                              <div className="flex items-center gap-4">
-                                <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl font-extrabold text-indigo-600 dark:text-indigo-400 border border-gray-200 dark:border-gray-700 text-center w-28">
-                                  {captchaNum1} + {captchaNum2}
-                                </div>
-                                <input type="number" required value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} className="block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-center" placeholder="=" />
-                              </div>
-                            </div>
-                          )}
+                        <PrimaryBtn type="submit">
+                          {isSignUp ? "Create Account →" : "Sign In →"}
+                        </PrimaryBtn>
+                      </form>
+                    )}
 
-                          <button
-                            type="submit"
-                            disabled={loading || phone.length !== 10}
-                            className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all"
-                          >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send OTP Verification"}
-                          </button>
-
-                          <div className="text-center mt-3">
-                            <button type="button" onClick={() => { setIsPhoneSignUp(false); setIsPhoneForgotPassword(false); setError(null); }} className="text-sm font-bold text-gray-600 hover:underline">
-                              ← Back to Sign In
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </form>
-                  ) : (
-                    // OTP VERIFY + PASSWORD CREATION
-                    <div className="space-y-4">
-                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200">
-                        <p className="text-xs font-bold text-green-700">OTP sent to +91 {phone}</p>
-                        <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }} className="text-[10px] text-indigo-600 font-bold hover:underline">Change number</button>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Enter 6-digit OTP</label>
-                        <input
-                          type="text"
-                          value={phoneOtp}
-                          disabled={loading}
-                          onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                          className="appearance-none block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-center font-black text-2xl tracking-[0.4em]"
-                          placeholder="------"
-                          maxLength={6}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">
-                          {isPhoneForgotPassword ? "Create New Password" : "Create Password (for future logins)"}
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <KeyRound className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            value={phonePassword}
-                            disabled={loading}
-                            onChange={(e) => setPhonePassword(e.target.value)}
-                            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
-                            placeholder="Min 6 characters"
-                            required
-                          />
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                          </button>
+                    {/* Email OTP verify (after signup) */}
+                    {!isForgotPass && emailOtpSent && (
+                      <form onSubmit={handleVerifyEmailOtp} className="space-y-4">
+                        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-center">
+                          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300">📧 OTP bheja: {email}</p>
+                          <p className="text-xs text-indigo-500 mt-1">Spam/Junk folder bhi check karein</p>
                         </div>
-                      </div>
-
-                      <button
-                        onClick={handleVerifyPhoneOtp}
-                        disabled={loading || phoneOtp.length !== 6 || phonePassword.length < 6}
-                        className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all"
-                      >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Save Password"}
-                      </button>
-
-                      <div className="flex items-center justify-between">
-                        <button type="button" onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }} className="text-sm font-bold text-gray-500 hover:underline">← Cancel</button>
-                        <button
-                          type="button"
-                          onClick={handleResendPhoneOtp}
-                          disabled={phoneResendCooldown > 0 || loading}
-                          className="text-sm font-bold text-indigo-600 disabled:text-gray-400"
-                        >
-                          {phoneResendCooldown > 0 ? `Resend in ${phoneResendCooldown}s` : "Resend OTP"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ─── GOOGLE TAB ─── */}
-              {authMethod === "google" && (
-                <div className="space-y-4">
-                  <button
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                    className="relative w-full flex items-center justify-center gap-3 py-3.5 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-md bg-white dark:bg-gray-800 text-sm font-extrabold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-indigo-300 transition-all overflow-hidden group"
-                  >
-                    <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-bl-lg">Recommended</div>
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue with Google"}
-                  </button>
-                  <p className="text-center text-xs text-gray-500">Google account se 1-click me instant login</p>
-                </div>
-              )}
-
-              {/* ─── EMAIL TAB ─── */}
-              {authMethod === "email" && (
-                <div className="space-y-5">
-                  {isForgotPassword ? (
-                    !otpSent ? (
-                      <form onSubmit={handleForgotPassword} className="space-y-5">
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Enter your Email</label>
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Mail className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="student@example.com" />
-                          </div>
-                          <p className="text-[11px] text-gray-500 mt-2 font-medium">We will send an OTP to reset your password.</p>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">6-digit OTP Enter Karein</label>
+                          <OtpBoxes value={emailOtp} onChange={setEmailOtp} disabled={loading} />
                         </div>
-                        <button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all">
-                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Reset OTP"}
-                        </button>
-                        <div className="text-center">
-                          <button type="button" onClick={() => { resetFormState(); setIsSignUp(false); }} className="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-indigo-600 transition-colors">Back to Sign In</button>
+                        <PrimaryBtn type="submit" disabled={emailOtp.length < 6}>
+                          Verify Email →
+                        </PrimaryBtn>
+                        <div className="flex items-center justify-between text-sm">
+                          <button type="button" onClick={() => { setEmailOtpSent(false); setEmailOtp(""); }}
+                            className="font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">← Wapas</button>
+                          <button type="button" onClick={handleResendEmailOtp} disabled={emailCooldown > 0 || loading}
+                            className="font-bold text-indigo-600 disabled:text-gray-400 transition-colors">
+                            {emailCooldown > 0 ? `Resend in ${emailCooldown}s` : "Resend OTP"}
+                          </button>
                         </div>
                       </form>
-                    ) : (
-                      <form onSubmit={handleResetPassword} className="space-y-5">
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Enter Reset OTP</label>
-                          <input type="text" required value={otp} onChange={(e) => handleOtpChange(e.target.value)} className="appearance-none block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tracking-widest text-center text-lg" placeholder="123456" maxLength={6} />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <ShieldCheck className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <input type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" placeholder="New Password" minLength={6} />
-                          </div>
-                        </div>
-                        <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all">
-                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Set New Password"}
-                        </button>
-                        <div className="text-center">
-                          <button type="button" onClick={() => { resetFormState(); setIsSignUp(false); }} className="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-indigo-600 transition-colors">Cancel Reset</button>
-                        </div>
-                      </form>
-                    )
-                  ) : !otpSent ? (
-                    <form onSubmit={handleEmailAuth} className="space-y-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Mail className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input type="email" required value={email} disabled={loading} onChange={(e) => setEmail(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-60" placeholder="student@example.com" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">Password</label>
-                          {!isSignUp && (
-                            <button type="button" disabled={loading} onClick={() => { resetFormState(); setIsForgotPassword(true); }} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors disabled:opacity-60">
-                              Forgot Password?
-                            </button>
-                          )}
-                        </div>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <KeyRound className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            required
-                            value={password}
-                            disabled={loading}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium disabled:opacity-60"
-                            placeholder="••••••••"
-                            minLength={6}
-                          />
-                          <button type="button" disabled={loading} onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-60">
-                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                          </button>
-                        </div>
-                        {isSignUp && <p className="text-[11px] text-gray-500 mt-2 font-medium">Must be at least 6 characters.</p>}
-                      </div>
-                      {isSignUp && (
-                        <div className="pt-2">
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Security Check (Anti-Bot)</label>
-                          <div className="flex items-center gap-4">
-                            <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl font-extrabold text-indigo-600 dark:text-indigo-400 border border-gray-200 dark:border-gray-700 tracking-wider w-32 text-center text-lg">
-                              {captchaNum1} + {captchaNum2}
-                            </div>
-                            <input type="number" required value={captchaInput} onChange={(e) => setCaptchaInput(e.target.value)} className="block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-center" placeholder="=" />
-                          </div>
-                          <p className="text-[10px] text-gray-500 mt-1.5 font-medium">Please solve this to prove you are human.</p>
-                        </div>
-                      )}
-                      <button type="submit" disabled={loading} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all disabled:opacity-70 mt-2">
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isSignUp ? "Create Account" : "Sign In")}
-                      </button>
-                      <div className="text-center mt-4">
-                        <button type="button" onClick={() => { resetFormState(); setIsSignUp(!isSignUp); }} className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">
-                          {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Create one"}
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <form onSubmit={handleVerifyOtp} className="space-y-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Enter Email OTP</label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <KeyRound className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input type="text" required value={otp} onChange={(e) => handleOtpChange(e.target.value)} className="appearance-none block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tracking-widest text-center text-lg" placeholder="123456" maxLength={6} />
-                        </div>
-                        <p className="text-[11px] text-gray-500 mt-2 font-medium bg-gray-100 dark:bg-gray-800/50 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                          <span className="font-bold text-gray-700 dark:text-gray-300">Note:</span> Check your <strong className="text-red-500 dark:text-red-400">Spam or Junk folder</strong> if you don&apos;t see it.
-                        </p>
-                      </div>
-                      <button type="submit" disabled={loading || otp.length < 6} className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-extrabold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 transition-all">
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Login"}
-                      </button>
-                      <div className="flex items-center justify-between mt-4">
-                        <button type="button" onClick={() => { setOtpSent(false); setOtp(""); }} className="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Go Back</button>
-                        <button type="button" onClick={handleResendOtp} disabled={resendCooldown > 0 || loading} className="text-sm font-bold text-indigo-600 hover:text-indigo-500 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors">
-                          {resendCooldown > 0 ? `Resend OTP in ${resendCooldown}s` : "Resend OTP"}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* PRIVATE PORTAL PREVIEW */}
-          {portalType === "private" && (
-            <div className="space-y-6 py-2 animate-in fade-in duration-200">
-              <div className="text-center space-y-2">
-                <div className="inline-flex p-3 bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 rounded-2xl border border-violet-100/50 dark:border-violet-900/50">
-                  <GraduationCap className="w-8 h-8" />
-                </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white flex items-center justify-center gap-1.5">
-                  Private Candidate Workspace <Sparkles className="w-4 h-4 text-amber-500" />
-                </h3>
-                <p className="text-xs text-gray-500 leading-relaxed">Apna professional resume banayein, skills highlights tag karein aur direct HRs ke sath chat karein like LinkedIn.</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <Link href="/private-jobs/login" className="w-full py-3.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] text-sm">
-                Candidate Login/Register Portal <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          )}
+            )}
 
-          {/* EMPLOYER PORTAL PREVIEW */}
-          {portalType === "employer" && (
-            <div className="space-y-6 py-2 animate-in fade-in duration-200">
-              <div className="text-center space-y-2">
-                <div className="inline-flex p-3 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 rounded-2xl border border-green-100/50 dark:border-green-900/50">
-                  <Building className="w-8 h-8" />
+            {/* ── PRIVATE JOBS PORTAL ── */}
+            {portalType === "private" && (
+              <div className="p-7 space-y-6">
+                <div className="text-center space-y-3">
+                  <div className="inline-flex p-4 bg-violet-50 dark:bg-violet-950/30 rounded-2xl border border-violet-100 dark:border-violet-900/50">
+                    <GraduationCap className="w-9 h-9 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center justify-center gap-2">
+                    Private Candidate Portal <Sparkles className="w-5 h-5 text-amber-500" />
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Resume banayein, skills add karein, aur MNC HRs se directly connect karein.
+                  </p>
                 </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white flex items-center justify-center gap-1.5">
-                  Recruiter / HR Workspace <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                </h3>
-                <p className="text-xs text-gray-500 leading-relaxed">Apni corporate business status verify karwayein aur skilled pre-vetted candidates se direct connect karein.</p>
+                <Link href="/private-jobs/login"
+                  className="w-full py-4 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
+                  Candidate Login / Register <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-              <Link href="/employer/login" className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] text-sm">
-                Employer/HR Portal <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          )}
+            )}
 
-          <div className="mt-8 text-center text-xs text-gray-500">
-            By signing in, you agree to our Terms of Service and Privacy Policy.
+            {/* ── EMPLOYER PORTAL ── */}
+            {portalType === "employer" && (
+              <div className="p-7 space-y-6">
+                <div className="text-center space-y-3">
+                  <div className="inline-flex p-4 bg-green-50 dark:bg-green-950/30 rounded-2xl border border-green-100 dark:border-green-900/50">
+                    <Building className="w-9 h-9 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center justify-center gap-2">
+                    Employer / HR Portal <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Company GSTIN verify karein, job post karein, aur pre-vetted candidates hire karein.
+                  </p>
+                </div>
+                <Link href="/employer/login"
+                  className="w-full py-4 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
+                  Employer Login <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="px-7 pb-6 border-t border-gray-100 dark:border-gray-800 pt-4 text-center">
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                Sign in karke aap hamare{" "}
+                <Link href="/terms" className="underline hover:text-indigo-600 transition-colors">Terms</Link>
+                {" "}&{" "}
+                <Link href="/privacy" className="underline hover:text-indigo-600 transition-colors">Privacy Policy</Link>
+                {" "}se agree karte hain.
+              </p>
+            </div>
           </div>
-        </div>
-        
-        <div className="mt-8 text-center">
-          <Link href="/" className="text-sm font-bold text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center justify-center gap-2">
-            <ArrowLeft className="w-4 h-4" /> Go back to website
-          </Link>
+
+          <div className="mt-5 text-center">
+            <Link href="/" className="text-sm font-bold text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center justify-center gap-1.5">
+              <ArrowLeft className="w-4 h-4" /> Website pe wapas jayein
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
+
+  // helper used inside component (workaround for no-nested-fn lint)
+  function resetForm() { reset(); }
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-bold text-gray-500">Loading...</p>
+        </div>
+      </div>
+    }>
       <LoginContent />
     </Suspense>
   );
