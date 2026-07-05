@@ -198,15 +198,20 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
         payload.generationConfig.responseMimeType = "application/json";
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 50000);
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(50000),
+          signal: controller.signal,
         }
       );
+
+      clearTimeout(timeoutId);
 
       const data = await response.json();
       if (data.error) {
@@ -678,6 +683,12 @@ export async function POST(req: Request) {
   try {
     const { rawText, category = "latest-jobs", customInstructions = "", officialLink = "" } = await req.json();
 
+    // Diagnostic logging for deployment key presence
+    console.log("AI Super Writer Invoked. Env Check:", {
+      hasGeminiKey: !!process.env.GEMINI_API_KEY,
+      hasGroqKey: !!process.env.GROQ_API_KEY
+    });
+
     if (!rawText || rawText.length < 50) {
       return NextResponse.json({ error: "Please paste longer text (min 50 chars)." }, { status: 400 });
     }
@@ -765,7 +776,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ...metadata, officialLink, blogHtml });
   } catch (error: any) {
-    console.error("AI Super Writer Error:", error.message);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    console.error("AI Super Writer Error Detail:", error.stack || error.message);
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    const hasGroq = !!process.env.GROQ_API_KEY;
+    const diagnostics = `[Vercel Keys Status - Gemini: ${hasGemini ? "SET" : "MISSING"}, Groq: ${hasGroq ? "SET" : "MISSING"}]`;
+    return NextResponse.json({ 
+      error: `Super Writer Error: ${error.message}. ${diagnostics}`
+    }, { status: 500 });
   }
 }
