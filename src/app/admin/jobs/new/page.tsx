@@ -143,6 +143,7 @@ export default function NewJobPage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState<"banner" | "pdf" | null>(null);
 
   const [applyForMeLink, setApplyForMeLink] = useState("");
   const [links, setLinks] = useState<any[]>([{ label: "Apply Online", url: "" }, { label: "Download Notification", url: "" }]);
@@ -315,7 +316,7 @@ export default function NewJobPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    setSavingDraft(true); 
+    setIsUploadingFile("banner"); 
     try {
       // Compress the image before uploading (Max width 1200px, 80% quality)
       const compressedFile = await compressImage(file, 1200, 0.8);
@@ -329,7 +330,7 @@ export default function NewJobPage() {
     } catch (err: any) {
       alert("Banner upload failed: " + err.message);
     } finally {
-      setSavingDraft(false);
+      setIsUploadingFile(null);
     }
   };
 
@@ -338,7 +339,7 @@ export default function NewJobPage() {
     if (!file) return;
     
     setUploadingPdfIndex(index);
-    setSavingDraft(true);
+    setIsUploadingFile("pdf");
     try {
       const rawName = file.name;
       const cleanName = rawName
@@ -368,7 +369,7 @@ export default function NewJobPage() {
     } catch (err: any) {
       alert("PDF Upload failed: " + err.message);
     } finally {
-      setSavingDraft(false);
+      setIsUploadingFile(null);
       setUploadingPdfIndex(null);
     }
   };
@@ -392,15 +393,22 @@ export default function NewJobPage() {
           <button onClick={() => setIsPreviewMode(!isPreviewMode)} className="px-4 py-2.5 rounded-xl font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-2">
             {isPreviewMode ? "Back to Edit" : "Preview Post"}
           </button>
-          <button onClick={() => handleSave(true)} disabled={savingDraft || saving} className="px-5 py-2.5 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50">
+          <button onClick={() => handleSave(true)} disabled={savingDraft || saving || isUploadingFile !== null} className="px-5 py-2.5 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50">
             {savingDraft ? "Saving..." : "Draft"}
           </button>
-          <button onClick={() => handleSave(false)} disabled={savingDraft || saving} className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-sm">
+          <button onClick={() => handleSave(false)} disabled={savingDraft || saving || isUploadingFile !== null} className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-sm">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {userRole === 'content_writer' ? "Submit for Approval" : "Publish"}
           </button>
         </div>
       </div>
+
+      {isUploadingFile && (
+        <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 p-4 rounded-xl text-sm font-bold mb-6 flex items-center gap-3 animate-pulse shadow-sm">
+          <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+          <span>Please wait: Uploading your {isUploadingFile === "banner" ? "featured banner image" : "official PDF notification"} to the database...</span>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-xl text-sm font-medium mb-6 flex items-center gap-2">
