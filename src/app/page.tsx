@@ -9,6 +9,7 @@ const Highlights = dynamic(() => import("@/components/home/Highlights"));
 const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"));
 const MainContent = dynamic(() => import("@/components/home/MainContent"));
 const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"));
+const CalendarSelector = dynamic(() => import("@/components/calendar/CalendarSelector"));
 const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
 const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
 import type { Metadata } from "next";
@@ -137,6 +138,11 @@ export default async function Home() {
 
       {/* Browse by State Section */}
       <StateJobsSection />
+
+      {/* Printable Monthly Wall Calendar & Tracker Widget */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <CalendarSelector />
+      </div>
 
       {/* Bottom Banner Ad */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
