@@ -319,36 +319,24 @@ export default function TrackApplicationPage() {
           }
         }
 
-        // Get PUT URL
-        const uploadRes = await fetch("/api/locker/upload-url", {
+        // Upload file via proxy backend endpoint to avoid browser CORS issues
+        const formData = new FormData();
+        formData.append("file", fileToUpload);
+
+        const uploadRes = await fetch("/api/locker/upload-direct", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`
           },
-          body: JSON.stringify({
-            fileName: `${selectedDocType}_reuploaded_${Date.now()}.${selectedFile.name.split('.').pop()}`,
-            contentType: fileToUpload.type
-          })
+          body: formData
         });
 
         const resData = await uploadRes.json();
         if (!uploadRes.ok) {
-          throw new Error(resData.error || "Failed to get upload URL");
+          throw new Error(resData.error || "Failed to upload file");
         }
 
-        const { uploadUrl, key } = resData;
-
-        // PUT to Backblaze B2
-        const uploadFileRes = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": fileToUpload.type },
-          body: fileToUpload
-        });
-
-        if (!uploadFileRes.ok) {
-          throw new Error("Failed to upload file to Backblaze");
-        }
+        const { key } = resData;
 
         const viewUrl = `/api/locker/view?key=${encodeURIComponent(key)}`;
 

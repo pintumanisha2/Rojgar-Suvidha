@@ -273,38 +273,24 @@ export default function ApplyPage() {
             }
           }
 
-          // Request upload URL from Next.js backend API
-          const res = await fetch("/api/locker/upload-url", {
+          // Upload file via proxy backend endpoint to avoid browser CORS issues
+          const formData = new FormData();
+          formData.append("file", fileToUpload);
+
+          const res = await fetch("/api/locker/upload-direct", {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
               "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({
-              fileName: file.name,
-              contentType: fileToUpload.type
-            })
+            body: formData
           });
 
           const resData = await res.json();
           if (!res.ok) {
-            throw new Error(resData.error || `Failed to get upload URL for ${docName}`);
+            throw new Error(resData.error || `Failed to upload ${docName}`);
           }
 
-          const { uploadUrl, key } = resData;
-
-          // Upload file directly to Backblaze B2 using PUT request
-          const uploadRes = await fetch(uploadUrl, {
-            method: "PUT",
-            headers: {
-              "Content-Type": fileToUpload.type
-            },
-            body: fileToUpload
-          });
-
-          if (!uploadRes.ok) {
-            throw new Error(`Failed to upload ${docName} to Backblaze`);
-          }
+          const { key } = resData;
 
           // Construct the secure relative view URL
           uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;

@@ -81,38 +81,24 @@ export default function DigitalLockerPage() {
         console.log(`Compressed ${docType} from ${file.size/1024}KB to ${fileToUpload.size/1024}KB`);
       }
 
-      // 2. Request upload URL from Next.js backend API
-      const res = await fetch("/api/locker/upload-url", {
+      // 2. Upload file via proxy backend endpoint to avoid browser CORS issues
+      const formData = new FormData();
+      formData.append("file", fileToUpload);
+
+      const res = await fetch("/api/locker/upload-direct", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          fileName: file.name,
-          contentType: fileToUpload.type
-        })
+        body: formData
       });
 
       const resData = await res.json();
       if (!res.ok) {
-        throw new Error(resData.error || "Failed to get upload URL");
+        throw new Error(resData.error || "Failed to upload file");
       }
 
-      const { uploadUrl, key } = resData;
-
-      // 3. Upload file directly to Backblaze B2 using PUT request
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": fileToUpload.type
-        },
-        body: fileToUpload
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error("Failed to upload file to Backblaze");
-      }
+      const { key } = resData;
 
       // 4. Construct the secure relative view URL
       const newUrl = `/api/locker/view?key=${encodeURIComponent(key)}`;
@@ -205,30 +191,21 @@ export default function DigitalLockerPage() {
         fileToUpload = await imageCompression(customFile, options);
       }
 
-      const res = await fetch("/api/locker/upload-url", {
+      const formData = new FormData();
+      formData.append("file", fileToUpload);
+
+      const res = await fetch("/api/locker/upload-direct", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          fileName: customFile.name,
-          contentType: fileToUpload.type
-        })
+        body: formData
       });
 
       const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error || "Failed to get upload URL");
+      if (!res.ok) throw new Error(resData.error || "Failed to upload file");
 
-      const { uploadUrl, key } = resData;
-
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": fileToUpload.type },
-        body: fileToUpload
-      });
-
-      if (!uploadRes.ok) throw new Error("Failed to upload file to Backblaze");
+      const { key } = resData;
 
       const newUrl = `/api/locker/view?key=${encodeURIComponent(key)}`;
       const updatedDocs = { ...lockerDocs, [customName.trim()]: newUrl };
