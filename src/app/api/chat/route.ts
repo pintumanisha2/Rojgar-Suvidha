@@ -145,20 +145,32 @@ ${formatList(admissions)}`;
       { role: "user", content: message },
     ];
 
-    // ─── 5. Call Groq API ─────────────────────────────────────────────────
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: messagesPayload,
-        max_tokens: 600,
-        temperature: 0.4,
-      }),
-    });
+    // ─── 5. Call Groq API (with retry on rate limit) ───────────────────────
+    const callGroq = async (retryCount = 0): Promise<any> => {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: messagesPayload,
+          max_tokens: 350,        // Reduced to stay within 12K TPM limit
+          temperature: 0.4,
+        }),
+      });
+
+      // Rate limit hit → wait 2 seconds and retry once
+      if (response.status === 429 && retryCount < 2) {
+        await new Promise(r => setTimeout(r, 2000));
+        return callGroq(retryCount + 1);
+      }
+
+      return response;
+    };
+
+    const response = await callGroq();
 
     const data = await response.json();
 
