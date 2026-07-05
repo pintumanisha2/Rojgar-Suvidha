@@ -339,75 +339,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             </div>
           )}
 
-          {/* Viral Share Module */}
-          <div className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-[#25D366] to-[#0088cc]"></div>
-            <div>
-              <h3 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-indigo-500" /> Share with Friends & Study Groups
-              </h3>
-              <p className="text-xs text-gray-500 mt-1 font-medium">Help someone get a government job by sharing this update.</p>
-            </div>
-            <div className="flex w-full sm:w-auto gap-3 flex-wrap">
-              <a 
-                href={`https://api.whatsapp.com/send?text=🔥 *${encodeURIComponent(job.title)}* %0A%0AApply Here: https://rojgarsuvidha.com/job/${slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#25D366]/20 transition-all hover:-translate-y-0.5"
-              >
-                <MessageCircle className="w-5 h-5" /> WhatsApp
-              </a>
-              <a 
-                href={`https://t.me/share/url?url=https://rojgarsuvidha.com/job/${slug}&text=🔥 ${encodeURIComponent(job.title)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#0088cc]/20 transition-all hover:-translate-y-0.5"
-              >
-                <Send className="w-5 h-5" /> Telegram
-              </a>
-              {/* Copy Link button */}
-              <CopyLinkButton url={`https://rojgarsuvidha.com/job/${slug}`} title={job.title} />
-            </div>
-          </div>
-
-          {/* Middle Banner Ad */}
-          <AdSensePlaceholder format="leaderboard" />
-
-          {/* 2. Promo Banner (User's USP) */}
-          {(() => {
-            // Find custom Apply For Me link
-            const customApplyLink = job.links?.find((l: any) => l.label.toLowerCase().includes('apply for me'))?.url;
-            return (
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 shadow-lg shadow-orange-500/20 text-white flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 p-3 rounded-xl shrink-0">
-                    <UploadCloud className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold mb-1">Form Bharne Ka Time Nahi?</h3>
-                    <p className="text-orange-100 text-sm">Upload documents and let our experts apply 100% safely.</p>
-                  </div>
-                </div>
-                {customApplyLink ? (
-                  <Link href={customApplyLink} target={customApplyLink.startsWith("http") ? "_blank" : "_self"} className="shrink-0 bg-white text-orange-600 hover:bg-orange-50 px-6 py-3 rounded-xl font-bold shadow-md transition-all">
-                    Apply For Me
-                  </Link>
-                ) : (
-                  <span 
-                    title="Special 'Apply For Me' service for this job will be activated soon. Stay tuned!"
-                    className="shrink-0 bg-white/20 text-white px-6 py-3 rounded-xl font-bold shadow-sm border border-white/30 cursor-not-allowed"
-                  >
-                    Coming Soon
-                  </span>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Age Calculator (Lightweight & SEO Friendly) */}
-          <AgeCalculator />
-
-          {/* Blog Post Content Area */}
+          {/* 3. Blog Post Content Area (Primary Details / Tables) */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-8 shadow-sm">
              <style>{`
               .blog-content { line-height: 1.75; color: #374151; font-size: 15px; }
@@ -446,18 +378,85 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               .blog-content ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.9rem; }
               .blog-content ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.9rem; }
               .blog-content li { margin-bottom: 0.4rem; }
-            `}</style>
-            
-            <article
-              className="blog-content max-w-none break-words"
-              dangerouslySetInnerHTML={{ __html: job.blog_content || DEMO_BLOG_CONTENT }}
-            />
+             `}</style>
+             
+             <article
+               className="blog-content max-w-none break-words"
+               dangerouslySetInnerHTML={{ __html: job.blog_content || DEMO_BLOG_CONTENT }}
+             />
 
-            
-            <div className="bg-orange-50 dark:bg-orange-900/10 border-l-4 border-orange-500 p-4 rounded-r-lg mt-8">
-              <p className="text-sm text-orange-800 dark:text-orange-200">
-                <em>Note: If you do not have time or find the process complicated, you can use our premium <strong className="font-bold">Apply For Me</strong> service. Just upload your documents securely, and our expert team will accurately fill out and submit your form.</em>
-              </p>
+             <div className="bg-orange-50 dark:bg-orange-900/10 border-l-4 border-orange-500 p-4 rounded-r-lg mt-8">
+               <p className="text-sm text-orange-800 dark:text-orange-200">
+                 <em>Note: If you do not have time or find the process complicated, you can use our premium <strong className="font-bold">Apply For Me</strong> service. Just upload your documents securely, and our expert team will accurately fill out and submit your form.</em>
+               </p>
+             </div>
+          </div>
+
+          {/* Middle Banner Ad */}
+          <AdSensePlaceholder format="leaderboard" />
+
+          {/* 4. Promo Banner ("Apply For Me" service callout) */}
+          {(() => {
+            // Find custom Apply For Me link
+            const customApplyLink = job.links?.find((l: any) => l.label.toLowerCase().includes('apply for me'))?.url;
+            return (
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 shadow-lg shadow-orange-500/20 text-white flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="bg-white/20 p-3 rounded-xl shrink-0">
+                    <UploadCloud className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold mb-1">Form Bharne Ka Time Nahi?</h3>
+                    <p className="text-orange-100 text-sm">Upload documents and let our experts apply 100% safely.</p>
+                  </div>
+                </div>
+                {customApplyLink ? (
+                  <Link href={customApplyLink} target={customApplyLink.startsWith("http") ? "_blank" : "_self"} className="shrink-0 bg-white text-orange-600 hover:bg-orange-50 px-6 py-3 rounded-xl font-bold shadow-md transition-all">
+                    Apply For Me
+                  </Link>
+                ) : (
+                  <span 
+                    title="Special 'Apply For Me' service for this job will be activated soon. Stay tuned!"
+                    className="shrink-0 bg-white/20 text-white px-6 py-3 rounded-xl font-bold shadow-sm border border-white/30 cursor-not-allowed"
+                  >
+                    Coming Soon
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* 5. Age Calculator (Check Eligibility) */}
+          <AgeCalculator />
+
+          {/* 6. Viral Share Module */}
+          <div className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-[#25D366] to-[#0088cc]"></div>
+            <div>
+              <h3 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-indigo-500" /> Share with Friends & Study Groups
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 font-medium">Help someone get a government job by sharing this update.</p>
+            </div>
+            <div className="flex w-full sm:w-auto gap-3 flex-wrap">
+              <a 
+                href={`https://api.whatsapp.com/send?text=🔥 *${encodeURIComponent(job.title)}* %0A%0AApply Here: https://rojgarsuvidha.com/job/${slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#25D366]/20 transition-all hover:-translate-y-0.5"
+              >
+                <MessageCircle className="w-5 h-5" /> WhatsApp
+              </a>
+              <a 
+                href={`https://t.me/share/url?url=https://rojgarsuvidha.com/job/${slug}&text=🔥 ${encodeURIComponent(job.title)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#0088cc]/20 transition-all hover:-translate-y-0.5"
+              >
+                <Send className="w-5 h-5" /> Telegram
+              </a>
+              {/* Copy Link button */}
+              <CopyLinkButton url={`https://rojgarsuvidha.com/job/${slug}`} title={job.title} />
             </div>
           </div>
 
