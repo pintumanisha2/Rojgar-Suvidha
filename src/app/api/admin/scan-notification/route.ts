@@ -57,7 +57,7 @@ NEVER write: "Great question!", "I hope this helps!", "as an AI language model"
 Before finishing, ask yourself: "Would a human editor look at this and think it was written by a real person?"
 If any section sounds too clean, too balanced, or too AI-like — rewrite it with more personality and specific details.`;
 
-// ── Humanizer: Post-process AI HTML to reduce AI detection score ──────────────
+// ── Humanizer: Post-process AI HTML to ensure natural vocabulary without breaking tags ──────────────
 function humanizeHtml(html: string): string {
   // 1. Replace overly formal words with natural equivalents
   const wordMap: [RegExp, string | ((m: string) => string)][] = [
@@ -88,42 +88,6 @@ function humanizeHtml(html: string): string {
   for (const [pattern, replacement] of wordMap) {
     out = out.replace(pattern, replacement as any);
   }
-
-  // 2. Randomly insert conversational openers at start of some <p> tags
-  const conversationalOpeners = [
-    "Look, ", "Honestly, ", "Here is the thing — ", "Now, ",
-    "And yes — ", "To be direct, ", "In practice, ", "So, ",
-  ];
-  let pCount = 0;
-  out = out.replace(/<p( [^>]*)?>/gi, (match) => {
-    pCount++;
-    // Insert on roughly every 4th-5th paragraph, but not the first
-    if (pCount > 1 && pCount % 4 === 0 && Math.random() > 0.4) {
-      const opener = conversationalOpeners[Math.floor(Math.random() * conversationalOpeners.length)];
-      return `${match}${opener}`;
-    }
-    return match;
-  });
-
-  // 3. Break some very long sentences with an em-dash for natural pause
-  // Only applies inside <p> content, not inside tags
-  out = out.replace(/([^>]{90,}?)\. ([A-Z])/g, (match, before, capital) => {
-    if (Math.random() > 0.6) {
-      return `${before} — ${capital}`;
-    }
-    return match;
-  });
-
-  // 4. Add occasional "by the way" or "worth mentioning" asides
-  const asides = [
-    " (worth knowing) ", " — and this matters — ", " — keep this in mind — ",
-  ];
-  out = out.replace(/(<strong>[^<]{10,30}<\/strong>)/g, (match) => {
-    if (Math.random() > 0.75) {
-      return match + asides[Math.floor(Math.random() * asides.length)];
-    }
-    return match;
-  });
 
   return out;
 }
@@ -268,7 +232,7 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
         { role: "user", content: prompt },
       ],
       temperature: 0.95,
-      max_tokens: 2000,
+      max_tokens: 3500,
       frequency_penalty: 0.6,
       presence_penalty: 0.4,
     }),
@@ -380,7 +344,7 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
         { role: "user", content: prompt },
       ],
       temperature: 0.95,
-      max_tokens: 2000,
+      max_tokens: 3500,
       frequency_penalty: 0.6,
       presence_penalty: 0.4,
     }),
