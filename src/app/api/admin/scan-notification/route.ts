@@ -59,7 +59,6 @@ If any section sounds too clean, too balanced, or too AI-like — rewrite it wit
 
 // ── Humanizer: Post-process AI HTML to ensure natural vocabulary without breaking tags ──────────────
 function humanizeHtml(html: string): string {
-  // 1. Replace overly formal words with natural equivalents
   const wordMap: [RegExp, string | ((m: string) => string)][] = [
     [/\bprovide\b/gi, "give"],
     [/\bobtain\b/gi, "get"],
@@ -92,8 +91,107 @@ function humanizeHtml(html: string): string {
   return out;
 }
 
-// ── Step 1: Extract metadata (Groq, fast JSON) ─────────────────────────────────
-async function extractMetadata(rawText: string, groqApiKey: string, category: string, customInstructions?: string) {
+// ── Call Gemini API with models fallback ───────────────────────────────────────
+async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) throw new Error("Gemini API Key missing in environment");
+
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  let lastError = "";
+
+  for (const model of models) {
+    try {
+      const payload: any = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${systemPrompt}\n\nUSER PROMPT/CONTENT:\n${userPrompt}`
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: jsonMode ? 0.1 : 0.75,
+          maxOutputTokens: 4000,
+        }
+      };
+
+      if (jsonMode) {
+        payload.generationConfig.responseMimeType = "application/json";
+      }
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(35000),
+        }
+      );
+
+      const data = await response.json();
+      if (data.error) {
+        lastError = data.error.message || "Unknown error";
+        continue;
+      }
+
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (rawText) {
+        return rawText;
+      }
+    } catch (e: any) {
+      lastError = e.message;
+      continue;
+    }
+  }
+  throw new Error(`All Gemini models failed: ${lastError}`);
+}
+
+// ── callAI wraps Gemini (Primary) and Groq (Fallback) ─────────────────────────
+async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
+  // 1. Try Gemini first (virtually infinite token limit, very robust & free)
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await callGemini(systemPrompt, userPrompt, jsonMode);
+    } catch (geminiError: any) {
+      console.warn("Gemini call failed, falling back to Groq:", geminiError.message);
+    }
+  }
+
+  // 2. Try Groq as fallback
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) {
+    throw new Error("Both GEMINI_API_KEY and GROQ_API_KEY are missing in environment variables.");
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: jsonMode ? 0.1 : 0.8,
+      max_tokens: jsonMode ? 900 : 3500,
+      response_format: jsonMode ? { type: "json_object" } : undefined,
+    })
+  });
+
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(`Groq API error: ${data.error.message}`);
+  }
+
+  return data.choices?.[0]?.message?.content || "";
+}
+
+// ── Step 1: Extract metadata (JSON) ─────────────────────────────────────────────
+async function extractMetadata(rawText: string, category: string, customInstructions?: string) {
   const categoryHint: Record<string, string> = {
     "latest-jobs":  `"appFee": "e.g. General: Rs.100 | SC/ST: Free", "ageLimit": "18-27 years", "education": "qualification", "totalPosts": "vacancy count", "lastDate": "last date to apply"`,
     "results":      `"appFee": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "total selected if mentioned", "lastDate": "result declared date"`,
@@ -103,16 +201,8 @@ async function extractMetadata(rawText: string, groqApiKey: string, category: st
     "answer-key":   `"appFee": "objection fee if any", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A", "lastDate": "objection window last date"`,
   };
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: "You are a JSON extractor. Return only valid JSON." },
-        {
-          role: "user",
-          content: `Extract info from this ${category} content. Return ONLY this JSON:
+  const systemPrompt = "You are a JSON extractor. Return only valid JSON.";
+  const prompt = `Extract info from this ${category} content. Return ONLY this JSON:
 {
   "title": "SEO title max 70 chars, include exam/org name + year, no emojis",
   "category": "${category}",
@@ -128,24 +218,15 @@ ${customInstructions ? `\nADDITIONAL CONTEXT: ${customInstructions}` : ""}
 CONTENT:
 ${rawText.substring(0, 3000)}
 
-Return ONLY the JSON.`,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 900,
-      response_format: { type: "json_object" },
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(`Groq metadata: ${data.error.message}`);
-  const text = data.choices?.[0]?.message?.content;
+Return ONLY the JSON.`;
+
+  const text = await callAI(systemPrompt, prompt, true);
   if (!text) throw new Error("No metadata returned");
-  return JSON.parse(text);
+  return JSON.parse(text.replace(/^```json?\n?/i, "").replace(/```$/g, "").trim());
 }
 
-
 // ── Step 2A: SEO-optimized Part 1 (H1, ToC, Intro, Org, Salary) ──────────────
-async function writePart1(meta: any, rawText: string, groqApiKey: string, customInstructions?: string) {
+async function writePart1(meta: any, rawText: string, customInstructions?: string) {
   const prompt = `Write the FIRST HALF of an SEO-optimized, human-written blog post in HTML.
 
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -181,23 +262,21 @@ ${rawText.substring(0, 1500)}
 
 === HTML STRUCTURE TO GENERATE ===
 
-<!-- SEO H1: Must contain primary keyword, be compelling, max 65 chars -->
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1 with primary keyword]</h1>
+<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1 Title — max 65 chars]</h1>
+<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Last Updated: <strong>${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</strong> &nbsp;|&nbsp; Vacancies: <strong>${meta.totalPosts}</strong> &nbsp;|&nbsp; Last Date: <strong>${meta.lastDate}</strong></p>
 
-<!-- Author + Date line for E-E-A-T -->
-<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1.5rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Last Updated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} &nbsp;|&nbsp; <strong>${meta.totalPosts} Vacancies</strong> &nbsp;|&nbsp; Last Date: <strong>${meta.lastDate}</strong></p>
-
-<!-- Quick Info Box for Featured Snippet -->
-<div style='background:#eff6ff;border-left:4px solid #4f46e5;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'>
-<p style='font-weight:700;color:#1e1b4b;margin:0 0 8px;font-size:1.05rem;'>${meta.primaryKeyword || meta.title} — Quick Overview</p>
-<p style='margin:4px 0;color:#374151;font-size:0.95rem;'><strong>Total Posts:</strong> ${meta.totalPosts}</p>
-<p style='margin:4px 0;color:#374151;font-size:0.95rem;'><strong>Last Date to Apply:</strong> ${meta.lastDate}</p>
-<p style='margin:4px 0;color:#374151;font-size:0.95rem;'><strong>Age Limit:</strong> ${meta.ageLimit}</p>
-<p style='margin:4px 0;color:#374151;font-size:0.95rem;'><strong>Application Fee:</strong> ${meta.appFee}</p>
-<p style='margin:4px 0;color:#374151;font-size:0.95rem;'><strong>Education Required:</strong> ${meta.education}</p>
+<!-- Table of Contents Links (Flat and Clean) -->
+<div style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin-bottom:2rem;'>
+<p style='font-weight:700;color:#1e1b4b;margin:0 0 10px;font-size:0.95rem;'>Quick Navigation</p>
+<div style='display:flex;flex-wrap:wrap;gap:12px;'>
+<a href='#intro' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>Overview</a>
+<a href='#dates' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>Important Dates & Fees</a>
+<a href='#eligibility' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>Eligibility Details</a>
+<a href='#vacancies' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>Vacancy Breakdown</a>
+<a href='#selection' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>Selection & Pattern</a>
+<a href='#apply' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>How to Apply</a>
 </div>
-
-
+</div>
 
 <h2 id='intro'>[H2 about why this notification matters — include primary keyword naturally]</h2>
 [3-4 paragraphs. Hook. Why NOW. Personal observation. Human tone. Include primary keyword in first paragraph.]
@@ -219,32 +298,12 @@ HTML table style — ALWAYS wrap every table in a scroll div (for mobile):
 Return ONLY the HTML. No markdown, no code blocks, no explanations before or after.
 ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${customInstructions}` : ""}`;
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "system",
-          content: HUMAN_BLOGGER_SYSTEM_PROMPT,
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.95,
-      max_tokens: 3500,
-      frequency_penalty: 0.6,
-      presence_penalty: 0.4,
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(`Part1: ${data.error.message}`);
-  const raw = (data.choices?.[0]?.message?.content || "").replace(/^```html?\n?/i, "").replace(/```$/g, "").trim();
-  return humanizeHtml(raw);
+  const raw = await callAI(HUMAN_BLOGGER_SYSTEM_PROMPT, prompt, false);
+  return humanizeHtml(raw.replace(/^```html?\n?/i, "").replace(/```$/g, "").trim());
 }
 
 // ── Step 2B: Part 2 (Dates, Eligibility, Vacancies, Selection, Apply, FAQs) ────
-async function writePart2(meta: any, rawText: string, groqApiKey: string, customInstructions?: string) {
+async function writePart2(meta: any, rawText: string, customInstructions?: string) {
   const prompt = `Write the SECOND HALF of an SEO-optimized, human-written blog post in HTML.
 
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -299,14 +358,6 @@ Final paragraph: "If I were starting prep from zero today, here's exactly what I
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword || meta.examName}</h2>
 [Exactly 6 FAQs. Written for featured snippets — each answer is 50-80 words, direct, starts with a direct answer then explains. Questions must match what people actually Google. Use <details> and <summary> tags.
 
-Example question formats:
-"What is the last date to apply for [exam]?"
-"Am I eligible if I am in final year of graduation?"  
-"What is the salary after selection in [exam]?"
-"How many stages are there in the selection process?"
-"Can I apply for [exam] online from my phone?"
-"What documents are needed for [exam] application?"]
-
 FAQ HTML (single quotes):
 <details style='margin-bottom:1rem;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;background:#f8fafc;'>
 <summary style='font-weight:700;color:#4f46e5;cursor:pointer;font-size:1rem;list-style:none;'>Question here?</summary>
@@ -331,32 +382,12 @@ HTML table style — ALWAYS wrap every table in a scroll div (mobile-safe):
 Return ONLY the HTML. No markdown, no code blocks.
 ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${customInstructions}` : ""}`;
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "system",
-          content: HUMAN_BLOGGER_SYSTEM_PROMPT,
-        },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.95,
-      max_tokens: 3500,
-      frequency_penalty: 0.6,
-      presence_penalty: 0.4,
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(`Part2: ${data.error.message}`);
-  const raw = (data.choices?.[0]?.message?.content || "").replace(/^```html?\n?/i, "").replace(/```$/g, "").trim();
-  return humanizeHtml(raw);
+  const raw = await callAI(HUMAN_BLOGGER_SYSTEM_PROMPT, prompt, false);
+  return humanizeHtml(raw.replace(/^```html?\n?/i, "").replace(/```$/g, "").trim());
 }
 
 // ── Step 3: Category-specific blog writer ─────────────────────────────────────
-async function writeSpecialCategoryBlog(meta: any, rawText: string, groqApiKey: string, category: string, customInstructions?: string): Promise<string> {
+async function writeSpecialCategoryBlog(meta: any, rawText: string, category: string, customInstructions?: string): Promise<string> {
   const tableStyle = `<div style='overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'><table style='width:100%;border-collapse:collapse;min-width:400px;'>`;
   const thStyle = `style='background-color:#4f46e5;color:white;padding:12px 16px;text-align:left;font-weight:600;white-space:nowrap;'`;
   const tdStyle = `style='padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#374151;'`;
@@ -385,7 +416,7 @@ STRUCTURE — write ALL sections with full paragraphs:
 [4-5 rich paragraphs. Open with the result announcement fact. How many appeared, what stages cleared, what this result covers. Explain what "result declared" means — who moves to next stage, who can re-apply. Warm human voice. 300+ words flowing text, no bullet points.]
 
 <h2 id='check'>How to Check ${meta.examName} Result Online — Step by Step</h2>
-[2 intro paragraphs. Then numbered ol steps — what to click, what to enter (registration number, date of birth), what page opens, how to save/print. End: "If the site is slow, try early morning — traffic is lowest then."]
+[2 intro paragraphs about which website to visit and what to keep ready. Then numbered ol steps — what to click, what to enter (registration number, date of birth), what page opens, how to save/print. End: "If the site is slow, try early morning — traffic is lowest then."]
 
 <h2 id='details'>Cutoff, Merit List and Scorecard — Everything Explained</h2>
 [3-4 paragraphs explaining cutoff, merit list, scorecard in simple language. Category-wise cutoff table if extractable. Explain what each number on the scorecard means. Educate first-time candidates who don't know these terms.]
@@ -420,7 +451,7 @@ STRUCTURE:
 [3-4 paragraphs. Why this matters urgently. What happens if you don't download in time. What the admit card contains. Why you need to verify all details immediately after downloading. Use flowing text — no bullet points here. Include a line like: "Every exam season, I see candidates show up at centers without a valid ID or with a blurry printout. Don't be that person."]
 
 <h2 id='download'>How to Download ${meta.examName} Admit Card — Step by Step</h2>
-[2 intro paragraphs about which website to visit and what to keep ready. Then numbered <ol> steps. After the steps, add 1 paragraph: "Print at least 2 copies. Keep one at home, carry one. If your printer is unavailable, a black-and-white printout from a nearby shop works — just make sure the photo and barcode are clearly visible."]
+[2 intro paragraphs about which website to visit and what to keep ready. Then numbered <ol> download steps. After steps: "Print at least 2 copies. Keep one at home, carry one. If your printer is unavailable, a black-and-white printout from a nearby shop works — just make sure the photo and barcode are clearly visible."]
 
 <h2 id='details'>What Is Written on Your ${meta.examName} Admit Card — Read This Carefully</h2>
 [3-4 full paragraphs explaining each detail: candidate name, roll number, exam date, reporting time, exam center address, exam duration, important instructions. "Check your name spelling against your ID proof. If there is a mismatch — even one letter — get it corrected before exam day."]
@@ -443,11 +474,11 @@ TOPIC: ${meta.examName} | ORG: ${meta.orgName}
 CONTENT: ${rawText.substring(0, 2500)}
 
 WRITING STYLE — THIS IS A NEWS ARTICLE. Write exactly like NDTV/HinduBusinessLine education reporters:
-- Inverted pyramid: most important fact in the very first sentence of the article.
+- Factual inverted pyramid: most important news fact in the very first sentence.
 - Short punchy paragraphs (2-4 sentences each). No paragraph exceeds 5 sentences.
 - No fluff. Every sentence carries information.
 - Quote-style statements: "According to official sources...", "The notification states that..."
-- Present tense for current facts, past tense for what happened.
+- Present-tense urgency for current facts, past-tense for what happened.
 - Minimum 900 words. Text-heavy, paragraph-rich.
 - ALL HTML attributes use single quotes. ZERO emojis.
 
@@ -555,28 +586,8 @@ HUMAN WRITING RULES:
 Return ONLY the HTML. No markdown, no code blocks, no text before or after.
 ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${customInstructions}` : ""}`;
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "system",
-          content: HUMAN_BLOGGER_SYSTEM_PROMPT,
-        },
-        { role: "user", content: blogPrompt },
-      ],
-      temperature: 0.95,
-      max_tokens: 4500,
-      frequency_penalty: 0.7,
-      presence_penalty: 0.5,
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(`Special blog: ${data.error.message}`);
-  const raw = (data.choices?.[0]?.message?.content || "").replace(/^```html?\n?/i, "").replace(/```$/g, "").trim();
-  return humanizeHtml(raw);
+  const raw = await callAI(HUMAN_BLOGGER_SYSTEM_PROMPT, blogPrompt, false);
+  return humanizeHtml(raw.replace(/^```html?\n?/i, "").replace(/```$/g, "").trim());
 }
 
 // ── Main Handler ────────────────────────────────────────────────────────────────
@@ -588,28 +599,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please paste longer text (min 50 chars)." }, { status: 400 });
     }
 
-    const groqApiKey = process.env.GROQ_API_KEY;
-    if (!groqApiKey) {
-      return NextResponse.json({ error: "Groq API Key missing." }, { status: 500 });
-    }
-
-    // Step 1: extract metadata (category-aware)
-    const metadata = await extractMetadata(rawText, groqApiKey, category, customInstructions);
+    // Step 1: extract metadata (category-aware) using callAI (handles Gemini & Groq internally)
+    const metadata = await extractMetadata(rawText, category, customInstructions);
     // Force category from user selection — don't let AI override it
     metadata.category = category;
 
     let blogHtml: string;
 
     if (category === "latest-jobs") {
-      // Sequential (not parallel) to avoid Groq 12k TPM rate limit
-      const part1 = await writePart1(metadata, rawText, groqApiKey, customInstructions);
-      // Small delay between calls to stay within rate limit
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const part2 = await writePart2(metadata, rawText, groqApiKey, customInstructions);
+      // Sequential to prevent Groq rate limits, but handles Gemini fast without delay
+      const part1 = await writePart1(metadata, rawText, customInstructions);
+      
+      // Small safety delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const part2 = await writePart2(metadata, rawText, customInstructions);
       blogHtml = `${part1}\n\n${part2}`;
     } else {
       // Use category-specific single writer
-      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, groqApiKey, category, customInstructions);
+      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, category, customInstructions);
     }
 
     // ── Append Official Notification Trust Box (if URL provided) ────────────────
