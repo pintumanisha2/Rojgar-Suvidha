@@ -314,7 +314,7 @@ export default function ApplyPage() {
       // 2. Cashfree Payment Flow
       if (finalPayable > 0) {
         // Create Order on Backend
-        const orderRes = await fetch("/api/create-payment-order", {
+        const orderRes = await fetch("/api/submit-application", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
