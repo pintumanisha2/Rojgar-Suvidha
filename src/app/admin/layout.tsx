@@ -151,9 +151,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
+      // Skip the initial callback as it is already handled reliably by getSession()
+      if (event === "INITIAL_SESSION") return;
+
       if (session) {
         const email = session.user.email ?? null;
         setAdminEmail(email);
