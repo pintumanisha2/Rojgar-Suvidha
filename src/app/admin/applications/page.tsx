@@ -304,13 +304,18 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
       }
     }
 
-    await supabase
+    const { error } = await supabase
       .from("apply_for_me_requests")
       .update({ status: newStatus, admin_notes: finalNote })
       .eq("id", selected.id);
+
+    if (error) {
+      alert(`Status update failed: ${error.message}\nEnsure you have run the database migration script in your Supabase SQL Editor.`);
+    } else {
+      setSelected(null);
+      fetchRequests();
+    }
     setSaving(false);
-    setSelected(null);
-    fetchRequests();
   };
 
   // OTP Request — sends in-app OTP request to user

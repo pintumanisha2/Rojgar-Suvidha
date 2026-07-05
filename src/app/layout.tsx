@@ -10,6 +10,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import TopLoader from "@/components/layout/TopLoader";
 import JobPreferenceModal from "@/components/layout/JobPreferenceModal";
 import LazyGlobalComponents from "@/components/layout/LazyGlobalComponents";
+import GlobalOtpListener from "@/components/layout/GlobalOtpListener";
 import CountdownGate from "@/components/layout/CountdownGate";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -266,6 +267,7 @@ export default function RootLayout({
             <BottomNav />
             <JobPreferenceModal />
             <LazyGlobalComponents />
+            <GlobalOtpListener />
           </CountdownGate>
           
           {/* Auto-update Service Worker to prevent caching issues for users */}
