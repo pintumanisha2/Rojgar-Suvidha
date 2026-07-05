@@ -90,6 +90,7 @@ export type Role = "super_admin" | "admin" | "govt_manager" | "govt_data_entry" 
 
 // Function to fetch role from Supabase 'admin_roles' table
 const getRoleFromEmail = async (email: string | null): Promise<Role> => {
+  console.error("DEBUG [getRoleFromEmail]: Querying role for email:", email);
   if (!email) return "unauthorized";
   
   try {
@@ -99,19 +100,29 @@ const getRoleFromEmail = async (email: string | null): Promise<Role> => {
       .eq('email', email)
       .single();
       
+    if (error) {
+      console.error("DEBUG [getRoleFromEmail]: Supabase query returned error:", error);
+    }
+    
     if (data && data.role) {
+      console.error("DEBUG [getRoleFromEmail]: Found role in DB:", data.role, "status:", data.status);
       if (data.status === 'Inactive') {
         return "unauthorized";
       }
       return data.role as Role;
     }
   } catch (err) {
-    console.error("Error fetching role:", err);
+    console.error("DEBUG [getRoleFromEmail]: Exception during query:", err);
   }
   
+  console.error("DEBUG [getRoleFromEmail]: Checking fallbacks for email:", email);
   // Hardcoded fallback for the primary owner just in case table fails
-  if (email === "admin@rojgarsuvidha.com" || email === "superadmin@rojgarsuvidha.com") return "super_admin";
+  if (email === "admin@rojgarsuvidha.com" || email === "superadmin@rojgarsuvidha.com") {
+    console.error("DEBUG [getRoleFromEmail]: Fallback matched super_admin");
+    return "super_admin";
+  }
   
+  console.error("DEBUG [getRoleFromEmail]: Fallback defaulted to unauthorized");
   return "unauthorized";
 };
 
@@ -126,36 +137,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Check authentication and fetch role ONCE on mount
   useEffect(() => {
     let mounted = true;
+    console.error("DEBUG [layout mount useEffect]: Triggered");
 
     const initAuth = async () => {
+      console.error("DEBUG [initAuth]: Started");
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.error("DEBUG [initAuth]: getSession resolved, session exists:", session !== null);
         if (!mounted) return;
         
         if (session) {
           const email = session.user.email ?? null;
+          console.error("DEBUG [initAuth]: Email is:", email);
           setAdminEmail(email);
           const fetchedRole = await getRoleFromEmail(email);
+          console.error("DEBUG [initAuth]: Role is:", fetchedRole);
           if (!mounted) return;
           setUserRole(fetchedRole);
         } else {
+          console.error("DEBUG [initAuth]: No active session");
           setAdminEmail(null);
           setUserRole("unauthorized");
         }
       } catch (err) {
-        console.error("Auth initialization failed:", err);
+        console.error("DEBUG [initAuth]: Caught exception:", err);
       } finally {
+        console.error("DEBUG [initAuth]: Finally block reached");
         if (mounted) setIsAuthLoading(false);
       }
     };
 
     initAuth();
 
+    console.error("DEBUG [layout mount]: Subscribing to onAuthStateChange");
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.error("DEBUG [onAuthStateChange]: Event fired:", event, "session exists:", session !== null);
       if (!mounted) return;
       
       // Skip the initial callback as it is already handled reliably by getSession()
-      if (event === "INITIAL_SESSION") return;
+      if (event === "INITIAL_SESSION") {
+        console.error("DEBUG [onAuthStateChange]: Skipping INITIAL_SESSION");
+        return;
+      }
 
       if (session) {
         const email = session.user.email ?? null;
@@ -171,6 +194,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
 
     return () => {
+      console.error("DEBUG [layout mount useEffect]: Cleanup fired");
       mounted = false;
       subscription.unsubscribe();
     };
@@ -178,14 +202,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Instant client-side redirect protection
   useEffect(() => {
+    console.error("DEBUG [redirect useEffect]: Triggered. isAuthLoading:", isAuthLoading, "adminEmail:", adminEmail, "pathname:", pathname);
     if (isAuthLoading) return;
 
     if (!adminEmail) {
       if (pathname !== "/admin/login") {
+        console.error("DEBUG [redirect useEffect]: Redirecting to /admin/login because adminEmail is null");
         window.location.href = "/admin/login";
       }
     } else {
       if (pathname === "/admin/login") {
+        console.error("DEBUG [redirect useEffect]: Redirecting to /admin because user is logged in");
         window.location.href = "/admin";
       }
     }
