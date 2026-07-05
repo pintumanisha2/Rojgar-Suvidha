@@ -8,7 +8,8 @@ ADD COLUMN IF NOT EXISTS phone_number TEXT,
 ADD COLUMN IF NOT EXISTS email TEXT,
 ADD COLUMN IF NOT EXISTS job_title TEXT,
 ADD COLUMN IF NOT EXISTS admin_notes TEXT,
-ADD COLUMN IF NOT EXISTS tracking_id TEXT;
+ADD COLUMN IF NOT EXISTS tracking_id TEXT,
+ADD COLUMN IF NOT EXISTS final_receipt_url TEXT;
 
 -- 2. Update user_applications table
 ALTER TABLE public.user_applications 
