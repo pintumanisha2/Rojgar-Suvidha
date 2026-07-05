@@ -182,14 +182,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (!adminEmail) {
       if (pathname !== "/admin/login") {
-        router.replace("/admin/login");
+        window.location.href = "/admin/login";
       }
     } else {
       if (pathname === "/admin/login") {
-        router.replace("/admin");
+        window.location.href = "/admin";
       }
     }
-  }, [pathname, adminEmail, isAuthLoading, router]);
+  }, [pathname, adminEmail, isAuthLoading]);
 
   // --- Auto Logout for Inactivity (10 minutes) ---
   useEffect(() => {
@@ -298,7 +298,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   if (userRole === "unauthorized") {
     if (typeof window !== "undefined") {
-      router.replace("/");
+      window.location.href = "/";
     }
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
