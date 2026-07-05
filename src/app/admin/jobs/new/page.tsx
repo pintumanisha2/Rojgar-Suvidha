@@ -332,6 +332,44 @@ export default function NewJobPage() {
     }
   };
 
+  const handleNotificationPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setSavingDraft(true);
+    try {
+      const rawName = file.name;
+      const cleanName = rawName
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9.]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      if (!cleanName.endsWith(".pdf")) {
+        throw new Error("Only PDF documents are allowed.");
+      }
+
+      const filePath = `pdfs/${cleanName}`;
+      const { error } = await supabase.storage.from("blog_images").upload(filePath, file, { 
+        upsert: true,
+        contentType: "application/pdf"
+      });
+      if (error) throw error;
+
+      const customServeUrl = `/uploads/${cleanName}`;
+      const updatedLinks = [...links];
+      updatedLinks[index].url = customServeUrl;
+      setLinks(updatedLinks);
+      
+      alert(`PDF successfully uploaded!\nServing URL: ${customServeUrl} ✓`);
+    } catch (err: any) {
+      alert("PDF Upload failed: " + err.message);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto pb-20">
       
@@ -570,16 +608,27 @@ export default function NewJobPage() {
             
             <div className="space-y-3">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Regular Links (Table)</label>
-              {links.map((l, i) => (
-                <div key={i} className="flex gap-3 group animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${i * 50}ms` }}>
-                  <div className="relative flex-1">
-                    <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-indigo-300 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="Label" className={`${inputCls} flex-1 pl-4 group-hover:pl-9 transition-all`} />
+              {links.map((l, i) => {
+                const isNotificationRow = l.label.toLowerCase().includes("notification") || l.label.toLowerCase().includes("pdf");
+                return (
+                  <div key={i} className="flex gap-3 group animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${i * 50}ms` }}>
+                    <div className="relative flex-1">
+                      <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-indigo-300 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="Label" className={`${inputCls} flex-1 pl-4 group-hover:pl-9 transition-all`} />
+                    </div>
+                    <div className="relative flex-1 flex items-center">
+                      <input type="url" value={l.url} onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} placeholder="URL (or upload PDF →)" className={`${inputCls} pr-12`} />
+                      {isNotificationRow && (
+                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors" title="Upload PDF to your server">
+                          <UploadCloud className="h-4 w-4" />
+                          <input type="file" className="hidden" accept="application/pdf" onChange={(e) => handleNotificationPdfUpload(e, i)} />
+                        </label>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
                   </div>
-                  <input type="url" value={l.url} onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} placeholder="URL" className={`${inputCls} flex-1`} />
-                  <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
-                </div>
-              ))}
+                );
+              })}
               <button type="button" onClick={() => setLinks([...links, { label: "", url: "" }])} className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 mt-4 p-2 rounded-lg hover:bg-indigo-50 transition-colors w-fit">
                 <PlusCircle className="h-4 w-4" /> Add Another Link
               </button>

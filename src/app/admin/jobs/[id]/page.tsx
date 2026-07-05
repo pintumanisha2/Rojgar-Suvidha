@@ -319,6 +319,44 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const handleNotificationPdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setSavingDraft(true);
+    try {
+      const rawName = file.name;
+      const cleanName = rawName
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9.]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      if (!cleanName.endsWith(".pdf")) {
+        throw new Error("Only PDF documents are allowed.");
+      }
+
+      const filePath = `pdfs/${cleanName}`;
+      const { error } = await supabase.storage.from("blog_images").upload(filePath, file, { 
+        upsert: true,
+        contentType: "application/pdf"
+      });
+      if (error) throw error;
+
+      const customServeUrl = `/uploads/${cleanName}`;
+      const updatedLinks = [...links];
+      updatedLinks[index].url = customServeUrl;
+      setLinks(updatedLinks);
+      
+      alert(`PDF successfully uploaded!\nServing URL: ${customServeUrl} ✓`);
+    } catch (err: any) {
+      alert("PDF Upload failed: " + err.message);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
@@ -533,13 +571,24 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
             </div>
             <div className="space-y-3">
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Regular Links (Table)</label>
-              {links.map((l, i) => (
-                <div key={i} className="flex gap-3 group">
-                  <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="Label" className={inputCls} />
-                  <input type="url" value={l.url} onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} placeholder="URL" className={inputCls} />
-                  <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
-                </div>
-              ))}
+              {links.map((l, i) => {
+                const isNotificationRow = l.label.toLowerCase().includes("notification") || l.label.toLowerCase().includes("pdf");
+                return (
+                  <div key={i} className="flex gap-3 group">
+                    <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="Label" className={inputCls} />
+                    <div className="relative flex-1 flex items-center">
+                      <input type="url" value={l.url} onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} placeholder="URL (or upload PDF →)" className={`${inputCls} pr-12`} />
+                      {isNotificationRow && (
+                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors" title="Upload PDF to your server">
+                          <UploadCloud className="h-4 w-4" />
+                          <input type="file" className="hidden" accept="application/pdf" onChange={(e) => handleNotificationPdfUpload(e, i)} />
+                        </label>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
+                  </div>
+                );
+              })}
               <button type="button" onClick={() => setLinks([...links, { label: "", url: "" }])} className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 mt-4">
                 <PlusCircle className="h-4 w-4" /> Add Another Link
               </button>
