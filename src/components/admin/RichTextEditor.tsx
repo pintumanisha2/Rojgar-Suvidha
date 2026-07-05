@@ -58,6 +58,105 @@ function ToolbarButton({
   );
 }
 
+import { Node } from "@tiptap/core";
+
+// ── Custom Extensions to preserve inline style, id and class attributes ──────
+const CustomDiv = Node.create({
+  name: "div",
+  group: "block",
+  content: "block+",
+  parseHTML() {
+    return [{ tag: "div" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", HTMLAttributes, 0];
+  },
+  addAttributes() {
+    return {
+      style: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("style"),
+        renderHTML: (attrs) => (attrs.style ? { style: attrs.style } : {}),
+      },
+      id: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("id"),
+        renderHTML: (attrs) => (attrs.id ? { id: attrs.id } : {}),
+      },
+      class: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("class"),
+        renderHTML: (attrs) => (attrs.class ? { class: attrs.class } : {}),
+      },
+    };
+  },
+});
+
+const CustomTable = Table.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("style"),
+        renderHTML: (attrs) => (attrs.style ? { style: attrs.style } : {}),
+      },
+    };
+  },
+});
+
+const CustomTableRow = TableRow.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("style"),
+        renderHTML: (attrs) => (attrs.style ? { style: attrs.style } : {}),
+      },
+    };
+  },
+});
+
+const CustomTableHeader = TableHeader.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("style"),
+        renderHTML: (attrs) => (attrs.style ? { style: attrs.style } : {}),
+      },
+    };
+  },
+});
+
+const CustomTableCell = TableCell.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("style"),
+        renderHTML: (attrs) => (attrs.style ? { style: attrs.style } : {}),
+      },
+    };
+  },
+});
+
+const CustomLink = Link.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        default: null,
+        parseHTML: (el) => el.getAttribute("style"),
+        renderHTML: (attrs) => (attrs.style ? { style: attrs.style } : {}),
+      },
+    };
+  },
+});
+
 function Divider() {
   return <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1.5 self-center" />;
 }
@@ -72,12 +171,16 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      CustomDiv,
+      TextAlign.configure({ types: ["heading", "paragraph", "div"] }),
       Underline,
-      Link.configure({ openOnClick: false }),
+      CustomLink.configure({ openOnClick: false }),
       TextStyle, Color,
       Highlight.configure({ multicolor: true }),
-      Table.configure({ resizable: true }), TableRow, TableHeader, TableCell,
+      CustomTable.configure({ resizable: true }),
+      CustomTableRow,
+      CustomTableHeader,
+      CustomTableCell,
       Image.configure({ inline: true, allowBase64: true }),
       Superscript, Subscript,
       Youtube.configure({ inline: false }),
