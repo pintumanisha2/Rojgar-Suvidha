@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { compressImage } from "@/lib/image-utils";
+import toast from "react-hot-toast";
 
 // Load rich text editor only on client side
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
@@ -179,7 +180,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     console.log("handleSave started");
     try {
       if (!title || typeof title !== 'string' || !title.trim()) { 
-        alert("Title likhna zaroori hai."); 
+        toast.error("Title likhna zaroori hai."); 
         setError("Title likhna zaroori hai."); 
         return; 
       }
@@ -210,18 +211,17 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       
       console.log("Supabase response error:", dbErr);
       if (dbErr) {
-        alert("Database Error: " + dbErr.message);
+        toast.error("Database Error: " + dbErr.message);
         setError(dbErr.message);
       } else {
-        alert("Job updated successfully!");
+        toast.success("Job updated successfully!");
         window.location.href = "/admin/jobs";
       }
     } catch (err: any) {
       console.error("Crash during save:", err);
-      alert("Failed to update post: " + err.message);
+      toast.error("Failed to update post: " + err.message);
       setError("Failed to update post: " + err.message);
     } finally {
-      console.log("Finally block executed");
       setSaving(false);
       setSavingDraft(false);
     }
@@ -264,7 +264,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
 
   const handleGenerateBlog = async () => {
     if (!title.trim()) {
-      alert("Please enter a Title first so AI knows what to write about.");
+      toast.error("Please enter a Title first so AI knows what to write about.");
       return;
     }
     
@@ -293,7 +293,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
         throw new Error(data.error || "Failed to generate blog.");
       }
     } catch (err: any) {
-      alert(err.message || "Something went wrong with AI generation.");
+      toast.error(err.message || "Something went wrong with AI generation.");
     } finally {
       setIsGeneratingBlog(false);
     }
@@ -305,7 +305,6 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     
     setIsUploadingFile("banner");
     try {
-      // Compress the image before uploading (Max width 1200px, 80% quality)
       const compressedFile = await compressImage(file, 1200, 0.8);
       
       const fileExt = compressedFile.name.split('.').pop() || 'jpg';
@@ -315,7 +314,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       const { data: { publicUrl } } = supabase.storage.from('banners').getPublicUrl(fileName);
       setBannerUrl(publicUrl);
     } catch (err: any) {
-      alert("Banner upload failed: " + err.message);
+      toast.error("Banner upload failed: " + err.message);
     } finally {
       setIsUploadingFile(null);
     }
@@ -352,9 +351,9 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       updatedLinks[index].url = customServeUrl;
       setLinks(updatedLinks);
       
-      alert(`PDF successfully uploaded!\nServing URL: ${customServeUrl} ✓`);
+      toast.success(`PDF successfully uploaded!\nServing URL: ${customServeUrl} ✓`);
     } catch (err: any) {
-      alert("PDF Upload failed: " + err.message);
+      toast.error("PDF Upload failed: " + err.message);
     } finally {
       setIsUploadingFile(null);
       setUploadingPdfIndex(null);

@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { compressImage } from "@/lib/image-utils";
 import BannerGenerator from "@/components/admin/BannerGenerator";
+import toast from "react-hot-toast";
 
 // Load rich text editor only on client side
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), {
@@ -277,7 +278,7 @@ export default function NewJobPage() {
 
   const handleGenerateBlog = async () => {
     if (!title.trim()) {
-      alert("Please enter a Title first so AI knows what to write about.");
+      toast.error("Please enter a Title first so AI knows what to write about.");
       return;
     }
     
@@ -306,7 +307,7 @@ export default function NewJobPage() {
         throw new Error(data.error || "Failed to generate blog.");
       }
     } catch (err: any) {
-      alert(err.message || "Something went wrong with AI generation.");
+      toast.error(err.message || "Something went wrong with AI generation.");
     } finally {
       setIsGeneratingBlog(false);
     }
@@ -328,7 +329,7 @@ export default function NewJobPage() {
       const { data: { publicUrl } } = supabase.storage.from('blog_images').getPublicUrl(fileName);
       setBannerUrl(publicUrl);
     } catch (err: any) {
-      alert("Banner upload failed: " + err.message);
+      toast.error("Banner upload failed: " + err.message);
     } finally {
       setIsUploadingFile(null);
     }
@@ -365,9 +366,9 @@ export default function NewJobPage() {
       updatedLinks[index].url = customServeUrl;
       setLinks(updatedLinks);
       
-      alert(`PDF successfully uploaded!\nServing URL: ${customServeUrl} ✓`);
+      toast.success(`PDF successfully uploaded!\nServing URL: ${customServeUrl} ✓`);
     } catch (err: any) {
-      alert("PDF Upload failed: " + err.message);
+      toast.error("PDF Upload failed: " + err.message);
     } finally {
       setIsUploadingFile(null);
       setUploadingPdfIndex(null);
