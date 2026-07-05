@@ -324,28 +324,43 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
     setRequestingOtp(true);
     setOtpRequest(null);
 
-    // 1. Mark request as in_progress so user dashboard shows live alert
-    await supabase.from("apply_for_me_requests")
-      .update({ status: "in_progress" })
-      .eq("id", selected.id);
-    setNewStatus("in_progress");
-
-    // 2. Insert OTP request record
+    let newOtp = null;
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000).toISOString();
-    const { data: newOtp } = await supabase
-      .from("otp_requests")
-      .insert({
-        apply_request_id: selected.id,
-        user_id: selected.user_id,
-        job_title: selected.job_title,
-        verification_code: selected.verification_code || null,
-        status: "pending",
-        expires_at: expiresAt,
-      })
-      .select()
-      .single();
 
-    setOtpRequest(newOtp);
+    try {
+      // 1. Mark request as in_progress so user dashboard shows live alert
+      const { error: err1 } = await supabase.from("apply_for_me_requests")
+        .update({ status: "in_progress" })
+        .eq("id", selected.id);
+
+      if (err1) throw err1;
+      setNewStatus("in_progress");
+
+      // 2. Insert OTP request record
+      const { data, error: err2 } = await supabase
+        .from("otp_requests")
+        .insert({
+          apply_request_id: selected.id,
+          user_id: selected.user_id,
+          job_title: selected.job_title,
+          verification_code: selected.verification_code || null,
+          status: "pending",
+          expires_at: expiresAt,
+        })
+        .select()
+        .single();
+
+      if (err2) throw err2;
+      newOtp = data;
+
+      setOtpRequest(newOtp);
+    } catch (err: any) {
+      console.error("OTP Request failed:", err);
+      alert(`OTP Request failed: ${err.message}\nEnsure you have run the updated SQL Editor script to create the 'otp_requests' table.`);
+      setRequestingOtp(false);
+      return;
+    }
+
     setRequestingOtp(false);
 
     // 3. Start countdown timer (3 min = 180s)
