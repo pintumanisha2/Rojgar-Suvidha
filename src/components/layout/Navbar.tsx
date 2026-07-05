@@ -336,17 +336,6 @@ export default function Navbar() {
                   <span>💬 Aspirants Adda</span>
                 </button>
 
-                {/* Community Chat (Desktop only, logged-in users only) */}
-                {user && (
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent("openCommunityChat"))}
-                    className="hidden sm:flex items-center gap-2 ml-1 px-4 py-2 bg-violet-500/20 hover:bg-violet-500/30 text-violet-200 hover:text-white rounded-xl text-sm font-bold transition-all duration-200 border border-violet-400/20"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span className="hidden lg:inline">Community</span>
-                  </button>
-                )}
-
                 {/* Track Application (Desktop only) */}
                 <Link
                   href="/track-application"
@@ -602,19 +591,6 @@ export default function Navbar() {
                 >
                   💬 Live Aspirants Adda
                 </button>
-                
-                {/* Community Chat Button - Mobile (only logged in) */}
-                {user && (
-                  <button 
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      window.dispatchEvent(new CustomEvent("openCommunityChat"));
-                    }}
-                    className="w-full flex justify-center items-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all bg-white dark:bg-gray-800 text-violet-600 dark:text-violet-400 shadow-sm"
-                  >
-                    <MessageCircle className="w-4 h-4" /> Community Chat
-                  </button>
-                )}
               </div>
             </div>
 

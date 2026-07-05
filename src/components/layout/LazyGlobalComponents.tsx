@@ -17,21 +17,27 @@ const FloatingInbox = dynamic(() => import("@/components/layout/FloatingInbox"),
 export default function LazyGlobalComponents() {
   const pathname = usePathname() || "";
 
-  // Only render FloatingRecruiterInbox on Private Jobs or Recruiter/Employer portals
-  const isPrivateJobsOrRecruiterSection = 
+  // Private job section: private-jobs, employer, job pages
+  const isPrivateJobsSection = 
     pathname.startsWith("/private-jobs") || 
-    pathname.startsWith("/employer");
+    pathname.startsWith("/employer") ||
+    pathname.startsWith("/job/");
+
+  // Government job section: everything that is NOT private jobs / employer
+  const isGovtJobsSection = !isPrivateJobsSection;
 
   return (
     <>
       <FloatingSocials />
       <AIChatBot />
-      <AspirantsCircleDrawer />
-      <CommunityChatDrawer />
+      {/* Govt Community: Aspirants Adda — only on govt/general pages */}
+      {isGovtJobsSection && <AspirantsCircleDrawer />}
+      {/* Private Community Chat — only on private job pages */}
+      {isPrivateJobsSection && <CommunityChatDrawer />}
       <PushNotificationPrompt />
       <AnalyticsTracker />
       <GlobalBehaviorTracker />
-      {isPrivateJobsOrRecruiterSection && <FloatingInbox />}
+      {isPrivateJobsSection && <FloatingInbox />}
     </>
   );
 }
