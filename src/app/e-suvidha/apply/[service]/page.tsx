@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud } from "lucide-react";
@@ -91,6 +91,7 @@ const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: s
 export default function ESuvidhaApply() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const rawServiceId = params.service as string;
 
   // SEO friendly slug mapping
@@ -198,6 +199,59 @@ export default function ESuvidhaApply() {
     };
     fetchUser();
   }, [router, serviceId]);
+
+  useEffect(() => {
+    const checkPaymentRedirect = async () => {
+      const orderIdParam = searchParams.get("order_id");
+      if (!orderIdParam || !user) return;
+
+      setLoading(true);
+      try {
+        // 1. Check if we already have this request marked as paid
+        const { data: request, error: reqErr } = await supabase
+          .from("apply_for_me_requests")
+          .select("*")
+          .eq("tracking_id", orderIdParam)
+          .single();
+
+        if (!reqErr && request && request.status === "paid") {
+          setTrackingId(orderIdParam);
+          setSubmitted(true);
+          return;
+        }
+
+        // 2. Call backend track API to verify payment with Cashfree
+        const res = await fetch(`/api/track?order_id=${orderIdParam}`);
+        const statusData = await res.json();
+
+        if (statusData.order_status === "PAID" || statusData.order_status === "ACTIVE") {
+          // Update status to paid in database
+          const { error: updateErr } = await supabase
+            .from("apply_for_me_requests")
+            .update({ status: "paid" })
+            .eq("tracking_id", orderIdParam);
+
+          if (!updateErr) {
+            setTrackingId(orderIdParam);
+            setSubmitted(true);
+          } else {
+            setError("Payment verified but failed to update status. Please contact support.");
+          }
+        } else {
+          setError(`Payment verification pending: status is ${statusData.order_status}`);
+        }
+      } catch (err: any) {
+        console.error("Verification error:", err);
+        setError(err.message || "Payment verification failed.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      checkPaymentRedirect();
+    }
+  }, [user, searchParams]);
 
   const handleFileChange = (docName: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -322,6 +376,24 @@ export default function ESuvidhaApply() {
       const order = await res.json();
       if (!res.ok) throw new Error(order.error || "Payment system unavailable.");
 
+      // Create a pending request in the database first to secure customer data before payment redirect
+      const { error: insertError } = await supabase
+        .from("apply_for_me_requests")
+        .insert({
+          user_id: user.id,
+          applicant_name: applicantName,
+          phone_number: applicantPhone,
+          email: user.email || "",
+          job_title: `[e-Suvidha] ${serviceDetails.title}`,
+          status: "pending",
+          admin_notes: esuvidhaData,
+          tracking_id: order.order_id,
+        });
+
+      if (insertError) {
+        throw new Error("Failed to initialize your request record in the database.");
+      }
+
       if (!(window as any).Cashfree) {
         throw new Error("Payment gateway is loading. Check your internet connection.");
       }
@@ -340,25 +412,16 @@ export default function ESuvidhaApply() {
               return;
           }
           if (result.paymentDetails) {
-            const tId = "ESV-" + Math.random().toString(36).slice(2, 10).toUpperCase();
-            
-            const { error: insertError } = await supabase
+            // Update request status to 'paid' in DB
+            const { error: updateError } = await supabase
               .from("apply_for_me_requests")
-              .insert({
-                user_id: user.id,
-                applicant_name: applicantName,
-                phone_number: applicantPhone,
-                email: user.email || "",
-                job_title: `[e-Suvidha] ${serviceDetails.title}`,
-                status: "paid",
-                admin_notes: esuvidhaData,
-                tracking_id: tId,
-              });
+              .update({ status: "paid" })
+              .eq("tracking_id", order.order_id);
 
-            if (insertError) {
-              setError("Payment successful but failed to save request. Contact support.");
+            if (updateError) {
+              setError("Payment successful but failed to update request status. Contact support.");
             } else {
-              setTrackingId(tId);
+              setTrackingId(order.order_id);
               setSubmitted(true);
             }
             setSubmitting(false);

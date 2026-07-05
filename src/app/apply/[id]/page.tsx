@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle } from "lucide-react";
 import Script from "next/script";
@@ -10,6 +10,7 @@ import imageCompression from "browser-image-compression";
 export default function ApplyPage() {
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formConfig, setFormConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -125,6 +126,60 @@ export default function ApplyPage() {
     };
     fetchForm();
   }, [id]);
+
+  useEffect(() => {
+    const checkPaymentRedirect = async () => {
+      const orderIdParam = searchParams.get("order_id");
+      if (!orderIdParam) return;
+
+      setLoading(true);
+      try {
+        // Extract the short trackingCode from the orderId prefix (order_RSG3E4_TIMESTAMP)
+        const parts = orderIdParam.split("_");
+        if (parts.length < 2) return;
+        const trackingCode = parts[1];
+
+        // 1. Check if we already have this request marked as paid
+        const { data: app, error: appErr } = await supabase
+          .from("user_applications")
+          .select("*")
+          .eq("tracking_id", trackingCode)
+          .single();
+
+        if (!appErr && app && app.payment_status === "paid") {
+          setSuccessTrackingId(trackingCode);
+          return;
+        }
+
+        // 2. Call backend track API to verify payment with Cashfree
+        const res = await fetch(`/api/track?order_id=${orderIdParam}`);
+        const statusData = await res.json();
+
+        if (statusData.order_status === "PAID" || statusData.order_status === "ACTIVE") {
+          // Update status to paid in database
+          const { error: updateErr } = await supabase
+            .from("user_applications")
+            .update({ payment_status: "paid" })
+            .eq("tracking_id", trackingCode);
+
+          if (!updateErr) {
+            setSuccessTrackingId(trackingCode);
+          } else {
+            setSubmitError("Payment verified but failed to update status. Please contact support.");
+          }
+        } else {
+          setSubmitError(`Payment verification pending: status is ${statusData.order_status}`);
+        }
+      } catch (err: any) {
+        console.error("Verification error:", err);
+        setSubmitError(err.message || "Payment verification failed.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkPaymentRedirect();
+  }, [searchParams]);
 
   useEffect(() => {
     if (!formConfig || !formConfig.fees_structure || formConfig.fees_structure.length === 0) return;
@@ -295,11 +350,12 @@ export default function ApplyPage() {
           // Construct the secure relative view URL
           uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;
         }
-      }
-
-      // 2. Cashfree Payment Flow
+      }      // 2. Cashfree Payment Flow
       if (finalPayable > 0) {
-        // Create Order on Backend
+        const trackingCode = "RS" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const customOrderId = `order_${trackingCode}_${Date.now()}`;
+
+        // Create Order on Backend with custom S3 access order ID
         const orderRes = await fetch("/api/submit-application", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -308,7 +364,8 @@ export default function ApplyPage() {
             customerName: formData.fullName,
             customerPhone: formData.phone,
             customerEmail: formData.email,
-            formId: id
+            formId: id,
+            orderId: customOrderId
           }),
         });
 
@@ -318,9 +375,38 @@ export default function ApplyPage() {
           throw new Error(order.error || "Payment system is currently unavailable.");
         }
 
+        const postName = Array.isArray(formConfig.fees_structure) 
+          ? formConfig.fees_structure[selectedPostIndex]?.postName 
+          : "Default Post";
+
+        // Save Application to Database as 'pending' to secure user input before payment redirect
+        const { error: dbError } = await supabase.from("user_applications").insert([{
+          tracking_id: trackingCode,
+          form_id: id,
+          full_name: formData.fullName,
+          father_name: formData.fatherName,
+          mother_name: formData.motherName,
+          phone: formData.phone,
+          email: formData.email,
+          alt_phone: formData.altPhone,
+          aadhar: formData.aadhar,
+          dob: formData.dob,
+          gender: formData.gender,
+          category: formData.category,
+          is_pwd: formData.isPwd,
+          selected_post_name: postName,
+          documents_urls: uploadedUrls,
+          total_paid: finalPayable,
+          coupon_applied: appliedCoupon ? appliedCoupon.code : null,
+          payment_status: "pending", // Set as pending initially
+          application_status: "Received"
+        }]);
+
+        if (dbError) throw dbError;
+
         // Open Cashfree Checkout Modal
         const cashfree = new (window as any).Cashfree({
-            mode: process.env.NEXT_PUBLIC_CASHFREE_MODE || "sandbox",
+             mode: process.env.NEXT_PUBLIC_CASHFREE_MODE || "sandbox",
         });
 
         const checkoutOptions = {
@@ -336,38 +422,15 @@ export default function ApplyPage() {
             }
             if (result.paymentDetails) {
                 try {
-                  // 3. Generate 8-Digit Tracking Code
-                  const trackingCode = "RS" + Math.random().toString(36).substring(2, 8).toUpperCase();
-                  const postName = Array.isArray(formConfig.fees_structure) 
-                    ? formConfig.fees_structure[selectedPostIndex]?.postName 
-                    : "Default Post";
+                  // Update payment_status to 'paid' in DB
+                  const { error: updateErr } = await supabase
+                    .from("user_applications")
+                    .update({ payment_status: "paid" })
+                    .eq("tracking_id", trackingCode);
 
-                  // 4. Save Application to Database as Paid
-                  const { error: dbError } = await supabase.from("user_applications").insert([{
-                    tracking_id: trackingCode,
-                    form_id: id,
-                    full_name: formData.fullName,
-                    father_name: formData.fatherName,
-                    mother_name: formData.motherName,
-                    phone: formData.phone,
-                    email: formData.email,
-                    alt_phone: formData.altPhone,
-                    aadhar: formData.aadhar,
-                    dob: formData.dob,
-                    gender: formData.gender,
-                    category: formData.category,
-                    is_pwd: formData.isPwd,
-                    selected_post_name: postName,
-                    documents_urls: uploadedUrls,
-                    total_paid: finalPayable,
-                    coupon_applied: appliedCoupon ? appliedCoupon.code : null,
-                    payment_status: "paid", // Payment is successful
-                    application_status: "Received"
-                  }]);
+                  if (updateErr) throw updateErr;
 
-                  if (dbError) throw dbError;
-
-                  // 5. Update Coupon Usage if applied
+                  // Update Coupon Usage if applied
                   if (appliedCoupon) {
                     const { error: rpcErr } = await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
                     if (rpcErr) {

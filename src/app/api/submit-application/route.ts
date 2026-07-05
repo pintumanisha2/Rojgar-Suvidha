@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const { amount, customerName, customerPhone, customerEmail, formId } = await req.json();
+    const { amount, customerName, customerPhone, customerEmail, formId, orderId: clientOrderId } = await req.json();
 
     const appId = process.env.CASHFREE_APP_ID;
     const secretKey = process.env.CASHFREE_SECRET_KEY;
@@ -20,7 +20,16 @@ export async function POST(req: Request) {
       ? "https://api.cashfree.com/pg/orders" 
       : "https://sandbox.cashfree.com/pg/orders";
 
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const orderId = clientOrderId || `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const host = req.headers.get("host") || "www.rojgarsuvidha.com";
+    
+    let redirectPath = `/apply/${formId}`;
+    if (formId && formId.startsWith("esuvidha-")) {
+      const serviceId = formId.replace("esuvidha-", "");
+      redirectPath = `/e-suvidha/apply/${serviceId}`;
+    }
 
     const payload = {
       order_id: orderId,
@@ -33,7 +42,7 @@ export async function POST(req: Request) {
         customer_phone: customerPhone || "9999999999",
       },
       order_meta: {
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/apply/${formId}?order_id={order_id}`
+        return_url: `${proto}://${host}${redirectPath}?order_id={order_id}`
       }
     };
 
