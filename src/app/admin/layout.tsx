@@ -123,29 +123,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [userRole, setUserRole] = useState<Role>("unauthorized");
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  // Check authentication and fetch role ONCE on mount
   useEffect(() => {
     let mounted = true;
 
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-      
-      if (!session && pathname !== "/admin/login") {
-        router.push("/admin/login");
-      } else if (session) {
-        const email = session.user.email ?? null;
-        setAdminEmail(email);
-        const fetchedRole = await getRoleFromEmail(email);
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
-        setUserRole(fetchedRole);
-        if (pathname === "/admin/login") {
-          router.replace("/admin");
+        
+        if (session) {
+          const email = session.user.email ?? null;
+          setAdminEmail(email);
+          const fetchedRole = await getRoleFromEmail(email);
+          if (!mounted) return;
+          setUserRole(fetchedRole);
+        } else {
+          setAdminEmail(null);
+          setUserRole("unauthorized");
         }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
+      } finally {
+        if (mounted) setIsAuthLoading(false);
       }
-      setIsAuthLoading(false);
     };
 
-    checkAuth();
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
@@ -156,22 +160,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         const fetchedRole = await getRoleFromEmail(email);
         if (!mounted) return;
         setUserRole(fetchedRole);
-        // Removed router.replace("/admin") to prevent race condition with login page
       } else {
         setAdminEmail(null);
         setUserRole("unauthorized");
-        if (pathname !== "/admin/login") {
-          router.push("/admin/login");
-        }
       }
-      setIsAuthLoading(false);
+      if (mounted) setIsAuthLoading(false);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [pathname, router]);
+  }, []); // Run ONLY once on mount to prevent infinite DB querying during page navigation!
+
+  // Instant client-side redirect protection
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (!adminEmail) {
+      if (pathname !== "/admin/login") {
+        router.replace("/admin/login");
+      }
+    } else {
+      if (pathname === "/admin/login") {
+        router.replace("/admin");
+      }
+    }
+  }, [pathname, adminEmail, isAuthLoading, router]);
 
   // --- Auto Logout for Inactivity (10 minutes) ---
   useEffect(() => {
