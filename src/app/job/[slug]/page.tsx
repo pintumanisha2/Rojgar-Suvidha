@@ -83,7 +83,7 @@ export async function generateMetadata(
   const { slug } = await params;
   const { data: job } = await supabase
     .from("jobs")
-    .select("title, short_info, category, created_at, slug")
+    .select("title, short_info, meta_description, banner_url, category, created_at, slug")
     .eq("slug", slug)
     .single();
 
@@ -91,18 +91,24 @@ export async function generateMetadata(
 
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
   
-  // SEO-optimized title with year + action keywords
-  const title = `${job.title} 2025 – Apply Online, Eligibility, Vacancy, Last Date`;
+  // Smart dynamic title with year (avoid clashing if year is already in title)
+  const currentYear = new Date().getFullYear().toString();
+  const hasYear = job.title.includes("2024") || job.title.includes("2025") || job.title.includes("2026") || job.title.includes("2027");
+  const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
+  const title = `${baseTitle} – Apply Online, Eligibility, Vacancy, Last Date`;
   
-  // Rich description for featured snippets (AEO)
-  const description = job.short_info
-    ? `${job.short_info.slice(0, 150)}. Check eligibility, important dates, vacancy details & apply online at Rojgar Suvidha.`
-    : `${job.title} 2025 Notification Out. Check eligibility criteria, important dates, vacancy count, age limit, application fee & apply online. Latest update from ${categoryLabel} on Rojgar Suvidha.`;
+  // Custom SEO description if written, fallback to short info or template
+  const rawDescription = job.meta_description || job.short_info || "";
+  const description = rawDescription.trim().length > 10 
+    ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
+    : `${job.title} Notification Out. Check eligibility criteria, important dates, vacancy details, age limit, application fee & apply online at Rojgar Suvidha.`;
 
-  // Comprehensive keyword coverage
+  // Custom social share image (use banner URL if generated, fallback to logo)
+  const shareImage = job.banner_url || `${BASE_URL}/og-image.png`;
+
   const keywords = [
     job.title,
-    `${job.title} 2025`, `${job.title} 2026`,
+    `${job.title} ${currentYear}`,
     `${job.title} apply online`, `${job.title} online form`,
     `${job.title} notification`, `${job.title} notification pdf`,
     `${job.title} eligibility`, `${job.title} age limit`,
@@ -110,8 +116,7 @@ export async function generateMetadata(
     `${job.title} vacancy`, `${job.title} salary`,
     `${job.title} syllabus`, `${job.title} admit card`,
     `${job.title} result`, `${job.title} answer key`,
-    `${job.title} ka form kaise bhare`,
-    "sarkari naukri 2025", "government jobs", "sarkari result",
+    "sarkari naukri", "government jobs", "sarkari result",
     job.category, "rojgar suvidha",
   ];
 
@@ -130,13 +135,13 @@ export async function generateMetadata(
       siteName: "Rojgar Suvidha",
       section: categoryLabel,
       tags: keywords.slice(0, 10),
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: job.title }],
+      images: [{ url: shareImage, width: 1200, height: 630, alt: job.title }],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${job.title} 2025 – Apply Now`,
+      title: `${job.title} – Apply Now`,
       description: description.slice(0, 200),
-      images: ["/og-image.png"],
+      images: [shareImage],
       creator: "@rojgarsuvidha",
     },
   };
@@ -182,7 +187,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     "@context": "https://schema.org",
     "@type": "Article",
     headline: job.title,
-    description: job.short_info || `Latest notification for ${job.title}. Apply online now.`,
+    description: job.meta_description || job.short_info || `Latest notification for ${job.title}. Apply online now.`,
     datePublished: job.created_at,
     dateModified: job.updated_at || job.created_at,
     author: { "@type": "Organization", name: "Rojgar Suvidha", url: BASE_URL },
@@ -209,7 +214,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
-    description: job.short_info || `Apply for ${job.title}`,
+    description: job.meta_description || job.short_info || `Apply for ${job.title}`,
     datePosted: job.created_at,
     ...(lastDate && { validThrough: lastDate }),
     employmentType: "FULL_TIME",
