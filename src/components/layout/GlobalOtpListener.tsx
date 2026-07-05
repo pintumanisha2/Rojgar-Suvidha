@@ -271,7 +271,7 @@ export default function GlobalOtpListener() {
               <div>
                 <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">⚠️ FRAUD ALERT (BE SAFE)</p>
                 <p className="text-[11px] text-red-700/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
-                  Hum kabhi bhi bank/UPI ya payment OTP nahi mangte. Yeh OTP sirf <strong>{otpAlert.job_title}</strong> ke login verification ke liye hai.
+                  We <strong>NEVER</strong> ask for bank, UPI, Paytm, or payment OTPs. This OTP is strictly for logging into the <strong>{otpAlert.job_title}</strong> application portal.
                 </p>
               </div>
             </div>
@@ -283,7 +283,7 @@ export default function GlobalOtpListener() {
             </div>
 
             <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 font-bold">
-              Apne mobile number par aaya OTP code yahan submit karein:
+              Please enter the SMS OTP received from the government/exam portal on your mobile:
             </p>
 
             {/* Trust Signal Verification Code */}
@@ -294,7 +294,7 @@ export default function GlobalOtpListener() {
                   <p className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400">🛡️ REPRESENTATIVE TRUST CODE</p>
                 </div>
                 <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-3 py-2">
-                  <span className="text-[11px] text-gray-500 font-bold">Call par baithe agent se code pucho:</span>
+                  <span className="text-[11px] text-gray-500 font-bold">Ask representative for code:</span>
                   <span className="font-mono font-extrabold tracking-widest text-emerald-600 dark:text-emerald-400 text-base">{otpAlert.verification_code}</span>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export default function GlobalOtpListener() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Agent ne mujhe same Secret Trust Code bola hai.
+                  The representative has verified and spoken the correct Secret Trust Code.
                 </span>
               </label>
 
@@ -324,7 +324,7 @@ export default function GlobalOtpListener() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Yeh bank, card, ya wallet/GPay ka OTP nahi hai.
+                  This OTP is not related to my bank account, ATM card, or mobile wallets (GPay/Paytm).
                 </span>
               </label>
 
@@ -336,7 +336,7 @@ export default function GlobalOtpListener() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Main koi AnyDesk ya TeamViewer screen sharing nahi kar raha.
+                  I have not installed any screen-sharing application (e.g. AnyDesk, TeamViewer).
                 </span>
               </label>
             </div>
@@ -348,7 +348,7 @@ export default function GlobalOtpListener() {
               maxLength={8}
               value={otpInput}
               onChange={e => setOtpInput(e.target.value.replace(/\D/g, ""))}
-              placeholder="OTP Code yahan likhein"
+              placeholder="Enter OTP here"
               className="w-full text-center text-2xl font-extrabold font-mono tracking-widest py-3 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 mb-4"
             />
 
@@ -358,13 +358,13 @@ export default function GlobalOtpListener() {
               disabled={otpInput.length < 4 || otpSubmitting || !chkSecret || !chkNotBank || !chkNoScreenShare}
               className="w-full py-3.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:dark:bg-gray-800 disabled:opacity-60 text-white rounded-2xl font-extrabold text-base transition-all active:scale-95 mb-3 flex items-center justify-center gap-2 shadow-lg"
             >
-              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ verified OTP Submit Karein"}
+              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ Submit Verified OTP"}
             </button>
 
             {/* Expiry Countdown */}
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 font-semibold">
               <Clock className="w-3.5 h-3.5" />
-              <span>{Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")} mein link expire hoga</span>
+              <span>Request expires in {Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")}</span>
             </div>
 
           </div>
@@ -375,7 +375,7 @@ export default function GlobalOtpListener() {
       {otpSubmitted && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] bg-green-600 text-white px-6 py-3.5 rounded-2xl shadow-2xl font-black text-sm flex items-center gap-2 animate-in slide-in-from-top duration-300">
           <CheckCircle2 className="w-5 h-5" />
-          <span>OTP safely team ko mil gaya hai! Form verification process start kar di gayi hai.</span>
+          <span>OTP successfully received! Our team will submit your form shortly.</span>
         </div>
       )}
     </>

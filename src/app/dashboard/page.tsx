@@ -442,9 +442,9 @@ function DashboardContent() {
             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-2xl p-3 mb-4 flex items-center gap-3 text-left">
               <ShieldAlert className="w-10 h-10 text-red-600 shrink-0" />
               <div>
-                <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">⚠️ FRAUD SE BACHEIN (ANTI-SCAM)</p>
+                <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider">⚠️ FRAUD ALERT (BE SAFE)</p>
                 <p className="text-[11px] text-red-700/90 dark:text-red-300/90 font-bold mt-0.5 leading-snug">
-                  Hum <strong>KABHI BHI</strong> bank/UPI, Paytm ya payment OTP nahi mangte. Yeh OTP sirf <strong>{otpAlert.job_title}</strong> ke form login ke liye hai.
+                  We <strong>NEVER</strong> ask for bank, UPI, Paytm, or payment OTPs. This OTP is strictly for logging into the <strong>{otpAlert.job_title}</strong> application portal.
                 </p>
               </div>
             </div>
@@ -452,11 +452,11 @@ function DashboardContent() {
             {/* Pulsing indicator */}
             <div className="flex items-center justify-center gap-2 mb-2">
               <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
-              <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest">LIVE OTP Request Active</span>
+              <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest">LIVE Verification Active</span>
             </div>
 
             <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 font-semibold">
-              Apne mobile par government/exam portal se aaya SMS OTP yahan enter karein:
+              Please enter the SMS OTP received from the government/exam portal on your mobile:
             </p>
 
             {/* Verification code — trust signal */}
@@ -467,11 +467,11 @@ function DashboardContent() {
                   <p className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400">🛡️ SECRET TRUST CODE</p>
                 </div>
                 <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-3 py-2">
-                  <span className="text-[11px] text-gray-500 font-bold">Representative se pucho:</span>
+                  <span className="text-[11px] text-gray-500 font-bold">Ask representative for code:</span>
                   <span className="font-mono font-extrabold tracking-widest text-emerald-600 dark:text-emerald-400 text-base">{otpAlert.verification_code}</span>
                 </div>
                 <p className="text-[10px] text-emerald-700/80 dark:text-emerald-300/80 font-semibold mt-2 leading-relaxed">
-                  Call par baithe agent se poochiye ki unka screen code kya hai. Agar woh same yahi code batayein tabhi trust karein.
+                  Ask the calling representative to speak this screen code. Only trust them if the code matches exactly.
                 </p>
               </div>
             )}
@@ -488,7 +488,7 @@ function DashboardContent() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Representative ne mujhe same Secret Trust Code bol kar sunaya hai.
+                  The representative has verified and spoken the correct Secret Trust Code.
                 </span>
               </label>
 
@@ -500,7 +500,7 @@ function DashboardContent() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Yeh OTP bank account, ATM card ya Google Pay/Paytm se related nahi hai.
+                  This OTP is not related to my bank account, ATM card, or mobile wallets (GPay/Paytm).
                 </span>
               </label>
 
@@ -512,7 +512,7 @@ function DashboardContent() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Kisi ne mujhe screen-share (e.g. AnyDesk, TeamViewer) download nahi karwaya.
+                  I have not installed any screen-sharing application (e.g. AnyDesk, TeamViewer).
                 </span>
               </label>
             </div>
@@ -524,7 +524,7 @@ function DashboardContent() {
               maxLength={8}
               value={otpInput}
               onChange={e => setOtpInput(e.target.value.replace(/\D/g, ""))}
-              placeholder="OTP yahan likhein"
+              placeholder="Enter OTP here"
               className="w-full text-center text-2xl font-extrabold font-mono tracking-widest py-3 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 mb-4"
             />
 
@@ -534,13 +534,13 @@ function DashboardContent() {
               disabled={otpInput.length < 4 || otpSubmitting || !chkSecret || !chkNotBank || !chkNoScreenShare}
               className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:dark:bg-gray-800 disabled:opacity-60 text-white rounded-2xl font-extrabold text-base transition-all active:scale-95 mb-3 flex items-center justify-center gap-2 shadow-lg shadow-red-500/10"
             >
-              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ Verified OTP Submit Karein"}
+              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ Submit Verified OTP"}
             </button>
 
             {/* Countdown */}
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 font-semibold">
               <Clock className="w-3.5 h-3.5" />
-              <span>{Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")} mein request expire hogi</span>
+              <span>Request expires in {Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")}</span>
             </div>
           </div>
         </div>
@@ -549,7 +549,7 @@ function DashboardContent() {
       {/* OTP submitted success toast */}
       {otpSubmitted && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-2">
-          ✅ OTP team ko mil gaya! Form jald submit hoga.
+          ✅ OTP received! Our team will submit your form shortly.
         </div>
       )}
 
@@ -873,7 +873,7 @@ function DashboardContent() {
                                 <div>
                                   <p className="text-[10px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider leading-none">Secret Verification Code</p>
                                   <p className="text-base font-extrabold text-red-700 dark:text-red-300 font-mono tracking-widest mt-0.5">{req.verification_code}</p>
-                                  <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">Call pe yeh code maango — nahi pata = Scammer!</p>
+                                  <p className="text-[10px] text-red-500 dark:text-red-400 mt-0.5">Ask the calling agent for this code. If they do not know it, they are not from Rojgar Suvidha.</p>
                                 </div>
                               </div>
                             )}
@@ -882,9 +882,9 @@ function DashboardContent() {
                               <div className="mt-2 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/10 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-2.5 animate-pulse flex items-start gap-2.5">
                                 <span className="text-base shrink-0">✍️</span>
                                 <div>
-                                  <p className="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Form Filling Started — Phone Ready Rakhein!</p>
+                                  <p className="text-xs font-extrabold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Form Filling Started — Keep Your Phone Close!</p>
                                   <p className="text-[11px] text-indigo-900/80 dark:text-indigo-300/80 font-semibold mt-0.5 leading-relaxed">
-                                    Humare expert abhi official portal par aapka form fill kar rahe hain. Form ke last stage par OTP ki zaroorat padegi, isliye kripya apne phone ke paas rahein taaki OTP aate hi aap verified tareeqe se submit kar sakein.
+                                    Our representative is currently filling your form on the official portal. An OTP will be required during the final stage, so please keep your phone close to verify it when requested.
                                   </p>
                                 </div>
                               </div>
@@ -892,13 +892,13 @@ function DashboardContent() {
                             {/* Completed celebration */}
                             {req.status === "completed" && (
                               <div className="mt-2 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-xl px-3 py-2">
-                                <p className="text-xs font-extrabold text-green-700 dark:text-green-300">🎉 Aapka form successfully submit ho gaya! Neeche receipt download karo.</p>
+                                <p className="text-xs font-extrabold text-green-700 dark:text-green-300">🎉 Your application has been successfully submitted! Download your receipt below.</p>
                               </div>
                             )}
                             {/* needs_info: user action required */}
                             {req.status === "needs_info" && (
                               <div className="mt-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-xl px-3 py-2">
-                                <p className="text-xs font-extrabold text-orange-700 dark:text-orange-300">⚠️ Hamari team ko aapka koi document chahiye. Admin note padho aur support se contact karo.</p>
+                                <p className="text-xs font-extrabold text-orange-700 dark:text-orange-300">⚠️ Action Required: Our team needs additional documents. Please check the representative message or contact support.</p>
                               </div>
                             )}
                             

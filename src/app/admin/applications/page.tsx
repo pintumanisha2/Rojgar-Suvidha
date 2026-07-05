@@ -803,11 +803,11 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                 {/* Admin Note */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                    <MessageSquare className="w-4 h-4 inline mr-1" /> Admin Note (Student ko dikhega)
+                    <MessageSquare className="w-4 h-4 inline mr-1" /> Admin Note (Visible to Candidate)
                   </label>
                   <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)} rows={3}
                     className={`w-full px-4 py-3 border ${(newStatus === 'needs_info' || newStatus === 'refund_pending') && !adminNote ? 'border-red-400 ring-2 ring-red-200' : 'border-gray-200 dark:border-gray-700'} rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                    placeholder={newStatus === 'needs_info' ? "Zaroori: Likhye ki kaunsa document missing hai (e.g., Aadhar blur hai)..." : newStatus === 'refund_pending' ? "Reason for refund (e.g., Server error, Age limit cross)..." : "e.g. Form fill ho gaya, receipt download karein..."} />
+                    placeholder={newStatus === 'needs_info' ? "Required: Explain which document is missing (e.g., Aadhaar scan is blurry)..." : newStatus === 'refund_pending' ? "Reason for refund (e.g., Server error, Age limit crossed)..." : "e.g., Form submitted successfully, please download your receipt..."} />
                   {(newStatus === 'needs_info' || newStatus === 'refund_pending') && !adminNote && (
                     <p className="text-xs font-bold text-red-500 mt-1">Please provide a valid note explaining the reason.</p>
                   )}
@@ -817,7 +817,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                 <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-5 text-center">
                   <FileDown className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <h4 className="font-bold text-gray-900 dark:text-white mb-1">Form Confirmation / Receipt Upload</h4>
-                  <p className="text-xs text-gray-500 mb-4">Form fill karne ke baad confirmation ya screenshot yahan upload karo. Student apne dashboard se download kar sakta hai.</p>
+                  <p className="text-xs text-gray-500 mb-4">Upload the confirmation receipt or portal screenshot after filling the form. The candidate can download it directly from their dashboard.</p>
                   
                   {selected.final_receipt_url ? (
                     <div className="space-y-3">
@@ -864,7 +864,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 rounded-xl p-3 mb-3 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 text-amber-500 animate-spin shrink-0" />
                     <div>
-                      <p className="text-xs font-extrabold text-amber-700 dark:text-amber-300">User se OTP ka wait kar rahe hain...</p>
+                      <p className="text-xs font-extrabold text-amber-700 dark:text-amber-300">Waiting for candidate's OTP response...</p>
                       <p className="text-xs text-amber-500">
                         Expires in: {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}
                       </p>
@@ -875,7 +875,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                 {/* Expired */}
                 {otpRequest?.status === "expired" && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
-                    <p className="text-xs font-bold text-red-600">⏰ OTP request expire ho gayi. User ne respond nahi kiya. Dobara try karo.</p>
+                    <p className="text-xs font-bold text-red-600">⏰ OTP request expired. The candidate did not respond. Please try again.</p>
                   </div>
                 )}
 
@@ -884,8 +884,8 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                   <button onClick={handleRequestOtp} disabled={requestingOtp || !selected?.user_id}
                     className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
                     {requestingOtp
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Bhej rahe hain...</>
-                      : <>🔔 User se OTP Maango</>
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending Request...</>
+                      : <>🔔 Request OTP from Candidate</>
                     }
                   </button>
                 )}

@@ -12,10 +12,10 @@ import imageCompression from "browser-image-compression";
 const STATUS_STEPS = ["pending", "in_progress", "completed"];
 
 const STATUS_CONFIG: Record<string, { label: string; desc: string; color: string; bg: string; icon: React.ReactNode }> = {
-  pending:     { label: "Request Received",  desc: "Aapki request hume mil gayi. Hum jald kaam shuru karenge.", color: "text-amber-700",  bg: "bg-amber-100 dark:bg-amber-900/30",  icon: <Clock className="w-5 h-5" /> },
-  in_progress: { label: "Form Filling",      desc: "Hum abhi aapka form fill kar rahe hain.",                 color: "text-blue-700",   bg: "bg-blue-100 dark:bg-blue-900/30",   icon: <RefreshCw className="w-5 h-5" /> },
-  completed:   { label: "Completed! ✅",     desc: "Aapka form bhar diya gaya hai. Receipt download karein.", color: "text-green-700",  bg: "bg-green-100 dark:bg-green-900/30", icon: <CheckCircle2 className="w-5 h-5" /> },
-  rejected:    { label: "Rejected",          desc: "Kisi wajah se request process nahi ho payi.",            color: "text-red-700",    bg: "bg-red-100 dark:bg-red-900/30",     icon: <AlertCircle className="w-5 h-5" /> },
+  pending:     { label: "Request Received",  desc: "Your request has been received. We will begin processing it shortly.", color: "text-amber-700",  bg: "bg-amber-100 dark:bg-amber-900/30",  icon: <Clock className="w-5 h-5" /> },
+  in_progress: { label: "Form Filling",      desc: "We are currently filling your application form on the portal.",                 color: "text-blue-700",   bg: "bg-blue-100 dark:bg-blue-900/30",   icon: <RefreshCw className="w-5 h-5" /> },
+  completed:   { label: "Completed! ✅",     desc: "Your application has been successfully submitted! Download your receipt below.", color: "text-green-700",  bg: "bg-green-100 dark:bg-green-900/30", icon: <CheckCircle2 className="w-5 h-5" /> },
+  rejected:    { label: "Rejected",          desc: "Unfortunately, your request could not be processed. Please check the notes or contact support.",            color: "text-red-700",    bg: "bg-red-100 dark:bg-red-900/30",     icon: <AlertCircle className="w-5 h-5" /> },
 };
 
 export default function TrackApplicationPage() {
@@ -539,7 +539,7 @@ export default function TrackApplicationPage() {
                 <div>
                   <h4 className="font-extrabold text-sm text-amber-800 dark:text-amber-400 uppercase tracking-wider">Correct Document Re-upload Portal</h4>
                   <p className="text-xs text-amber-700/80 dark:text-amber-300/80 font-medium mt-0.5">
-                    Aapki application complete karne ke liye sahi file submit karein. Ye automatic Backblaze database par save ho jayegi.
+                    Please submit the correct file to complete your application. It will be securely stored in our cloud locker.
                   </p>
                 </div>
               </div>
@@ -551,7 +551,7 @@ export default function TrackApplicationPage() {
               ) : (
                 <form onSubmit={handleUpload} className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Kaunsa Document Hai?</label>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Document Type</label>
                     <select
                       value={selectedDocType}
                       onChange={(e) => setSelectedDocType(e.target.value)}
@@ -569,7 +569,7 @@ export default function TrackApplicationPage() {
                   <div className="flex items-center gap-3">
                     <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-900 hover:border-amber-400 dark:hover:border-amber-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 cursor-pointer transition-all">
                       <FileUp className="w-4 h-4 text-amber-500" />
-                      {selectedFile ? selectedFile.name.slice(0, 20) + "..." : "Sahi File Select Karein"}
+                      {selectedFile ? selectedFile.name.slice(0, 20) + "..." : "Select File"}
                       <input
                         type="file"
                         className="hidden"
@@ -656,11 +656,11 @@ export default function TrackApplicationPage() {
             {/* Pulsing indicator */}
             <div className="flex items-center justify-center gap-2 mb-2">
               <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
-              <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest">LIVE OTP Request Active</span>
+              <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-widest">LIVE Verification Active</span>
             </div>
 
             <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 font-semibold">
-              Apne mobile par government/exam portal se aaya SMS OTP yahan enter karein:
+              Please enter the SMS OTP received from the government/exam portal on your mobile:
             </p>
 
             {/* Verification code — trust signal */}
@@ -671,11 +671,11 @@ export default function TrackApplicationPage() {
                   <p className="text-xs font-extrabold text-emerald-800 dark:text-emerald-400">🛡️ SECRET TRUST CODE</p>
                 </div>
                 <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/60 rounded-xl px-3 py-2">
-                  <span className="text-[11px] text-gray-500 font-bold">Representative se pucho:</span>
+                  <span className="text-[11px] text-gray-500 font-bold">Ask representative for code:</span>
                   <span className="font-mono font-extrabold tracking-widest text-emerald-600 dark:text-emerald-400 text-base">{otpAlert.verification_code}</span>
                 </div>
                 <p className="text-[10px] text-emerald-700/80 dark:text-emerald-300/80 font-semibold mt-2 leading-relaxed">
-                  Call par baithe agent se poochiye ki unka screen code kya hai. Agar woh same yahi code batayein tabhi trust karein.
+                  Ask the calling representative to speak this screen code. Only trust them if the code matches exactly.
                 </p>
               </div>
             )}
@@ -692,7 +692,7 @@ export default function TrackApplicationPage() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Representative ne mujhe same Secret Trust Code bol kar sunaya hai.
+                  The representative has verified and spoken the correct Secret Trust Code.
                 </span>
               </label>
 
@@ -704,7 +704,7 @@ export default function TrackApplicationPage() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Yeh OTP bank account, ATM card ya Google Pay/Paytm se related nahi hai.
+                  This OTP is not related to my bank account, ATM card, or mobile wallets (GPay/Paytm).
                 </span>
               </label>
 
@@ -716,7 +716,7 @@ export default function TrackApplicationPage() {
                   className="w-4 h-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500 mt-0.5 shrink-0"
                 />
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-tight">
-                  Kisi ne mujhe screen-share (e.g. AnyDesk, TeamViewer) download nahi karwaya.
+                  I have not installed any screen-sharing application (e.g. AnyDesk, TeamViewer).
                 </span>
               </label>
             </div>
@@ -728,7 +728,7 @@ export default function TrackApplicationPage() {
               maxLength={8}
               value={otpInput}
               onChange={e => setOtpInput(e.target.value.replace(/\D/g, ""))}
-              placeholder="OTP yahan likhein"
+              placeholder="Enter OTP here"
               className="w-full text-center text-2xl font-extrabold font-mono tracking-widest py-3 px-4 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 mb-4"
             />
 
@@ -738,13 +738,13 @@ export default function TrackApplicationPage() {
               disabled={otpInput.length < 4 || otpSubmitting || !chkSecret || !chkNotBank || !chkNoScreenShare}
               className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:dark:bg-gray-800 disabled:opacity-60 text-white rounded-2xl font-extrabold text-base transition-all active:scale-95 mb-3 flex items-center justify-center gap-2 shadow-lg shadow-red-500/10"
             >
-              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ Verified OTP Submit Karein"}
+              {otpSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "✅ Submit Verified OTP"}
             </button>
 
             {/* Countdown */}
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 font-semibold">
               <Clock className="w-3.5 h-3.5" />
-              <span>{Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")} mein request expire hogi</span>
+              <span>Request expires in {Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, "0")}</span>
             </div>
           </div>
         </div>
