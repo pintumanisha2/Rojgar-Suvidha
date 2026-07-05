@@ -204,7 +204,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(35000),
+          signal: AbortSignal.timeout(50000),
         }
       );
 
@@ -245,7 +245,7 @@ async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolea
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

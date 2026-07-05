@@ -37,7 +37,7 @@ Return this exact JSON structure (no other text):
         "Authorization": `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "llama-3.1-8b-instant",
         messages: [
           { role: "system", content: "You are a professional resume writer. Always respond with ONLY valid JSON, no markdown, no explanation." },
           { role: "user", content: prompt }
