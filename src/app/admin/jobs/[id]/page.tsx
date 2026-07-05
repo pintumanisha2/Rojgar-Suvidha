@@ -134,6 +134,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
 
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [uploadingPdfIndex, setUploadingPdfIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -323,6 +324,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     const file = e.target.files?.[0];
     if (!file) return;
     
+    setUploadingPdfIndex(index);
     setSavingDraft(true);
     try {
       const rawName = file.name;
@@ -354,6 +356,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       alert("PDF Upload failed: " + err.message);
     } finally {
       setSavingDraft(false);
+      setUploadingPdfIndex(null);
     }
   };
 
@@ -573,16 +576,30 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Regular Links (Table)</label>
               {links.map((l, i) => {
                 const isNotificationRow = l.label.toLowerCase().includes("notification") || l.label.toLowerCase().includes("pdf");
+                const isThisUploading = uploadingPdfIndex === i;
                 return (
                   <div key={i} className="flex gap-3 group">
                     <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="Label" className={inputCls} />
                     <div className="relative flex-1 flex items-center">
-                      <input type="url" value={l.url} onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} placeholder="URL (or upload PDF →)" className={`${inputCls} pr-12`} />
-                      {isNotificationRow && (
-                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors" title="Upload PDF to your server">
-                          <UploadCloud className="h-4 w-4" />
-                          <input type="file" className="hidden" accept="application/pdf" onChange={(e) => handleNotificationPdfUpload(e, i)} />
-                        </label>
+                      <input 
+                        type="url" 
+                        value={isThisUploading ? "Uploading PDF..." : l.url} 
+                        onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} 
+                        disabled={isThisUploading}
+                        placeholder="URL (or upload PDF →)" 
+                        className={`${inputCls} pr-12 ${isThisUploading ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-semibold" : ""}`} 
+                      />
+                      {isThisUploading ? (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4.5 w-4.5 animate-spin text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                      ) : (
+                        isNotificationRow && (
+                          <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors" title="Upload PDF to your server">
+                            <UploadCloud className="h-4 w-4" />
+                            <input type="file" className="hidden" accept="application/pdf" onChange={(e) => handleNotificationPdfUpload(e, i)} />
+                          </label>
+                        )
                       )}
                     </div>
                     <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
