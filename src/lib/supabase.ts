@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
   const urlStr = typeof url === "string" ? url : (url as any).url || url.toString();
   const isStorage = urlStr.includes("/storage/v1");
-  const timeoutMs = isStorage ? 60000 : 8000; // 60s for storage uploads, 8s for regular queries
+  const timeoutMs = isStorage ? 60000 : 30000; // 60s for storage uploads, 30s for regular queries
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -19,7 +19,19 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
   } catch (error: any) {
     clearTimeout(id);
     if (error.name === 'AbortError') {
-      throw new Error(`Network timeout: The request took too long (${timeoutMs / 1000}s). Please try again.`);
+      // Return a clean mock HTTP 408 response instead of throwing a raw exception,
+      // preventing Supabase client library from hanging on aborted promises.
+      return new Response(
+        JSON.stringify({
+          code: "TIMEOUT",
+          message: `Network timeout: The request took too long (>${timeoutMs / 1000}s). Please try again.`
+        }),
+        {
+          status: 408,
+          statusText: "Request Timeout",
+          headers: { "Content-Type": "application/json" }
+        }
+      );
     }
     throw error;
   }
