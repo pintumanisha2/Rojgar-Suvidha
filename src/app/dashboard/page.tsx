@@ -330,7 +330,7 @@ function DashboardContent() {
           playChimeSound();
           if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
             new Notification("🔑 OTP Required - Rojgar Suvidha", {
-              body: `Kripya live verification ke liye OTP enter karein. Secret trust code: ${data.verification_code || "None"}.`,
+              body: `Please enter the OTP for live verification. Secret trust code: ${data.verification_code || "None"}.`,
               icon: "/logo-blue.png"
             });
           }
@@ -752,7 +752,7 @@ function DashboardContent() {
                 <Bookmark className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Your Saved Jobs</h3>
                 <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-                  Aapki saved jobs ek dedicated page par hain. Unhe dekhne ke liye click karein.
+                  Your saved jobs are located on a dedicated page. Click below to view them.
                 </p>
                 <Link href="/saved-jobs" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/30">
                   View Saved Jobs →
@@ -769,7 +769,7 @@ function DashboardContent() {
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-16 text-center">
                   <Briefcase className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Applications Yet</h3>
-                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">Kisi bhi job form par jaake apply karein. Aapke saare applications yahaan track honge.</p>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">Apply for any job to get started. All your submitted job applications will be tracked here.</p>
                   <Link href="/" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/30">
                     Browse Jobs
                   </Link>

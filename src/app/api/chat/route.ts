@@ -180,7 +180,7 @@ ${formatList(admissions)}`;
 
     const botReply =
       data.choices?.[0]?.message?.content ||
-      "Maafi chahta hoon, abhi jawab nahi de paa raha. Thodi der baad try karein. 🙏";
+      "I apologize, I am unable to respond at the moment. Please try again in a few moments. 🙏";
 
     return NextResponse.json({ reply: botReply });
   } catch (error: any) {

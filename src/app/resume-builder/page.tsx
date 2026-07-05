@@ -616,7 +616,7 @@ export default function ResumeBuilderPage() {
             <div className="flex justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
               <button onClick={() => { setStep(2); setAiData(null); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl">
-                <ChevronLeft className="w-4 h-4" /> Edit Karein
+                <ChevronLeft className="w-4 h-4" /> Edit
               </button>
               <button onClick={generateResume} disabled={generating}
                 className="flex items-center gap-2 px-5 py-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold rounded-xl">

@@ -49,7 +49,7 @@ export default function ComplaintPage() {
     });
 
     if (err) {
-      setError("Submit nahi hua. Dobara try karo.");
+      setError("Failed to submit. Please try again.");
     } else {
       setSubmitted(true);
     }
@@ -64,19 +64,19 @@ export default function ComplaintPage() {
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
           <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-3">
-            Complaint Submit Ho Gayi! ✅
+            Complaint Submitted Successfully! ✅
           </h2>
           <p className="text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-            Aapki complaint humein mil gayi hai. Hum 24-48 ghante mein aapke email par jawab denge.
+            We have received your complaint. We will respond to your email address within 24-48 hours.
           </p>
           <div className="space-y-3">
             <Link href="/"
               className="block w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-center transition-all shadow-lg shadow-indigo-500/30">
-              Home par Wapas Jaao
+              Back to Home
             </Link>
             <button onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", category: "", subject: "", message: "" }); }}
               className="block w-full py-3 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-center hover:bg-gray-50 transition-all">
-              Nai Complaint Daalo
+              Submit Another Complaint
             </button>
           </div>
         </div>
@@ -99,14 +99,14 @@ export default function ComplaintPage() {
             <MessageSquareWarning className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Complaint / Feedback</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Koi bhi problem hai? Hume batao, hum help karenge!</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Facing any issues? Let us know, we are here to help!</p>
         </div>
 
         {/* Notice */}
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex gap-3 mb-6">
           <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
-            Aapki complaint 24-48 ghante mein resolve ki jayegi. Emergency ke liye hamare WhatsApp par contact karein.
+            Your complaint will be resolved within 24-48 hours. For emergency assistance, please contact us on WhatsApp.
           </p>
         </div>
 

@@ -132,7 +132,7 @@ export default function AboutFounderPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">No More Waiting</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Ab ghanto line me lagne ki zarurat nahi. Apne ghar ki shanti se, mobile click par apna form submit karein. Time bachayein, exam ki taiyari badhayein.
+                No more waiting in long lines. Submit your forms from the comfort of your home in a few clicks. Save time and focus on your exam preparation.
               </p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function AboutFounderPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Military Grade Security</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Aapke personal documents humare server par 256-bit encryption ke sath save hote hain aur e-Suvidha me toh kaam hote hi automatically delete ho jate hain. 100% Privacy.
+                Your documents are stored on our servers with 256-bit encryption, and are automatically deleted after your e-Suvidha application is processed. 100% privacy guaranteed.
               </p>
             </div>
           </div>
@@ -160,7 +160,7 @@ export default function AboutFounderPage() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Expert Verification</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Chhoti si spelling mistake se form reject ho jata hai. Humari expert team submit karne se pehle har detail ko do baar cross-verify karti hai.
+                Even a minor spelling mistake can get your application rejected. Our expert team cross-verifies every detail twice before final submission.
               </p>
             </div>
           </div>
@@ -183,9 +183,9 @@ export default function AboutFounderPage() {
           <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.05] mix-blend-overlay"></div>
           <div className="relative z-10">
             <Smartphone className="w-16 h-16 text-white/80 mx-auto mb-6" />
-            <h2 className="text-3xl font-black text-white mb-4">Taiyar Hain Apna Digital Safar Shuru Karne Ke Liye?</h2>
+            <h2 className="text-3xl font-black text-white mb-4">Ready to Start Your Digital Journey?</h2>
             <p className="text-indigo-100 mb-8 max-w-xl mx-auto font-medium">
-              Abhi apna profile banayein aur Digital Locker ka fayda uthayein. Kisi bhi job pe 'Apply For Me' par click karein aur baaki hum par chhod dein!
+              Create your profile today and use our Digital Locker. Click 'Apply For Me' on any job posting, and let us handle the rest!
             </p>
             <Link href="/register" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-600 hover:bg-gray-50 rounded-xl font-black text-lg transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1">
               Join Rojgar Suvidha <ArrowLeft className="w-5 h-5 rotate-180" />

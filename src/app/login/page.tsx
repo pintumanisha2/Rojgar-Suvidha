@@ -218,7 +218,7 @@ function LoginContent() {
   // ── Phone OTP: Send ───────────────────────────────────
   const handleSendPhoneOtp = async () => {
     const digits = phone.replace(/\D/g, "");
-    if (digits.length !== 10) { setError("Valid 10-digit mobile number enter karein."); return; }
+    if (digits.length !== 10) { setError("Please enter a valid 10-digit mobile number."); return; }
     setLoading(true); setError(null); setMsg(null);
     try {
       const res = await fetch("/api/send-phone-otp", {
@@ -226,15 +226,15 @@ function LoginContent() {
         body: JSON.stringify({ phone: `+91${digits}` }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "OTP send nahi hua."); }
-      else { setPhoneOtpSent(true); setPhoneCooldown(60); setMsg(`OTP +91 ${digits} pe bheja gaya!`); }
-    } catch { setError("Network error. Dobara try karein."); }
+      if (!res.ok) { setError(data.error || "Failed to send OTP. Please try again."); }
+      else { setPhoneOtpSent(true); setPhoneCooldown(60); setMsg(`OTP sent successfully to +91 ${digits}!`); }
+    } catch { setError("Network error. Please try again."); }
     finally { setLoading(false); }
   };
 
   // ── Phone OTP: Verify (auto detect new/existing user) ─
   const handleVerifyPhoneOtp = async () => {
-    if (phoneOtp.length !== 6) { setError("6-digit OTP enter karein."); return; }
+    if (phoneOtp.length !== 6) { setError("Please enter the 6-digit OTP."); return; }
     const digits = phone.replace(/\D/g, "");
     setLoading(true); setError(null); setMsg(null);
     try {
@@ -243,26 +243,26 @@ function LoginContent() {
         body: JSON.stringify({ phone: `+91${digits}`, otp: phoneOtp }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "OTP galat hai."); setLoading(false); return; }
+      if (!res.ok) { setError(data.error || "Invalid OTP code. Please try again."); setLoading(false); return; }
       if (data.accessToken && data.refreshToken) {
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: data.accessToken,
           refresh_token: data.refreshToken,
         });
-        if (sessionError) { setError("Session error. Dobara try karein."); setLoading(false); return; }
+        if (sessionError) { setError("Session error. Please try again."); setLoading(false); return; }
         if (sessionData?.user) {
-          setMsg(data.isNewUser ? "Account ban gaya! Profile setup ho raha hai..." : "Login ho gaya! Redirect ho raha hai...");
+          setMsg(data.isNewUser ? "Account created! Preparing profile setup..." : "Logged in successfully! Redirecting...");
           await redirectAfterLogin(sessionData.user.id);
         }
       } else if (data.actionLink) {
-        setMsg(data.isNewUser ? "Account ban gaya! Login ho raha hai..." : "Login ho gaya!");
+        setMsg(data.isNewUser ? "Account created! Logging in..." : "Logged in successfully!");
         const redirectParam = encodeURIComponent(data.isNewUser ? `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}` : redirectUrl);
         window.location.href = `${data.actionLink}&next=${redirectParam}`;
       } else {
-        setError("Session create nahi hua. Dobara try karein.");
+        setError("Session creation failed. Please try again.");
         setLoading(false);
       }
-    } catch { setError("Network error. Dobara try karein."); setLoading(false); }
+    } catch { setError("Network error. Please try again."); setLoading(false); }
   };
 
   const handleResendPhoneOtp = async () => {
@@ -291,22 +291,22 @@ function LoginContent() {
     e.preventDefault();
     setError(null); setMsg(null);
     const typo = checkEmailTypo(email);
-    if (typo) { setError(`Email me typo? "${typo}" mean kar rahe ho?`); return; }
+    if (typo) { setError(`Typo in email? Did you mean "${typo}"?`); return; }
     if (isSignUp) {
-      if (password.length < 8) { setError("Password minimum 8 characters ka hona chahiye."); return; }
-      if (password !== confirmPass) { setError("Passwords match nahi kar rahe."); return; }
+      if (password.length < 8) { setError("Password must be at least 8 characters long."); return; }
+      if (password !== confirmPass) { setError("Passwords do not match."); return; }
       setLoading(true);
       try {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
-          if (error.message.toLowerCase().includes("already")) { setError("Account already exist karta hai! Sign In karein."); setIsSignUp(false); }
+          if (error.message.toLowerCase().includes("already")) { setError("Account already exists! Please Sign In."); setIsSignUp(false); }
           else setError(error.message);
         } else if (data?.session) {
-          setMsg("Account ban gaya! Redirect ho raha hai...");
+          setMsg("Account created successfully! Redirecting...");
           await redirectAfterLogin(data.user!.id);
         } else {
           setEmailOtpSent(true); setEmailCooldown(60);
-          setMsg("Account ban gaya! Email pe 6-digit OTP aaya hai — verify karein.");
+          setMsg("Account created! A 6-digit OTP has been sent to your email — please verify it.");
         }
       } catch (err: any) { setError(err.message); }
       finally { setLoading(false); }
@@ -318,12 +318,12 @@ function LoginContent() {
           if (error.message.includes("Email not confirmed")) {
             await supabase.auth.resend({ type: "signup", email });
             setIsSignUp(true); setEmailOtpSent(true); setEmailCooldown(60);
-            setError("Email verify nahi hua. Naya OTP bheja gaya.");
+            setError("Email not verified. A new verification OTP has been sent.");
           } else if (error.message.includes("Invalid login credentials")) {
-            setError("Email ya Password galat hai. Dobara check karein.");
+            setError("Incorrect email or password. Please check your credentials.");
           } else setError(error.message);
         } else if (data?.user) {
-          setMsg("Login ho gaya! Redirect ho raha hai...");
+          setMsg("Logged in successfully! Redirecting...");
           await redirectAfterLogin(data.user.id);
         }
       } catch (err: any) { setError(err.message); }
@@ -432,10 +432,10 @@ function LoginContent() {
                     {isSignUp && authMethod === "email" ? "Create Account" : "Welcome Back"}
                   </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {authMethod === "phone" ? "Mobile OTP se login karein — Sarkari aur Private Jobs dono access hongi" :
-                     authMethod === "google" ? "Google se 1-click login — Sarkari aur Private Jobs dono ke liye" :
-                     isSignUp ? "Naya account banayein — Sarkari aur Private Jobs dono access milegi" :
-                     "Sign in karein — Sarkari aur Private Jobs dono ke liye same account"}
+                    {authMethod === "phone" ? "Login via Mobile OTP to access all Government & Private job portals." :
+                     authMethod === "google" ? "One-click login with Google to access both Government & Private jobs." :
+                     isSignUp ? "Create a new account to get instant access to Government & Private jobs." :
+                     "Sign in to access your unified profile for Government & Private jobs."}
                   </p>
                 </div>
 
@@ -492,7 +492,7 @@ function LoginContent() {
                           Send OTP →
                         </PrimaryBtn>
                         <p className="text-center text-xs text-gray-400 dark:text-gray-500">
-                          📱 Ek account — Sarkari Naukri aur Private Jobs dono access. OTP se login, koi password nahi.
+                          📱 One account — access both Government & Private jobs. Login via OTP, no password needed.
                         </p>
                       </>
                     ) : (
@@ -504,7 +504,7 @@ function LoginContent() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">6-digit OTP Enter Karein</label>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">Enter the 6-digit OTP</label>
                           <OtpBoxes value={phoneOtp} onChange={setPhoneOtp} disabled={loading} />
                         </div>
 
@@ -515,7 +515,7 @@ function LoginContent() {
                         <div className="flex items-center justify-between text-sm">
                           <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); }}
                             className="font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
-                            ← Wapas
+                            ← Back
                           </button>
                           <button onClick={handleResendPhoneOtp} disabled={phoneCooldown > 0 || loading}
                             className="font-bold text-indigo-600 dark:text-indigo-400 disabled:text-gray-400 transition-colors">
@@ -552,7 +552,7 @@ function LoginContent() {
                     {isForgotPass && !emailOtpSent && (
                       <form onSubmit={handleForgotPassword} className="space-y-4">
                         <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-700 dark:text-amber-400 font-medium">
-                          🔑 Apna email enter karein — password reset link aur OTP bhejenge.
+                          🔑 Enter your email address to receive a password reset link and OTP.
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
@@ -561,7 +561,7 @@ function LoginContent() {
                         <PrimaryBtn type="submit">Send Reset OTP →</PrimaryBtn>
                         <button type="button" onClick={() => { resetForm(); }}
                           className="w-full text-center text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">
-                          ← Sign In pe wapas
+                          ← Back to Sign In
                         </button>
                       </form>
                     )}
@@ -570,7 +570,7 @@ function LoginContent() {
                     {isForgotPass && emailOtpSent && (
                       <form onSubmit={handleResetPassword} className="space-y-4">
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">Email OTP Enter Karein</label>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">Enter Email OTP</label>
                           <OtpBoxes value={emailOtp} onChange={setEmailOtp} disabled={loading} />
                         </div>
                         <div>
@@ -644,7 +644,7 @@ function LoginContent() {
                             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
                             <div className="relative">
                               <InputField icon={Lock} type={showConfirm ? "text" : "password"} required value={confirmPass}
-                                onChange={(e: any) => setConfirmPass(e.target.value)} placeholder="Password dobara enter karein" disabled={loading} />
+                                onChange={(e: any) => setConfirmPass(e.target.value)} placeholder="Re-enter your password" disabled={loading} />
                               <button type="button" onClick={() => setShowConfirm(!showConfirm)}
                                 className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600">
                                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -652,7 +652,7 @@ function LoginContent() {
                             </div>
                             {confirmPass && (
                               <p className={`text-[11px] font-bold mt-1 ${password === confirmPass ? "text-green-600" : "text-red-500"}`}>
-                                {password === confirmPass ? "✓ Passwords match" : "✗ Passwords match nahi kar rahe"}
+                                {password === confirmPass ? "✓ Passwords match" : "✗ Passwords do not match"}
                               </p>
                             )}
                           </div>
@@ -668,11 +668,11 @@ function LoginContent() {
                     {!isForgotPass && emailOtpSent && (
                       <form onSubmit={handleVerifyEmailOtp} className="space-y-4">
                         <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-center">
-                          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300">📧 OTP bheja: {email}</p>
-                          <p className="text-xs text-indigo-500 mt-1">Spam/Junk folder bhi check karein</p>
+                          <p className="text-sm font-black text-indigo-700 dark:text-indigo-300">📧 OTP sent to: {email}</p>
+                          <p className="text-xs text-indigo-500 mt-1">Please check your Spam/Junk folders as well</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">6-digit OTP Enter Karein</label>
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 text-center">Enter the 6-digit OTP</label>
                           <OtpBoxes value={emailOtp} onChange={setEmailOtp} disabled={loading} />
                         </div>
                         <PrimaryBtn type="submit" disabled={emailOtp.length < 6}>

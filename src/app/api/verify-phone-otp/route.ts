@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     if (fetchError || !otpRecord) {
       return NextResponse.json(
-        { error: "OTP galat hai ya expire ho gaya. Dobara try karein." },
+        { error: "Invalid or expired OTP. Please try again." },
         { status: 400 }
       );
     }
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       }
 
       console.error("User creation failed:", createError);
-      return NextResponse.json({ error: "Account create nahi hua. Dobara try karein." }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
     }
 
     // Sign in the newly created user to get session tokens

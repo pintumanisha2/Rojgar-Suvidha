@@ -155,13 +155,13 @@ function ApplyForMeContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobTitle.trim()) { setError("Job ka naam daalna zaroori hai."); return; }
-    if (!termsAccepted) { setError("Pehle Terms & Conditions accept karein."); return; }
-    if (!profile?.full_name) { setError("Pehle apna profile complete karein."); return; }
+    if (!jobTitle.trim()) { setError("Job title is required."); return; }
+    if (!termsAccepted) { setError("Please accept the Terms & Conditions to proceed."); return; }
+    if (!profile?.full_name) { setError("Please complete your profile details first."); return; }
     
     // Validate Captcha
     if (parseInt(captchaInput) !== captcha.num1 + captcha.num2) {
-      setError("Captcha ka answer galat hai! Kripya sahi calculation bharein.");
+      setError("Incorrect Captcha answer! Please solve the calculation again.");
       generateCaptcha();
       return;
     }
@@ -382,8 +382,8 @@ function ApplyForMeContent() {
             ) : orders.length === 0 ? (
               <div className="bg-white dark:bg-gray-900 p-12 rounded-3xl border border-gray-100 dark:border-gray-800 text-center space-y-3">
                 <ClipboardList className="w-12 h-12 text-gray-300 mx-auto" />
-                <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">Aapne abhi tak koi order place nahi kiya hai</h3>
-                <p className="text-xs text-gray-500">Sarkari/Private jobs ke forms bina mistakes fill karwane ke liye abhi apply karein.</p>
+                <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">You have not placed any application requests yet.</h3>
+                <p className="text-xs text-gray-500">Apply now to get your Government & Private job forms filled error-free by our experts.</p>
                 <button onClick={() => setActiveTab("apply")} className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">Apply Now</button>
               </div>
             ) : (
@@ -481,7 +481,7 @@ function ApplyForMeContent() {
                   <div>
                     <h4 className="text-sm font-bold text-red-800 dark:text-red-400">Profile Incomplete!</h4>
                     <p className="text-xs text-red-700 dark:text-red-300/80 leading-relaxed mt-0.5">
-                      Pehle apna details setup page se complete karein taaki hum aapka data access kar sakein.
+                      Please complete your details on the profile setup page so that we can access your application data.
                     </p>
                     <Link href="/profile-setup" className="inline-block mt-2 text-xs font-black text-indigo-600 hover:underline">Complete Setup Now →</Link>
                   </div>
@@ -591,7 +591,7 @@ function ApplyForMeContent() {
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3">
                 <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-                  Aapke documents (Photo, Signature, Aadhar) aapke Dashboard ke "My Documents" section mein pehle se upload hone chahiye. Agar nahi hain toh pehle upload karein.
+                  Your documents (Photo, Signature, Aadhaar) must be pre-uploaded in the "My Documents" section of your Dashboard. If they are not, please upload them first.
                 </p>
               </div>
 

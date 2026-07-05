@@ -72,7 +72,7 @@ export default function EligibilityScoutPage() {
 
   const handleCheck = () => {
     if (!dob) {
-      alert("Apni Date of Birth select karein.");
+      alert("Please select your Date of Birth.");
       return;
     }
 
@@ -183,7 +183,7 @@ export default function EligibilityScoutPage() {
             Smart Eligibility Checker <Sparkles className="w-5 h-5 text-amber-500" />
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-xl mx-auto">
-            Apni qualification aur details select karein, aur instantly dekhein aap kis vacancy ke liye eligible hain.
+            Select your qualification and details, and instantly find out which job vacancies you are eligible for.
           </p>
         </div>
 
@@ -269,8 +269,8 @@ export default function EligibilityScoutPage() {
                 <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Calculator className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                 </div>
-                <h3 className="font-extrabold text-gray-800 dark:text-gray-200 text-lg">Eligibility Result Aise Dikhega</h3>
-                <p className="text-sm text-gray-400 max-w-sm mx-auto mt-1">Form fill karke button click karein, eligible jobs list ho jayenge.</p>
+                <h3 className="font-extrabold text-gray-800 dark:text-gray-200 text-lg">Eligibility Results Will Appear Here</h3>
+                <p className="text-sm text-gray-400 max-w-sm mx-auto mt-1">Fill out the form and click check to list the jobs you are eligible for.</p>
               </div>
             ) : loading ? (
               <div className="space-y-4">
@@ -291,7 +291,7 @@ export default function EligibilityScoutPage() {
                 </div>
                 <h3 className="font-extrabold text-gray-800 dark:text-gray-200 text-lg">No Matching Jobs Found</h3>
                 <p className="text-sm text-gray-400 max-w-sm mx-auto mt-1">
-                  Aapki select ki gayi details ke mutabik abhi koi vacancies active nahi hain. Dobara details check karein.
+                  No vacancies are active matching your selection details. Please review your details and try again.
                 </p>
                 {userAge !== null && (
                   <p className="text-xs text-indigo-500 mt-2 font-bold">Calculated Age: {userAge} Years</p>
@@ -301,7 +301,7 @@ export default function EligibilityScoutPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
-                    🎉 Congratulation! Aap <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{matchedJobs.length} matches</span> ke liye eligible hain.
+                    🎉 Congratulations! You are eligible for <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{matchedJobs.length} matches</span>.
                   </p>
                   {userAge !== null && (
                     <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-lg text-xs font-bold text-indigo-600 dark:text-indigo-400">
