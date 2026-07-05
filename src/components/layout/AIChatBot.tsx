@@ -10,7 +10,7 @@ export default function AIChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string }[]>([
-    { role: "bot", content: "Namaste! Main Rojgar Assistant hoon. Main aapki career ya jobs se judi kya madad kar sakta hoon? 😊" }
+    { role: "bot", content: "Namaste! 🙏 Main Rojgar AI hoon — Rojgar Suvidha ka exclusive Career Assistant!\n\nAap mujhse pooch sakte hain:\n• Latest Sarkari Jobs 💼\n• Admit Card / Results 📋\n• SSC, Railway, Banking, UPSC vacancies\n• Apply For Me service 🚀\n• Digital Locker, Resume Builder\n\nBatayein, main aapki kya madad kar sakta hoon? 😊" }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -105,10 +105,12 @@ export default function AIChatBot() {
   };
 
   const quickActions = [
-    { label: "Latest Jobs 🔥", query: "Kaunsi nayi naukri aayi hai?" },
-    { label: "Admit Cards 🎫", query: "Admit card kaise download karein?" },
-    { label: "Results 📜", query: "Results kab aayenge?" },
-    { label: "Digital Locker 🛡️", query: "Locker mein document kaise upload karein?" },
+    { label: "Latest Jobs 🔥", query: "Abhi kaunsi nayi sarkari naukri aayi hai?" },
+    { label: "SSC Jobs 📝", query: "SSC ki kaunsi vacancy abhi open hai?" },
+    { label: "Railway Jobs 🚂", query: "Railway mein kaunsi naukri abhi open hai?" },
+    { label: "Admit Card 🎫", query: "Kaunse exam ke admit card abhi available hain?" },
+    { label: "Results 📜", query: "Kaunse latest results aaye hain?" },
+    { label: "Apply For Me 🚀", query: "Apply For Me service kya hai aur kaise kaam karta hai?" },
   ];
 
   return (
@@ -244,7 +246,7 @@ export default function AIChatBot() {
 
               {/* Quick Actions — only on first message */}
               {!isLoading && messages.length === 1 && (
-                <div className="grid grid-cols-2 gap-1.5 mt-2">
+                <div className="grid grid-cols-3 gap-1.5 mt-2">
                   {quickActions.map((action, idx) => (
                     <button
                       key={idx}
