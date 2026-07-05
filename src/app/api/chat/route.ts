@@ -31,55 +31,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "AI Configuration missing (GROQ_API_KEY)" }, { status: 500 });
     }
 
-    // ─── 1. SMART SEARCH: Search jobs matching user's query ───────────────
+    // ─── 1. SMART SEARCH: Search jobs matching user's query ───────────────────
     let relevantJobs: any[] = [];
     if (keywords.length > 0) {
-      // Try keyword-based search using ilike on title
-      const searchQuery = keywords.slice(0, 3).join(" | ");
       const { data: searchResults } = await supabaseAdmin
         .from("jobs")
-        .select("title, category, status, slug, short_info, exam_date, last_date, total_posts, qualification")
+        .select("title, category, slug, last_date, total_posts")
         .neq("status", "draft")
         .or(keywords.map(k => `title.ilike.%${k}%`).join(","))
         .order("created_at", { ascending: false })
-        .limit(8);
+        .limit(5);
       relevantJobs = searchResults || [];
     }
 
-    // ─── 2. FETCH LATEST DATA from all categories ─────────────────────────
+    // ─── 2. FETCH LATEST DATA (small set to keep tokens low) ─────────────
     const { data: allItems } = await supabaseAdmin
       .from("jobs")
-      .select("title, category, status, slug, short_info, exam_date, last_date, total_posts, qualification")
+      .select("title, category, slug, last_date, total_posts")
       .neq("status", "draft")
       .order("created_at", { ascending: false })
-      .limit(120);
+      .limit(40); // Reduced from 120 to keep system prompt small
 
     const allData = allItems || [];
 
     // Categorize data
     const jobCategories = ["latest-jobs", "ssc", "railway", "banking", "upsc", "state-psc", "defence", "police", "teaching", "psu"];
-    const latestJobs = allData.filter(i => jobCategories.includes(i.category)).slice(0, 20);
-    const results = allData.filter(i => i.category === "result").slice(0, 10);
-    const admitCards = allData.filter(i => i.category === "admit-card").slice(0, 10);
-    const answerKeys = allData.filter(i => i.category === "answer-key").slice(0, 8);
-    const admissions = allData.filter(i => i.category === "admission").slice(0, 8);
+    const latestJobs = allData.filter(i => jobCategories.includes(i.category)).slice(0, 6);
+    const results = allData.filter(i => i.category === "result").slice(0, 4);
+    const admitCards = allData.filter(i => i.category === "admit-card").slice(0, 4);
+    const answerKeys = allData.filter(i => i.category === "answer-key").slice(0, 3);
+    const admissions = allData.filter(i => i.category === "admission").slice(0, 3);
 
-    // Format function with rich info
+    // Compact format to save tokens
     const formatItem = (item: any) => {
       let line = `• ${item.title}`;
-      if (item.total_posts) line += ` | Vacancies: ${item.total_posts}`;
-      if (item.last_date) line += ` | Last Date: ${item.last_date}`;
-      if (item.qualification) line += ` | Qualification: ${item.qualification}`;
-      if (item.short_info) line += ` | Info: ${item.short_info.slice(0, 120)}`;
-      line += ` | Link: [View Details](/job/${item.slug})`;
+      if (item.total_posts) line += ` [${item.total_posts} posts]`;
+      if (item.last_date) line += ` [Last: ${item.last_date}]`;
+      line += ` → /job/${item.slug}`;
       return line;
     };
 
     const formatList = (list: any[]) =>
-      list.length ? list.map(formatItem).join("\n") : "Abhi koi naya update nahi hai.";
+      list.length ? list.map(formatItem).join("\n") : "Koi update nahi.";
 
     const relevantSection = relevantJobs.length > 0
-      ? `\n[USER QUERY SE MATCH HUI NAUKRI / RESULTS]\n${formatList(relevantJobs)}`
+      ? `\n[QUERY MATCH]\n${formatList(relevantJobs)}`
       : "";
 
     // ─── 3. SYSTEM PROMPT with full website context ────────────────────────
@@ -154,7 +150,7 @@ ${formatList(admissions)}`;
           "Authorization": `Bearer ${groqApiKey}`,
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "llama-3.1-8b-instant", // Higher TPM limit: 20K vs 12K for 70b model
           messages: messagesPayload,
           max_tokens: 350,        // Reduced to stay within 12K TPM limit
           temperature: 0.4,
