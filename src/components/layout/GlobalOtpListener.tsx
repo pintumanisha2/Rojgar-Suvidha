@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ShieldAlert, Lock, Clock, Loader2, CheckCircle2, User } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function GlobalOtpListener() {
   const pathname = usePathname() || "";
@@ -20,6 +21,7 @@ export default function GlobalOtpListener() {
   const [chkNoScreenShare, setChkNoScreenShare] = useState(false);
 
   const lastNotifiedOtpId = useRef<string | null>(null);
+  const lastNotifiedStatus = useRef<Record<string, string>>({});
 
   // Listen to active session
   useEffect(() => {
@@ -33,6 +35,107 @@ export default function GlobalOtpListener() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Poll & Subscribe to live apply requests status changes globally
+  useEffect(() => {
+    if (!user) return;
+
+    // Initialize status cache on load
+    const initStatus = async () => {
+      try {
+        const { data } = await supabase
+          .from("apply_for_me_requests")
+          .select("id, status")
+          .eq("user_id", user.id);
+        
+        if (data) {
+          data.forEach((req: any) => {
+            lastNotifiedStatus.current[req.id] = req.status;
+          });
+        }
+      } catch (e) {
+        console.error("Init status error:", e);
+      }
+    };
+    initStatus();
+
+    // Check logic
+    const checkStatusUpdate = async () => {
+      try {
+        const { data } = await supabase
+          .from("apply_for_me_requests")
+          .select("id, status, job_title")
+          .eq("user_id", user.id);
+
+        if (data) {
+          data.forEach((req: any) => {
+            const oldStatus = lastNotifiedStatus.current[req.id];
+            // Only trigger alert if status actually changed
+            if (oldStatus && oldStatus !== req.status) {
+              lastNotifiedStatus.current[req.id] = req.status;
+              
+              // Trigger notification chime sound
+              playChimeSound();
+
+              const statusLabels: Record<string, string> = {
+                pending: "Pending / Waiting",
+                paid: "Payment Received",
+                submitted: "Form Submitted",
+                needs_info: "Action Required / Missing Info",
+                completed: "Completed Successfully",
+                refund_pending: "Refund Pending"
+              };
+              const label = statusLabels[req.status] || req.status;
+
+              // 1. Toast Notification banner (gorgeous popup)
+              let toastMsg = `Aapki application "${req.job_title}" ka status ab "${label}" ho gaya hai.`;
+              if (req.status === "completed") {
+                toastMsg = `🎉 Congratulations! Aapka form "${req.job_title}" successfully fill ho gaya hai. Receipt download karein.`;
+              } else if (req.status === "needs_info") {
+                toastMsg = `⚠️ Action Required: Aapke form "${req.job_title}" ke liye kuch documents pending hain. Kripya check karein.`;
+              }
+              
+              toast(toastMsg, {
+                duration: 8000,
+                icon: req.status === "completed" ? "🎉" : req.status === "needs_info" ? "⚠️" : "📋",
+              });
+
+              // 2. HTML5 Browser Notification
+              if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                new Notification(`📋 Status Update: ${req.job_title}`, {
+                  body: `Current status is now: ${label}`,
+                  icon: "/logo-blue.png"
+                });
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Poll status error:", err);
+      }
+    };
+
+    // Subscribe to real-time updates via Supabase WebSockets
+    const channel = supabase.channel(`apply_status_channel_${user.id}`)
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "apply_for_me_requests",
+        filter: `user_id=eq.${user.id}`
+      }, (payload: any) => {
+        console.log("Realtime status update detected:", payload);
+        checkStatusUpdate();
+      })
+      .subscribe();
+
+    // Fallback polling (every 6 seconds)
+    const poll = setInterval(checkStatusUpdate, 6000);
+
+    return () => {
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const playChimeSound = () => {
     try {
