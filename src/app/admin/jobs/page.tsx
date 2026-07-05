@@ -72,7 +72,7 @@ function AdminJobsContent() {
     try {
       const { data: jobsData } = await supabase
         .from("jobs")
-        .select("id, title, category, status, state_code, created_at, slug, banner_url, employer_id, salary")
+        .select("id, title, category, status, state_code, created_at, slug, banner_url, employer_id")
         .order("created_at", { ascending: false });
       
       if (jobsData) setJobs(jobsData);
