@@ -91,6 +91,95 @@ function humanizeHtml(html: string): string {
   return out;
 }
 
+// ── Competitor-Style HTML Table Generators ──────────────────────────────────────
+function generateOverviewTable(meta: any): string {
+  return `
+<div style='overflow-x:auto;margin-bottom:2rem;border-radius:12px;border:2px solid #e2e8f0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);'>
+  <table style='width:100%;border-collapse:collapse;min-width:400px;font-family:inherit;font-size:0.95rem;'>
+    <thead>
+      <tr style='background:linear-gradient(135deg,#4f46e5,#6366f1);color:white;'>
+        <th colspan='2' style='padding:14px 18px;text-align:center;font-weight:800;font-size:1.1rem;'>🎯 Quick Recruitment Highlights</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style='border-bottom:1px solid #e2e8f0;'>
+        <td style='padding:12px 16px;font-weight:700;background:#f8fafc;color:#1e293b;width:35%;'>Organization</td>
+        <td style='padding:12px 16px;color:#334155;font-weight:600;'>${meta.orgName || "Department / Board"}</td>
+      </tr>
+      <tr style='border-bottom:1px solid #e2e8f0;'>
+        <td style='padding:12px 16px;font-weight:700;background:#f8fafc;color:#1e293b;'>Exam Name</td>
+        <td style='padding:12px 16px;color:#334155;font-weight:600;'>${meta.examName || meta.title}</td>
+      </tr>
+      <tr style='border-bottom:1px solid #e2e8f0;'>
+        <td style='padding:12px 16px;font-weight:700;background:#f8fafc;color:#1e293b;'>Total Vacancies</td>
+        <td style='padding:12px 16px;color:#e11d48;font-weight:800;font-size:1.05rem;'>${meta.totalPosts || "Not Available"} Posts</td>
+      </tr>
+      <tr style='border-bottom:1px solid #e2e8f0;'>
+        <td style='padding:12px 16px;font-weight:700;background:#f8fafc;color:#1e293b;'>Application Mode</td>
+        <td style='padding:12px 16px;color:#15803d;font-weight:700;'>Online Apply</td>
+      </tr>
+      <tr style='border-bottom:1px solid #e2e8f0;'>
+        <td style='padding:12px 16px;font-weight:700;background:#f8fafc;color:#1e293b;'>Official Website</td>
+        <td style='padding:12px 16px;color:#4f46e5;font-weight:600;'>Refer to official links below</td>
+      </tr>
+    </tbody>
+  </table>
+</div>`;
+}
+
+function generateDatesFeesTable(meta: any): string {
+  return `
+<div style='overflow-x:auto;margin-bottom:2rem;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 6px -1px rgba(0,0,0,0.02);'>
+  <table style='width:100%;border-collapse:collapse;min-width:500px;font-family:inherit;font-size:0.95rem;'>
+    <thead>
+      <tr style='background-color:#4f46e5;color:white;'>
+        <th style='padding:12px 16px;text-align:left;font-weight:700;width:50%;'>⏰ Important Dates</th>
+        <th style='padding:12px 16px;text-align:left;font-weight:700;width:50%;'>💵 Application Fee</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style='padding:16px;border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;vertical-align:top;line-height:1.6;color:#334155;'>
+          <p style='margin:4px 0;'><strong>Apply Starts:</strong> ${meta.startDate || "Announced Soon"}</p>
+          <p style='margin:4px 0;color:#e11d48;'><strong>Last Date to Apply:</strong> ${meta.lastDate || "See Notification"}</p>
+          <p style='margin:4px 0;'><strong>Exam Date:</strong> ${meta.examDate || "Will be notified later"}</p>
+        </td>
+        <td style='padding:16px;border-bottom:1px solid #e5e7eb;vertical-align:top;line-height:1.6;color:#334155;'>
+          <p style='margin:4px 0;'><strong>General / OBC / EWS:</strong> ${meta.appFeeGen || "Check Details"}</p>
+          <p style='margin:4px 0;'><strong>SC / ST / PH:</strong> ${meta.appFeeRes || "Check Details"}</p>
+          <p style='margin:4px 0;font-size:0.85rem;color:#64748b;'><strong>Note:</strong> Fees can be paid online via Credit/Debit card, Netbanking or UPI.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>`;
+}
+
+function generateVacancyTable(meta: any): string {
+  return `
+<div style='overflow-x:auto;margin-bottom:2rem;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 6px -1px rgba(0,0,0,0.02);'>
+  <table style='width:100%;border-collapse:collapse;min-width:550px;font-family:inherit;font-size:0.95rem;'>
+    <thead>
+      <tr style='background-color:#1e1b4b;color:white;'>
+        <th style='padding:12px 16px;text-align:left;font-weight:700;width:35%;'>Post Name</th>
+        <th style='padding:12px 16px;text-align:center;font-weight:700;width:20%;'>Total Vacancies</th>
+        <th style='padding:12px 16px;text-align:left;font-weight:700;width:45%;'>Eligibility Criteria</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style='border-bottom:1px solid #e5e7eb;'>
+        <td style='padding:14px 16px;font-weight:600;color:#1e293b;vertical-align:middle;'>${meta.examName || meta.title}</td>
+        <td style='padding:14px 16px;text-align:center;font-weight:800;color:#4f46e5;font-size:1.05rem;vertical-align:middle;'>${meta.totalPosts || "Not Available"}</td>
+        <td style='padding:14px 16px;color:#334155;line-height:1.5;vertical-align:middle;'>
+          <p style='margin:2px 0;'><strong>Age Limit:</strong> ${meta.ageLimit || "As per rules"}</p>
+          <p style='margin:2px 0;'><strong>Education:</strong> ${meta.education || "See official notification"}</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>`;
+}
+
 // ── Call Gemini API with models fallback ───────────────────────────────────────
 async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
   const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -152,7 +241,6 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
 
 // ── callAI wraps Gemini (Primary) and Groq (Fallback) ─────────────────────────
 async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
-  // 1. Try Gemini first (virtually infinite token limit, very robust & free)
   if (process.env.GEMINI_API_KEY) {
     try {
       return await callGemini(systemPrompt, userPrompt, jsonMode);
@@ -161,7 +249,6 @@ async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolea
     }
   }
 
-  // 2. Try Groq as fallback
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) {
     throw new Error("Both GEMINI_API_KEY and GROQ_API_KEY are missing in environment variables.");
@@ -193,12 +280,12 @@ async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolea
 // ── Step 1: Extract metadata (JSON) ─────────────────────────────────────────────
 async function extractMetadata(rawText: string, category: string, customInstructions?: string) {
   const categoryHint: Record<string, string> = {
-    "latest-jobs":  `"appFee": "e.g. General: Rs.100 | SC/ST: Free", "ageLimit": "18-27 years", "education": "qualification", "totalPosts": "vacancy count", "lastDate": "last date to apply"`,
-    "results":      `"appFee": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "total selected if mentioned", "lastDate": "result declared date"`,
-    "admit-cards":  `"appFee": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A", "lastDate": "exam date"`,
-    "news":         `"appFee": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A", "lastDate": "news date"`,
-    "admission":    `"appFee": "application fee", "ageLimit": "age limit if any", "education": "qualification required", "totalPosts": "total seats", "lastDate": "last date to apply"`,
-    "answer-key":   `"appFee": "objection fee if any", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A", "lastDate": "objection window last date"`,
+    "latest-jobs":  `"appFeeGen": "General/OBC/EWS fee amount (e.g. ₹ 100 or Free)", "appFeeRes": "SC/ST/PH/Female fee amount (e.g. ₹ 0 or Free)", "startDate": "Application start date (e.g. 10 July 2025)", "lastDate": "Application last date (e.g. 30 July 2025)", "examDate": "Exam date if available (e.g. September 2025 or Announced Soon)", "ageLimit": "Age limit details (e.g. 18-27 years as on 01/07/2025)", "education": "Brief educational qualification (e.g. Bachelor Degree in any stream)", "totalPosts": "Total vacancy count (e.g. 1248 posts or Not Available)"`,
+    "results":      `"appFeeGen": "N/A", "appFeeRes": "N/A", "startDate": "N/A", "lastDate": "result declared date", "examDate": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "total selected count if mentioned"`,
+    "admit-cards":  `"appFeeGen": "N/A", "appFeeRes": "N/A", "startDate": "N/A", "lastDate": "admit card release date", "examDate": "exam date", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A"`,
+    "news":         `"appFeeGen": "N/A", "appFeeRes": "N/A", "startDate": "N/A", "lastDate": "news date", "examDate": "N/A", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A"`,
+    "admission":    `"appFeeGen": "General/OBC/EWS fee", "appFeeRes": "SC/ST/PH fee", "startDate": "admission start date", "lastDate": "last date to apply", "examDate": "entrance exam date if any", "ageLimit": "age criteria", "education": "required qualifying course", "totalPosts": "total seats available"`,
+    "answer-key":   `"appFeeGen": "objection fee if any", "appFeeRes": "N/A", "startDate": "answer key release date", "lastDate": "objection window last date", "examDate": "exam conducted date", "ageLimit": "N/A", "education": "N/A", "totalPosts": "N/A"`,
   };
 
   const systemPrompt = "You are a JSON extractor. Return only valid JSON.";
@@ -237,7 +324,8 @@ VACANCIES: ${meta.totalPosts}
 LAST DATE: ${meta.lastDate}
 AGE: ${meta.ageLimit}
 EDUCATION: ${meta.education}
-FEE: ${meta.appFee}
+FEE_GEN: ${meta.appFeeGen || "N/A"}
+FEE_RES: ${meta.appFeeRes || "N/A"}
 
 NOTIFICATION TEXT:
 ${rawText.substring(0, 1500)}
@@ -260,6 +348,9 @@ ${rawText.substring(0, 1500)}
 7. BANNED WORDS: delve, plethora, crucial, navigating, landscape, testament, moreover, furthermore, comprehensive, leverage, transformative, needless to say, in today's world
 8. ZERO emojis. Use <p> tags for all narrative text (no bullet points for prose).
 
+=== LAYOUT INSTRUCTION ===
+Write the content exactly structured as follows. You MUST output the placeholder '{{OVERVIEW_TABLE}}' immediately after the Quick Navigation (ToC) box. Do not output any table for the overview yourself; just place the placeholder.
+
 === HTML STRUCTURE TO GENERATE ===
 
 <h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1 Title — max 65 chars]</h1>
@@ -277,6 +368,8 @@ ${rawText.substring(0, 1500)}
 <a href='#apply' style='color:#4f46e5;text-decoration:none;font-weight:600;font-size:0.85rem;'>How to Apply</a>
 </div>
 </div>
+
+{{OVERVIEW_TABLE}}
 
 <h2 id='intro'>[H2 about why this notification matters — include primary keyword naturally]</h2>
 [3-4 paragraphs. Hook. Why NOW. Personal observation. Human tone. Include primary keyword in first paragraph.]
@@ -311,7 +404,7 @@ RELATED KEYWORDS: ${meta.lsiKeywords || ""}
 EXAM: ${meta.examName || meta.title}
 ORG: ${meta.orgName || "the organization"}
 VACANCIES: ${meta.totalPosts} | LAST DATE: ${meta.lastDate} | AGE: ${meta.ageLimit}
-EDUCATION: ${meta.education} | FEE: ${meta.appFee}
+EDUCATION: ${meta.education} | FEE_GEN: ${meta.appFeeGen || "N/A"} | FEE_RES: ${meta.appFeeRes || "N/A"}
 
 NOTIFICATION TEXT:
 ${rawText.substring(0, 1500)}
@@ -332,16 +425,23 @@ ${rawText.substring(0, 1500)}
 6. BANNED: delve, plethora, crucial, navigating, comprehensive, moreover, furthermore, transformative
 7. ZERO emojis. Use <p> for prose, <ol>/<ul> only for step-by-step.
 
+=== TABLE INSERTS ===
+You MUST place the placeholder '{{DATES_FEES_TABLE}}' immediately after the H2 element with id='dates'.
+You MUST place the placeholder '{{VACANCY_TABLE}}' immediately after the H2 element with id='vacancies'.
+Do not output raw tables for dates/fees or vacancy breakdown yourself; just place the placeholders.
+
 === HTML STRUCTURE TO GENERATE ===
 
 <h2 id='dates'>${meta.primaryKeyword || meta.examName} Important Dates and Application Fee</h2>
-[1-2 direct paragraphs with urgency — why acting early matters. HTML table for important dates. HTML table for fee (General/OBC/SC/ST/EWS/PwD rows). Short closing line with human voice.]
+{{DATES_FEES_TABLE}}
+[1-2 direct paragraphs with urgency — why acting early matters. Short closing line with human voice.]
 
 <h2 id='eligibility'>${meta.primaryKeyword || meta.examName} Eligibility Criteria — Who Can Apply?</h2>
 [Very detailed. Age limit with ALL relaxations (SC/ST: 5 yrs, OBC: 3 yrs, PwD: 10 yrs, Ex-Servicemen rules). Education qualification explained simply. Address common questions: "Final year students?", "Appearing candidates?" Include primary keyword naturally.]
 
 <h2 id='vacancies'>${meta.primaryKeyword || meta.examName} Vacancy Details — Category Wise</h2>
-[1 paragraph about competition reality. HTML table with UR/OBC/SC/ST/EWS/PwD breakdown. Estimate competition: "With lakhs expected to apply for ${meta.totalPosts} posts, here's how to stand out..." Include LSI keyword.]
+{{VACANCY_TABLE}}
+[1 paragraph about competition reality. Estimate competition: "With lakhs expected to apply for ${meta.totalPosts} posts, here's how to stand out..." Include LSI keyword.]
 
 <h2 id='selection'>${meta.primaryKeyword || meta.examName} Selection Process and Exam Pattern</h2>
 [Most detailed section — 5-7 paragraphs minimum. For each exam stage use H3:
@@ -388,10 +488,6 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
 
 // ── Step 3: Category-specific blog writer ─────────────────────────────────────
 async function writeSpecialCategoryBlog(meta: any, rawText: string, category: string, customInstructions?: string): Promise<string> {
-  const tableStyle = `<div style='overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'><table style='width:100%;border-collapse:collapse;min-width:400px;'>`;
-  const thStyle = `style='background-color:#4f46e5;color:white;padding:12px 16px;text-align:left;font-weight:600;white-space:nowrap;'`;
-  const tdStyle = `style='padding:12px 16px;border-bottom:1px solid #e5e7eb;color:#374151;'`;
-
   const prompts: Record<string, string> = {
     results: `Write a complete SEO-optimized human blog post about a RESULT in HTML.
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -607,13 +703,58 @@ export async function POST(req: Request) {
     let blogHtml: string;
 
     if (category === "latest-jobs") {
-      // Sequential to prevent Groq rate limits, but handles Gemini fast without delay
-      const part1 = await writePart1(metadata, rawText, customInstructions);
+      // 1. Generate humanized written sections with placeholders
+      let part1 = await writePart1(metadata, rawText, customInstructions);
       
-      // Small safety delay
+      // Small safety delay between API hits
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const part2 = await writePart2(metadata, rawText, customInstructions);
+      let part2 = await writePart2(metadata, rawText, customInstructions);
+
+      // 2. Generate clean, competitor-style tables programmatically
+      const overviewTable = generateOverviewTable(metadata);
+      const datesFeesTable = generateDatesFeesTable(metadata);
+      const vacancyTable = generateVacancyTable(metadata);
+
+      // 3. Inject tables cleanly into the blog content
+      if (part1.includes("{{OVERVIEW_TABLE}}")) {
+        part1 = part1.replace("{{OVERVIEW_TABLE}}", overviewTable);
+      } else {
+        // Fallback: inject after ToC div if placeholder was missed
+        const tocEndTag = "</div>";
+        const tocIndex = part1.indexOf(tocEndTag);
+        if (tocIndex !== -1) {
+          const insertPos = tocIndex + tocEndTag.length;
+          part1 = part1.slice(0, insertPos) + "\n\n" + overviewTable + part1.slice(insertPos);
+        } else {
+          part1 = overviewTable + "\n\n" + part1;
+        }
+      }
+
+      if (part2.includes("{{DATES_FEES_TABLE}}")) {
+        part2 = part2.replace("{{DATES_FEES_TABLE}}", datesFeesTable);
+      } else {
+        // Fallback: inject after dates header
+        const datesHeader = "id='dates'>";
+        const headerIndex = part2.indexOf(datesHeader);
+        if (headerIndex !== -1) {
+          const insertPos = part2.indexOf("</h2>", headerIndex) + 5;
+          part2 = part2.slice(0, insertPos) + "\n\n" + datesFeesTable + part2.slice(insertPos);
+        }
+      }
+
+      if (part2.includes("{{VACANCY_TABLE}}")) {
+        part2 = part2.replace("{{VACANCY_TABLE}}", vacancyTable);
+      } else {
+        // Fallback: inject after vacancies header
+        const vacancyHeader = "id='vacancies'>";
+        const headerIndex = part2.indexOf(vacancyHeader);
+        if (headerIndex !== -1) {
+          const insertPos = part2.indexOf("</h2>", headerIndex) + 5;
+          part2 = part2.slice(0, insertPos) + "\n\n" + vacancyTable + part2.slice(insertPos);
+        }
+      }
+
       blogHtml = `${part1}\n\n${part2}`;
     } else {
       // Use category-specific single writer
