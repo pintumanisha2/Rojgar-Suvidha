@@ -171,7 +171,7 @@ function ApplyForMeContent() {
 
     try {
       // 1. Create Order on Backend
-      const res = await fetch("/api/create-cashfree-order", {
+      const res = await fetch("/api/create-payment-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

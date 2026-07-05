@@ -321,7 +321,7 @@ export default function ESuvidhaApply() {
       esuvidhaData += Object.entries(uploadedUrls).map(([k, v]) => `${k}: ${v}`).join('\n');
 
       // 2. Initialize Payment
-      const res = await fetch("/api/create-cashfree-order", {
+      const res = await fetch("/api/create-payment-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
