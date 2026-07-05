@@ -33,7 +33,19 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
         }
       );
     }
-    throw error;
+    // Catch any other network/CORS/AdBlock errors and return a mock 503 Response
+    // to prevent the Supabase client library from hanging on rejected fetch promises.
+    return new Response(
+      JSON.stringify({
+        code: "NETWORK_ERROR",
+        message: error.message || "Failed to fetch: Connection refused or blocked by extensions/adblockers."
+      }),
+      {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: { "Content-Type": "application/json" }
+      }
+    );
   }
 };
 
