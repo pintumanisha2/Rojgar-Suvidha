@@ -215,13 +215,13 @@ function DashboardContent() {
     const fetchUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { router.push("/login"); return; }
+        if (!session) { setLoading(false); router.push("/login"); return; }
         setUser(session.user);
 
         const { data: profileData } = await supabase
           .from("profiles").select("*").eq("id", session.user.id).single();
 
-        if (!profileData?.full_name) { router.push("/profile-setup"); return; }
+        if (!profileData?.full_name) { setLoading(false); router.push("/profile-setup"); return; }
         setProfile(profileData);
         if (profileData?.avatar_url) setAvatarUrl(profileData.avatar_url);
 
