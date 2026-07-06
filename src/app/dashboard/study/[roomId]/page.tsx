@@ -39,11 +39,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [joinedSessionId, setJoinedSessionId] = useState<string | null>(null);
 
-  // Pomodoro Timer States
-  const [timerMinutes, setTimerMinutes] = useState(25);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerActive, setTimerActive] = useState(false);
-  const [timerMode, setTimerMode] = useState<"focus" | "break">("focus");
+
 
   // Moderation / Flag State
   const [showReportModal, setShowReportModal] = useState(false);
@@ -183,56 +179,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
     };
   }, [unwrappedParams.roomId]);
 
-  // Pomodoro Timer Effect
-  useEffect(() => {
-    let interval: any = null;
-    if (timerActive) {
-      interval = setInterval(() => {
-        if (timerSeconds > 0) {
-          setTimerSeconds(prev => prev - 1);
-        } else if (timerMinutes > 0) {
-          setTimerMinutes(prev => prev - 1);
-          setTimerSeconds(59);
-        } else {
-          // Cycle Completed
-          handleCycleComplete();
-        }
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
 
-    return () => clearInterval(interval);
-  }, [timerActive, timerMinutes, timerSeconds]);
-
-  const handleCycleComplete = () => {
-    setTimerActive(false);
-    
-    // Play Chime
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4 Key
-      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 1.2);
-    } catch (e) {}
-
-    if (timerMode === "focus") {
-      toast.success("Focus Cycle Completed! 🎉 Time for a 5-minute break.");
-      setTimerMode("break");
-      setTimerMinutes(5);
-    } else {
-      toast.success("Break Finished! Back to focus.");
-      setTimerMode("focus");
-      setTimerMinutes(25);
-    }
-    setTimerSeconds(0);
-  };
 
   const fetchParticipants = async () => {
     const { data } = await supabase
@@ -378,105 +325,65 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
         </div>
       </div>
 
-      {/* Main Study Grid Panel */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+      {/* Main Study Grid Panel (Full Screen Zoom Meeting Grid) */}
+      <div className="flex-1 flex flex-col p-4 sm:p-6 justify-between gap-4 overflow-hidden">
         
-        {/* Left Side: Circular Timer */}
-        <div className="lg:col-span-3 bg-gray-900/40 p-6 flex flex-col items-center justify-center gap-8 border-r border-gray-900/60 overflow-y-auto">
+        {/* Zego pre-built layout target */}
+        <div className="flex-1 bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden relative w-full h-full min-h-[400px]">
           
-          {/* Pomodoro Timer Widget */}
-          <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 text-center max-w-sm w-full relative overflow-hidden">
-            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${timerMode === 'focus' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-pink-500/20 text-pink-300'}`}>
-              {timerMode === "focus" ? "🎯 Focus Session" : "☕ Break Time"}
+          <div 
+            ref={containerRef} 
+            className="w-full h-full relative"
+          />
+
+          {/* If Zego fails to load credentials, show fallback banner */}
+          {(!process.env.NEXT_PUBLIC_ZEGO_APP_ID || process.env.NEXT_PUBLIC_ZEGO_APP_ID === "0") && (
+            <div className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm space-y-4">
+              <div className="w-14 h-14 bg-amber-500/15 text-amber-500 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <h3 className="font-extrabold text-base text-white">Live Camera Preview Suspended</h3>
+              <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
+                Please add your NEXT_PUBLIC_ZEGO_APP_ID and NEXT_PUBLIC_ZEGO_SERVER_SECRET environment variables to your Vercel Dashboard to enable live group video rooms on production.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Toolbar controls */}
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-gray-400 font-bold tracking-wide">STUDY CONTROLS:</span>
+            <span className="text-xs text-red-500 font-extrabold bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-xl">
+              🔇 Microphone Disabled
             </span>
+          </div>
 
-            {/* Circular representation */}
-            <div className="my-6 flex items-center justify-center">
-              <div className="w-40 h-40 rounded-full border-4 border-gray-800 flex items-center justify-center relative shadow-[0_0_20px_rgba(99,102,241,0.08)]">
-                <span className="text-4xl font-extrabold font-mono tracking-tight text-white">
-                  {String(timerMinutes).padStart(2, "0")}:{String(timerSeconds).padStart(2, "0")}
-                </span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            {/* Flag / Abuse trigger button */}
+            <button
+              onClick={() => {
+                const targetList = participants.filter(p => p.user_id !== user?.id);
+                if (targetList.length === 0) {
+                  toast.error("You are currently alone at this table.");
+                } else {
+                  setFlaggedUser(targetList[0]);
+                  setShowReportModal(true);
+                }
+              }}
+              className="py-2.5 px-4 bg-gray-800 hover:bg-red-950/20 border border-gray-700 hover:border-red-900/40 text-gray-400 hover:text-red-400 rounded-xl text-xs font-black transition-all flex items-center gap-2"
+            >
+              <ShieldAlert className="w-4 h-4" /> Report Stream
+            </button>
 
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => setTimerActive(!timerActive)}
-                className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all ${timerActive ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-950/50'}`}
-              >
-                {timerActive ? "Pause Timer" : "Start Focus"}
-              </button>
-              <button
-                onClick={() => { setTimerActive(false); setTimerMinutes(25); setTimerSeconds(0); }}
-                className="py-3 px-4 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl text-xs font-bold transition-all"
-              >
-                Reset
-              </button>
-            </div>
+            <button
+              onClick={handleLeaveRoom}
+              className="py-2.5 px-4 bg-red-650 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" /> Exit Lobby
+            </button>
           </div>
         </div>
-
-        {/* Right Side: ZEGOCLOUD Video Streams & Report Overlay */}
-        <div className="lg:col-span-9 flex flex-col p-4 sm:p-6 justify-between gap-4 overflow-y-auto">
-          
-          {/* Zego pre-built layout target */}
-          <div className="flex-1 bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden relative min-h-[400px]">
-            
-            <div 
-              ref={containerRef} 
-              className="w-full h-full relative"
-            />
-
-            {/* If Zego fails to load credentials, show fallback banner */}
-            {(!process.env.NEXT_PUBLIC_ZEGO_APP_ID || process.env.NEXT_PUBLIC_ZEGO_APP_ID === "0") && (
-              <div className="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm space-y-4">
-                <div className="w-14 h-14 bg-amber-500/15 text-amber-500 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="w-8 h-8" />
-                </div>
-                <h3 className="font-extrabold text-base text-white">Live Camera Preview Suspended</h3>
-                <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
-                  Please add your NEXT_PUBLIC_ZEGO_APP_ID and NEXT_PUBLIC_ZEGO_SERVER_SECRET environment variables to your Vercel Dashboard to enable live group video rooms on production.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Toolbar controls */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-gray-400 font-bold tracking-wide">STUDY CONTROLS:</span>
-              <span className="text-xs text-red-500 font-extrabold bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-xl">
-                🔇 Microphone Disabled
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Flag / Abuse trigger button */}
-              <button
-                onClick={() => {
-                  const targetList = participants.filter(p => p.user_id !== user?.id);
-                  if (targetList.length === 0) {
-                    toast.error("You are currently alone at this table.");
-                  } else {
-                    setFlaggedUser(targetList[0]);
-                    setShowReportModal(true);
-                  }
-                }}
-                className="py-2.5 px-4 bg-gray-800 hover:bg-red-950/20 border border-gray-700 hover:border-red-900/40 text-gray-400 hover:text-red-400 rounded-xl text-xs font-black transition-all flex items-center gap-2"
-              >
-                <ShieldAlert className="w-4 h-4" /> Report Stream
-              </button>
-
-              <button
-                onClick={handleLeaveRoom}
-                className="py-2.5 px-4 bg-red-650 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" /> Exit Lobby
-              </button>
-            </div>
-          </div>
-        </div>
-
       </div>
 
       {/* Report Modal */}
