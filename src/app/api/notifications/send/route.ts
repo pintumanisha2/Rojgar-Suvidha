@@ -63,7 +63,7 @@ export async function POST(req: Request) {
           url:         actionUrl,
           icon:        "/logo-blue.png",
           tag:         pushExtras.tag         || "rojgar-suvidha",
-          actionLabel: pushExtras.actionLabel || "Abhi Dekho",
+          actionLabel: pushExtras.actionLabel || "View Details",
           jobTitle:    pushExtras.jobTitle    || "",
           category:    pushExtras.category    || "general",
           requireInteraction: false,

@@ -14,20 +14,20 @@ export interface JobCategory {
 }
 
 const JOB_CATEGORIES: JobCategory[] = [
-  { key: "ssc",      label: "SSC",      emoji: "🏛️",  color: "#4F46E5", url: "/jobs/ssc",     actionLabel: "SSC Jobs Dekho" },
-  { key: "bpsc",     label: "BPSC",     emoji: "🏢",  color: "#059669", url: "/jobs/state-psc", actionLabel: "BPSC Jobs Dekho" },
-  { key: "uppsc",    label: "UPPSC",    emoji: "🏢",  color: "#059669", url: "/jobs/state-psc", actionLabel: "UPPSC Jobs Dekho" },
-  { key: "railway",  label: "Railway",  emoji: "🚂",  color: "#DC2626", url: "/jobs/railway", actionLabel: "Railway Jobs Dekho" },
-  { key: "rrb",      label: "Railway",  emoji: "🚂",  color: "#DC2626", url: "/jobs/railway", actionLabel: "Railway Jobs Dekho" },
-  { key: "banking",  label: "Banking",  emoji: "🏦",  color: "#D97706", url: "/jobs/banking", actionLabel: "Bank Jobs Dekho" },
-  { key: "ibps",     label: "IBPS",     emoji: "🏦",  color: "#D97706", url: "/jobs/banking", actionLabel: "IBPS Jobs Dekho" },
-  { key: "sbi",      label: "SBI",      emoji: "🏦",  color: "#D97706", url: "/jobs/banking", actionLabel: "SBI Jobs Dekho" },
-  { key: "upsc",     label: "UPSC",     emoji: "🎖️",  color: "#7C3AED", url: "/jobs/upsc",    actionLabel: "UPSC Jobs Dekho" },
-  { key: "police",   label: "Police",   emoji: "👮",  color: "#1D4ED8", url: "/jobs/police",  actionLabel: "Police Jobs Dekho" },
-  { key: "defence",  label: "Defence",  emoji: "🛡️",  color: "#065F46", url: "/jobs/defence", actionLabel: "Defence Jobs Dekho" },
-  { key: "army",     label: "Army",     emoji: "🛡️",  color: "#065F46", url: "/jobs/defence", actionLabel: "Army Jobs Dekho" },
-  { key: "teaching", label: "Teaching", emoji: "📚",  color: "#9333EA", url: "/jobs/teaching", actionLabel: "Teaching Jobs Dekho" },
-  { key: "ctet",     label: "CTET",     emoji: "📚",  color: "#9333EA", url: "/jobs/teaching", actionLabel: "CTET Jobs Dekho" },
+  { key: "ssc",      label: "SSC",      emoji: "🏛️",  color: "#4F46E5", url: "/jobs/ssc",     actionLabel: "View SSC Jobs" },
+  { key: "bpsc",     label: "BPSC",     emoji: "🏢",  color: "#059669", url: "/jobs/state-psc", actionLabel: "View BPSC Jobs" },
+  { key: "uppsc",    label: "UPPSC",    emoji: "🏢",  color: "#059669", url: "/jobs/state-psc", actionLabel: "View UPPSC Jobs" },
+  { key: "railway",  label: "Railway",  emoji: "🚂",  color: "#DC2626", url: "/jobs/railway", actionLabel: "View Railway Jobs" },
+  { key: "rrb",      label: "Railway",  emoji: "🚂",  color: "#DC2626", url: "/jobs/railway", actionLabel: "View Railway Jobs" },
+  { key: "banking",  label: "Banking",  emoji: "🏦",  color: "#D97706", url: "/jobs/banking", actionLabel: "View Bank Jobs" },
+  { key: "ibps",     label: "IBPS",     emoji: "🏦",  color: "#D97706", url: "/jobs/banking", actionLabel: "View IBPS Jobs" },
+  { key: "sbi",      label: "SBI",      emoji: "🏦",  color: "#D97706", url: "/jobs/banking", actionLabel: "View SBI Jobs" },
+  { key: "upsc",     label: "UPSC",     emoji: "🎖️",  color: "#7C3AED", url: "/jobs/upsc",    actionLabel: "View UPSC Jobs" },
+  { key: "police",   label: "Police",   emoji: "👮",  color: "#1D4ED8", url: "/jobs/police",  actionLabel: "View Police Jobs" },
+  { key: "defence",  label: "Defence",  emoji: "🛡️",  color: "#065F46", url: "/jobs/defence", actionLabel: "View Defence Jobs" },
+  { key: "army",     label: "Army",     emoji: "🛡️",  color: "#065F46", url: "/jobs/defence", actionLabel: "View Army Jobs" },
+  { key: "teaching", label: "Teaching", emoji: "📚",  color: "#9333EA", url: "/jobs/teaching", actionLabel: "View Teaching Jobs" },
+  { key: "ctet",     label: "CTET",     emoji: "📚",  color: "#9333EA", url: "/jobs/teaching", actionLabel: "View CTET Jobs" },
 ];
 
 /** Detect job category from any job title string */
@@ -36,7 +36,7 @@ export function detectJobCategory(jobTitle: string): JobCategory {
   for (const cat of JOB_CATEGORIES) {
     if (lower.includes(cat.key)) return cat;
   }
-  return { key: "general", label: "Sarkari Naukri", emoji: "💼", color: "#4F46E5", url: "/latest-jobs", actionLabel: "Sabhi Jobs Dekho" };
+  return { key: "general", label: "Sarkari Naukri", emoji: "💼", color: "#4F46E5", url: "/latest-jobs", actionLabel: "View All Jobs" };
 }
 
 // ── Core Send Function ──────────────────────────────────
@@ -88,7 +88,7 @@ export function scheduleFormAbandonNotification(
     sendUserNotification({
       userId,
       title: `${cat.emoji} ${cat.label} Form Incomplete!`,
-      body: `"${jobTitle}" ka form abhi bhi baki hai. Last date miss mat karo!`,
+      body: `The form for "${jobTitle}" is still incomplete. Don't miss the deadline!`,
       icon: cat.emoji,
       actionUrl: formUrl,
       type: "form_reminder",
@@ -115,14 +115,14 @@ export async function triggerPaymentSuccessNotification(
   await sendUserNotification({
     userId,
     title: `✅ Apply For Me — Successful!`,
-    body: `"${jobTitle}" request placed! Tracking ID: ${trackingId}. Hamari team jaldi shuru karegi.`,
+    body: `"${jobTitle}" request placed! Tracking ID: ${trackingId}. Our team will start processing it shortly.`,
     icon: "✅",
     actionUrl: "/track-application",
     type: "payment",
     sendPush: true,
     pushExtras: {
       tag: `payment-${trackingId}`,
-      actionLabel: "Track Karein",
+      actionLabel: "Track Order",
       jobTitle,
       category: cat.key,
     },
@@ -138,13 +138,13 @@ export async function triggerApplicationStatusNotification(
 ) {
   const cat = detectJobCategory(jobTitle);
   const statusMap: Record<string, { emoji: string; msg: string }> = {
-    processing:    { emoji: "⏳", msg: "Hamari team aapka form fill kar rahi hai..." },
-    otp_required:  { emoji: "🔑", msg: "OTP required hai! Turant check karein." },
-    submitted:     { emoji: "📝", msg: "Form submit ho gaya! Registration confirm karo." },
-    completed:     { emoji: "🎉", msg: "Form successfully submit! Congratulations!" },
-    failed:        { emoji: "❌", msg: "Kuch dikkat aayi. Hamari team aapse contact karegi." },
+    processing:    { emoji: "⏳", msg: "Our team is filling your application form..." },
+    otp_required:  { emoji: "🔑", msg: "OTP required! Please verify immediately." },
+    submitted:     { emoji: "📝", msg: "Form submitted! Please confirm your registration." },
+    completed:     { emoji: "🎉", msg: "Form submitted successfully! Congratulations!" },
+    failed:        { emoji: "❌", msg: "An issue occurred. Our team will contact you shortly." },
   };
-  const s = statusMap[newStatus] || { emoji: "🔔", msg: `Status update: ${newStatus}` };
+  const s = statusMap[newStatus] || { emoji: "🔔", msg: `Status updated to: ${newStatus}` };
 
   await sendUserNotification({
     userId,
@@ -156,7 +156,7 @@ export async function triggerApplicationStatusNotification(
     sendPush: true,
     pushExtras: {
       tag: `status-${trackingId}`,
-      actionLabel: "Status Dekho",
+      actionLabel: "View Status",
       jobTitle,
       category: cat.key,
     },
@@ -172,7 +172,7 @@ export async function triggerProfileIncompleteNotification(
     await sendUserNotification({
       userId,
       title: `👤 Profile ${completionPercent}% Complete`,
-      body: "Profile poora karein — Apply For Me service aur personalized job alerts unlock hogi!",
+      body: "Complete your profile to unlock the 'Apply For Me' service and personalized job alerts!",
       icon: "👤",
       actionUrl: "/dashboard?tab=profile",
       type: "system",
@@ -191,7 +191,7 @@ export async function triggerJobAlertNotification(
   await sendUserNotification({
     userId,
     title: `${cat.emoji} New ${cat.label} Vacancy!`,
-    body: `${jobTitle}${vacancies ? ` — ${vacancies} posts` : ""}. Abhi apply karein!`,
+    body: `${jobTitle}${vacancies ? ` — ${vacancies} vacancies` : ""}. Apply now!`,
     icon: cat.emoji,
     actionUrl: jobUrl,
     type: "job_alert",
@@ -212,15 +212,15 @@ export async function triggerReEngagementNotification(
 ) {
   await sendUserNotification({
     userId,
-    title: `🔔 ${matchCount} New Jobs Aapke Liye!`,
-    body: "7 din ho gaye! Aapke profile se match karti nayi vacancies dekho.",
+    title: `🔔 ${matchCount} New Jobs For You!`,
+    body: "It's been 7 days! View new vacancies matching your profile.",
     icon: "🔔",
     actionUrl: "/latest-jobs",
     type: "job_alert",
     sendPush: true,
     pushExtras: {
       tag: "re-engagement",
-      actionLabel: "Jobs Dekho",
+      actionLabel: "View Jobs",
       category: "general",
     },
   });

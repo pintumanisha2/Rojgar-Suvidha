@@ -23,10 +23,10 @@ function timeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 60) return "abhi";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min pehle`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} ghante pehle`;
-  return `${Math.floor(diff / 86400)} din pehle`;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 const typeColors: Record<string, string> = {
@@ -200,7 +200,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                   className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 disabled:opacity-50 px-2 py-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
                 >
                   {markingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
-                  Sab Read
+                  Mark all read
                 </button>
               )}
               <button
@@ -219,8 +219,8 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                 <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
                   <Bell className="w-7 h-7 text-gray-300 dark:text-gray-600" />
                 </div>
-                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Koi notification nahi abhi</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Naye vacancies aur results pe alerts milenge</p>
+                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No notifications yet</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">You will receive updates on new job vacancies and results</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -282,7 +282,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                 onClick={() => setIsOpen(false)}
                 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 flex items-center justify-center gap-1"
               >
-                Sab dekho <ExternalLink className="w-3 h-3" />
+                View All <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
           )}
