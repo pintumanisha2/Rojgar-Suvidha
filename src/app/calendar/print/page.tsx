@@ -152,28 +152,33 @@ export default async function CalendarPrintPage({ searchParams }: PageProps) {
       {/* Dynamic print-optimized stylesheet */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body {
+          html, body {
             background-color: white !important;
             color: black !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 297mm !important;
+            height: 210mm !important;
+            overflow: hidden !important;
           }
           .no-print {
             display: none !important;
           }
           @page {
             size: A4 landscape;
-            margin: 6mm 8mm;
+            margin: 0 !important;
           }
           .print-scale {
-            width: 280mm !important;
-            height: 195mm !important;
-            max-height: 195mm !important;
+            width: 297mm !important;
+            height: 210mm !important;
+            max-height: 210mm !important;
             box-shadow: none !important;
             border: none !important;
-            padding: 0 !important;
+            padding: 6mm 10mm 4mm 10mm !important;
             margin: 0 !important;
             background: white !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
           }
         }
       `}} />
@@ -320,15 +325,23 @@ export default async function CalendarPrintPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Bottom Current Affairs Row */}
-        <div className="mt-3 pt-2.5 border-t border-gray-200 dark:border-gray-800 grid grid-cols-4 gap-2">
-          <div className="col-span-4 mb-0.5 flex items-center justify-between">
-            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block">🔥 Cheat Sheet: Last Month's Top Current Affairs</span>
-            <span className="text-[8px] text-gray-400">RojgarSuvidha.com</span>
+        {/* Bottom Cheat Sheet Row */}
+        <div className="mt-2.5 pt-2 border-t border-gray-200 dark:border-gray-800 grid grid-cols-4 gap-2">
+          <div className="col-span-4 flex items-center justify-between">
+            <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest block">🔥 Aspirant's cheat sheet: memory mnemonics & current affairs</span>
+            <span className="text-[8px] text-gray-400 font-bold">RojgarSuvidha.com</span>
           </div>
-          {CALENDAR_CONFIG.currentAffairs.slice(0, 4).map((ca, index) => (
-            <div key={index} className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-1.5 border border-gray-100 dark:border-gray-800/80">
-              <span className="text-[8px] font-black text-indigo-600">Q{index + 1}. {ca.question.slice(0, 60)}...</span>
+          {/* 2 GK Tricks */}
+          {targetConfig.gkTricks.slice(0, 2).map((gt, idx) => (
+            <div key={`gk-${idx}`} className="bg-indigo-50/20 dark:bg-indigo-950/5 rounded-lg p-1.5 border border-indigo-100/50 dark:border-indigo-900/10">
+              <span className="text-[8px] font-black text-indigo-600">🧠 GK Shortcut: {gt.title}</span>
+              <p className="text-[8px] font-extrabold text-gray-700 dark:text-gray-300 mt-0.5 leading-snug">Trick: {gt.trick}</p>
+            </div>
+          ))}
+          {/* 2 Current Affairs */}
+          {CALENDAR_CONFIG.currentAffairs.slice(0, 2).map((ca, index) => (
+            <div key={`ca-${index}`} className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-1.5 border border-gray-150 dark:border-gray-800/80">
+              <span className="text-[8px] font-black text-gray-800 dark:text-gray-200">📰 Q. {ca.question.slice(0, 52)}...</span>
               <p className="text-[8px] font-extrabold text-gray-700 dark:text-gray-300 mt-0.5">Ans: {ca.answer}</p>
             </div>
           ))}
