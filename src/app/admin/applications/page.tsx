@@ -312,6 +312,46 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
     if (error) {
       alert(`Status update failed: ${error.message}\nEnsure you have run the database migration script in your Supabase SQL Editor.`);
     } else {
+      // Send Web Push notification if status changed (works even when user's browser is closed)
+      try {
+        const statusLabels: Record<string, string> = {
+          pending: "Pending / Waiting",
+          paid: "Payment Received",
+          submitted: "Form Submitted",
+          needs_info: "Action Required / Missing Info",
+          completed: "Completed Successfully",
+          refund_pending: "Refund Pending"
+        };
+        const label = statusLabels[newStatus] || newStatus;
+
+        let pushTitle = `📋 Status Update: ${selected.job_title}`;
+        let pushBody = `Aapki application ka status ab "${label}" ho gaya hai.`;
+        if (newStatus === "completed") {
+          pushTitle = "🎉 Application Completed!";
+          pushBody = `Badhai Ho! Aapka form "${selected.job_title}" successfully fill ho gaya hai. Receipt download karein.`;
+        } else if (newStatus === "needs_info") {
+          pushTitle = "⚠️ Action Required";
+          pushBody = `Attention: Aapke form "${selected.job_title}" ke liye kuch documents pending hain. Kripya check karein.`;
+        }
+
+        await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "send_to_user",
+            userId: selected.user_id,
+            payload: {
+              title: pushTitle,
+              body: pushBody,
+              url: "/dashboard",
+              icon: "/logo-blue.png"
+            }
+          })
+        });
+      } catch (pushErr) {
+        console.error("Status push notification failed:", pushErr);
+      }
+
       setSelected(null);
       fetchRequests();
     }
@@ -354,6 +394,27 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
       newOtp = data;
 
       setOtpRequest(newOtp);
+
+      // Send Web Push notification for OTP Request (works even when user's browser is closed)
+      try {
+        await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "send_to_user",
+            userId: selected.user_id,
+            payload: {
+              title: "🔑 OTP Required - Rojgar Suvidha",
+              body: `Form verification ke liye OTP chahiye. Secret trust code: ${selected.verification_code || "None"}.`,
+              url: "/dashboard",
+              icon: "/logo-blue.png",
+              requireInteraction: true
+            }
+          })
+        });
+      } catch (pushErr) {
+        console.error("OTP request push notification failed:", pushErr);
+      }
     } catch (err: any) {
       console.error("OTP Request failed:", err);
       alert(`OTP Request failed: ${err.message}\nEnsure you have run the updated SQL Editor script to create the 'otp_requests' table.`);

@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { Bell, BellRing, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function PushNotificationPrompt() {
   const pathname = usePathname();
+  const [user, setUser] = useState<any>(null);
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -44,7 +46,8 @@ export default function PushNotificationPrompt() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             subscription, 
-            action: 'test' 
+            action: 'subscribe',
+            userId: user?.id || null
           }),
         });
 
@@ -72,7 +75,15 @@ export default function PushNotificationPrompt() {
 
 
   useEffect(() => {
-    // Check if push messaging is supported
+    // 1. Listen to active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    // 2. Check if push messaging is supported
     if ("serviceWorker" in navigator && "PushManager" in window) {
       setIsSupported(true);
       checkSubscription();
@@ -85,8 +96,13 @@ export default function PushNotificationPrompt() {
         }
       }, 5000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        subscription.unsubscribe();
+      };
     }
+
+    return () => subscription.unsubscribe();
   }, []);
 
   if (

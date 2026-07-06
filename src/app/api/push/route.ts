@@ -13,7 +13,7 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 export async function POST(req: Request) {
   try {
-    const { subscription, action, payload } = await req.json();
+    const { subscription, action, payload, userId } = await req.json();
 
     if (action === 'test' || action === 'subscribe') {
       // 1. Save subscription to Supabase
@@ -21,8 +21,7 @@ export async function POST(req: Request) {
         .from('push_subscriptions')
         .upsert({ 
           endpoint: subscription.endpoint, 
-          auth: subscription.keys.auth,
-          p256dh: subscription.keys.p256dh,
+          user_id: userId || null,
           subscription_data: subscription 
         }, { onConflict: 'endpoint' });
 
@@ -78,6 +77,38 @@ export async function POST(req: Request) {
       await Promise.allSettled(sendPromises);
 
       return NextResponse.json({ success: true, message: `Broadcast sent to ${subs.length} users` });
+    }
+
+    if (action === 'send_to_user') {
+      if (!userId) {
+        return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+      }
+
+      // Fetch active subscriptions for this targeted user ID
+      const { data: subs, error } = await supabase
+        .from('push_subscriptions')
+        .select('subscription_data')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      if (!subs || subs.length === 0) {
+        return NextResponse.json({ success: true, message: 'No active push subscriptions for this user.' });
+      }
+
+      const sendPromises = subs.map(async (sub: any) => {
+        try {
+          await webpush.sendNotification(sub.subscription_data, JSON.stringify(payload));
+        } catch (err: any) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+             // Delete inactive subscriptions
+             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.subscription_data.endpoint);
+          }
+          console.error("Error sending user push notification:", err.message);
+        }
+      });
+
+      await Promise.allSettled(sendPromises);
+      return NextResponse.json({ success: true, message: `Notification sent to ${subs.length} devices.` });
     }
 
     return NextResponse.json({ success: true });
