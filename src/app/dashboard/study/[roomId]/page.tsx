@@ -28,27 +28,16 @@ interface Participant {
   camera_active: boolean;
 }
 
-const MUSIC_STREAMS = [
-  { name: "🎧 Chill Lo-Fi Study Beats", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" }, // Dummy mp3 streams
-  { name: "🌧️ Soft Rain Soundscape", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-  { name: "🌲 Forest Camp Ambient", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
-];
-
 export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const unwrappedParams = use(params);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [room, setRoom] = useState<StudyRoom | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [joinedSessionId, setJoinedSessionId] = useState<string | null>(null);
-
-  // Audio / Music settings
-  const [currentMusic, setCurrentMusic] = useState<number>(-1);
-  const [volume, setVolume] = useState<number>(0.5);
 
   // Pomodoro Timer States
   const [timerMinutes, setTimerMinutes] = useState(25);
@@ -314,26 +303,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
     router.push("/dashboard/study");
   };
 
-  const toggleMusic = (idx: number) => {
-    if (!audioRef.current) return;
-    if (currentMusic === idx) {
-      audioRef.current.pause();
-      setCurrentMusic(-1);
-    } else {
-      audioRef.current.src = MUSIC_STREAMS[idx].url;
-      audioRef.current.volume = volume;
-      audioRef.current.play().catch(() => null);
-      setCurrentMusic(idx);
-    }
-  };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
-    setVolume(val);
-    if (audioRef.current) {
-      audioRef.current.volume = val;
-    }
-  };
 
   const triggerReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,8 +381,8 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       {/* Main Study Grid Panel */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         
-        {/* Left Side: Circular Timer & Sound Mixers */}
-        <div className="lg:col-span-4 bg-gray-900/40 p-6 flex flex-col items-center justify-center gap-8 border-r border-gray-900/60 overflow-y-auto">
+        {/* Left Side: Circular Timer */}
+        <div className="lg:col-span-3 bg-gray-900/40 p-6 flex flex-col items-center justify-center gap-8 border-r border-gray-900/60 overflow-y-auto">
           
           {/* Pomodoro Timer Widget */}
           <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 text-center max-w-sm w-full relative overflow-hidden">
@@ -444,48 +414,10 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
               </button>
             </div>
           </div>
-
-          {/* Sound Mixer Panel */}
-          <div className="bg-gray-900 border border-gray-800 rounded-3xl p-6 max-w-sm w-full space-y-4">
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <Music className="w-4 h-4 text-indigo-400" /> Focus Soundscape
-            </h3>
-
-            <audio ref={audioRef} loop />
-
-            <div className="space-y-2">
-              {MUSIC_STREAMS.map((st, idx) => (
-                <button
-                  key={st.name}
-                  onClick={() => toggleMusic(idx)}
-                  className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold text-left transition-all flex items-center justify-between ${currentMusic === idx ? 'bg-indigo-600/10 border-indigo-500 text-indigo-300' : 'bg-gray-950 border-gray-850 hover:border-gray-700 text-gray-400 hover:text-white'}`}
-                >
-                  <span>{st.name}</span>
-                  <Volume2 className={`w-4 h-4 ${currentMusic === idx ? 'opacity-100 animate-bounce' : 'opacity-40'}`} />
-                </button>
-              ))}
-            </div>
-
-            {/* Volume controller */}
-            {currentMusic !== -1 && (
-              <div className="pt-2 flex items-center gap-3">
-                <span className="text-[10px] text-gray-400 font-bold">Vol</span>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.05"
-                  value={volume}
-                  onChange={handleVolumeChange}
-                  className="flex-1 accent-indigo-500"
-                />
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Right Side: ZEGOCLOUD Video Streams & Report Overlay */}
-        <div className="lg:col-span-8 flex flex-col p-4 sm:p-6 justify-between gap-4 overflow-y-auto">
+        <div className="lg:col-span-9 flex flex-col p-4 sm:p-6 justify-between gap-4 overflow-y-auto">
           
           {/* Zego pre-built layout target */}
           <div className="flex-1 bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden relative min-h-[400px]">
@@ -503,7 +435,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
                 </div>
                 <h3 className="font-extrabold text-base text-white">Live Camera Preview Suspended</h3>
                 <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
-                  Zego App Credentials are not verified. Run dynamic camera outputs inside active production channels or toggle local simulators.
+                  Please add your NEXT_PUBLIC_ZEGO_APP_ID and NEXT_PUBLIC_ZEGO_SERVER_SECRET environment variables to your Vercel Dashboard to enable live group video rooms on production.
                 </p>
               </div>
             )}
