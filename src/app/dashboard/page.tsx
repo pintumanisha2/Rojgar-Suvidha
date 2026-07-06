@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   UserCircle, FileText, Bookmark, ClipboardCheck,
   LogOut, CheckCircle2, Loader2, ShieldCheck, Lock, Briefcase, Camera, Trash2, MessageSquare, Send, Paperclip,
-  ShieldAlert, AlertTriangle, Clock, Settings
+  ShieldAlert, AlertTriangle, Clock, Settings, Bell
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
@@ -52,6 +52,11 @@ function DashboardContent() {
   const [prefTypes, setPrefTypes] = useState<string[]>(["jobs", "results", "admit-card"]);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefsMsg, setPrefsMsg] = useState<string | null>(null);
+
+  // Dashboard Notifications State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [markingAllNotifs, setMarkingAllNotifs] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -257,6 +262,10 @@ function DashboardContent() {
   }, [router]);
 
   useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
     if (searchParams.get("openChat") === "true") {
       // Small timeout to ensure components are mounted and event listener is ready
       setTimeout(() => {
@@ -305,6 +314,50 @@ function DashboardContent() {
     const poll = setInterval(checkRequestsStatus, 8000);
     return () => clearInterval(poll);
   }, [user]);
+
+  const fetchDashboardNotifications = async () => {
+    if (!user) return;
+    setNotificationsLoading(true);
+    try {
+      const res = await fetch(`/api/notifications?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch notifications in dashboard:", e);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "notifications" && user) {
+      fetchDashboardNotifications();
+    }
+  }, [activeTab, user]);
+
+  const markDashboardNotifAsRead = async (notificationId: string) => {
+    setNotifications(prev =>
+      prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+    );
+    fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, notificationId }),
+    }).catch(() => null);
+  };
+
+  const markAllDashboardNotifsAsRead = async () => {
+    setMarkingAllNotifs(true);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, markAll: true }),
+    }).catch(() => null);
+    setMarkingAllNotifs(false);
+  };
 
   // Poll for live OTP requests (every 4 seconds)
   useEffect(() => {
@@ -626,6 +679,10 @@ function DashboardContent() {
               <button onClick={() => setActiveTab("messages")}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "messages" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                 <MessageSquare className="w-5 h-5" /> Messages
+              </button>
+              <button onClick={() => setActiveTab("notifications")}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "notifications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                <Bell className="w-5 h-5" /> Notifications
               </button>
               <button onClick={() => setActiveTab("preferences")}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "preferences" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
@@ -1168,6 +1225,97 @@ function DashboardContent() {
                   {savingPrefs ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Preferences →"}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === "notifications" && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <Bell className="w-6 h-6 text-indigo-500" /> Notifications & Alerts History
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Your real-time application updates, vacancy announcements, and alert logs.
+                  </p>
+                </div>
+                {notifications.some(n => !n.is_read) && (
+                  <button
+                    onClick={markAllDashboardNotifsAsRead}
+                    disabled={markingAllNotifs}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-xl self-start sm:self-center transition-all disabled:opacity-50"
+                  >
+                    {markingAllNotifs ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              {notificationsLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-16 text-center">
+                  <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Bell className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+                  </div>
+                  <h3 className="font-extrabold text-gray-800 dark:text-gray-200 text-lg">No Notifications Yet</h3>
+                  <p className="text-sm text-gray-400 max-w-sm mx-auto mt-1">
+                    You will receive instant alerts here as soon as there is an update on your application.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800/80 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                  {notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`relative p-5 transition-all flex items-start gap-4 ${!notif.is_read ? "bg-indigo-50/20 dark:bg-indigo-950/5" : ""}`}
+                    >
+                      {/* Icon */}
+                      <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 flex items-center justify-center text-lg shrink-0">
+                        {notif.icon || "🔔"}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <h3 className={`font-black text-sm leading-snug ${!notif.is_read ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}`}>
+                            {notif.title}
+                          </h3>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold shrink-0 mt-0.5">
+                            {new Date(notif.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed max-w-2xl">
+                          {notif.body}
+                        </p>
+                        {notif.action_url && (
+                          <Link
+                            href={notif.action_url}
+                            onClick={() => markDashboardNotifAsRead(notif.id)}
+                            className="inline-flex items-center gap-1 mt-2.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            View details →
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Mark single as read */}
+                      {!notif.is_read && (
+                        <button
+                          onClick={() => markDashboardNotifAsRead(notif.id)}
+                          className="p-1 rounded-lg text-gray-300 hover:text-indigo-600 transition-colors"
+                          title="Mark as read"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
