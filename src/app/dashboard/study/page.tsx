@@ -94,6 +94,11 @@ export default function StudyLobbyPage() {
       }
     };
 
+    // Safety fallback: force-disable loading state after 3 seconds anyway
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
     initLobby();
 
     // Setup realtime subscription to sync participant counts dynamically
@@ -108,6 +113,7 @@ export default function StudyLobbyPage() {
       .subscribe();
 
     return () => {
+      clearTimeout(safetyTimer);
       supabase.removeChannel(channel);
     };
   }, []);
