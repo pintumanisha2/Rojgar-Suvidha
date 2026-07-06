@@ -30,6 +30,7 @@ import {
   Sparkles,
   MessageCircle,
   Calculator,
+  Flame,
 } from 'lucide-react';
 import NotificationBell from '@/components/layout/NotificationBell';
 
@@ -44,6 +45,7 @@ const navSections = [
   { name: "Exam Calendar", href: "/exam-calendar", icon: ClipboardCheck, color: "text-teal-500" },
   { name: "e-Suvidha", href: "/e-suvidha", icon: Landmark, color: "text-emerald-500" },
   { name: "AI Resume", href: "/resume-builder", icon: Sparkles, color: "text-violet-500" },
+  { name: "Study Room", href: "/dashboard/study", icon: Flame, color: "text-orange-500" },
 ];
 
 // Jobs by sector — links to /jobs/[type] dynamic pages
