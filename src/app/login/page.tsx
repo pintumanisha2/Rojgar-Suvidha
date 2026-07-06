@@ -392,7 +392,7 @@ function LoginContent() {
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
       {/* Left brand panel (desktop only) */}
-      <div className="w-[420px] shrink-0">
+      <div className="hidden lg:block w-[420px] shrink-0">
         <BrandPanel />
       </div>
 
