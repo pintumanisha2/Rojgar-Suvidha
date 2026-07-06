@@ -58,6 +58,10 @@ function DashboardContent() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [markingAllNotifs, setMarkingAllNotifs] = useState(false);
 
+  // Delete account confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedPrefs = localStorage.getItem(`notification_prefs_${user?.id || 'guest'}`);
@@ -92,7 +96,7 @@ function DashboardContent() {
           data: { notification_prefs: payload }
         }).catch(() => null);
       }
-      setPrefsMsg("✓ Preferences successfully save ho gaye!");
+      setPrefsMsg("✓ Preferences saved successfully!");
       setTimeout(() => setPrefsMsg(null), 3000);
     } catch (err: any) {
       console.error(err);
@@ -419,6 +423,8 @@ function DashboardContent() {
     setChkSecret(false);
     setChkNotBank(false);
     setChkNoScreenShare(false);
+    // Auto-dismiss success toast after 4 seconds
+    setTimeout(() => setOtpSubmitted(false), 4000);
   };
 
   const handleLogout = async () => {
@@ -428,19 +434,12 @@ function DashboardContent() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmDelete = window.confirm(
-      "⚠️ DANGER: Are you absolutely sure you want to permanently delete your account?\n\nThis will instantly wipe your profile, documents, and application history. This action CANNOT be undone."
-    );
-    if (!confirmDelete) return;
-
     setLoading(true);
     // 1. Delete profile data (this will cascade or at least remove their personal data)
     await supabase.from("profiles").delete().eq("id", user.id);
-    
     // 2. Sign out the user completely
     await supabase.auth.signOut();
-    
-    alert("Your account and associated data have been scheduled for complete deletion.");
+    setShowDeleteModal(false);
     router.push("/");
     router.refresh();
   };
@@ -601,8 +600,50 @@ function DashboardContent() {
 
       {/* OTP submitted success toast */}
       {otpSubmitted && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl font-bold text-sm flex items-center gap-2 animate-in slide-in-from-top duration-300">
           ✅ OTP received! Our team will submit your form shortly.
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border-2 border-red-200 dark:border-red-800 w-full max-w-md p-6">
+            <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-7 h-7 text-red-600" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 dark:text-white text-center mb-2">Delete Account Permanently?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-5 leading-relaxed">
+              This will permanently delete your profile, all uploaded documents, and application history.
+              <strong className="text-red-600 dark:text-red-400"> This cannot be undone.</strong>
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5">Type <span className="text-red-600 font-mono">DELETE</span> to confirm</label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE here"
+                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-mono font-bold focus:outline-none focus:border-red-500 transition-all"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== "DELETE" || loading}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:dark:bg-gray-800 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Delete Forever
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -648,10 +689,31 @@ function DashboardContent() {
             </div>
 
             <div className="p-3 space-y-1">
-              <button onClick={() => setActiveTab("profile")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "profile" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <FileText className="w-5 h-5" /> Profile
-              </button>
+              {([
+                { id: "profile",              icon: <FileText className="w-5 h-5" />,      label: "Profile" },
+                { id: "applications",         icon: <Briefcase className="w-5 h-5" />,     label: "Govt Job Apps" },
+                { id: "private-applications", icon: <Briefcase className="w-5 h-5" />,     label: "Private Job Tracker" },
+                { id: "saved",                icon: <Bookmark className="w-5 h-5" />,      label: "Saved Jobs" },
+                { id: "requests",             icon: <ClipboardCheck className="w-5 h-5" />,label: "Apply For Me" },
+                { id: "messages",             icon: <MessageSquare className="w-5 h-5" />, label: "Messages" },
+                { id: "notifications",        icon: <Bell className="w-5 h-5" />,          label: "Notifications" },
+                { id: "preferences",          icon: <Settings className="w-5 h-5" />,      label: "Preferences" },
+              ] as const).map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    router.replace(`/dashboard?tab=${item.id}`, { scroll: false });
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${
+                    activeTab === item.id
+                      ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {item.icon} {item.label}
+                </button>
+              ))}
               <Link href="/dashboard/locker"
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <Lock className="w-5 h-5" /> Digital Locker
@@ -659,34 +721,6 @@ function DashboardContent() {
               <button onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <span className="text-base shrink-0">💬</span> Aspirants Adda
-              </button>
-              <button onClick={() => setActiveTab("applications")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "applications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <Briefcase className="w-5 h-5" /> Govt Job Apps
-              </button>
-              <button onClick={() => setActiveTab("private-applications")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "private-applications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <Briefcase className="w-5 h-5" /> Private Job Tracker
-              </button>
-              <button onClick={() => setActiveTab("saved")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "saved" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <Bookmark className="w-5 h-5" /> Saved Jobs
-              </button>
-              <button onClick={() => setActiveTab("requests")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "requests" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <ClipboardCheck className="w-5 h-5" /> Apply For Me
-              </button>
-              <button onClick={() => setActiveTab("messages")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "messages" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <MessageSquare className="w-5 h-5" /> Messages
-              </button>
-              <button onClick={() => setActiveTab("notifications")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "notifications" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <Bell className="w-5 h-5" /> Notifications
-              </button>
-              <button onClick={() => setActiveTab("preferences")}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${activeTab === "preferences" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                <Settings className="w-5 h-5" /> Preferences
               </button>
             </div>
 
@@ -789,7 +823,7 @@ function DashboardContent() {
                   Permanently delete your account and all associated data, including your digital locker documents, personal details, and application history. This action cannot be undone and is strictly compliant with data privacy policies.
                 </p>
                 <button
-                  onClick={handleDeleteAccount}
+                  onClick={() => setShowDeleteModal(true)}
                   className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 text-sm flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" /> Delete My Account
@@ -1105,7 +1139,7 @@ function DashboardContent() {
                   <Settings className="w-6 h-6 text-indigo-500" /> Notification & Alert Preferences
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Chunki aap premium user hain, aap customize kar sakte hain kab aur kaise notification aana chahiye.
+                  Customize when and how you receive notifications. Only relevant updates will be sent based on your preferences.
                 </p>
               </div>
 
@@ -1122,8 +1156,8 @@ function DashboardContent() {
                     <h3 className="font-extrabold text-gray-800 dark:text-white text-sm mb-3">Notification Channels</h3>
                     <div className="space-y-3">
                       {[
-                        { key: "bell", label: "In-App Notification Bell", desc: "Website ke bell icon me alert dikhein" },
-                        { key: "push", label: "Web Browser Push Notification", desc: "Chrome/Safari bar me notification float ho" },
+                        { key: "bell", label: "In-App Notification Bell", desc: "Show alerts inside the website notification bell" },
+                        { key: "push", label: "Web Browser Push Notification", desc: "Float browser notifications in Chrome / Safari" },
                       ].map((ch) => {
                         const checked = prefChannels.includes(ch.key);
                         return (
@@ -1150,9 +1184,9 @@ function DashboardContent() {
                     <h3 className="font-extrabold text-gray-800 dark:text-white text-sm mb-3">Alert Types</h3>
                     <div className="space-y-3">
                       {[
-                        { key: "jobs", label: "Nayi Sarkari & Private Jobs", desc: "Naye vacancies launch hote hi alert aaye" },
-                        { key: "results", label: "Results Declared Alerts", desc: "Exam results aate hi turant alert" },
-                        { key: "admit-card", label: "Admit Cards Out Alerts", desc: "Hall tickets/Admit card release par alert" },
+                        { key: "jobs", label: "New Government & Private Jobs", desc: "Get alerted instantly when new vacancies are posted" },
+                        { key: "results", label: "Exam Results Declared", desc: "Instant alert as soon as results are out" },
+                        { key: "admit-card", label: "Admit Cards Released", desc: "Alert when hall tickets / admit cards are available" },
                       ].map((t) => {
                         const checked = prefTypes.includes(t.key);
                         return (
@@ -1210,7 +1244,7 @@ function DashboardContent() {
                     })}
                   </div>
                   <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-4 leading-normal">
-                    * Hum keval aapki select ki gayi categories ke exams ke notifications hi bhejenge taaki aapko spam na mile.
+                    * We will only send notifications for your selected exam categories to avoid irrelevant updates.
                   </p>
                 </div>
               </div>
@@ -1222,7 +1256,7 @@ function DashboardContent() {
                   disabled={savingPrefs}
                   className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {savingPrefs ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Preferences →"}
+                  {savingPrefs ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Preferences"}
                 </button>
               </div>
             </div>
@@ -1257,14 +1291,33 @@ function DashboardContent() {
                   <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-16 text-center">
+                <div className="border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center">
                   <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Bell className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                   </div>
                   <h3 className="font-extrabold text-gray-800 dark:text-gray-200 text-lg">No Notifications Yet</h3>
-                  <p className="text-sm text-gray-400 max-w-sm mx-auto mt-1">
+                  <p className="text-sm text-gray-400 max-w-sm mx-auto mt-1 mb-5">
                     You will receive instant alerts here as soon as there is an update on your application.
                   </p>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <Link href="/" className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/20">
+                      Browse Latest Jobs
+                    </Link>
+                    <button
+                      onClick={() => {
+                        if (typeof window !== "undefined" && "Notification" in window) {
+                          Notification.requestPermission().then(p => {
+                            if (p === "granted") {
+                              new Notification("✅ Push Notifications Enabled!", { body: "You will now receive instant job & result alerts.", icon: "/logo-blue.png" });
+                            }
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all"
+                    >
+                      <Bell className="w-4 h-4" /> Enable Push Notifications
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-800/80 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm">

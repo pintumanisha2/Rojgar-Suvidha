@@ -24,6 +24,9 @@ function ProfileSetupContent() {
   const [category, setCategory] = useState("gen");
   const [address, setAddress] = useState("");
 
+  // Per-field validation errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     let active = true;
     const checkUser = async () => {
@@ -65,18 +68,32 @@ function ProfileSetupContent() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    const errors: Record<string, string> = {};
 
-    if (!fullName.trim() || !dob || !mobile.trim()) {
-      setError("Please fill in all fields.");
+    if (!fullName.trim()) errors.fullName = "Full name is required.";
+    if (!dob) {
+      errors.dob = "Date of birth is required.";
+    } else {
+      // Minimum age validation: must be at least 10 years old
+      const birthDate = new Date(dob);
+      const minAgeDate = new Date();
+      minAgeDate.setFullYear(minAgeDate.getFullYear() - 10);
+      if (birthDate > minAgeDate) {
+        errors.dob = "You must be at least 10 years old to register.";
+      }
+    }
+    if (!mobile.trim()) {
+      errors.mobile = "Mobile number is required.";
+    } else if (mobile.length < 10) {
+      errors.mobile = "Please enter a valid 10-digit mobile number.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       setSaving(false);
       return;
     }
-
-    if (mobile.length < 10) {
-      setError("Please enter a valid 10-digit mobile number.");
-      setSaving(false);
-      return;
-    }
+    setFieldErrors({});
 
     const { error: upsertError } = await supabase.from("profiles").upsert({
       id: user.id,
@@ -155,10 +172,13 @@ function ProfileSetupContent() {
                   type="text"
                   required
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="appearance-none block w-full pl-11 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm"
+                  onChange={(e) => { setFullName(e.target.value); setFieldErrors(p => ({ ...p, fullName: "" })); }}
+                  className={`appearance-none block w-full pl-11 pr-4 py-3 border rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${
+                    fieldErrors.fullName ? "border-red-400 dark:border-red-600" : "border-gray-200 dark:border-gray-700"
+                  }`}
                   placeholder="e.g. Rajesh Kumar Sharma"
                 />
+                {fieldErrors.fullName && <p className="text-xs text-red-500 font-semibold mt-1">{fieldErrors.fullName}</p>}
               </div>
               <p className="text-xs text-gray-400 mt-1">As per your documents (Aadhar/10th Certificate)</p>
             </div>
@@ -176,10 +196,13 @@ function ProfileSetupContent() {
                   type="date"
                   required
                   value={dob}
-                  onChange={(e) => setDob(e.target.value)}
+                  onChange={(e) => { setDob(e.target.value); setFieldErrors(p => ({ ...p, dob: "" })); }}
                   max={new Date().toISOString().split("T")[0]}
-                  className="appearance-none block w-full pl-11 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm"
+                  className={`appearance-none block w-full pl-11 pr-4 py-3 border rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm ${
+                    fieldErrors.dob ? "border-red-400 dark:border-red-600" : "border-gray-200 dark:border-gray-700"
+                  }`}
                 />
+                {fieldErrors.dob && <p className="text-xs text-red-500 font-semibold mt-1">{fieldErrors.dob}</p>}
               </div>
             </div>
 
@@ -200,10 +223,13 @@ function ProfileSetupContent() {
                   required
                   maxLength={10}
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
-                  className="appearance-none block w-full pl-20 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm tracking-widest"
+                  onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "")); setFieldErrors(p => ({ ...p, mobile: "" })); }}
+                  className={`appearance-none block w-full pl-20 pr-4 py-3 border rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm tracking-widest ${
+                    fieldErrors.mobile ? "border-red-400 dark:border-red-600" : "border-gray-200 dark:border-gray-700"
+                  }`}
                   placeholder="9876543210"
                 />
+                {fieldErrors.mobile && <p className="text-xs text-red-500 font-semibold mt-1">{fieldErrors.mobile}</p>}
               </div>
             </div>
 

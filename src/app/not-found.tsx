@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Home, ArrowLeft } from "lucide-react";
+import { Home, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -16,10 +16,10 @@ export default function NotFound() {
             <div className="bg-white dark:bg-gray-900 rounded-3xl px-8 py-6 shadow-2xl border border-indigo-100 dark:border-indigo-900">
               <div className="text-6xl mb-2">🔍</div>
               <p className="text-xl font-extrabold text-gray-900 dark:text-white">
-                Page Nahi Mili!
+                Page Not Found!
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Ye page exist nahi karta ya delete ho gaya hai
+                This page doesn&apos;t exist or may have been removed.
               </p>
             </div>
           </div>
@@ -28,10 +28,10 @@ export default function NotFound() {
         {/* Suggestions */}
         <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 text-left space-y-3">
           <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Shayad aap dhundh rahe the:
+            You might be looking for:
           </p>
           {[
-            { href: "/", label: "🏠 Home — Sarkari Jobs, Results" },
+            { href: "/", label: "🏠 Home — Sarkari Jobs & Results" },
             { href: "/latest-jobs", label: "Latest Government Jobs" },
             { href: "/results", label: "🏆 Exam Results 2025" },
             { href: "/admit-card", label: "🎫 Admit Card Download" },
@@ -55,13 +55,13 @@ export default function NotFound() {
             href="/"
             className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-indigo-600/20"
           >
-            <Home className="w-5 h-5" /> Home Par Jao
+            <Home className="w-5 h-5" /> Go to Home
           </Link>
           <button
             onClick={() => window.history.back()}
             className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-4 rounded-2xl transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" /> Pichhe Jao
+            <ArrowLeft className="w-5 h-5" /> Go Back
           </button>
         </div>
       </div>

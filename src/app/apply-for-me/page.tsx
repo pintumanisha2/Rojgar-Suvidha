@@ -156,13 +156,19 @@ function ApplyForMeContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle.trim()) { setError("Job title is required."); return; }
+    // URL format validation — must start with http:// or https://
+    if (jobUrl.trim() && !/^https?:\/\/.+/i.test(jobUrl.trim())) {
+      setError("Job URL must be a valid link starting with http:// or https://");
+      return;
+    }
     if (!termsAccepted) { setError("Please accept the Terms & Conditions to proceed."); return; }
     if (!profile?.full_name) { setError("Please complete your profile details first."); return; }
     
     // Validate Captcha
     if (parseInt(captchaInput) !== captcha.num1 + captcha.num2) {
-      setError("Incorrect Captcha answer! Please solve the calculation again.");
+      setError("Incorrect answer! Please solve the calculation again.");
       generateCaptcha();
+      setCaptchaInput("");
       return;
     }
 
@@ -572,19 +578,26 @@ function ApplyForMeContent() {
 
               {/* Bot Check Captcha */}
               <div className="pt-2">
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Security Check (Anti-Bot) *</label>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                    <span className="font-mono font-bold text-lg text-gray-800 dark:text-gray-200 tracking-widest">
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Security Check (Anti-Bot) <span className="text-red-500">*</span></label>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[140px] bg-indigo-50 dark:bg-indigo-950/20 px-4 py-3 rounded-xl border-2 border-indigo-100 dark:border-indigo-900 flex items-center justify-center">
+                    <span className="font-mono font-black text-xl text-indigo-700 dark:text-indigo-300 tracking-widest">
                       {captcha.num1} + {captcha.num2} = ?
                     </span>
                   </div>
-                  <div className="flex-[2]">
-                    <input type="number" required value={captchaInput} onChange={e => setCaptchaInput(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium text-sm transition-all text-center"
-                      placeholder="Answer likhein..." />
-                  </div>
+                  <input type="number" required value={captchaInput} onChange={e => setCaptchaInput(e.target.value)}
+                    className="flex-[2] min-w-[100px] px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold text-lg transition-all text-center"
+                    placeholder="Your answer" />
+                  <button
+                    type="button"
+                    onClick={() => { generateCaptcha(); setCaptchaInput(""); }}
+                    className="flex items-center gap-1.5 px-4 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-xs transition-all border border-gray-200 dark:border-gray-700 whitespace-nowrap"
+                    title="Get a new math question"
+                  >
+                    🔄 Try new sum
+                  </button>
                 </div>
+                <p className="text-[11px] text-gray-400 mt-1.5">Solve the simple math above to verify you are human.</p>
               </div>
 
               {/* Notice */}
