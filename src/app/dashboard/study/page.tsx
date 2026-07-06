@@ -58,28 +58,34 @@ export default function StudyLobbyPage() {
 
   useEffect(() => {
     const initLobby = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Please login to access study rooms.");
-        router.push("/login?redirect=/dashboard/study");
-        return;
-      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast.error("Please login to access study rooms.");
+          router.push("/login?redirect=/dashboard/study");
+          return;
+        }
 
-      // Check if user has completed profile setup, otherwise redirect
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", session.user.id)
-        .single();
+        // Check if user has completed profile setup, otherwise redirect
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", session.user.id)
+          .single();
 
-      if (!profile?.full_name) {
-        toast.error("Please complete your profile setup first.");
+        if (!profile?.full_name) {
+          toast.error("Please complete your profile setup first.");
+          router.push("/profile-setup?redirect=/dashboard/study");
+          return;
+        }
+
+        setUser(session.user);
+        await fetchRooms();
+      } catch (err) {
+        console.error("Lobby initialization failed:", err);
+        // Fallback to profile setup if profiles query crashes on new accounts
         router.push("/profile-setup?redirect=/dashboard/study");
-        return;
       }
-
-      setUser(session.user);
-      await fetchRooms();
     };
 
     initLobby();
