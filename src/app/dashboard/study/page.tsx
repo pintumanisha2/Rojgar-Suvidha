@@ -64,6 +64,20 @@ export default function StudyLobbyPage() {
         router.push("/login?redirect=/dashboard/study");
         return;
       }
+
+      // Check if user has completed profile setup, otherwise redirect
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", session.user.id)
+        .single();
+
+      if (!profile?.full_name) {
+        toast.error("Please complete your profile setup first.");
+        router.push("/profile-setup?redirect=/dashboard/study");
+        return;
+      }
+
       setUser(session.user);
       await fetchRooms();
     };

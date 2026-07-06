@@ -99,7 +99,13 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
           .eq("id", session.user.id)
           .single();
 
-        const nameDisplay = profile?.full_name || "Aspirant_" + session.user.id.slice(-4);
+        if (!profile?.full_name) {
+          toast.error("Please complete your profile setup first.");
+          router.push("/profile-setup?redirect=/dashboard/study/" + unwrappedParams.roomId);
+          return;
+        }
+
+        const nameDisplay = profile.full_name;
 
         // 2. Clear any old session for this user first
         await supabase

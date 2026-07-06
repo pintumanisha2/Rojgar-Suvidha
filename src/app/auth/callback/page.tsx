@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
@@ -8,13 +8,13 @@ import { Loader2 } from "lucide-react";
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    let active = true;
+    isMountedRef.current = true;
     let subscription: any = null;
 
     const handleAuthCallback = async () => {
-      // 1. Check redirects: both 'redirect' and 'next' parameter support
       const nextRedirect = searchParams.get("redirect") || searchParams.get("next") || "/dashboard";
 
       try {
@@ -23,11 +23,13 @@ function CallbackContent() {
 
         if (error) {
           console.error("Auth callback error:", error, errorDescription);
-          if (active) router.push(`/login?error=${encodeURIComponent(errorDescription || "Authentication failed")}`);
+          if (isMountedRef.current) {
+            router.push(`/login?error=${encodeURIComponent(errorDescription || "Authentication failed")}`);
+          }
           return;
         }
 
-        // 2. Explicit manual hash parsing fallback (Ensures fast session setup from OAuth hash redirects)
+        // Explicit manual hash parsing fallback
         if (typeof window !== "undefined" && window.location.hash) {
           const hash = window.location.hash.substring(1);
           const hashParams = new URLSearchParams(hash);
@@ -35,7 +37,7 @@ function CallbackContent() {
           const refresh = hashParams.get("refresh_token");
 
           if (token && refresh) {
-            console.log("Found OAuth tokens in URL hash, explicitly setting session...");
+            console.log("Found OAuth tokens in hash parameters, setting session...");
             await supabase.auth.setSession({
               access_token: token,
               refresh_token: refresh,
@@ -43,20 +45,22 @@ function CallbackContent() {
           }
         }
 
-        // 3. Check session
+        // Check if session is already present
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          if (active) router.push(nextRedirect);
+          if (isMountedRef.current) {
+            router.push(nextRedirect);
+          }
           return;
         }
 
-        // 4. Fallback listener for dynamic updates
+        // Fallback real-time state listener
         const authResponse = supabase.auth.onAuthStateChange((event, newSession) => {
-          if (newSession && active) {
+          if (newSession && isMountedRef.current) {
             if (subscription) {
               if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
-              else if (typeof subscription === "function") subscription(); // older versions callback format
+              else if (typeof subscription === "function") subscription();
             }
             router.push(nextRedirect);
           }
@@ -64,29 +68,29 @@ function CallbackContent() {
         
         subscription = authResponse.data?.subscription || authResponse;
 
-        // 5. Ultimate timeout fallback (Never let the page hang forever)
+        // Fallback timeout redirect (forces page transition if Supabase doesn't reply in time)
         setTimeout(() => {
-          if (active) {
-            console.log("Callback timeout fallback triggered, redirecting to:", nextRedirect);
+          if (isMountedRef.current) {
+            console.log("Forcing fallback timeout redirect to:", nextRedirect);
             if (subscription) {
               if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
               else if (typeof subscription === "function") subscription();
             }
             router.push(nextRedirect);
           }
-        }, 1500);
+        }, 1200);
 
       } catch (err) {
-        console.error("Error in auth callback wrapper:", err);
-        // Safely redirect anyway
-        if (active) router.push(nextRedirect);
+        console.error("Error in callback execution:", err);
+        if (isMountedRef.current) {
+          router.push(nextRedirect);
+        }
       }
     };
 
     handleAuthCallback();
 
     return () => {
-      active = false;
       if (subscription) {
         if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
         else if (typeof subscription === "function") subscription();
