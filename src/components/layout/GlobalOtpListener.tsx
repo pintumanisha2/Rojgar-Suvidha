@@ -97,11 +97,11 @@ export default function GlobalOtpListener() {
               const label = statusLabels[req.status] || req.status;
 
               // 1. Toast Notification banner (gorgeous popup)
-              let toastMsg = `Aapki application "${req.job_title}" ka status ab "${label}" ho gaya hai.`;
+              let toastMsg = `Your application for "${req.job_title}" status is now "${label}".`;
               if (req.status === "completed") {
-                toastMsg = `🎉 Congratulations! Aapka form "${req.job_title}" successfully fill ho gaya hai. Receipt download karein.`;
+                toastMsg = `🎉 Congratulations! Your application for "${req.job_title}" has been successfully filled. Download your receipt.`;
               } else if (req.status === "needs_info") {
-                toastMsg = `⚠️ Action Required: Aapke form "${req.job_title}" ke liye kuch documents pending hain. Kripya check karein.`;
+                toastMsg = `⚠️ Action Required: Additional documents are required for your "${req.job_title}" application. Please check your dashboard.`;
               }
               
               toast(toastMsg, {
@@ -151,6 +151,10 @@ export default function GlobalOtpListener() {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContext) return;
       const ctx = new AudioContext();
+      if (ctx.state === "suspended") {
+        // AudioContext is blocked by browser policies until user interacts
+        return;
+      }
       
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
@@ -163,6 +167,7 @@ export default function GlobalOtpListener() {
       osc1.stop(ctx.currentTime + 0.45);
 
       setTimeout(() => {
+        if (ctx.state === "suspended") return;
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.frequency.setValueAtTime(880, ctx.currentTime);

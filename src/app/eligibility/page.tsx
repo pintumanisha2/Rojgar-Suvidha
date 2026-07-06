@@ -204,6 +204,7 @@ export default function EligibilityScoutPage() {
                   <input
                     type="date"
                     value={dob}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 10)).toISOString().split("T")[0]}
                     onChange={(e) => setDob(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-900 dark:text-white focus:border-indigo-500 outline-none"
                   />
@@ -224,7 +225,7 @@ export default function EligibilityScoutPage() {
 
               {/* Category */}
               <div>
-                <label className="block text-xs font-bold text-gray-400 tracking-wider mb-2">Category (Age relaxation ke liye)</label>
+                <label className="block text-xs font-bold text-gray-400 tracking-wider mb-2">Category (For Age Relaxation)</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}

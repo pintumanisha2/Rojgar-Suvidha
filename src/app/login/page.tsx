@@ -274,7 +274,7 @@ function LoginContent() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: `+91${digits}` }),
       });
-      if (res.ok) { setMsg("Naya OTP bheja gaya!"); setPhoneCooldown(60); }
+      if (res.ok) { setMsg("A new OTP has been sent!"); setPhoneCooldown(60); }
       else { const d = await res.json(); setError(d.error || "OTP resend failed."); }
     } catch { setError("Network error."); }
     finally { setLoading(false); }
@@ -336,19 +336,19 @@ function LoginContent() {
     setLoading(true); setError(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) setError(error.message);
-    else { setEmailOtpSent(true); setMsg("Password reset OTP email pe bheja gaya!"); }
+    else { setEmailOtpSent(true); setMsg("Password reset OTP has been sent to your email address!"); }
     setLoading(false);
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 8) { setError("New password minimum 8 characters."); return; }
+    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
     setLoading(true); setError(null);
     const { error: ve } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "recovery" });
     if (ve) { setError(ve.message); setLoading(false); return; }
     const { error: ue } = await supabase.auth.updateUser({ password: newPassword });
     if (ue) setError(ue.message);
-    else { setMsg("Password reset ho gaya! Login ho raha hai..."); setTimeout(() => window.location.reload(), 1500); }
+    else { setMsg("Password reset successfully! Logging you in..."); setTimeout(() => window.location.reload(), 1500); }
     setLoading(false);
   };
 
@@ -357,7 +357,7 @@ function LoginContent() {
     setLoading(true); setError(null);
     const { data, error } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "signup" });
     if (error) setError(error.message);
-    else if (data?.user) { setMsg("Email verify ho gaya! Redirect ho raha hai..."); await redirectAfterLogin(data.user.id); }
+    else if (data?.user) { setMsg("Email verified successfully! Redirecting..."); await redirectAfterLogin(data.user.id); }
     setLoading(false);
   };
 
@@ -366,7 +366,7 @@ function LoginContent() {
     setLoading(true); setError(null);
     const { error } = await supabase.auth.resend({ type: "signup", email });
     if (error) setError(error.message);
-    else { setMsg("Naya OTP bheja gaya!"); setEmailCooldown(60); }
+    else { setMsg("A new OTP has been sent!"); setEmailCooldown(60); }
     setLoading(false);
   };
 

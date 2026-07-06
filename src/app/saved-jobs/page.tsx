@@ -13,6 +13,7 @@ interface SavedJob {
 export default function SavedJobsPage() {
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -29,18 +30,46 @@ export default function SavedJobsPage() {
     window.dispatchEvent(new Event('savedJobsUpdated'));
   };
 
-  const clearAll = () => {
-    if (confirm("Are you sure you want to remove all saved jobs?")) {
-      setSavedJobs([]);
-      localStorage.removeItem("saved_jobs");
-      window.dispatchEvent(new Event('savedJobsUpdated'));
-    }
+  const handleClearAll = () => {
+    setSavedJobs([]);
+    localStorage.removeItem("saved_jobs");
+    window.dispatchEvent(new Event('savedJobsUpdated'));
+    setShowClearModal(false);
   };
 
   if (!isMounted) return null; // Avoid hydration mismatch
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/20 via-white to-purple-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950/20 py-10">
+      
+      {/* Clear All Confirmation Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 w-full max-w-sm p-6 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Clear All Saved Jobs?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+              Are you sure you want to remove all saved jobs from your bookmarks?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearAll}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
@@ -54,7 +83,7 @@ export default function SavedJobsPage() {
           </div>
           {savedJobs.length > 0 && (
             <button 
-              onClick={clearAll}
+              onClick={() => setShowClearModal(true)}
               className="flex items-center gap-2 text-sm font-bold text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-xl transition-colors"
             >
               <Trash2 className="w-4 h-4" /> Clear All

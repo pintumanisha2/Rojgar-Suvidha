@@ -32,7 +32,7 @@ export default function ComplaintPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.category || !form.subject || !form.message) {
-      setError("Saare required fields bharo.");
+      setError("Please fill in all required fields.");
       return;
     }
     setSubmitting(true);
@@ -90,7 +90,7 @@ export default function ComplaintPage() {
 
         {/* Back */}
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 mb-8 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Wapas Jaao
+          <ArrowLeft className="w-4 h-4" /> Go Back
         </Link>
 
         {/* Header */}
@@ -118,19 +118,19 @@ export default function ComplaintPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  <User className="w-4 h-4" /> Aapka Naam <span className="text-red-500">*</span>
+                  <User className="w-4 h-4" /> Your Name <span className="text-red-500">*</span>
                 </label>
                 <input type="text" name="name" required value={form.name} onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm"
-                  placeholder="Rahul Sharma" />
+                  placeholder="John Doe" />
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  <Mail className="w-4 h-4" /> Email <span className="text-red-500">*</span>
+                  <Mail className="w-4 h-4" /> Email Address <span className="text-red-500">*</span>
                 </label>
                 <input type="email" name="email" required value={form.email} onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm"
-                  placeholder="rahul@gmail.com" />
+                  placeholder="john@example.com" />
               </div>
             </div>
 
@@ -151,7 +151,7 @@ export default function ComplaintPage() {
               </label>
               <select name="category" required value={form.category} onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm">
-                <option value="">-- Category Chunein --</option>
+                <option value="">-- Choose Category --</option>
                 {CATEGORIES.map(c => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
@@ -161,21 +161,21 @@ export default function ComplaintPage() {
             {/* Subject */}
             <div>
               <label className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                <FileText className="w-4 h-4" /> Subject (Short) <span className="text-red-500">*</span>
+                <FileText className="w-4 h-4" /> Subject <span className="text-red-500">*</span>
               </label>
               <input type="text" name="subject" required value={form.subject} onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm"
-                placeholder="e.g. Mera form submit nahi hua" />
+                placeholder="e.g. Issue with my application payment" />
             </div>
 
             {/* Message */}
             <div>
               <label className="flex items-center gap-1.5 text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                <MessageSquareWarning className="w-4 h-4" /> Apni Problem Detail mein Likho <span className="text-red-500">*</span>
+                <MessageSquareWarning className="w-4 h-4" /> Problem Details <span className="text-red-500">*</span>
               </label>
               <textarea name="message" required value={form.message} onChange={handleChange} rows={5}
                 className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm"
-                placeholder="Puri baat detail mein likho taaki hum jaldi help kar sakein..." />
+                placeholder="Please describe your problem in detail so we can help you quickly..." />
             </div>
 
             {error && (
@@ -187,7 +187,7 @@ export default function ComplaintPage() {
             <button type="submit" disabled={submitting}
               className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded-xl font-extrabold text-base shadow-lg shadow-red-500/30 transition-all disabled:opacity-60">
               {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageSquareWarning className="w-5 h-5" />}
-              {submitting ? "Submit Ho Raha Hai..." : "Complaint Submit Karo"}
+              {submitting ? "Submitting..." : "Submit Complaint"}
             </button>
 
           </form>
@@ -196,3 +196,4 @@ export default function ComplaintPage() {
     </div>
   );
 }
+

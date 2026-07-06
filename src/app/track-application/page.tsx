@@ -49,6 +49,7 @@ export default function TrackApplicationPage() {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContext) return;
       const ctx = new AudioContext();
+      if (ctx.state === "suspended") return;
       
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
@@ -76,11 +77,11 @@ export default function TrackApplicationPage() {
     }
   };
 
-  useEffect(() => {
+  const requestNotificationPermission = () => {
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
-  }, []);
+  };
 
   const fetchData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -140,7 +141,7 @@ export default function TrackApplicationPage() {
               playChimeSound();
               if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
                 new Notification("✍️ Form Filling Started!", {
-                  body: `Aapke "${req.job_title}" form fill hona shuru ho gaya hai. Phone ready rakhein!`,
+                  body: `Form filling has started for your "${req.job_title}" application. Please keep your phone close.`,
                   icon: "/logo-blue.png"
                 });
               }
@@ -200,7 +201,7 @@ export default function TrackApplicationPage() {
           playChimeSound();
           if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
             new Notification("🔑 OTP Required - Rojgar Suvidha", {
-              body: `Kripya live verification ke liye OTP enter karein. Secret trust code: ${data.verification_code || "None"}.`,
+              body: `Please enter the OTP for live verification. Secret verification code: ${data.verification_code || "None"}.`,
               icon: "/logo-blue.png"
             });
           }
@@ -244,6 +245,7 @@ export default function TrackApplicationPage() {
     setGuestLoading(true);
     setGuestError(null);
     setGuestResults(null);
+    requestNotificationPermission(); // Request notification permission upon active tracking interaction!
 
     const { data, error } = await supabase
       .from("apply_for_me_requests")
@@ -252,7 +254,7 @@ export default function TrackApplicationPage() {
       .order("created_at", { ascending: false });
 
     if (error || !data || data.length === 0) {
-      setGuestError("Is mobile number par koi application nahi mili. Sahi number daalo.");
+      setGuestError("No applications found for this mobile number. Please check the number and try again.");
     } else {
       setGuestResults(data);
       // Initialize status notification ref to prevent initial page-load alerts for guest

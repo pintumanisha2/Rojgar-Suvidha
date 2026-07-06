@@ -7,7 +7,7 @@ import { ArrowLeft, MonitorSmartphone, CheckCircle2, Star, FileText, ShieldCheck
 export default function ESuvidhaPage() {
   const services = [
     {
-      category: "Identity Cards (Pehchan Patra)",
+      category: "Identity Cards",
       items: [
         { id: "pan-new", slug: "apply-new-pan-card-online", name: "New PAN Card", desc: "Apply online for new PAN Card with Aadhaar card.", price: "150", icon: "💳", time: "3-5 Days" },
         { id: "pan-correction", slug: "pan-card-correction-online", name: "PAN Card Correction", desc: "Change name, photo, signature or DOB in existing PAN.", price: "150", icon: "✏️", time: "5-7 Days" },
@@ -16,7 +16,7 @@ export default function ESuvidhaPage() {
       ]
     },
     {
-      category: "Sarkari Praman Patra (Certificates)",
+      category: "Official Certificates",
       items: [
         { id: "income-cert", slug: "apply-income-certificate-online", name: "Income Certificate (Aay)", desc: "Aay Praman Patra online form filling service.", price: "100", icon: "📄", time: "7 Days" },
         { id: "caste-cert", slug: "apply-caste-certificate-online", name: "Caste Certificate (Jati)", desc: "Jati Praman Patra online apply & verification.", price: "150", icon: "📜", time: "10-15 Days" },
@@ -25,7 +25,7 @@ export default function ESuvidhaPage() {
       ]
     },
     {
-      category: "Sarkari Yojna (Govt Schemes)",
+      category: "Government Schemes",
       items: [
         { id: "eshram", slug: "eshram-card-registration-online", name: "E-Shram Card Registration", desc: "Shramik card self registration and download.", price: "80", icon: "👷", time: "24 Hours" },
         { id: "ayushman", slug: "ayushman-bharat-card-apply", name: "Ayushman Bharat Card", desc: "PMJAY Golden Health Card check & apply online.", price: "100", icon: "🏥", time: "24 Hours" },
