@@ -27,6 +27,7 @@ const navItems = [
   { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
   { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
   { href: "/admin/analytics", label: "Deep Analytics", icon: Activity },
+  { href: "/admin/study", label: "Study Room Moderation", icon: ShieldCheck },
   // Private Portal Items
   { href: "/admin/private-portal", label: "Platform Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/private-portal/employers", label: "HR Approvals", icon: Users },
@@ -60,6 +61,7 @@ const navSections = [
       { href: "/admin/ticker", label: "Live Ticker", icon: Zap },
       { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
       { href: "/admin/analytics", label: "Deep Analytics", icon: Activity },
+      { href: "/admin/study", label: "Study Rooms", icon: ShieldCheck },
     ]
   }
 ];
