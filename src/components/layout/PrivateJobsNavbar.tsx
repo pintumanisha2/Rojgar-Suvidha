@@ -214,7 +214,7 @@ export default function PrivateJobsNavbar() {
     window.addEventListener('profile_picture_updated', checkCandidateSession);
 
     // Dynamic Auth listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setIsCandidateLoggedIn(true);
         const { data: dbProfile } = await supabase
@@ -238,7 +238,11 @@ export default function PrivateJobsNavbar() {
     });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      if (authListener && typeof (authListener as any).unsubscribe === "function") {
+        (authListener as any).unsubscribe();
+      } else if (authListener?.data?.subscription && typeof authListener.data.subscription.unsubscribe === "function") {
+        authListener.data.subscription.unsubscribe();
+      }
       window.removeEventListener('profile_picture_updated', checkCandidateSession);
     };
   }, []);

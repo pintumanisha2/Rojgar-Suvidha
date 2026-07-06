@@ -157,7 +157,7 @@ export default function Navbar() {
     };
     checkUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user || null);
       if (session?.user) {
         const { data: profile } = await supabase
@@ -180,7 +180,11 @@ export default function Navbar() {
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      authListener.subscription.unsubscribe();
+      if (authListener && typeof (authListener as any).unsubscribe === "function") {
+        (authListener as any).unsubscribe();
+      } else if (authListener?.data?.subscription && typeof authListener.data.subscription.unsubscribe === "function") {
+        authListener.data.subscription.unsubscribe();
+      }
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);

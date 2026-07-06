@@ -76,12 +76,22 @@ export default function PushNotificationPrompt() {
 
   useEffect(() => {
     // 1. Listen to active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }) => {
+      const session = data?.session;
+      setUser(session?.user || null);
+    }).catch(() => null);
+
+    const authListener = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
+
+    const unsubscribe = () => {
+      if (authListener && typeof (authListener as any).unsubscribe === "function") {
+        (authListener as any).unsubscribe();
+      } else if (authListener?.data?.subscription && typeof authListener.data.subscription.unsubscribe === "function") {
+        authListener.data.subscription.unsubscribe();
+      }
+    };
 
     // 2. Check if push messaging is supported
     if ("serviceWorker" in navigator && "PushManager" in window) {
@@ -98,11 +108,11 @@ export default function PushNotificationPrompt() {
       
       return () => {
         clearTimeout(timer);
-        subscription.unsubscribe();
+        unsubscribe();
       };
     }
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   if (

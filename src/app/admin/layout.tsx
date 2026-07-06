@@ -170,7 +170,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     initAuth();
 
     console.error("DEBUG [layout mount]: Subscribing to onAuthStateChange");
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
       console.error("DEBUG [onAuthStateChange]: Event fired:", event, "session exists:", session !== null);
       if (!mounted) return;
       
@@ -193,10 +193,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (mounted) setIsAuthLoading(false);
     });
 
+    const unsubscribe = () => {
+      if (authListener && typeof (authListener as any).unsubscribe === "function") {
+        (authListener as any).unsubscribe();
+      } else if (authListener?.data?.subscription && typeof authListener.data.subscription.unsubscribe === "function") {
+        authListener.data.subscription.unsubscribe();
+      }
+    };
+
     return () => {
       console.error("DEBUG [layout mount useEffect]: Cleanup fired");
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []); // Run ONLY once on mount to prevent infinite DB querying during page navigation!
 

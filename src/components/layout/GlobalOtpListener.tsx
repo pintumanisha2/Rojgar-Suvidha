@@ -25,15 +25,24 @@ export default function GlobalOtpListener() {
 
   // Listen to active session
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const authListener = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-    });
+    const unsubscribe = () => {
+      if (authListener && typeof (authListener as any).unsubscribe === "function") {
+        (authListener as any).unsubscribe();
+      } else if (authListener?.data?.subscription && typeof authListener.data.subscription.unsubscribe === "function") {
+        authListener.data.subscription.unsubscribe();
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession().then(({ data }) => {
+      const session = data?.session;
+      setUser(session?.user || null);
+    }).catch(() => null);
+
+    return () => unsubscribe();
   }, []);
 
   // Poll & Subscribe to live apply requests status changes globally

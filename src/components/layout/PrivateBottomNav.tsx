@@ -49,14 +49,26 @@ export default function PrivateBottomNav() {
   // Check auth state
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
+      try {
+        const { data } = await supabase.auth.getSession();
+        setIsLoggedIn(!!data?.session);
+      } catch {
+        setIsLoggedIn(false);
+      }
     };
     checkAuth();
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+
+    const authListener = supabase.auth.onAuthStateChange((_e, session) => {
       setIsLoggedIn(!!session);
     });
-    return () => listener.subscription.unsubscribe();
+
+    return () => {
+      if (authListener && typeof (authListener as any).unsubscribe === "function") {
+        (authListener as any).unsubscribe();
+      } else if (authListener?.data?.subscription && typeof authListener.data.subscription.unsubscribe === "function") {
+        authListener.data.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const navItems = [

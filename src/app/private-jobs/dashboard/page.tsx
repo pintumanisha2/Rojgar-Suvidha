@@ -705,8 +705,8 @@ function PrivateCandidateDashboardContent() {
 
  initCandidateSession();
 
- // Subscribe to Supabase auth changes to dynamically catch OAuth session establishment
- const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+  // Subscribe to Supabase auth changes to dynamically catch OAuth session establishment
+  const authListenerObj = supabase.auth.onAuthStateChange(async (event, session) => {
  if (session?.user) {
  setUserId(session.user.id);
  try {
@@ -737,11 +737,17 @@ function PrivateCandidateDashboardContent() {
  }
  });
 
- return () => {
- if (authListener && authListener.subscription) {
- authListener.subscription.unsubscribe();
- }
- };
+  return () => {
+   if (authListenerObj) {
+    if (typeof (authListenerObj as any).unsubscribe === "function") {
+     (authListenerObj as any).unsubscribe();
+    } else if ((authListenerObj as any).subscription && typeof (authListenerObj as any).subscription.unsubscribe === "function") {
+     (authListenerObj as any).subscription.unsubscribe();
+    } else if ((authListenerObj as any).data?.subscription && typeof (authListenerObj as any).data.subscription.unsubscribe === "function") {
+     (authListenerObj as any).data.subscription.unsubscribe();
+    }
+   }
+  };
  }, [router]);
 
  const applyProfileData = (profile: CandidateProfile) => {
