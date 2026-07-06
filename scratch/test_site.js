@@ -25,14 +25,15 @@ async function checkSite() {
     console.error(err.stack);
   });
 
-  console.log("Navigating to https://www.rojgarsuvidha.com ...");
+  const url = 'http://localhost:3009/calendar/print?categories=general&state=';
+  console.log(`Navigating to ${url} ...`);
   try {
-    await page.goto('https://www.rojgarsuvidha.com', { waitUntil: 'networkidle', timeout: 15000 });
-    console.log("Navigation successful!");
+    const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+    console.log("Navigation status:", response.status());
     
     // Take a screenshot
-    await page.screenshot({ path: 'scratch/site_screenshot.png' });
-    console.log("Screenshot saved to scratch/site_screenshot.png");
+    await page.screenshot({ path: 'scratch/print_screenshot.png' });
+    console.log("Screenshot saved to scratch/print_screenshot.png");
   } catch (e) {
     console.error("Navigation failed:", e.message);
   }

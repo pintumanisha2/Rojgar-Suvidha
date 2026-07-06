@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { CALENDAR_CONFIG } from "@/config/calendarConfig";
-import { Printer, Calendar, BookOpen, CheckSquare, Sparkles } from "lucide-react";
+import { BookOpen, CheckSquare, Sparkles } from "lucide-react";
 import Link from "next/link";
+import CalendarPrintHeader from "@/components/calendar/CalendarPrintHeader";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,10 +47,8 @@ export default async function CalendarPrintPage({ searchParams }: PageProps) {
   // Fetch jobs for events
   let query = supabase
     .from("jobs")
-    .select("title, category, state_code, last_date, exam_date, slug")
-    .neq("status", "draft")
-    .or(`last_date.gte.${startOfMonthStr},exam_date.gte.${startOfMonthStr}`)
-    .or(`last_date.lte.${endOfMonthStr},exam_date.lte.${endOfMonthStr}`);
+    .select("title, category, state_code, slug, important_dates")
+    .neq("status", "draft");
 
   // Category filter
   if (categoriesParam !== "general") {
@@ -63,7 +62,32 @@ export default async function CalendarPrintPage({ searchParams }: PageProps) {
   }
 
   const { data: jobs } = await query;
-  const eventJobs = jobs || [];
+  const allJobs = jobs || [];
+
+  // Filter and extract dates in memory
+  const eventJobs = allJobs.map(job => {
+    let lastDateStr = "";
+    let examDateStr = "";
+    if (Array.isArray(job.important_dates)) {
+      const lastDateObj = job.important_dates.find((d: any) => d.label === "Last Date");
+      if (lastDateObj) lastDateStr = lastDateObj.value || "";
+      
+      const examDateObj = job.important_dates.find((d: any) => d.label === "Exam Date" || d.label === "Exam Date / CBT Date");
+      if (examDateObj) examDateStr = examDateObj.value || "";
+    }
+    return {
+      title: job.title,
+      category: job.category,
+      state_code: job.state_code,
+      slug: job.slug,
+      last_date: lastDateStr,
+      exam_date: examDateStr
+    };
+  }).filter(job => {
+    const hasLastDateInMonth = job.last_date && job.last_date.startsWith(`${year}-${(monthIndex + 1).toString().padStart(2, "0")}`);
+    const hasExamDateInMonth = job.exam_date && job.exam_date.startsWith(`${year}-${(monthIndex + 1).toString().padStart(2, "0")}`);
+    return hasLastDateInMonth || hasExamDateInMonth;
+  });
 
   // Generate Calendar Grid
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
@@ -155,29 +179,7 @@ export default async function CalendarPrintPage({ searchParams }: PageProps) {
       `}} />
 
       {/* Control panel (Hidden on print) */}
-      <div className="w-full max-w-7xl bg-white dark:bg-gray-900 shadow-md rounded-xl p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 no-print border border-gray-200 dark:border-gray-800">
-        <div className="flex items-center gap-3">
-          <Calendar className="w-6 h-6 text-indigo-600" />
-          <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Your Print Preview</h1>
-            <p className="text-xs text-gray-500">Scale matches landscape A4 size sheet.</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/"
-            className="px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            Go to Home
-          </Link>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-md transition-all active:scale-95 cursor-pointer"
-          >
-            <Printer className="w-4 h-4" /> Print / Save PDF
-          </button>
-        </div>
-      </div>
+      <CalendarPrintHeader />
 
       {/* Printable Sheet (Landscape A4: 297mm x 210mm scaled box) */}
       <div className="print-scale w-full max-w-7xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-850 p-4 sm:p-5 shadow-lg rounded-2xl flex flex-col justify-between font-sans min-h-[620px] text-gray-900 dark:text-gray-100 overflow-hidden">
