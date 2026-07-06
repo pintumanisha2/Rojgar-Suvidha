@@ -124,6 +124,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 // ══════════════════════════════════════════════════════════
 // 🏗️ JSON-LD STRUCTURED DATA (SEO + AEO + GEO)
 // ══════════════════════════════════════════════════════════
