@@ -10,7 +10,7 @@ export default function AIChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string }[]>([
-    { role: "bot", content: "Namaste! 🙏 Main Rojgar AI hoon — Rojgar Suvidha ka exclusive Career Assistant!\n\nAap mujhse pooch sakte hain:\n• Latest Sarkari Jobs 💼\n• Admit Card / Results 📋\n• SSC, Railway, Banking, UPSC vacancies\n• Apply For Me service 🚀\n• Digital Locker, Resume Builder\n\nBatayein, main aapki kya madad kar sakta hoon? 😊" }
+    { role: "bot", content: "Hello! 🙏 I am Rojgar AI — Rojgar Suvidha's exclusive Career Assistant!\n\nYou can ask me about:\n• Latest Government Jobs 💼\n• Admit Cards / Results 📋\n• SSC, Railway, Banking, UPSC vacancies\n• Apply For Me service 🚀\n• Digital Locker, Resume Builder\n\nHow can I assist you today? 😊" }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -25,7 +25,7 @@ export default function AIChatBot() {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = "hi-IN";
+        recognitionRef.current.lang = "en-IN";
 
         recognitionRef.current.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
@@ -50,7 +50,7 @@ export default function AIChatBot() {
       recognitionRef.current?.stop();
     } else {
       if (!recognitionRef.current) {
-        alert("Aapka browser voice input support nahi karta. Kripya Chrome use karein.");
+        alert("Your browser does not support voice input. Please use Google Chrome.");
         return;
       }
       setIsListening(true);
@@ -97,7 +97,7 @@ export default function AIChatBot() {
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
-        { role: "bot", content: `Error: ${err.message || "Server me dikkat hai."}` },
+        { role: "bot", content: `Error: ${err.message || "Something went wrong on the server."}` },
       ]);
     } finally {
       setIsLoading(false);

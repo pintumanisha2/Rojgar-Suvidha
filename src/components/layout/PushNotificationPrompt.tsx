@@ -164,11 +164,11 @@ export default function PushNotificationPrompt() {
             </div>
             
             <h3 className="font-extrabold text-gray-900 dark:text-white text-xl md:text-2xl mb-2">
-              Govt Job Updates Chahiye?
+              Want Government Job Updates?
             </h3>
             
             <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-              Koi bhi **Vacancy, Admit Card** ya **Result** aate hi turant aapke phone me notification aayega. Ab form chootne ka dar khatam!
+              Get instant notifications on your phone as soon as new **Vacancies, Admit Cards**, or **Exam Results** are released. Never miss an application deadline!
             </p>
             
             <div className="flex flex-col sm:flex-row w-full gap-3">
@@ -177,14 +177,14 @@ export default function PushNotificationPrompt() {
                 disabled={loading}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-70 flex items-center justify-center gap-2"
               >
-                {loading ? "Chalu ho raha hai..." : "Haan, Chalu Karein"}
+                {loading ? "Activating..." : "Yes, Enable Alerts"}
               </button>
               
               <button 
                 onClick={dismissPrompt}
                 className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold py-3.5 px-6 rounded-xl transition-all"
               >
-                Nahi, Baad me
+                No, Later
               </button>
             </div>
           </div>

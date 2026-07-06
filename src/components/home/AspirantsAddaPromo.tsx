@@ -48,7 +48,7 @@ export default function AspirantsAddaPromo() {
 
             {/* Subtext with Hindlish Mentor Touch */}
             <p className="text-sm sm:text-base text-indigo-200/80 leading-relaxed mb-6 max-w-xl">
-              Sarkari exam ki taiyari akele kyun karna? Join India's most active community! Live updates share karein, notifications discuss karein, aur instant guidance paayein. Sabhi updates sabase pehle, direct seniors ke saath!
+              Why prepare for government exams alone? Join India's most active student community! Share live updates, discuss notifications, and get instant guidance directly from peers and seniors.
             </p>
 
             {/* Premium Dynamic Action Button */}
@@ -100,7 +100,7 @@ export default function AspirantsAddaPromo() {
                       <span className="text-[9px] text-gray-500 font-medium">2 min ago</span>
                     </div>
                     <div className="bg-white/5 border border-white/5 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs text-indigo-100 leading-relaxed shadow-sm">
-                      Sarkari result CGL ka merit list out ho gaya hai kya? 🤔
+                      Is the SSC CGL merit list out yet? 🤔
                     </div>
                   </div>
                 </div>
@@ -116,7 +116,7 @@ export default function AspirantsAddaPromo() {
                       <span className="text-[9px] text-gray-500 font-medium">1 min ago</span>
                     </div>
                     <div className="bg-gradient-to-r from-indigo-600/30 to-violet-600/30 border border-indigo-500/20 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs text-indigo-100 leading-relaxed shadow-sm">
-                      Haan bhai! Direct download link <span className="text-emerald-300 font-bold">Rojgar Suvidha</span> ke homepage par active hai.
+                      Yes! The direct download link is active on the <span className="text-emerald-300 font-bold">Rojgar Suvidha</span> homepage.
                     </div>
                   </div>
                 </div>
@@ -132,7 +132,7 @@ export default function AspirantsAddaPromo() {
                       <span className="text-[9px] text-gray-500 font-medium">Just now</span>
                     </div>
                     <div className="bg-white/5 border border-white/5 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs text-indigo-100 leading-relaxed shadow-sm">
-                      Mera list mein naam aa gaya! Dev team ka form-filling super accurate hai! ❤️
+                      I made it to the list! The form-filling service was super accurate! ❤️
                     </div>
                   </div>
                 </div>
