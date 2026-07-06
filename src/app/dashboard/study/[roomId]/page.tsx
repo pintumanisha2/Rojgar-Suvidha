@@ -16,6 +16,8 @@ interface StudyRoom {
   category: string;
   theme_name: string;
   max_capacity: number;
+  is_private?: boolean;
+  join_code?: string;
 }
 
 interface Participant {
@@ -384,8 +386,12 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-sm font-black tracking-wide truncate max-w-[200px] sm:max-w-sm">
-              {room?.name}
+            <h2 className="text-sm font-black tracking-wide truncate max-w-[200px] sm:max-w-sm flex items-center gap-2">
+              {room?.name} {room?.is_private && room?.join_code && (
+                <span className="text-[10px] bg-indigo-600 px-2 py-0.5 rounded font-black text-white">
+                  Code: {room.join_code}
+                </span>
+              )}
             </h2>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               Theme: {room?.theme_name}

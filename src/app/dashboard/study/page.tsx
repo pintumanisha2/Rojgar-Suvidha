@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { 
   Users, Flame, Search, PlusCircle, ArrowLeft, Loader2, 
-  Sparkles, Award, Shield, BookOpen, Volume2, Globe 
+  Sparkles, Award, Shield, BookOpen, Volume2, Globe, Hash
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -17,11 +17,12 @@ interface StudyRoom {
   theme_name: string;
   max_capacity: number;
   is_private: boolean;
+  join_code: string;
   active_count?: number;
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  all: "🌐 All Rooms",
+  all: "🌐 All Cabins",
   ssc: "🏛️ SSC Exams",
   railway: "🚂 Railways",
   upsc: "🎖️ UPSC Prep",
@@ -36,6 +37,8 @@ const THEME_COLORS: Record<string, string> = {
   space: "from-indigo-900 via-purple-950 to-slate-950 border-purple-500/20"
 };
 
+const PUBLIC_HALL_ID = "00000000-0000-0000-0000-000000000001";
+
 export default function StudyLobbyPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -44,17 +47,21 @@ export default function StudyLobbyPage() {
   const [selectedCat, setSelectedCat] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Room Join code input
+  const [inputJoinCode, setInputJoinCode] = useState("");
+  const [joiningByCode, setJoiningByCode] = useState(false);
+
   // Create room modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomCat, setNewRoomCat] = useState("general");
   const [newRoomTheme, setNewRoomTheme] = useState("library");
-  const [newRoomCapacity, setNewRoomCapacity] = useState(6);
+  const [newRoomCapacity, setNewRoomCapacity] = useState(8);
   const [creating, setCreating] = useState(false);
 
-  // User Stats (Statically simulated for gamified retention)
-  const [userCoins, setUserCoins] = useState(120);
-  const [streakDays, setStreakDays] = useState(4);
+  // Gamified Study Streak (Statically simulated for gamified retention)
+  const [streakDays, setStreakDays] = useState(5);
+  const [publicActiveCount, setPublicActiveCount] = useState(0);
 
   useEffect(() => {
     const initLobby = async () => {
@@ -83,7 +90,6 @@ export default function StudyLobbyPage() {
         await fetchRooms();
       } catch (err) {
         console.error("Lobby initialization failed:", err);
-        // Fallback to profile setup if profiles query crashes on new accounts
         router.push("/profile-setup?redirect=/dashboard/study");
       }
     };
@@ -128,6 +134,8 @@ export default function StudyLobbyPage() {
         countsMap[sess.room_id] = (countsMap[sess.room_id] || 0) + 1;
       });
 
+      setPublicActiveCount(countsMap[PUBLIC_HALL_ID] || 0);
+
       const formattedRooms = (roomsData || []).map((room: any) => ({
         ...room,
         active_count: countsMap[room.id] || 0
@@ -149,12 +157,10 @@ export default function StudyLobbyPage() {
       return;
     }
 
-    if (userCoins < 50) {
-      toast.error("You need at least 50 coins to create a custom study room!");
-      return;
-    }
-
     setCreating(true);
+    // Generate a unique 6 digit join code for free rooms sharing
+    const genCode = Math.floor(100000 + Math.random() * 900000).toString();
+
     try {
       const { data, error } = await supabase
         .from("study_rooms")
@@ -163,6 +169,8 @@ export default function StudyLobbyPage() {
           category: newRoomCat,
           theme_name: newRoomTheme,
           max_capacity: newRoomCapacity,
+          is_private: true,
+          join_code: genCode,
           created_by: user.id
         })
         .select()
@@ -170,9 +178,7 @@ export default function StudyLobbyPage() {
 
       if (error) throw error;
 
-      // Deduct coins for gamification conversion
-      setUserCoins(prev => prev - 50);
-      toast.success("Custom Study Room Created! 🎉 (50 Coins Deducted)");
+      toast.success(`Private Room Created! Share Code: ${genCode} 🎉`);
       setShowCreateModal(false);
       setNewRoomName("");
       
@@ -185,7 +191,39 @@ export default function StudyLobbyPage() {
     }
   };
 
+  const handleJoinByCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = inputJoinCode.trim();
+    if (!cleanCode) {
+      toast.error("Please enter a study cabin code.");
+      return;
+    }
+
+    setJoiningByCode(true);
+    try {
+      const { data, error } = await supabase
+        .from("study_rooms")
+        .select("id")
+        .eq("join_code", cleanCode)
+        .single();
+
+      if (error || !data) {
+        toast.error("Invalid study cabin code. Please check and try again.");
+        return;
+      }
+
+      toast.success("Cabin Found! Directing to session...");
+      router.push(`/dashboard/study/${data.id}`);
+    } catch (err) {
+      toast.error("Invalid code or connection issue.");
+    } finally {
+      setJoiningByCode(false);
+    }
+  };
+
   const filteredRooms = rooms.filter(room => {
+    // Hide the primary public hall from the lower grid (since it is shown on center stage banner)
+    if (room.id === PUBLIC_HALL_ID) return false;
     const matchesCat = selectedCat === "all" || room.category === selectedCat;
     const matchesSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
@@ -216,28 +254,53 @@ export default function StudyLobbyPage() {
           
           <div className="flex-1 text-center md:text-left z-10">
             <h1 className="text-3xl font-black mb-1 flex items-center justify-center md:justify-start gap-2">
-              Silent Video Study Room <Sparkles className="w-5 h-5 text-yellow-300" />
+              Silent Video Study Rooms <Sparkles className="w-5 h-5 text-yellow-300" />
             </h1>
             <p className="text-indigo-200 text-sm font-medium opacity-90 max-w-xl">
-              Study live on camera with thousands of aspirants across India in complete silence. Microphones are permanently muted to guarantee zero distractions.
+              Focus live on camera with candidates across India in complete silence. Microphones are muted to guarantee distraction-free study. 100% Free.
             </p>
           </div>
 
           <div className="flex items-center gap-3 shrink-0 z-10">
             <Link href="/dashboard" className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold transition-all text-sm flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" /> Back
+              <ArrowLeft className="w-4 h-4" /> Dashboard
             </Link>
             <button 
               onClick={() => setShowCreateModal(true)}
               className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white rounded-xl font-black transition-all text-sm flex items-center gap-2 shadow-lg shadow-purple-950/50"
             >
-              <PlusCircle className="w-4 h-4" /> Create Table
+              <PlusCircle className="w-4 h-4" /> Create Private Cabin
             </button>
           </div>
         </div>
 
-        {/* User Status Bar (Gamified Retentions) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Center Stage: Perpetual National Public Hall */}
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden border border-indigo-400/20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+          
+          <div className="space-y-2 text-center md:text-left">
+            <span className="text-[10px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 px-3 py-1 rounded-full font-black uppercase tracking-wider">
+              🟢 National Public Hall (Open 24/7)
+            </span>
+            <h2 className="text-2xl font-black tracking-tight">Enter Main National Co-Study Room</h2>
+            <p className="text-indigo-100 text-xs sm:text-sm max-w-lg leading-relaxed">
+              Study side-by-side with fellow aspirants from all over India. Watch everyone live in tiny Zoom-style squares. Mic off by default.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center gap-2 shrink-0 w-full md:w-auto">
+            <Link
+              href={`/dashboard/study/${PUBLIC_HALL_ID}`}
+              className="w-full md:w-auto px-8 py-4 bg-white text-indigo-750 hover:bg-indigo-50 font-black rounded-2xl transition-all text-sm text-center shadow-lg shadow-indigo-950/30 flex items-center justify-center gap-2"
+            >
+              <Users className="w-4 h-4" /> Join Room ({publicActiveCount} Live)
+            </Link>
+            <span className="text-[10px] text-indigo-200 font-bold">No seat limits. Instant enter.</span>
+          </div>
+        </div>
+
+        {/* User Status Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
           {/* Streak */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
@@ -246,41 +309,44 @@ export default function StudyLobbyPage() {
                 <Flame className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Your Daily Streak</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Study Streak</p>
                 <p className="text-lg font-black text-gray-800 dark:text-white">{streakDays} Days Studied</p>
               </div>
             </div>
             <span className="text-xs font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-2.5 py-1 rounded-lg">Active</span>
           </div>
 
-          {/* Coins */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 text-yellow-500 rounded-xl">
-                <Award className="w-6 h-6" />
+          {/* Join Cabin by Code Form */}
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-sm md:col-span-2">
+            <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row items-center gap-3 h-full justify-between">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
+                  <Hash className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Friend's Private Room?</p>
+                  <p className="text-sm font-black text-gray-800 dark:text-white">Join Table via Code</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Rojgar Coins</p>
-                <p className="text-lg font-black text-gray-800 dark:text-white">{userCoins} Coins</p>
-              </div>
-            </div>
-            <button className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg hover:underline">
-              Shop Store
-            </button>
-          </div>
 
-          {/* Guidelines */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500 rounded-xl">
-                <Shield className="w-6 h-6" />
+              <div className="flex gap-2 w-full sm:w-72">
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter 6-Digit Cabin Code"
+                  value={inputJoinCode}
+                  onChange={(e) => setInputJoinCode(e.target.value)}
+                  className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500 text-center uppercase"
+                />
+                <button
+                  type="submit"
+                  disabled={joiningByCode}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center shrink-0"
+                >
+                  {joiningByCode ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enter"}
+                </button>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Content Security</p>
-                <p className="text-sm font-black text-gray-800 dark:text-white">AI Real-time Moderation</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded uppercase tracking-wider">Active</span>
+            </form>
           </div>
         </div>
 
@@ -304,7 +370,7 @@ export default function StudyLobbyPage() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search table or cabin..."
+              placeholder="Search private room..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl pl-10 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white font-medium"
@@ -316,15 +382,15 @@ export default function StudyLobbyPage() {
         {filteredRooms.length === 0 ? (
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-12 text-center shadow-sm">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">No active tables found</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">No active private rooms found</h3>
             <p className="text-sm text-gray-500 max-w-xs mx-auto mt-1 mb-6">
-              Create a custom private/public study table and invite your friends to start study sessions.
+              Create a custom free private cabin and share the join code with your friends to start focus sessions.
             </p>
             <button 
               onClick={() => setShowCreateModal(true)}
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition-colors"
             >
-              Launch Table
+              Launch Private Cabin
             </button>
           </div>
         ) : (
@@ -340,12 +406,14 @@ export default function StudyLobbyPage() {
                 >
                   {/* Theme Top Banner */}
                   <div className={`h-24 bg-gradient-to-br ${bgCls} p-4 flex flex-col justify-between relative`}>
-                    <span className="absolute top-3 right-3 text-xs bg-black/30 backdrop-blur-sm text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-widest">
-                      {room.theme_name}
-                    </span>
-                    <span className="text-[9px] bg-white/20 text-white backdrop-blur-sm border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider w-fit">
-                      {room.category}
-                    </span>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-[9px] bg-white/20 text-white backdrop-blur-sm border border-white/10 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider w-fit">
+                        {room.category}
+                      </span>
+                      <span className="text-[10px] bg-black/40 backdrop-blur-sm text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                        Code: {room.join_code}
+                      </span>
+                    </div>
                     <h3 className="font-extrabold text-white text-base leading-tight truncate">
                       {room.name}
                     </h3>
@@ -354,7 +422,7 @@ export default function StudyLobbyPage() {
                   {/* Room Details */}
                   <div className="p-5 flex-1 flex flex-col justify-between gap-4">
                     <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-gray-400 uppercase tracking-wider">Participants</span>
+                      <span className="text-gray-400 uppercase tracking-wider">Capacity limit</span>
                       <span className={`flex items-center gap-1 ${isFull ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'}`}>
                         <Users className="w-3.5 h-3.5" />
                         {room.active_count || 0} / {room.max_capacity} Occupied
@@ -363,14 +431,14 @@ export default function StudyLobbyPage() {
 
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">Mic disabled by default for silent focus</span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">Zoom-style grid mode. Mic disabled.</span>
                     </div>
 
                     <Link
                       href={`/dashboard/study/${room.id}`}
-                      className={`w-full py-3 text-center rounded-xl text-xs font-black shadow-sm transition-all flex items-center justify-center gap-2 ${isFull ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-indigo-550 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 dark:text-indigo-400'}`}
+                      className={`w-full py-3 text-center rounded-xl text-xs font-black shadow-sm transition-all flex items-center justify-center gap-2 ${isFull ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 dark:text-indigo-400'}`}
                     >
-                      Join Table →
+                      Join Cabin →
                     </Link>
                   </div>
                 </div>
@@ -384,20 +452,20 @@ export default function StudyLobbyPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <form onSubmit={handleCreateRoom} className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl shadow-2xl w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200">
               <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-                Launch Custom Study Table <Sparkles className="w-5 h-5 text-yellow-500" />
+                Launch Free Private Study Cabin <Sparkles className="w-5 h-5 text-indigo-500" />
               </h2>
-              <p className="text-xs text-gray-400 mb-6 font-medium">Creating a custom table costs 50 Rojgar Coins.</p>
+              <p className="text-xs text-gray-400 mb-6 font-medium">Create a free study table and invite up to 10 friends.</p>
 
               <div className="space-y-4 mb-6">
                 {/* Room Name */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Table Name</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cabin Name</label>
                   <input
                     type="text"
                     required
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
-                    placeholder="e.g. My SSC Revision Table"
+                    placeholder="e.g. UPSC revision cabin"
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -433,15 +501,16 @@ export default function StudyLobbyPage() {
 
                 {/* Capacity */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Table Capacity</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Max Capacity</label>
                   <select
                     value={newRoomCapacity}
                     onChange={(e) => setNewRoomCapacity(parseInt(e.target.value))}
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-indigo-500"
                   >
-                    <option value={4}>4 Seats (Highly Focused)</option>
-                    <option value={6}>6 Seats (Recommended)</option>
-                    <option value={10}>10 Seats (Study Group)</option>
+                    <option value={4}>4 Members</option>
+                    <option value={6}>6 Members</option>
+                    <option value={8}>8 Members</option>
+                    <option value={10}>10 Members (Max)</option>
                   </select>
                 </div>
               </div>
@@ -457,10 +526,10 @@ export default function StudyLobbyPage() {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="flex-1 py-3 bg-indigo-650 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl font-extrabold text-sm transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl font-extrabold text-sm transition-all flex items-center justify-center gap-2"
                 >
                   {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Launch (-50)
+                  Create Free Room
                 </button>
               </div>
             </form>
