@@ -249,7 +249,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       .from("study_session_users")
       .select("*")
       .eq("room_id", roomId)
-      .order("created_at", { ascending: true });
+      .order("joined_at", { ascending: true });
     if (data) setParticipants(data);
   };
 
