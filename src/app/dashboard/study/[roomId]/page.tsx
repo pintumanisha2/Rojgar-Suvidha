@@ -115,8 +115,16 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       }
       setRoom(roomData);
 
-      // 1. Get user camera stream
-      const stream = await rtc.initCamera();
+      // 1. Get user camera stream (with 4-second timeout to prevent permission prompt hangs)
+      let stream = null;
+      try {
+        stream = await Promise.race([
+          rtc.initCamera(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))
+        ]);
+      } catch (err) {
+        console.error("Camera init error:", err);
+      }
 
       // 2. Clear out any previous stale session row
       await supabase.from("study_session_users").delete().eq("user_id", uid);
