@@ -9,7 +9,7 @@ const Highlights = dynamic(() => import("@/components/home/Highlights"));
 const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"));
 const MainContent = dynamic(() => import("@/components/home/MainContent"));
 const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"));
-const CalendarSelector = dynamic(() => import("@/components/calendar/CalendarSelector"));
+import CalendarSelector from "@/components/calendar/CalendarSelector";
 const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
 const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
 import type { Metadata } from "next";
