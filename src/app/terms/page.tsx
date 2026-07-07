@@ -3,11 +3,13 @@ import { FileText } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions – Rojgar Suvidha | Usage Policy",
-  description: "Read the Terms and Conditions for using Rojgar Suvidha. Understand user responsibilities, service terms, and usage guidelines for India's #1 government job portal.",
+  description:
+    "Read the Terms and Conditions for using Rojgar Suvidha. Understand user responsibilities, service terms, pricing, and usage guidelines for India's #1 government job portal.",
   alternates: { canonical: "https://www.rojgarsuvidha.com/terms" },
   openGraph: {
     title: "Terms & Conditions – Rojgar Suvidha",
-    description: "Terms and conditions for using Rojgar Suvidha's Sarkari Naukri and government job portal services.",
+    description:
+      "Terms and conditions for using Rojgar Suvidha's Sarkari Naukri and government job portal services.",
     url: "https://www.rojgarsuvidha.com/terms",
   },
 };
@@ -21,44 +23,185 @@ export default function TermsPage() {
             <FileText className="w-8 h-8 text-gray-600 dark:text-gray-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Terms & Conditions</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Please read these terms carefully before using our platform.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+              Terms &amp; Conditions
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              Last Updated: July 2026 | Effective Date: January 2025
+            </p>
           </div>
         </div>
 
-        <div className="prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-          <p className="mb-6">
-            Welcome to Rojgar Suvidha. By accessing this website, we assume you accept these terms and conditions. Do not continue to use Rojgar Suvidha if you do not agree to take all of the terms and conditions stated on this page.
-          </p>
-          
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">1. License and Use</h2>
-          <p className="mb-4">
-            Unless otherwise stated, Rojgar Suvidha and/or its licensors own the intellectual property rights for all material on Rojgar Suvidha. All intellectual property rights are reserved. You may access this from Rojgar Suvidha for your own personal use subjected to restrictions set in these terms and conditions.
-          </p>
+        {/* Legal Business Info Banner */}
+        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 mb-8">
+          <h2 className="font-bold text-indigo-800 dark:text-indigo-300 text-sm uppercase tracking-wider mb-2">
+            Business Information
+          </h2>
+          <div className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
+            <p><strong>Legal Name of Proprietor:</strong> PINTU KUMAR</p>
+            <p><strong>Business Name:</strong> Rojgar Suvidha</p>
+            <p><strong>Website:</strong> www.rojgarsuvidha.com</p>
+            <p><strong>Line of Business:</strong> Online Job Portal — Government &amp; Private Job Listings, Application Assistance Service</p>
+            <p><strong>Registered Address:</strong> Sector 62, Noida, Uttar Pradesh, India – 201309</p>
+            <p><strong>Contact Email:</strong> support@rojgarsuvidha.com</p>
+            <p><strong>Contact Phone:</strong> +91 88774 34088</p>
+          </div>
+        </div>
 
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">2. Apply For Me Service</h2>
-          <p className="mb-4">
-            Our "Apply For Me" service is a premium assistance service. By using this service:
-          </p>
-          <ul className="list-disc pl-5 mb-6 space-y-2">
-            <li>You agree to provide true, accurate, and complete information and documents.</li>
-            <li>We act solely as an assistant to fill the forms on your behalf. The final decision of application acceptance lies strictly with the respective examination/recruitment authority.</li>
-            <li>We are not responsible for rejection due to incorrect details provided by the user.</li>
-          </ul>
+        <div className="prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 space-y-8">
 
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">3. Information Accuracy</h2>
-          <p className="mb-6">
-            While we strive to provide the most accurate and up-to-date information regarding jobs, results, and admit cards, we do not warrant its completeness or accuracy. Users are highly advised to verify information from the official websites of the respective departments before making any decisions.
-          </p>
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">1. Acceptance of Terms</h2>
+            <p>
+              By accessing or using the website <strong>www.rojgarsuvidha.com</strong> ("the Website"),
+              you agree to be bound by these Terms &amp; Conditions. These Terms constitute a legally
+              binding agreement between you ("User") and <strong>PINTU KUMAR</strong>, the sole proprietor
+              operating under the business name <strong>Rojgar Suvidha</strong>.
+            </p>
+            <p className="mt-2">
+              If you do not agree with any part of these Terms, please discontinue use of the Website immediately.
+            </p>
+          </section>
 
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">4. Merchant Legal Entity Name</h2>
-          <p className="mb-6">
-            Rojgar Suvidha, including the "Apply For Me" and "e-Suvidha" services, is legally owned, operated, and billed under the merchant entity name <strong>PINTU KUMAR</strong>. All legal matters, disputes, or business queries are handled under the sole proprietorship of PINTU KUMAR.
-          </p>
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">2. Services Offered</h2>
+            <p>Rojgar Suvidha provides the following services:</p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>
+                <strong>Free Job Listings Portal:</strong> Access to verified government (Sarkari Naukri) and private
+                sector job notifications, exam results, admit cards, and answer keys.
+              </li>
+              <li>
+                <strong>Apply For Me Service (Paid):</strong> A premium form-filling assistance service where our
+                team fills government job application forms on behalf of the user.
+                <br />
+                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                  Service Charge: ₹50 (Fifty Rupees) per application — non-refundable except in cases
+                  where we are unable to complete the form due to our error.
+                </span>
+              </li>
+              <li>
+                <strong>e-Suvidha:</strong> Assistance with PAN card, Aadhaar, and other government
+                digital services information.
+              </li>
+              <li>
+                <strong>Study Rooms:</strong> Free live study group rooms for aspirants.
+              </li>
+            </ul>
+          </section>
 
-          <p className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-sm">
-            These terms and conditions are governed by and construed in accordance with the laws of India.
-          </p>
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">3. Pricing &amp; Payment</h2>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Apply For Me — Service Pricing</h3>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b border-gray-200 dark:border-gray-700">
+                    <th className="pb-2 font-semibold">Service</th>
+                    <th className="pb-2 font-semibold">Price (INR)</th>
+                    <th className="pb-2 font-semibold">Includes</th>
+                  </tr>
+                </thead>
+                <tbody className="space-y-1">
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="py-2">Form Filling Assistance</td>
+                    <td className="py-2 font-bold text-indigo-600">₹50 per application</td>
+                    <td className="py-2">Complete form submission + verification</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2">Exam/Application Fee</td>
+                    <td className="py-2">As per official notification</td>
+                    <td className="py-2">Paid directly to government portal</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3">
+              All payments are processed securely through Cashfree Payments. Prices are quoted in Indian
+              Rupees (INR) inclusive of applicable taxes. The ₹50 service fee is separate from any
+              official government examination fees.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">4. User Obligations</h2>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>You must be at least 18 years of age to use our paid services.</li>
+              <li>You must provide accurate, complete, and truthful information when using the Apply For Me service.</li>
+              <li>You are responsible for providing your correct documents, photos, and personal details.</li>
+              <li>You must not share your account credentials with others.</li>
+              <li>You must not use the Website for any fraudulent, unlawful, or harmful purpose.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">5. Intellectual Property</h2>
+            <p>
+              All content on this Website — including job listings, articles, graphics, and software — is owned
+              by or licensed to <strong>PINTU KUMAR / Rojgar Suvidha</strong>. Unauthorized reproduction,
+              distribution, or use of any content is strictly prohibited.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">6. Limitation of Liability</h2>
+            <p>
+              Rojgar Suvidha provides job information as a reference service. We do not guarantee employment
+              or selection in any examination or job. We are not responsible for:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>Rejection of applications due to incorrect information provided by the user.</li>
+              <li>Changes in government job notifications or examination schedules.</li>
+              <li>Technical failures of third-party government portals.</li>
+              <li>Any consequential, indirect, or special damages.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">7. Privacy</h2>
+            <p>
+              Your use of this Website is also governed by our{" "}
+              <a href="/privacy" className="text-indigo-600 hover:underline">Privacy Policy</a>.
+              We collect and process your personal data only as described therein.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">8. Refund &amp; Cancellation</h2>
+            <p>
+              Our refund policy is detailed in the{" "}
+              <a href="/refund-policy" className="text-indigo-600 hover:underline">Refund &amp; Cancellation Policy</a> page.
+              The ₹50 service charge is generally non-refundable. Refunds are only issued if we fail to
+              submit your form due to our error.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">9. Governing Law</h2>
+            <p>
+              These Terms are governed by the laws of India. Any dispute arising out of or relating to
+              these Terms shall be subject to the exclusive jurisdiction of courts in Noida, Uttar Pradesh, India.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">10. Changes to Terms</h2>
+            <p>
+              We reserve the right to modify these Terms at any time. Continued use of the Website after
+              any changes constitutes acceptance of the new Terms.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">11. Contact for Legal Queries</h2>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+              <p><strong>PINTU KUMAR</strong></p>
+              <p>Sole Proprietor, Rojgar Suvidha</p>
+              <p>Sector 62, Noida, Uttar Pradesh – 201309</p>
+              <p>Email: support@rojgarsuvidha.com</p>
+              <p>Phone: +91 88774 34088</p>
+            </div>
+          </section>
         </div>
       </div>
     </div>

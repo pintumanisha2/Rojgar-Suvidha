@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, CheckCircle, XCircle, Clock, Phone } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Refund Policy – Rojgar Suvidha | Apply For Me Refund Terms",
-  description: "Read Rojgar Suvidha's refund policy for our Apply For Me form-filling service. Understand eligibility, process and timeline for refund requests.",
+  title: "Refund & Cancellation Policy – Rojgar Suvidha",
+  description:
+    "Read Rojgar Suvidha's complete Refund and Cancellation Policy for our Apply For Me form-filling service. Understand eligibility, timeline, and process for refund requests.",
   alternates: { canonical: "https://www.rojgarsuvidha.com/refund-policy" },
   openGraph: {
-    title: "Refund Policy – Rojgar Suvidha",
-    description: "Refund policy and eligibility for Rojgar Suvidha's Apply For Me government form-filling service.",
+    title: "Refund & Cancellation Policy – Rojgar Suvidha",
+    description:
+      "Refund and cancellation policy for Rojgar Suvidha's government form-filling assistance service.",
     url: "https://www.rojgarsuvidha.com/refund-policy",
   },
 };
@@ -21,45 +23,189 @@ export default function RefundPolicyPage() {
             <RefreshCcw className="w-8 h-8 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Refund Policy</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">Our policy regarding payments and refunds for premium services.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+              Refund &amp; Cancellation Policy
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              Last Updated: July 2026 | Effective Date: January 2025
+            </p>
           </div>
         </div>
 
-        <div className="prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-          <p className="mb-6">
-            At Rojgar Suvidha, we are committed to providing you with the best possible service. This Refund Policy outlines the conditions under which refunds are provided for our paid services, specifically the "Apply For Me" service.
-          </p>
-          
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">1. Eligibility for Refund</h2>
-          <p className="mb-4">Refunds will only be considered under the following circumstances:</p>
-          <ul className="list-disc pl-5 mb-6 space-y-2">
-            <li><strong>Double Payment:</strong> If you accidentally made duplicate payments for the same service.</li>
-            <li><strong>Service Not Initiated:</strong> If you cancel your "Apply For Me" request before our team has started processing your application.</li>
-            <li><strong>Technical Failure:</strong> If we are unable to submit your application due to a technical error on our end before the official deadline.</li>
-          </ul>
+        {/* Legal Business Info Banner */}
+        <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-2xl p-5 mb-8">
+          <h2 className="font-bold text-orange-800 dark:text-orange-300 text-sm uppercase tracking-wider mb-2">
+            Merchant Information
+          </h2>
+          <div className="text-sm text-orange-700 dark:text-orange-300 space-y-1">
+            <p><strong>Legal Name:</strong> PINTU KUMAR</p>
+            <p><strong>Business Name:</strong> Rojgar Suvidha</p>
+            <p><strong>Service:</strong> Online Job Portal &amp; Application Assistance Service</p>
+            <p><strong>Email:</strong> support@rojgarsuvidha.com</p>
+            <p><strong>Phone:</strong> +91 88774 34088</p>
+          </div>
+        </div>
 
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">2. Non-Refundable Cases</h2>
-          <p className="mb-4">We do NOT issue refunds under the following conditions:</p>
-          <ul className="list-disc pl-5 mb-6 space-y-2">
-            <li>Once the application form has been successfully submitted to the official portal and a confirmation receipt has been generated.</li>
-            <li>If the application gets rejected by the authority due to incorrect documents or details provided by you.</li>
-            <li>If you request a cancellation after the application process has already been initiated by our team.</li>
-          </ul>
-
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">3. Refund Processing Time</h2>
-          <p className="mb-6">
-            Approved refunds will be processed and credited to the original method of payment within 5-7 business days. If you haven't received a refund yet, first check your bank account again, then contact your credit card company or bank, as it may take some time before your refund is officially posted.
+        {/* Service Pricing Summary */}
+        <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 mb-8">
+          <h2 className="font-bold text-indigo-800 dark:text-indigo-300 mb-3">
+            Service Pricing (in INR)
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-indigo-900 dark:text-indigo-200">
+              <thead>
+                <tr className="border-b border-indigo-200 dark:border-indigo-700 text-left">
+                  <th className="pb-2 pr-4">Service</th>
+                  <th className="pb-2 pr-4">Price (INR)</th>
+                  <th className="pb-2">Refundable?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-indigo-100 dark:border-indigo-800">
+                  <td className="py-2 pr-4">Apply For Me — Form Filling Assistance</td>
+                  <td className="py-2 pr-4 font-bold">₹50 per application</td>
+                  <td className="py-2 text-red-600 dark:text-red-400 font-semibold">Non-refundable*</td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-4">Government Exam Fee (paid to portal)</td>
+                  <td className="py-2 pr-4">As notified</td>
+                  <td className="py-2 text-gray-500">Per govt. policy</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2">
+            * Refundable only if we fail to complete the form due to an error on our part.
           </p>
+        </div>
 
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">4. Merchant Ownership</h2>
-          <p className="mb-6">
-            Rojgar Suvidha is a sole proprietorship owned and operated by <strong>PINTU KUMAR</strong>. All refund transactions, chargebacks, and online payment billing will be processed under the merchant account of PINTU KUMAR.
-          </p>
+        <div className="space-y-8 text-gray-600 dark:text-gray-300">
 
-          <p className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 text-sm">
-            To request a refund, please contact our support team at <strong>support@rojgarsuvidha.com</strong> with your transaction ID.
-          </p>
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" /> 1. Overview
+            </h2>
+            <p>
+              Rojgar Suvidha (owned and operated by <strong>PINTU KUMAR</strong>) offers the <strong>
+              "Apply For Me"</strong> service — a paid form-filling assistance service where our team
+              submits government job applications on behalf of users. The service charge is{" "}
+              <strong>₹50 (Fifty Rupees) per application</strong>.
+            </p>
+            <p className="mt-2">
+              This policy outlines the conditions under which refunds will or will not be issued.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-500" /> 2. Non-Refundable Cases
+            </h2>
+            <p className="mb-3">The ₹50 service charge is <strong>non-refundable</strong> in the following cases:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>User provided incorrect or incomplete information (name, date of birth, photo, documents).</li>
+              <li>User did not pay the official government examination fee within the deadline.</li>
+              <li>The application was submitted successfully but the user was later deemed ineligible by the recruiting body.</li>
+              <li>The user requests cancellation after the form submission has been initiated.</li>
+              <li>The application deadline was missed due to high server load on the government portal.</li>
+              <li>User submitted a duplicate or unnecessary application request.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" /> 3. Cases Eligible for Full Refund
+            </h2>
+            <p className="mb-3">A <strong>full refund of ₹50 INR</strong> will be issued if:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Our team was unable to submit your form due to a technical error on our end.</li>
+              <li>The payment was charged but no form-filling service was initiated within 48 hours.</li>
+              <li>Duplicate payment was made for the same application.</li>
+              <li>The government notification was withdrawn or postponed before form submission.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-500" /> 4. Refund Process &amp; Timeline
+            </h2>
+            <ol className="list-decimal pl-6 space-y-2">
+              <li>
+                <strong>Step 1 — Request:</strong> Email us at{" "}
+                <a href="mailto:support@rojgarsuvidha.com" className="text-indigo-600 hover:underline">
+                  support@rojgarsuvidha.com
+                </a>{" "}
+                with your order ID, registered mobile number, and reason for refund.
+              </li>
+              <li>
+                <strong>Step 2 — Review:</strong> We will review your request within 2–3 business days.
+              </li>
+              <li>
+                <strong>Step 3 — Approval:</strong> If eligible, refund will be processed within{" "}
+                <strong>5–7 business days</strong> back to your original payment method.
+              </li>
+              <li>
+                <strong>Step 4 — Bank Processing:</strong> Depending on your bank, the amount may take an additional
+                3–5 business days to reflect in your account.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+              5. Cancellation Policy
+            </h2>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>
+                <strong>Before Form Submission Starts:</strong> You may cancel your request within 1 hour
+                of payment and receive a full refund.
+              </li>
+              <li>
+                <strong>After Submission Has Started:</strong> No cancellation is possible once our team
+                has started working on your form.
+              </li>
+              <li>
+                <strong>After Successful Submission:</strong> No cancellation or refund will be entertained.
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+              6. Government Exam Fees
+            </h2>
+            <p>
+              All official government examination fees are paid directly to the respective government portals.
+              Rojgar Suvidha has no control over these fees. Refunds for examination fees are governed
+              entirely by the respective recruiting body's policy.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+              7. Contact for Refund Requests
+            </h2>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <p className="font-bold text-gray-900 dark:text-white">PINTU KUMAR</p>
+                <p>Sole Proprietor, Rojgar Suvidha</p>
+                <p>Sector 62, Noida, Uttar Pradesh – 201309</p>
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-indigo-500" />
+                  <a href="tel:+918877434088" className="text-indigo-600 hover:underline">+91 88774 34088</a>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-indigo-500">✉</span>
+                  <a href="mailto:support@rojgarsuvidha.com" className="text-indigo-600 hover:underline">
+                    support@rojgarsuvidha.com
+                  </a>
+                </p>
+                <p className="text-sm text-gray-500">Mon – Sat: 10:00 AM – 6:00 PM IST</p>
+              </div>
+            </div>
+          </section>
+
         </div>
       </div>
     </div>

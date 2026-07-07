@@ -200,15 +200,15 @@ export default async function Home() {
             <div className="space-y-4 not-prose mt-6">
               <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q1. Is Rojgar Suvidha completely free to use?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yes, accessing job notifications, downloading admit cards, and checking results on Rojgar Suvidha is 100% free. Fees only apply if you opt for our premium "Apply For Me" service.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yes, accessing job notifications, downloading admit cards, and checking results on Rojgar Suvidha is 100% free. A service charge of <strong className="text-indigo-600">₹50 (Fifty Rupees) per application</strong> applies only for our premium &quot;Apply For Me&quot; form-filling assistance service.</p>
               </div>
               <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q2. How accurate are the job notifications here?</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">We maintain strict editorial standards. Every job posted is verified directly from official government portals, employment newspapers (Rojgar Samachar), and official press releases.</p>
               </div>
               <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-                <h4 className="font-bold text-gray-900 dark:text-white">Q3. What is the "Apply For Me" feature?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">It is an expert service where students upload their documents on our secure portal, and our trained professionals fill out complex government job forms on their behalf to ensure zero rejection due to technical errors.</p>
+                <h4 className="font-bold text-gray-900 dark:text-white">Q3. What is the &quot;Apply For Me&quot; feature and how much does it cost?</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">It is an expert form-filling service. You upload your documents, and our trained team fills and submits your government job application accurately. <strong className="text-indigo-600">Service charge: ₹50 INR per application</strong> (non-refundable). The official government exam fee is paid separately.</p>
               </div>
               <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q4. How do I get daily job updates?</h4>
@@ -218,6 +218,9 @@ export default async function Home() {
 
             <p className="mt-8">
               <strong>Disclaimer:</strong> Rojgar Suvidha is an independent educational portal and is NOT affiliated with any government organization. We curate publicly available information to assist students. Always verify details from official government websites before applying.
+            </p>
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-500">
+              <strong>Legal:</strong> Rojgar Suvidha is owned and operated by <strong>PINTU KUMAR</strong> (Sole Proprietor). Registered at Sector 62, Noida, Uttar Pradesh – 201309. Contact: <a href="mailto:support@rojgarsuvidha.com" className="text-indigo-600 hover:underline">support@rojgarsuvidha.com</a> | <a href="tel:+918877434088" className="text-indigo-600 hover:underline">+91 88774 34088</a>. Apply For Me Service: ₹50 per application (INR). <a href="/refund-policy" className="text-indigo-600 hover:underline">Refund Policy</a> | <a href="/terms" className="text-indigo-600 hover:underline">Terms</a> | <a href="/privacy" className="text-indigo-600 hover:underline">Privacy</a>.
             </p>
           </div>
         </div>
