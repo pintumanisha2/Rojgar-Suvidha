@@ -29,8 +29,7 @@ const nextConfig = {
         headers: [
           // Prevent MIME-type sniffing
           { key: "X-Content-Type-Options", value: "nosniff" },
-          // Prevents clickjacking
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          // X-Frame-Options removed — Jitsi Meet iframe needs to embed
           // Forces HTTPS
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           // Basic XSS protection
@@ -38,7 +37,8 @@ const nextConfig = {
           // Controls Referrer info (good for SEO)
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           // Permissions policy — disable unnecessary browser features
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+          // Allow camera & microphone for study room video calls
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self)" },
         ],
       },
       // ── Cache static assets aggressively (faster = better SEO) ──
