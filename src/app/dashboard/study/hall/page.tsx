@@ -260,12 +260,19 @@ export default function PublicHallPage() {
   /* ── Encourage ─────────────────────────────────────── */
   const handleEncourage = useCallback(async (userId: string) => {
     setClapping(prev => ({ ...prev, [userId]: true }));
+    const target = dbParticipants.find(p => p.user_id === userId);
+    const currentClaps = target?.claps_count || 0;
     try {
-      await supabase.rpc("increment_claps", { target_user_id: userId });
+      await supabase.from("study_session_users")
+        .update({ claps_count: currentClaps + 1 })
+        .eq("user_id", userId);
+      setDbParticipants(prev =>
+        prev.map(p => p.user_id === userId ? { ...p, claps_count: currentClaps + 1 } : p)
+      );
     } catch {}
     setTimeout(() => setClapping(prev => ({ ...prev, [userId]: false })), 2000);
     toast("👏 Encouraged!");
-  }, []);
+  }, [dbParticipants]);
 
   /* ── Save goal ─────────────────────────────────────── */
   const handleSaveGoal = useCallback(async () => {
