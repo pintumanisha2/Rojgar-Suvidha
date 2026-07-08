@@ -134,16 +134,16 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       // 2. Clear out any previous stale session row
       await supabase.from("study_session_users").delete().eq("user_id", uid);
 
-      // 3. Register user inside DB session
+      // 3. Register user inside DB session (using upsert to prevent 409 duplicate key conflicts)
       const { data: sessRow, error: sessErr } = await supabase
         .from("study_session_users")
-        .insert({
+        .upsert({
           room_id: roomId,
           user_id: uid,
           display_name: displayName,
           target_task: "",
           camera_active: !!stream,
-        })
+        }, { onConflict: "user_id" })
         .select()
         .single();
 
