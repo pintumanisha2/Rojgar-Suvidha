@@ -59,9 +59,9 @@ export default function VideoTile({
     <div
       className={`relative rounded-2xl overflow-hidden bg-[#0d1117] border
                   flex items-center justify-center select-none group transition-all
+                  w-full h-full
                   ${isSpotlight ? "border-indigo-500/40 shadow-lg shadow-indigo-950/50" : "border-white/5"}
                   ${isMe ? "ring-2 ring-indigo-500/30" : ""}`}
-      style={{ aspectRatio: "16/9" }}
     >
       {/* ── LIVE VIDEO ────────────────────────────────── */}
       {showVideo && (

@@ -32,6 +32,7 @@ interface Participant {
   target_task: string;
   camera_active: boolean;
   claps_count?: number;
+  joined_at?: string;
 }
 
 const AVATAR_COLORS = [
@@ -84,22 +85,28 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
     let kickInterval: any = null;
 
     const boot = async () => {
+      console.log("[BOOT] Step 1: Getting auth session...");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log("[BOOT] No session, redirecting to login");
         router.push("/login");
         return;
       }
       const uid = session.user.id;
+      console.log("[BOOT] Step 1 OK - User ID:", uid);
       setMyUserId(uid);
 
       // Verify Profile details completed
-      const { data: profile } = await supabase
+      console.log("[BOOT] Step 2: Fetching profile...");
+      const { data: profile, error: profileErr } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("id", uid)
         .single();
 
+      console.log("[BOOT] Profile result:", profile, "Error:", profileErr);
       if (!profile?.full_name) {
+        console.log("[BOOT] No profile full_name, redirecting to profile-setup");
         router.push(`/profile-setup?redirect=/dashboard/study/${roomId}`);
         return;
       }
@@ -107,12 +114,14 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       setMyName(displayName);
 
       // Verify Study Room exists
+      console.log("[BOOT] Step 3: Fetching room:", roomId);
       const { data: roomData, error: roomErr } = await supabase
         .from("study_rooms")
         .select("*")
         .eq("id", roomId)
         .single();
 
+      console.log("[BOOT] Room result:", roomData, "Error:", roomErr);
       if (roomErr || !roomData) {
         toast.error("Study room not found.");
         router.push("/dashboard/study");
@@ -120,11 +129,13 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       }
       setRoom(roomData);
 
-
       // 2. Clear out any previous stale session row
-      await supabase.from("study_session_users").delete().eq("user_id", uid);
+      console.log("[BOOT] Step 4: Clearing stale session row...");
+      const { error: delErr } = await supabase.from("study_session_users").delete().eq("user_id", uid);
+      console.log("[BOOT] Delete result error:", delErr);
 
       // 3. Register user inside DB session IMMEDIATELY (no camera wait)
+      console.log("[BOOT] Step 5: Upserting session row...");
       const { data: sessRow, error: sessErr } = await supabase
         .from("study_session_users")
         .upsert({
@@ -137,18 +148,22 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
         .select()
         .single();
 
+      console.log("[BOOT] Upsert result:", sessRow, "Error:", sessErr);
       if (sessErr || !sessRow) {
         console.error("Study session insertion error details:", sessErr);
-        toast.error("Could not enter the study room.");
+        toast.error(`Could not enter: ${sessErr?.message || "unknown error"}`);
         router.push("/dashboard/study");
         return;
       }
+      console.log("[BOOT] Step 5 OK - Session ID:", sessRow.id);
       setMySessionId(sessRow.id);
 
       // 4. Fetch list of users inside this room
+      console.log("[BOOT] Step 6: Fetching participants...");
       await fetchParticipants();
 
       // 5. Show room UI NOW — no more waiting for camera
+      console.log("[BOOT] Step 6 OK - Setting loading to false");
       setLoading(false);
 
       // Trigger goal prompt modal
@@ -357,7 +372,9 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
   const myParticipant = participants.find((p) => p.user_id === myUserId);
   const others = participants.filter((p) => p.user_id !== myUserId);
 
-  /* Build participant list format for the grid helper */
+  /* Build participant list format for the grid helper.
+     Filter out stale 'ghost' participants: not me, no stream, joined > 2 min ago */
+  const TWO_MIN_AGO = Date.now() - 2 * 60 * 1000;
   const gridParticipants: GridParticipant[] = [
     // My own tile
     {
@@ -368,9 +385,15 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       isMe: true,
       camOn: rtc.camOn,
     },
-    // Other peer tiles
+    // Other peer tiles — exclude ghost entries with no stream older than 2 minutes
     ...participants
-      .filter((p) => p.user_id !== myUserId)
+      .filter((p) => {
+        if (p.user_id === myUserId) return false;
+        const hasStream = !!rtc.remotePeers.get(p.user_id);
+        const joinedAt = p.joined_at ? new Date(p.joined_at).getTime() : 0;
+        const isStale = !hasStream && joinedAt < TWO_MIN_AGO;
+        return !isStale;
+      })
       .map((p) => {
         const peerEntry = rtc.remotePeers.get(p.user_id);
         return {
@@ -386,7 +409,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
   ];
 
   return (
-    <div className="fixed inset-0 bg-[#030712] flex flex-col overflow-hidden text-white">
+    <div className="fixed inset-0 z-[200] bg-[#030712] flex flex-col overflow-hidden text-white">
       {/* ── HEADER ───────────────────────────────────────────── */}
       <header className="shrink-0 h-14 bg-[#080d1a]/80 border-b border-white/5 backdrop-blur-md flex items-center justify-between px-4 z-20">
         {/* Left */}

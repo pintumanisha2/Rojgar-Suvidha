@@ -85,12 +85,12 @@ export default function VideoGrid({
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-[#030712] p-2">
+    <div className="flex-1 overflow-hidden bg-[#030712] p-2">
       <div
         className="h-full grid gap-2"
         style={{
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridAutoRows: count <= 4 ? "1fr" : "auto",
+          gridTemplateRows: `repeat(${Math.ceil(count / cols)}, 1fr)`,
         }}
       >
         {participants.map(p => (
