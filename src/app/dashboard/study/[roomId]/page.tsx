@@ -120,21 +120,11 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       }
       setRoom(roomData);
 
-      // 1. Get user camera stream (with 4-second timeout to prevent permission prompt hangs)
-      let stream = null;
-      try {
-        stream = await Promise.race([
-          rtc.initCamera(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))
-        ]);
-      } catch (err) {
-        console.error("Camera init error:", err);
-      }
 
       // 2. Clear out any previous stale session row
       await supabase.from("study_session_users").delete().eq("user_id", uid);
 
-      // 3. Register user inside DB session (using upsert to prevent 409 duplicate key conflicts)
+      // 3. Register user inside DB session IMMEDIATELY (no camera wait)
       const { data: sessRow, error: sessErr } = await supabase
         .from("study_session_users")
         .upsert({
@@ -142,7 +132,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
           user_id: uid,
           display_name: displayName,
           target_task: "",
-          camera_active: !!stream,
+          camera_active: false, // will be updated once camera loads
         }, { onConflict: "user_id" })
         .select()
         .single();
@@ -154,24 +144,25 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
         return;
       }
       setMySessionId(sessRow.id);
+
+      // 4. Fetch list of users inside this room
+      await fetchParticipants();
+
+      // 5. Show room UI NOW — no more waiting for camera
       setLoading(false);
 
       // Trigger goal prompt modal
       setShowGoal(true);
 
-      // 4. Fetch list of users inside this room
-      await fetchParticipants();
-
-      // 5. Setup WebRTC signaling handlers
+      // 6. Setup WebRTC signaling handlers BEFORE asking for camera
       await signaling.subscribe({
         onPeerJoined: async (payload) => {
-          // A new user has entered the room. WE will act as initiator
           if (payload.userId !== uid) {
             await rtc.createPeer(
               payload.userId,
               payload.displayName,
-              true, // initiator
-              stream,
+              true,
+              rtc.localStream, // use whatever stream is available at this moment
               (signalData) => {
                 signaling.sendSignal({
                   to: payload.userId,
@@ -188,15 +179,13 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
         },
         onSignal: async (payload) => {
           if (payload.to !== uid) return;
-          // We got signal (offer/answer/candidate) from another peer
           let peer = rtc.peersRef.current.get(payload.from);
           if (!peer) {
-            // If peer connection doesn't exist, create it (we are NOT initiator)
             peer = await rtc.createPeer(
               payload.from,
               payload.fromName,
-              false, // not initiator
-              stream,
+              false,
+              rtc.localStream,
               (signalData) => {
                 signaling.sendSignal({
                   to: payload.from,
@@ -210,9 +199,20 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
           rtc.signalPeer(payload.from, payload.signal);
         },
         onSubscribed: () => {
-          // Broadcast our presence to existing room members
           signaling.announceJoin(uid, displayName);
         },
+      });
+
+      // 7. Start camera in the background AFTER room is visible
+      rtc.initCamera().then(async (camStream) => {
+        if (camStream) {
+          // Update DB that camera is now active
+          await supabase.from("study_session_users")
+            .update({ camera_active: true })
+            .eq("user_id", uid);
+        }
+      }).catch(() => {
+        // Camera blocked — no problem, user is already in the room with avatar fallback
       });
 
       // 6. Admin kick validation timer check
