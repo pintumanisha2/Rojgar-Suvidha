@@ -63,7 +63,7 @@ export default function LiveTile({
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-[#0d1117] border
                      flex items-center justify-center select-none group transition-all
-                     w-full h-full min-h-[120px]
+                     w-full h-full min-h-[60px]
                      ${isMe ? "ring-2 ring-indigo-500/40 border-indigo-500/20" : "border-white/5"}`}>
 
       {/* Live video */}

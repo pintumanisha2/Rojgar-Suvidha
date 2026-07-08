@@ -8,7 +8,7 @@
  * - Pagination: 16 per page, ◀ ▶ navigation
  * - "Me" tile always pinned at position 0 on page 1
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Participant } from "livekit-client";
 import LiveTile from "./LiveTile";
@@ -41,16 +41,31 @@ export default function HallGrid({
 }: HallGridProps) {
   const [page, setPage] = useState(0);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const totalPages = Math.max(1, Math.ceil(participants.length / PAGE_SIZE));
   const safePage   = Math.min(page, totalPages - 1);
 
-  // Put "me" first
-  const meIndex = participants.findIndex(p => p.isMe);
-  const ordered = [...participants];
-  if (meIndex > 0) {
-    const [me] = ordered.splice(meIndex, 1);
-    ordered.unshift(me);
-  }
+  // Sort participants to create the illusion of a fully live hall:
+  // 1. "Me" is always first (so I see my own camera)
+  // 2. Then all users with an active LiveKit connection (actual live video)
+  // 3. Then everyone else (avatar cards)
+  const ordered = [...participants].sort((a, b) => {
+    if (a.isMe) return -1;
+    if (b.isMe) return 1;
+    const aLive = !!a.lkParticipant;
+    const bLive = !!b.lkParticipant;
+    if (aLive && !bLive) return -1;
+    if (!aLive && bLive) return 1;
+    return 0; // Keep original DB order (joined_at) for same types
+  });
 
   const slice = ordered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
@@ -66,15 +81,19 @@ export default function HallGrid({
     );
   }
 
+  const count = slice.length;
+  const cols = isMobile ? (count <= 1 ? 1 : 2) : (count <= 1 ? 1 : count <= 2 ? 2 : count <= 4 ? 2 : count <= 6 ? 3 : 4);
+  const rows = Math.ceil(count / cols);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#030712]">
       {/* Grid */}
       <div className="flex-1 overflow-hidden p-2">
         <div
-          className="h-full grid gap-2"
+          className="h-full grid gap-1.5"
           style={{
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gridTemplateRows:    `repeat(${Math.ceil(slice.length / 4)}, 1fr)`,
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gridTemplateRows:    `repeat(${rows}, 1fr)`,
           }}
         >
           {slice.map(p => {

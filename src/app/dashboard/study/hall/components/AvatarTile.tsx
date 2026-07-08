@@ -31,7 +31,7 @@ export default function AvatarTile({
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-[#0d1117] border
                      flex flex-col items-center justify-center gap-2
-                     w-full h-full min-h-[120px] select-none group transition-all
+                     w-full h-full min-h-[60px] select-none group transition-all
                      ${isMe ? "ring-2 ring-indigo-500/40 border-indigo-500/20" : "border-white/5 hover:border-white/10"}`}>
 
       {/* Avatar circle */}
