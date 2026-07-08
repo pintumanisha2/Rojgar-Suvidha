@@ -22,7 +22,7 @@ interface StudyRoom {
   active_count?: number;
 }
 
-const PUBLIC_HALL_ID = "00000000-0000-0000-0000-000000000001";
+const PUBLIC_HALL_ID = "8cd519d3-bdfb-40ae-916f-3e312c8d5f53"; // SSC Exam Hall 1 (Main Public Hall)
 
 const CATEGORIES = [
   { key: "all", label: "All Rooms", emoji: "🌐" },
