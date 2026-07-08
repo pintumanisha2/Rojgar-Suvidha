@@ -239,7 +239,7 @@ export default function StudyLobbyPage() {
             </div>
 
             <Link
-              href={`/dashboard/study/${PUBLIC_HALL_ID}`}
+              href="/dashboard/study/hall"
               className="shrink-0 flex items-center gap-2 px-6 py-3.5 bg-white text-indigo-900 hover:bg-indigo-50 font-black rounded-2xl text-sm transition-all shadow-lg shadow-indigo-950/50"
             >
               Enter Hall <ChevronRight className="w-4 h-4" />
