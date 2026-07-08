@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, ShieldAlert, Users, Loader2, Heart, MicOff } from "lucide-react";
@@ -74,8 +74,13 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
   const rtc = useWebRTC(myUserId);
   const signaling = useSignaling(roomId);
 
+  const bootCalled = useRef(false);
+
   /* ── 1. Boot Room ──────────────────────────────────────── */
   useEffect(() => {
+    if (bootCalled.current) return;
+    bootCalled.current = true;
+
     let kickInterval: any = null;
 
     const boot = async () => {
@@ -143,6 +148,7 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
         .single();
 
       if (sessErr || !sessRow) {
+        console.error("Study session insertion error details:", sessErr);
         toast.error("Could not enter the study room.");
         router.push("/dashboard/study");
         return;
