@@ -129,13 +129,24 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
       }
       setRoom(roomData);
 
+      // ── Capacity Check: count active participants in this room
+      const { count: activeCount } = await supabase
+        .from("study_session_users")
+        .select("id", { count: "exact", head: true })
+        .eq("room_id", roomId)
+        .neq("user_id", uid); // don't count self (might be rejoining)
+
+      const maxCap = roomData.max_capacity ?? 9;
+      if ((activeCount ?? 0) >= maxCap) {
+        toast.error(`🚫 Room is full! Maximum ${maxCap} students allowed. Try another room.`);
+        router.push("/dashboard/study");
+        return;
+      }
+
       // 2. Clear out any previous stale session row
-      console.log("[BOOT] Step 4: Clearing stale session row...");
-      const { error: delErr } = await supabase.from("study_session_users").delete().eq("user_id", uid);
-      console.log("[BOOT] Delete result error:", delErr);
+      await supabase.from("study_session_users").delete().eq("user_id", uid);
 
       // 3. Register user inside DB session IMMEDIATELY (no camera wait)
-      console.log("[BOOT] Step 5: Upserting session row...");
       const { data: sessRow, error: sessErr } = await supabase
         .from("study_session_users")
         .upsert({
@@ -143,27 +154,23 @@ export default function LiveStudyRoomPage({ params }: { params: Promise<{ roomId
           user_id: uid,
           display_name: displayName,
           target_task: "",
-          camera_active: false, // will be updated once camera loads
+          camera_active: false,
         }, { onConflict: "user_id" })
         .select()
         .single();
 
-      console.log("[BOOT] Upsert result:", sessRow, "Error:", sessErr);
       if (sessErr || !sessRow) {
-        console.error("Study session insertion error details:", sessErr);
+        console.error("[BOOT] Upsert failed:", sessErr);
         toast.error(`Could not enter: ${sessErr?.message || "unknown error"}`);
         router.push("/dashboard/study");
         return;
       }
-      console.log("[BOOT] Step 5 OK - Session ID:", sessRow.id);
       setMySessionId(sessRow.id);
 
       // 4. Fetch list of users inside this room
-      console.log("[BOOT] Step 6: Fetching participants...");
       await fetchParticipants();
 
       // 5. Show room UI NOW — no more waiting for camera
-      console.log("[BOOT] Step 6 OK - Setting loading to false");
       setLoading(false);
 
       // Trigger goal prompt modal
