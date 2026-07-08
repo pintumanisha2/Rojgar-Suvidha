@@ -315,7 +315,8 @@ function DashboardContent() {
       }
     };
 
-    const poll = setInterval(checkRequestsStatus, 8000);
+    // Poll status updates every 30 seconds fallback
+    const poll = setInterval(checkRequestsStatus, 30000);
     return () => clearInterval(poll);
   }, [user]);
 
@@ -400,7 +401,8 @@ function DashboardContent() {
       }
     };
     checkOtp();
-    const poll = setInterval(checkOtp, 4000);
+    // Poll OTP fallback every 20 seconds
+    const poll = setInterval(checkOtp, 20000);
     return () => clearInterval(poll);
   }, [user]);
 

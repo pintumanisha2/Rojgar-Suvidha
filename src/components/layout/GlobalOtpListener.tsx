@@ -137,8 +137,8 @@ export default function GlobalOtpListener() {
       })
       .subscribe();
 
-    // Fallback polling (every 6 seconds)
-    const poll = setInterval(checkStatusUpdate, 6000);
+    // Fallback polling (every 45 seconds as WebSocket handles real-time updates)
+    const poll = setInterval(checkStatusUpdate, 45000);
 
     return () => {
       clearInterval(poll);
@@ -233,8 +233,33 @@ export default function GlobalOtpListener() {
     };
 
     checkOtp();
-    const poll = setInterval(checkOtp, 4000);
-    return () => clearInterval(poll);
+
+    // Subscribe to real-time OTP alerts via Supabase WebSockets
+    const channel = supabase.channel(`otp_requests_channel_${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "otp_requests",
+        filter: `user_id=eq.${user.id}`
+      }, (payload: any) => {
+        console.log("Realtime OTP request detected:", payload);
+        checkOtp();
+      })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "otp_requests",
+        filter: `user_id=eq.${user.id}`
+      }, (payload: any) => {
+        checkOtp();
+      })
+      .subscribe();
+
+    const poll = setInterval(checkOtp, 20000);
+    return () => {
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
   }, [user, pathname]);
 
   // Countdown timer
