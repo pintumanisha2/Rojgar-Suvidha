@@ -30,7 +30,12 @@ export default function LiveTile({
   participant, goal, clapsCount, isMe, isClapping, onEncourage, localVideoTrack
 }: LiveTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Safety guard — should never happen after HallGrid fix, but just in case
+  if (!participant) return null;
+
   const name = participant.name || participant.identity || "Student";
+
 
   useEffect(() => {
     if (!videoRef.current) return;
