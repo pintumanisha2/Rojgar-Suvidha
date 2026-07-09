@@ -90,7 +90,6 @@ export default function PublicHallPage() {
   /* ── Fetch DB participants (polling) ──────────────────── */
   const fetchParticipants = useCallback(async () => {
     try {
-      // Try with last_heartbeat filter first (if column exists)
       let query = supabase
         .from("study_session_users")
         .select("*", { count: "exact" })
@@ -133,66 +132,70 @@ export default function PublicHallPage() {
         myUserIdRef.current = uid;
         setMyUserId(uid);
 
-        /* 2. Profile + delete stale session — run IN PARALLEL to save ~500ms */
-        const [profileResult] = await Promise.all([
-          supabase.from("profiles").select("full_name").eq("id", uid).single(),
-          supabase.from("study_session_users").delete().eq("user_id", uid),
-        ]);
-
-        const profile = profileResult.data;
-        if (!profile?.full_name) {
-          router.push(`/profile-setup?redirect=/dashboard/study/hall`);
-          return;
+        /* 2. Load cached display name for instant UI rendering */
+        const cachedName = localStorage.getItem("rs_display_name");
+        if (cachedName) {
+          setMyName(cachedName);
         }
-        const displayName = profile.full_name;
-        setMyName(displayName);
 
-        /* 3. Register presence in new room */
-        const upsertPayload: any = {
-          room_id:       PUBLIC_HALL_ROOM_ID,
-          user_id:       uid,
-          display_name:  displayName,
-          target_task:   "",
-          camera_active: false,
-          last_heartbeat: new Date().toISOString(),
-        };
-
-        const { data: sessRow, error: sessErr } = await supabase
-          .from("study_session_users")
-          .upsert(upsertPayload, { onConflict: "user_id" })
-          .select().single();
-
-        if (sessErr || !sessRow) {
-          console.error("[Hall] Session upsert failed:", sessErr);
-          toast.error("Could not join the hall. Please try again.");
-          router.push("/dashboard/study");
-          return;
-        }
-        setMySessionId(sessRow.id);
-
-        /* 4. Show UI IMMEDIATELY — don't wait for participant list */
+        /* 3. Show UI IMMEDIATELY — don't block on DB queries */
         setLoading(false);
 
-        /* 5. Fetch participants + start timers in background (non-blocking) */
-        fetchParticipants(); // fire and forget — UI already visible
+        /* 4. Run database updates and profile fetches in background (non-blocking) */
+        Promise.resolve().then(async () => {
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", uid)
+              .single();
+            
+            const displayName = profile?.full_name || session.user.email?.split("@")[0] || "Student";
+            setMyName(displayName);
+            localStorage.setItem("rs_display_name", displayName);
 
-        /* 6. Start heartbeat */
+            // Register presence in background
+            await supabase.from("study_session_users").delete().eq("user_id", uid);
+            const upsertPayload: any = {
+              room_id:       PUBLIC_HALL_ROOM_ID,
+              user_id:       uid,
+              display_name:  displayName,
+              target_task:   "",
+              camera_active: false,
+              last_heartbeat: new Date().toISOString(),
+            };
+            const { data: sessRow } = await supabase
+              .from("study_session_users")
+              .upsert(upsertPayload, { onConflict: "user_id" })
+              .select().single();
+
+            if (sessRow) {
+              setMySessionId(sessRow.id);
+            }
+          } catch (e) {
+            console.warn("Background presence registration warning:", e);
+          }
+          // Fetch initial participant list once presence setup runs
+          fetchParticipants();
+        });
+
+        /* 5. Start heartbeat */
         heartbeatTimer = setInterval(async () => {
-          await supabase.from("study_session_users")
-            .update({ last_heartbeat: new Date().toISOString() })
-            .eq("user_id", uid);
+          try {
+            await supabase.from("study_session_users")
+              .update({ last_heartbeat: new Date().toISOString() })
+              .eq("user_id", uid);
+          } catch {}
         }, 30_000);
 
-        /* 7. Poll DB every 15s for updated participant list */
+        /* 6. Poll DB every 15s for updated participant list */
         pollTimer = setInterval(fetchParticipants, 15_000);
 
-        /* 8. Camera — completely non-blocking, runs after UI is visible */
-        initCameraInBackground(uid, displayName, session.access_token);
-
+        /* 7. Camera — request ONLY video first to speed up permission popups */
+        initCameraInBackground(uid, cachedName || "Student", session.access_token);
 
       } catch (err: any) {
         console.error("[Hall] Boot failed:", err);
-        toast.error("Something went wrong. Please refresh.");
         setLoading(false);
       }
     };
@@ -211,12 +214,11 @@ export default function PublicHallPage() {
   /* ── Camera (non-blocking background init) ───────────── */
   const initCameraInBackground = async (uid: string, displayName: string, accessToken: string) => {
     try {
+      // Request ONLY video to make loading fast and bypass audio blocker issues
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
-        audio: { echoCancellation: true, noiseSuppression: true },
+        audio: false,
       });
-      // Mic off by default
-      stream.getAudioTracks().forEach(t => (t.enabled = false));
       localStreamRef.current = stream;
 
       const videoTrack = stream.getVideoTracks()[0] || null;
@@ -331,10 +333,35 @@ export default function PublicHallPage() {
   /* ── Toggle mic ────────────────────────────────────── */
   const toggleMic = useCallback(async () => {
     if (!localStreamRef.current) return;
-    const track = localStreamRef.current.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    setMicOn(track.enabled);
+    let track = localStreamRef.current.getAudioTracks()[0];
+
+    if (!track) {
+      // Dynamically request microphone permission if not yet acquired
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true }
+        });
+        const audioTrack = audioStream.getAudioTracks()[0];
+        if (audioTrack) {
+          localStreamRef.current.addTrack(audioTrack);
+          track = audioTrack;
+          
+          // Publish to LiveKit if connected
+          if (lkRoomRef.current) {
+            await lkRoomRef.current.localParticipant.publishTrack(audioTrack);
+          }
+        }
+      } catch (err) {
+        toast.error("Microphone permission denied.");
+        return;
+      }
+    }
+
+    if (track) {
+      track.enabled = !track.enabled;
+      setMicOn(track.enabled);
+      toast.success(track.enabled ? "Microphone ON" : "Microphone MUTED");
+    }
   }, []);
 
   /* ── Encourage ─────────────────────────────────────── */
@@ -378,16 +405,38 @@ export default function PublicHallPage() {
   }, [router]);
 
   /* ── Build grid participants ──────────────────────── */
-  const gridParticipants: HallParticipant[] = dbParticipants.map(p => ({
-    userId:       p.user_id,
-    displayName:  p.display_name,
-    goal:         p.target_task,
-    cameraActive: p.camera_active,
-    clapsCount:   p.claps_count,
-    isMe:         p.user_id === myUserId,
-    lkParticipant: lkParticipants.get(p.user_id),
-    localVideoTrack: p.user_id === myUserId ? localVideoTrack : undefined,
-  }));
+  /* ── Build grid participants ──────────────────────── */
+  const gridParticipants: HallParticipant[] = [];
+  let meAdded = false;
+
+  dbParticipants.forEach(p => {
+    const isMe = p.user_id === myUserId;
+    if (isMe) meAdded = true;
+    gridParticipants.push({
+      userId:       p.user_id,
+      displayName:  p.display_name,
+      goal:         p.target_task,
+      cameraActive: isMe ? camOn : p.camera_active, // Use local reactive state for "me"
+      clapsCount:   p.claps_count,
+      isMe:         isMe,
+      lkParticipant: lkParticipants.get(p.user_id),
+      localVideoTrack: isMe ? localVideoTrack : undefined,
+    });
+  });
+
+  // Always prepend "me" if not yet added to prevent blank screen while fetching DB
+  if (!meAdded && myUserId) {
+    gridParticipants.unshift({
+      userId:       myUserId,
+      displayName:  myName || "You",
+      goal:         myGoal,
+      cameraActive: camOn,
+      clapsCount:   0,
+      isMe:         true,
+      lkParticipant: lkParticipants.get(myUserId),
+      localVideoTrack: localVideoTrack,
+    });
+  }
 
   /* ── Loading screen ──────────────────────────────── */
   if (loading) {

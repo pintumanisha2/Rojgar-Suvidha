@@ -96,13 +96,13 @@ export async function POST(req: Request) {
     });
 
     if (error) {
-      console.error("Failed to insert activity log:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.warn("Failed to insert activity log (table user_activities might be missing):", error.message);
+      return NextResponse.json({ success: false, warning: "Log table not configured" }, { status: 200 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("Track activity exception:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.warn("Track activity exception caught, suppressing:", err.message);
+    return NextResponse.json({ success: false, warning: err.message }, { status: 200 });
   }
 }
