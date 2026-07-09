@@ -122,8 +122,8 @@ export default function PublicHallPage() {
 
     const boot = async () => {
       try {
-        /* 1. Auth + Profile — run in parallel */
-        setLoadingMsg("Checking account...");
+        /* 1. Auth check — fast local check first */
+        setLoadingMsg("Entering hall...");
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           router.push("/login?redirect=/dashboard/study/hall");
@@ -133,10 +133,13 @@ export default function PublicHallPage() {
         myUserIdRef.current = uid;
         setMyUserId(uid);
 
-        /* 2. Profile */
-        setLoadingMsg("Loading profile...");
-        const { data: profile } = await supabase
-          .from("profiles").select("full_name").eq("id", uid).single();
+        /* 2. Profile + delete stale session — run IN PARALLEL to save ~500ms */
+        const [profileResult] = await Promise.all([
+          supabase.from("profiles").select("full_name").eq("id", uid).single(),
+          supabase.from("study_session_users").delete().eq("user_id", uid),
+        ]);
+
+        const profile = profileResult.data;
         if (!profile?.full_name) {
           router.push(`/profile-setup?redirect=/dashboard/study/hall`);
           return;
@@ -144,25 +147,15 @@ export default function PublicHallPage() {
         const displayName = profile.full_name;
         setMyName(displayName);
 
-        /* 3. Register presence — upsert (handles rejoin) */
-        setLoadingMsg("Joining hall...");
-
-        // Remove any stale session from other rooms first
-        await supabase.from("study_session_users").delete().eq("user_id", uid);
-
-        // Upsert with correct room UUID
+        /* 3. Register presence in new room */
         const upsertPayload: any = {
-          room_id:      PUBLIC_HALL_ROOM_ID,
-          user_id:      uid,
-          display_name: displayName,
-          target_task:  "",
+          room_id:       PUBLIC_HALL_ROOM_ID,
+          user_id:       uid,
+          display_name:  displayName,
+          target_task:   "",
           camera_active: false,
+          last_heartbeat: new Date().toISOString(),
         };
-
-        // Try to include last_heartbeat (will be ignored if column doesn't exist)
-        try {
-          upsertPayload.last_heartbeat = new Date().toISOString();
-        } catch {}
 
         const { data: sessRow, error: sessErr } = await supabase
           .from("study_session_users")
@@ -177,29 +170,25 @@ export default function PublicHallPage() {
         }
         setMySessionId(sessRow.id);
 
-        /* 4. Fetch participant list + show UI IMMEDIATELY */
-        await fetchParticipants();
+        /* 4. Show UI IMMEDIATELY — don't wait for participant list */
         setLoading(false);
 
-        /* 5. Start heartbeat (gracefully handles missing column) */
+        /* 5. Fetch participants + start timers in background (non-blocking) */
+        fetchParticipants(); // fire and forget — UI already visible
+
+        /* 6. Start heartbeat */
         heartbeatTimer = setInterval(async () => {
-          const hb: any = { last_heartbeat: new Date().toISOString() };
           await supabase.from("study_session_users")
-            .update(hb)
-            .eq("user_id", uid)
-            .then(({ error }) => {
-              // Silently ignore if last_heartbeat column doesn't exist
-              if (error && !error.message.includes("last_heartbeat")) {
-                console.warn("[Hall] Heartbeat error:", error.message);
-              }
-            });
+            .update({ last_heartbeat: new Date().toISOString() })
+            .eq("user_id", uid);
         }, 30_000);
 
-        /* 6. Poll DB every 15s for updated participant list */
+        /* 7. Poll DB every 15s for updated participant list */
         pollTimer = setInterval(fetchParticipants, 15_000);
 
-        /* 7. Camera — completely non-blocking, runs after UI is visible */
+        /* 8. Camera — completely non-blocking, runs after UI is visible */
         initCameraInBackground(uid, displayName, session.access_token);
+
 
       } catch (err: any) {
         console.error("[Hall] Boot failed:", err);
