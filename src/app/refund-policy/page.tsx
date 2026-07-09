@@ -188,7 +188,7 @@ export default function RefundPolicyPage() {
               <div className="flex-1">
                 <p className="font-bold text-gray-900 dark:text-white">PINTU KUMAR</p>
                 <p>Sole Proprietor, Rojgar Suvidha</p>
-                <p>Sector 62, Noida, Uttar Pradesh – 201309</p>
+                <p>Champanagar, Purnia, Bihar – 854201</p>
               </div>
               <div className="flex-1 space-y-2">
                 <p className="flex items-center gap-2">

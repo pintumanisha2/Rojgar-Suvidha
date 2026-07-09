@@ -42,7 +42,7 @@ export default function TermsPage() {
             <p><strong>Business Name:</strong> Rojgar Suvidha</p>
             <p><strong>Website:</strong> www.rojgarsuvidha.com</p>
             <p><strong>Line of Business:</strong> Online Job Portal — Government &amp; Private Job Listings, Application Assistance Service</p>
-            <p><strong>Registered Address:</strong> Sector 62, Noida, Uttar Pradesh, India – 201309</p>
+            <p><strong>Registered Address:</strong> Champanagar, Purnia, Bihar, India – 854201</p>
             <p><strong>Contact Email:</strong> support@rojgarsuvidha.com</p>
             <p><strong>Contact Phone:</strong> +91 88774 34088</p>
           </div>
@@ -180,7 +180,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">9. Governing Law</h2>
             <p>
               These Terms are governed by the laws of India. Any dispute arising out of or relating to
-              these Terms shall be subject to the exclusive jurisdiction of courts in Noida, Uttar Pradesh, India.
+              These Terms shall be subject to the exclusive jurisdiction of courts in Purnia, Bihar, India.
             </p>
           </section>
 
@@ -197,7 +197,7 @@ export default function TermsPage() {
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
               <p><strong>PINTU KUMAR</strong></p>
               <p>Sole Proprietor, Rojgar Suvidha</p>
-              <p>Sector 62, Noida, Uttar Pradesh – 201309</p>
+              <p>Champanagar, Purnia, Bihar – 854201</p>
               <p>Email: support@rojgarsuvidha.com</p>
               <p>Phone: +91 88774 34088</p>
             </div>

@@ -84,7 +84,7 @@ export default function PrivateJobsContactPage() {
  <div>
  <h3 className="font-bold text-slate-800 text-sm">Corporate Headquarters</h3>
  <p className="text-xs leading-relaxed text-slate-600 mt-1">
- Sector 62, Noida, Uttar Pradesh, India - 201309
+ Champanagar, Purnia, Bihar, India - 854201
  </p>
  </div>
  </div>
