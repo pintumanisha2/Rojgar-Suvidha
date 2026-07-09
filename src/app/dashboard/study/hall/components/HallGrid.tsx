@@ -97,8 +97,12 @@ export default function HallGrid({
           }}
         >
           {slice.map(p => {
-            const isLive = p.cameraActive && (p.lkParticipant || p.isMe);
-            return isLive ? (
+            // Show LiveTile only when:
+            // - Remote user: lkParticipant is defined (actually connected to LiveKit)
+            // - Me: lkParticipant is defined (LiveKit connected) AND camera is active
+            // In all other cases, show AvatarTile (safe fallback, no crash)
+            const showLiveTile = !!p.lkParticipant && p.cameraActive;
+            return showLiveTile ? (
               <LiveTile
                 key={p.userId}
                 participant={p.lkParticipant!}
@@ -117,8 +121,10 @@ export default function HallGrid({
                 goal={p.goal}
                 clapsCount={p.clapsCount}
                 isMe={p.isMe}
+                cameraActive={p.cameraActive}
                 isClapping={clapping[p.userId]}
                 onEncourage={!p.isMe ? () => onEncourage(p.userId) : undefined}
+                localVideoTrack={p.localVideoTrack}
               />
             );
           })}

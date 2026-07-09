@@ -2,10 +2,10 @@
 /**
  * AvatarTile.tsx
  * Shows a DB-driven avatar card for users with camera OFF.
- * Zero bandwidth — just renders from props.
+ * Also handles local video preview (for "Me" tile) when LiveKit is not yet connected.
  */
-import React from "react";
-import { Heart } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import { Heart, VideoOff } from "lucide-react";
 
 const AVATAR_COLORS = [
   "#6366f1","#ec4899","#10b981","#f59e0b",
@@ -21,40 +21,104 @@ export interface AvatarTileProps {
   goal?: string;
   clapsCount?: number;
   isMe?: boolean;
+  cameraActive?: boolean;
   isClapping?: boolean;
   onEncourage?: () => void;
+  /** Local video track — shown for "Me" tile before LiveKit connects */
+  localVideoTrack?: MediaStreamTrack | null;
 }
 
 export default function AvatarTile({
-  userId, name, goal, clapsCount, isMe, isClapping, onEncourage
+  userId, name, goal, clapsCount, isMe, cameraActive,
+  isClapping, onEncourage, localVideoTrack
 }: AvatarTileProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Attach local video track for "me" tile when LiveKit isn't yet connected
+  useEffect(() => {
+    if (!videoRef.current || !isMe || !localVideoTrack) return;
+    const stream = new MediaStream([localVideoTrack]);
+    videoRef.current.srcObject = stream;
+  }, [isMe, localVideoTrack]);
+
+  const showLocalVideo = isMe && !!localVideoTrack && cameraActive;
+
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-[#0d1117] border
                      flex flex-col items-center justify-center gap-2
                      w-full h-full min-h-[60px] select-none group transition-all
                      ${isMe ? "ring-2 ring-indigo-500/40 border-indigo-500/20" : "border-white/5 hover:border-white/10"}`}>
 
-      {/* Avatar circle */}
-      <div
-        className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black text-white shadow-lg shrink-0"
-        style={{ background: avatarBg(name) }}
-      >
-        {initials(name)}
-      </div>
+      {/* Local video preview (for "me" before LiveKit connects) */}
+      {showLocalVideo && (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
 
-      {/* Name */}
-      <div className="text-center px-2 w-full">
-        <p className="text-[11px] font-black text-white truncate leading-tight flex items-center justify-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          {name}
-          {isMe && <span className="text-[9px] text-indigo-300 font-bold">(You)</span>}
-        </p>
-        {goal && (
-          <p className="text-[9px] text-gray-400 truncate mt-0.5 leading-tight">
-            📚 {goal}
+      {/* Avatar (shown when no local video) */}
+      {!showLocalVideo && (
+        <>
+          {/* Avatar circle */}
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black text-white shadow-lg shrink-0"
+            style={{ background: avatarBg(name) }}
+          >
+            {initials(name)}
+          </div>
+
+          {/* Name */}
+          <div className="text-center px-2 w-full">
+            <p className="text-[11px] font-black text-white truncate leading-tight flex items-center justify-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              {name}
+              {isMe && <span className="text-[9px] text-indigo-300 font-bold">(You)</span>}
+            </p>
+            {goal && (
+              <p className="text-[9px] text-gray-400 truncate mt-0.5 leading-tight">
+                📚 {goal}
+              </p>
+            )}
+            {!goal && isMe && (
+              <p className="text-[9px] text-gray-600 truncate mt-0.5 leading-tight italic">
+                Tap "Set Goal" to add your task
+              </p>
+            )}
+          </div>
+
+          {/* Camera off indicator */}
+          {!cameraActive && !isMe && (
+            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/50 px-1.5 py-0.5 rounded-md">
+              <VideoOff className="w-2.5 h-2.5 text-gray-500" />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Gradient overlay (only when video is showing) */}
+      {showLocalVideo && (
+        <div className="absolute inset-x-0 bottom-0 h-16
+                        bg-gradient-to-t from-black/90 via-black/40 to-transparent
+                        pointer-events-none" />
+      )}
+
+      {/* Name overlay on video */}
+      {showLocalVideo && (
+        <div className="absolute bottom-0 left-0 right-0 px-2.5 py-2 pointer-events-none">
+          <p className="text-[10px] font-black text-white truncate leading-tight">
+            {name}
           </p>
-        )}
-      </div>
+          {goal && (
+            <p className="text-[8px] text-gray-300/80 truncate mt-0.5 leading-tight">
+              📚 {goal}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Encourage button */}
       {!isMe && onEncourage && (
