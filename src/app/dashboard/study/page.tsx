@@ -22,7 +22,14 @@ interface StudyRoom {
   active_count?: number;
 }
 
-const PUBLIC_HALL_ID = "8cd519d3-bdfb-40ae-916f-3e312c8d5f53"; // SSC Exam Hall 1 (Main Public Hall)
+// Public Hall Room UUID — must match the seeded study_rooms row in Supabase DB.
+// Reads from env var if set, otherwise falls back to the seed UUID.
+const PUBLIC_HALL_ID =
+  (process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID &&
+   process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID !== "public-hall")
+    ? process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID
+    : "00000000-0000-0000-0000-000000000001";
+
 
 const CATEGORIES = [
   { key: "all", label: "All Rooms", emoji: "🌐" },

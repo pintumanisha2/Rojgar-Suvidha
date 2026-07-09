@@ -87,7 +87,7 @@ export default function RefundPolicyPage() {
             </h2>
             <p>
               Rojgar Suvidha (owned and operated by <strong>PINTU KUMAR</strong>) offers the <strong>
-              "Apply For Me"</strong> service — a paid form-filling assistance service where our team
+                "Apply For Me"</strong> service — a paid form-filling assistance service where our team
               submits government job applications on behalf of users. The service charge is{" "}
               <strong>₹50 (Fifty Rupees) per application</strong>.
             </p>
@@ -188,7 +188,7 @@ export default function RefundPolicyPage() {
               <div className="flex-1">
                 <p className="font-bold text-gray-900 dark:text-white">PINTU KUMAR</p>
                 <p>Sole Proprietor, Rojgar Suvidha</p>
-                <p>Champanagar, Purnia, Bihar – 854201</p>
+                <p>Sector 62, Noida, Uttar Pradesh – 201309</p>
               </div>
               <div className="flex-1 space-y-2">
                 <p className="flex items-center gap-2">

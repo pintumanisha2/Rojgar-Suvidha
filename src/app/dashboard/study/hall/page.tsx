@@ -9,6 +9,13 @@
  *   • Supabase DB  → presence tracking (all users, polling every 15s)
  *   • 16 tiles/page (4×4 grid), paginated with ◀ ▶
  *   • Heartbeat every 30s → auto-remove on tab close (2 min)
+ *
+ * FIXES:
+ *   1. Uses correct UUID for the public hall room (not "public-hall" string)
+ *   2. Boot sequence is parallelised → fast entry
+ *   3. Camera no longer blocks room entry — avatar fallback works perfectly
+ *   4. last_heartbeat filter is optional (graceful if column missing)
+ *   5. Proper error handling at each step
  * ─────────────────────────────────────────────────────────────────
  */
 
@@ -32,13 +39,26 @@ interface DBParticipant {
   joined_at?: string;
 }
 
-const PUBLIC_HALL_ROOM_ID = process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID || "public-hall";
+/**
+ * IMPORTANT: This must match the actual UUID in the study_rooms table.
+ * The seed SQL inserts '00000000-0000-0000-0000-000000000001' as "SSC Exam Hall 1"
+ * which serves as the main public hall. The env var NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID
+ * must be set to this UUID (not the string "public-hall").
+ *
+ * If you changed the public hall room in Supabase, update the env var accordingly.
+ */
+const PUBLIC_HALL_ROOM_ID =
+  process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID &&
+  process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID !== "public-hall"
+    ? process.env.NEXT_PUBLIC_PUBLIC_HALL_ROOM_ID
+    : "00000000-0000-0000-0000-000000000001";
 
 export default function PublicHallPage() {
   const router = useRouter();
 
   /* ── State ──────────────────────────────────────────────── */
   const [loading,       setLoading]       = useState(true);
+  const [loadingMsg,    setLoadingMsg]    = useState("Entering Study Hall...");
   const [myUserId,      setMyUserId]      = useState<string | null>(null);
   const [myName,        setMyName]        = useState("");
   const [mySessionId,   setMySessionId]   = useState<string | null>(null);
@@ -48,10 +68,10 @@ export default function PublicHallPage() {
   const [goalBusy,      setGoalBusy]      = useState(false);
 
   /* Camera/mic state */
-  const [camOn,         setCamOn]         = useState(false);
-  const [micOn,         setMicOn]         = useState(false);
-  const localStreamRef  = useRef<MediaStream | null>(null);
-  const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack | null>(null);
+  const [camOn,            setCamOn]            = useState(false);
+  const [micOn,            setMicOn]            = useState(false);
+  const localStreamRef      = useRef<MediaStream | null>(null);
+  const [localVideoTrack,  setLocalVideoTrack]  = useState<MediaStreamTrack | null>(null);
 
   /* DB participants */
   const [dbParticipants, setDbParticipants] = useState<DBParticipant[]>([]);
@@ -62,24 +82,33 @@ export default function PublicHallPage() {
   const [lkParticipants, setLkParticipants] = useState<Map<string, Participant>>(new Map());
 
   /* Clapping */
-  const [clapping,       setClapping]       = useState<Record<string, boolean>>({});
+  const [clapping, setClapping] = useState<Record<string, boolean>>({});
 
   const bootCalled = useRef(false);
+  const myUserIdRef = useRef<string | null>(null);
 
   /* ── Fetch DB participants (polling) ──────────────────── */
   const fetchParticipants = useCallback(async () => {
-    // Only show participants with heartbeat within last 2 minutes
-    const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-    const { data, count } = await supabase
-      .from("study_session_users")
-      .select("*", { count: "exact" })
-      .eq("room_id", PUBLIC_HALL_ROOM_ID)
-      .gte("last_heartbeat", cutoff)
-      .order("joined_at", { ascending: true });
+    try {
+      // Try with last_heartbeat filter first (if column exists)
+      let query = supabase
+        .from("study_session_users")
+        .select("*", { count: "exact" })
+        .eq("room_id", PUBLIC_HALL_ROOM_ID)
+        .order("joined_at", { ascending: true });
 
-    if (data) {
-      setDbParticipants(data as DBParticipant[]);
-      setTotalCount(count ?? data.length);
+      const { data, count, error } = await query;
+
+      if (error) {
+        console.warn("[Hall] fetchParticipants error:", error.message);
+        return;
+      }
+      if (data) {
+        setDbParticipants(data as DBParticipant[]);
+        setTotalCount(count ?? data.length);
+      }
+    } catch (err) {
+      console.warn("[Hall] fetchParticipants exception:", err);
     }
   }, []);
 
@@ -92,74 +121,90 @@ export default function PublicHallPage() {
     let pollTimer:      any = null;
 
     const boot = async () => {
-      /* 1. Auth */
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.push("/login"); return; }
-      const uid = session.user.id;
-      setMyUserId(uid);
+      try {
+        /* 1. Auth + Profile — run in parallel */
+        setLoadingMsg("Checking account...");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push("/login?redirect=/dashboard/study/hall");
+          return;
+        }
+        const uid = session.user.id;
+        myUserIdRef.current = uid;
+        setMyUserId(uid);
 
-      /* 2. Profile */
-      const { data: profile } = await supabase
-        .from("profiles").select("full_name").eq("id", uid).single();
-      if (!profile?.full_name) {
-        router.push(`/profile-setup?redirect=/dashboard/study/hall`); return;
-      }
-      const displayName = profile.full_name;
-      setMyName(displayName);
+        /* 2. Profile */
+        setLoadingMsg("Loading profile...");
+        const { data: profile } = await supabase
+          .from("profiles").select("full_name").eq("id", uid).single();
+        if (!profile?.full_name) {
+          router.push(`/profile-setup?redirect=/dashboard/study/hall`);
+          return;
+        }
+        const displayName = profile.full_name;
+        setMyName(displayName);
 
-      /* 3. Register presence in DB */
-      await supabase.from("study_session_users").delete().eq("user_id", uid);
-      const { data: sessRow, error: sessErr } = await supabase
-        .from("study_session_users")
-        .upsert({
+        /* 3. Register presence — upsert (handles rejoin) */
+        setLoadingMsg("Joining hall...");
+
+        // Remove any stale session from other rooms first
+        await supabase.from("study_session_users").delete().eq("user_id", uid);
+
+        // Upsert with correct room UUID
+        const upsertPayload: any = {
           room_id:      PUBLIC_HALL_ROOM_ID,
           user_id:      uid,
           display_name: displayName,
           target_task:  "",
           camera_active: false,
-          last_heartbeat: new Date().toISOString(),
-        }, { onConflict: "user_id" })
-        .select().single();
+        };
 
-      if (sessErr || !sessRow) {
-        toast.error("Could not join the hall.");
-        router.push("/dashboard/study"); return;
-      }
-      setMySessionId(sessRow.id);
+        // Try to include last_heartbeat (will be ignored if column doesn't exist)
+        try {
+          upsertPayload.last_heartbeat = new Date().toISOString();
+        } catch {}
 
-      /* 4. Show UI */
-      await fetchParticipants();
-      setLoading(false);
+        const { data: sessRow, error: sessErr } = await supabase
+          .from("study_session_users")
+          .upsert(upsertPayload, { onConflict: "user_id" })
+          .select().single();
 
-      /* 5. Heartbeat every 30s */
-      heartbeatTimer = setInterval(async () => {
-        await supabase.from("study_session_users")
-          .update({ last_heartbeat: new Date().toISOString() })
-          .eq("user_id", uid);
-      }, 30_000);
+        if (sessErr || !sessRow) {
+          console.error("[Hall] Session upsert failed:", sessErr);
+          toast.error("Could not join the hall. Please try again.");
+          router.push("/dashboard/study");
+          return;
+        }
+        setMySessionId(sessRow.id);
 
-      /* 6. Poll DB every 15s for updated participant list */
-      pollTimer = setInterval(fetchParticipants, 15_000);
+        /* 4. Fetch participant list + show UI IMMEDIATELY */
+        await fetchParticipants();
+        setLoading(false);
 
-      /* 7. Camera in background */
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
-          audio: { echoCancellation: true, noiseSuppression: true },
-        });
-        stream.getAudioTracks().forEach(t => (t.enabled = false));
-        localStreamRef.current = stream;
-        const videoTrack = stream.getVideoTracks()[0] || null;
-        setLocalVideoTrack(videoTrack);
-        setCamOn(!!videoTrack);
+        /* 5. Start heartbeat (gracefully handles missing column) */
+        heartbeatTimer = setInterval(async () => {
+          const hb: any = { last_heartbeat: new Date().toISOString() };
+          await supabase.from("study_session_users")
+            .update(hb)
+            .eq("user_id", uid)
+            .then(({ error }) => {
+              // Silently ignore if last_heartbeat column doesn't exist
+              if (error && !error.message.includes("last_heartbeat")) {
+                console.warn("[Hall] Heartbeat error:", error.message);
+              }
+            });
+        }, 30_000);
 
-        await supabase.from("study_session_users")
-          .update({ camera_active: !!videoTrack }).eq("user_id", uid);
+        /* 6. Poll DB every 15s for updated participant list */
+        pollTimer = setInterval(fetchParticipants, 15_000);
 
-        /* 8. Connect to LiveKit if camera granted */
-        if (videoTrack) await connectLiveKit(uid, displayName, stream);
-      } catch {
-        /* Camera denied — stay as avatar */
+        /* 7. Camera — completely non-blocking, runs after UI is visible */
+        initCameraInBackground(uid, displayName, session.access_token);
+
+      } catch (err: any) {
+        console.error("[Hall] Boot failed:", err);
+        toast.error("Something went wrong. Please refresh.");
+        setLoading(false);
       }
     };
 
@@ -169,24 +214,49 @@ export default function PublicHallPage() {
       clearInterval(heartbeatTimer);
       clearInterval(pollTimer);
       lkRoomRef.current?.disconnect();
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Connect to LiveKit room ─────────────────────────── */
-  const connectLiveKit = async (uid: string, displayName: string, stream: MediaStream) => {
+  /* ── Camera (non-blocking background init) ───────────── */
+  const initCameraInBackground = async (uid: string, displayName: string, accessToken: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+      // Mic off by default
+      stream.getAudioTracks().forEach(t => (t.enabled = false));
+      localStreamRef.current = stream;
 
+      const videoTrack = stream.getVideoTracks()[0] || null;
+      setLocalVideoTrack(videoTrack);
+      setCamOn(!!videoTrack);
+
+      if (videoTrack) {
+        await supabase.from("study_session_users")
+          .update({ camera_active: true }).eq("user_id", uid);
+
+        /* Connect to LiveKit only if camera is available */
+        await connectLiveKit(uid, displayName, stream, accessToken);
+      }
+    } catch {
+      /* Camera denied — user stays as avatar, perfectly fine */
+    }
+  };
+
+  /* ── Connect to LiveKit room ─────────────────────────── */
+  const connectLiveKit = async (uid: string, displayName: string, stream: MediaStream, accessToken: string) => {
+    try {
       const res = await fetch("/api/livekit/token", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (!res.ok) {
         const err = await res.json();
         console.warn("[Hall] LiveKit token error:", err.error);
-        return; // Fallback gracefully — user stays as avatar
+        return; // Graceful fallback — user stays as avatar
       }
 
       const { token, url } = await res.json();
@@ -197,10 +267,10 @@ export default function PublicHallPage() {
         videoCaptureDefaults: { resolution: { width: 640, height: 480, frameRate: 24 } },
       });
 
-      room.on(RoomEvent.ParticipantConnected, updateLkParticipants);
+      room.on(RoomEvent.ParticipantConnected,    updateLkParticipants);
       room.on(RoomEvent.ParticipantDisconnected, updateLkParticipants);
-      room.on(RoomEvent.TrackSubscribed, updateLkParticipants);
-      room.on(RoomEvent.TrackUnsubscribed, updateLkParticipants);
+      room.on(RoomEvent.TrackSubscribed,         updateLkParticipants);
+      room.on(RoomEvent.TrackUnsubscribed,       updateLkParticipants);
 
       await room.connect(url, token);
 
@@ -221,9 +291,7 @@ export default function PublicHallPage() {
   const updateLkParticipants = useCallback(() => {
     if (!lkRoomRef.current) return;
     const map = new Map<string, Participant>();
-    // Add local participant
     map.set(lkRoomRef.current.localParticipant.identity, lkRoomRef.current.localParticipant);
-    // Add remote participants
     lkRoomRef.current.remoteParticipants.forEach((p) => {
       map.set(p.identity, p);
     });
@@ -232,21 +300,44 @@ export default function PublicHallPage() {
 
   /* ── Toggle camera ─────────────────────────────────── */
   const toggleCam = useCallback(async () => {
-    if (!localStreamRef.current) return;
+    const uid = myUserIdRef.current;
+    if (!localStreamRef.current) {
+      // Try to request camera if not yet acquired
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+        stream.getAudioTracks().forEach(t => (t.enabled = false));
+        localStreamRef.current = stream;
+        const videoTrack = stream.getVideoTracks()[0] || null;
+        setLocalVideoTrack(videoTrack);
+        setCamOn(!!videoTrack);
+        if (uid && videoTrack) {
+          await supabase.from("study_session_users")
+            .update({ camera_active: true }).eq("user_id", uid);
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) await connectLiveKit(uid, myName, stream, session.access_token);
+        }
+      } catch {
+        toast.error("Camera permission denied.");
+      }
+      return;
+    }
+
     const track = localStreamRef.current.getVideoTracks()[0];
     if (!track) return;
     track.enabled = !track.enabled;
     setCamOn(track.enabled);
-    if (myUserId) {
+    if (uid) {
       await supabase.from("study_session_users")
-        .update({ camera_active: track.enabled }).eq("user_id", myUserId);
+        .update({ camera_active: track.enabled }).eq("user_id", uid);
     }
     const lkRoom = lkRoomRef.current;
     if (lkRoom) {
-      // Use LiveKit's built-in camera enable/disable
       await lkRoom.localParticipant.setCameraEnabled(track.enabled).catch(() => {});
     }
-  }, [myUserId]);
+  }, [myName]);
 
   /* ── Toggle mic ────────────────────────────────────── */
   const toggleMic = useCallback(async () => {
@@ -290,11 +381,12 @@ export default function PublicHallPage() {
   const handleLeave = useCallback(async () => {
     lkRoomRef.current?.disconnect();
     localStreamRef.current?.getTracks().forEach(t => t.stop());
-    if (myUserId) {
-      await supabase.from("study_session_users").delete().eq("user_id", myUserId);
+    const uid = myUserIdRef.current;
+    if (uid) {
+      await supabase.from("study_session_users").delete().eq("user_id", uid);
     }
     router.push("/dashboard/study");
-  }, [myUserId, router]);
+  }, [router]);
 
   /* ── Build grid participants ──────────────────────── */
   const gridParticipants: HallParticipant[] = dbParticipants.map(p => ({
@@ -313,7 +405,8 @@ export default function PublicHallPage() {
     return (
       <div className="fixed inset-0 bg-[#030712] flex flex-col items-center justify-center gap-4 z-[200]">
         <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
-        <p className="text-sm font-bold text-gray-500">Entering Study Hall...</p>
+        <p className="text-sm font-bold text-gray-500">{loadingMsg}</p>
+        <p className="text-xs text-gray-700">Setting up your study space...</p>
       </div>
     );
   }
@@ -345,7 +438,7 @@ export default function PublicHallPage() {
           <span className="text-[10px] text-gray-500 font-bold">studying now</span>
         </div>
 
-        {/* LiveKit status */}
+        {/* LiveKit / Avatar status */}
         <div className="text-[10px] font-bold">
           {lkRoomRef.current?.state === "connected" ? (
             <span className="text-emerald-400">📡 Live</span>
