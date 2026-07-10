@@ -4,7 +4,7 @@
  * Shows a DB-driven avatar card for users with camera OFF.
  * Also handles local video preview (for "Me" tile) when LiveKit is not yet connected.
  */
-import React, { useEffect, useRef } from "react";
+import React, { useCallback } from "react";
 import { Heart, VideoOff } from "lucide-react";
 
 const AVATAR_COLORS = [
@@ -32,13 +32,11 @@ export default function AvatarTile({
   userId, name, goal, clapsCount, isMe, cameraActive,
   isClapping, onEncourage, localVideoTrack
 }: AvatarTileProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Attach local video track for "me" tile when LiveKit isn't yet connected
-  useEffect(() => {
-    if (!videoRef.current || !isMe || !localVideoTrack) return;
-    const stream = new MediaStream([localVideoTrack]);
-    videoRef.current.srcObject = stream;
+  const videoRef = useCallback((node: HTMLVideoElement | null) => {
+    if (node && isMe && localVideoTrack) {
+      const stream = new MediaStream([localVideoTrack]);
+      node.srcObject = stream;
+    }
   }, [isMe, localVideoTrack]);
 
   const showLocalVideo = isMe && !!localVideoTrack && cameraActive;

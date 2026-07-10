@@ -4,7 +4,7 @@
  * Renders a single LiveKit participant's video tile.
  * Subscribes only when visible (handled by parent HallGrid).
  */
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { Participant, Track } from "livekit-client";
 import { Heart } from "lucide-react";
 
@@ -29,36 +29,41 @@ interface LiveTileProps {
 export default function LiveTile({
   participant, goal, clapsCount, isMe, isClapping, onEncourage, localVideoTrack
 }: LiveTileProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Safety guard — should never happen after HallGrid fix, but just in case
   if (!participant) return null;
-
   const name = participant.name || participant.identity || "Student";
 
+  const lastElementRef = useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => {
-    if (!videoRef.current) return;
-
-    if (isMe && localVideoTrack) {
-      // For local user: attach local MediaStream directly
-      const stream = new MediaStream([localVideoTrack]);
-      videoRef.current.srcObject = stream;
-      return;
-    }
-
-    // For remote participants: get camera track from LiveKit
-    const cameraPublication = participant.getTrackPublication(Track.Source.Camera);
-    if (cameraPublication?.track) {
-      cameraPublication.track.attach(videoRef.current);
-    }
-
-    return () => {
-      const pub = participant.getTrackPublication(Track.Source.Camera);
-      if (pub?.track && videoRef.current) {
-        pub.track.detach(videoRef.current);
+  const videoRef = useCallback((node: HTMLVideoElement | null) => {
+    // Detach from previous node if it exists
+    if (lastElementRef.current) {
+      const prevNode = lastElementRef.current;
+      if (!isMe) {
+        try {
+          const pub = participant.getTrackPublication(Track.Source.Camera);
+          if (pub?.track) {
+            pub.track.detach(prevNode);
+          }
+        } catch (e) {
+          console.warn("Error detaching track:", e);
+        }
       }
-    };
+    }
+
+    lastElementRef.current = node;
+
+    // Attach to new node if it exists
+    if (node) {
+      if (isMe && localVideoTrack) {
+        const stream = new MediaStream([localVideoTrack]);
+        node.srcObject = stream;
+      } else {
+        const pub = participant.getTrackPublication(Track.Source.Camera);
+        if (pub?.track) {
+          pub.track.attach(node);
+        }
+      }
+    }
   }, [participant, isMe, localVideoTrack]);
 
   const hasVideo = isMe
