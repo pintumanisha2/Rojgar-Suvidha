@@ -120,9 +120,36 @@ export default function PublicHallPage() {
     let pollTimer:      any = null;
 
     const boot = async () => {
+      // 1. Synchronous check to dismiss loader instantly for logged in users
+      const referenceId = "kkfgdzaoukekhlijlfsw";
+      const cacheKey = `sb-${referenceId}-auth-token`;
+      const cachedSessionStr = typeof window !== "undefined" ? localStorage.getItem(cacheKey) : null;
+      
+      let initialUid: string | null = null;
+      let initialName: string | null = null;
+
+      if (cachedSessionStr) {
+        try {
+          const parsed = JSON.parse(cachedSessionStr);
+          if (parsed?.user?.id) {
+            initialUid = parsed.user.id;
+            const cachedName = localStorage.getItem("rs_display_name");
+            initialName = cachedName || parsed.user.email?.split("@")[0] || "Student";
+          }
+        } catch (e) {
+          console.warn("Error parsing cached session:", e);
+        }
+      }
+
+      if (initialUid) {
+        setMyUserId(initialUid);
+        setMyName(initialName || "Student");
+        myUserIdRef.current = initialUid;
+        setLoading(false); // Dismiss loader instantly!
+      }
+
       try {
-        /* 1. Auth check — fast local check first */
-        setLoadingMsg("Entering hall...");
+        /* 2. Run real auth check in background */
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           router.push("/login?redirect=/dashboard/study/hall");
@@ -132,29 +159,23 @@ export default function PublicHallPage() {
         myUserIdRef.current = uid;
         setMyUserId(uid);
 
-        /* 2. Load cached display name for instant UI rendering */
-        const cachedName = localStorage.getItem("rs_display_name");
-        if (cachedName) {
-          setMyName(cachedName);
-        }
+        // Fetch profile to update name
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", uid)
+          .single();
+        
+        const displayName = profile?.full_name || session.user.email?.split("@")[0] || "Student";
+        setMyName(displayName);
+        localStorage.setItem("rs_display_name", displayName);
 
-        /* 3. Show UI IMMEDIATELY — don't block on DB queries */
+        // Dismiss loader in case synchronous check didn't run
         setLoading(false);
 
-        /* 4. Run database updates and profile fetches in background (non-blocking) */
+        /* 3. Register presence in new room in background (non-blocking) */
         Promise.resolve().then(async () => {
           try {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("full_name")
-              .eq("id", uid)
-              .single();
-            
-            const displayName = profile?.full_name || session.user.email?.split("@")[0] || "Student";
-            setMyName(displayName);
-            localStorage.setItem("rs_display_name", displayName);
-
-            // Register presence in background
             await supabase.from("study_session_users").delete().eq("user_id", uid);
             const upsertPayload: any = {
               room_id:       PUBLIC_HALL_ROOM_ID,
@@ -192,7 +213,7 @@ export default function PublicHallPage() {
         pollTimer = setInterval(fetchParticipants, 15_000);
 
         /* 7. Camera — request ONLY video first to speed up permission popups */
-        initCameraInBackground(uid, cachedName || "Student", session.access_token);
+        initCameraInBackground(uid, displayName, session.access_token);
 
       } catch (err: any) {
         console.error("[Hall] Boot failed:", err);
