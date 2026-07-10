@@ -8,6 +8,12 @@ import { usePathname } from "next/navigation";
 export default function AIChatBot() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Hide chatbot on study hall page to prevent covering controls/buttons
+  if (pathname === "/dashboard/study/hall") {
+    return null;
+  }
+
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string }[]>([
     { role: "bot", content: "Hello! 🙏 I am Rojgar AI — Rojgar Suvidha's exclusive Career Assistant!\n\nYou can ask me about:\n• Latest Government Jobs 💼\n• Admit Cards / Results 📋\n• SSC, Railway, Banking, UPSC vacancies\n• Apply For Me service 🚀\n• Digital Locker, Resume Builder\n\nHow can I assist you today? 😊" }
