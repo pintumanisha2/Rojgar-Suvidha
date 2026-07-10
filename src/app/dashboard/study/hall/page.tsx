@@ -24,7 +24,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Room, RoomEvent, Participant, Track } from "livekit-client";
 import toast from "react-hot-toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Star } from "lucide-react";
 import HallGrid, { HallParticipant } from "./components/HallGrid";
 import HallControls from "./components/HallControls";
 
@@ -66,6 +66,13 @@ export default function PublicHallPage() {
   const [showGoalInput, setShowGoalInput] = useState(false);
   const [goalInput,     setGoalInput]     = useState("");
   const [goalBusy,      setGoalBusy]      = useState(false);
+
+  /* Feedback state */
+  const [showFeedback,       setShowFeedback]       = useState(false);
+  const [feedbackRating,     setFeedbackRating]     = useState(0);
+  const [hoverRating,        setHoverRating]        = useState<number | null>(null);
+  const [feedbackComment,    setFeedbackComment]    = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   /* Camera/mic state */
   const [camOn,            setCamOn]            = useState(false);
@@ -414,16 +421,56 @@ export default function PublicHallPage() {
     toast.success("Goal set! 🎯");
   }, [mySessionId, goalInput]);
 
-  /* ── Leave ─────────────────────────────────────────── */
-  const handleLeave = useCallback(async () => {
+  /* ── Leave & Feedback Handlers ─────────────────────── */
+  const performActualLeave = useCallback(async () => {
     lkRoomRef.current?.disconnect();
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     const uid = myUserIdRef.current;
     if (uid) {
-      await supabase.from("study_session_users").delete().eq("user_id", uid);
+      try {
+        await supabase.from("study_session_users").delete().eq("user_id", uid);
+      } catch {}
     }
     router.push("/dashboard/study");
   }, [router]);
+
+  const handleLeave = useCallback(() => {
+    // Show rating modal first instead of leaving immediately
+    setShowFeedback(true);
+  }, []);
+
+  const handleFeedbackSubmit = async () => {
+    if (feedbackRating === 0) {
+      toast.error("Please select a rating! ⭐");
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    const uid = myUserIdRef.current;
+    try {
+      const { error } = await supabase.from("study_room_feedback").insert({
+        user_id: uid,
+        rating: feedbackRating,
+        feedback_text: feedbackComment.trim() || null,
+      });
+
+      if (error) {
+        console.warn("Feedback save database error:", error.message);
+      } else {
+        toast.success("Thank you for your rating! ❤️");
+      }
+    } catch (e: any) {
+      console.warn("Feedback save catch error:", e.message);
+    }
+    setSubmittingFeedback(false);
+    setShowFeedback(false);
+    performActualLeave();
+  };
+
+  const handleFeedbackSkip = () => {
+    setShowFeedback(false);
+    performActualLeave();
+  };
 
   /* ── Build grid participants ──────────────────────── */
   /* ── Build grid participants ──────────────────────── */
@@ -562,6 +609,79 @@ export default function PublicHallPage() {
                            disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {goalBusy ? "Saving..." : "Set Goal 🎯"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RATING & FEEDBACK MODAL ───────────────────── */}
+      {showFeedback && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0a0f1e]/95 border border-white/10 rounded-3xl w-full max-w-md p-7 space-y-6 text-center shadow-2xl">
+            <div className="space-y-2">
+              <span className="text-3xl">🌟</span>
+              <h3 className="text-lg font-black text-white">
+                How was your study session?
+              </h3>
+              <p className="text-xs text-gray-500">
+                Help us make Rojgar Study Rooms better for everyone.
+              </p>
+            </div>
+
+            {/* Stars row */}
+            <div className="flex justify-center items-center gap-3 py-2">
+              {[1, 2, 3, 4, 5].map((starValue) => {
+                const isLit = hoverRating !== null ? starValue <= hoverRating : starValue <= feedbackRating;
+                return (
+                  <button
+                    key={starValue}
+                    type="button"
+                    onMouseEnter={() => setHoverRating(starValue)}
+                    onMouseLeave={() => setHoverRating(null)}
+                    onClick={() => setFeedbackRating(starValue)}
+                    className="focus:outline-none transition-all duration-150 transform hover:scale-125"
+                  >
+                    <Star
+                      className={`w-9 h-9 ${
+                        isLit
+                          ? "text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]"
+                          : "text-gray-600 hover:text-yellow-500"
+                      } transition-all duration-150`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Textarea comments */}
+            <textarea
+              rows={3}
+              value={feedbackComment}
+              onChange={e => setFeedbackComment(e.target.value)}
+              placeholder="What did you study today? Any feedback on the room? (optional)"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-2xl
+                         text-sm text-white placeholder-gray-600 outline-none resize-none
+                         focus:border-indigo-500 transition-colors"
+            />
+
+            {/* Action buttons */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleFeedbackSkip}
+                className="flex-1 py-3 bg-white/5 border border-white/10 text-gray-400
+                           rounded-2xl font-black text-xs hover:bg-white/10 transition-all"
+              >
+                Skip & Leave
+              </button>
+              <button
+                onClick={handleFeedbackSubmit}
+                disabled={submittingFeedback || feedbackRating === 0}
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white
+                           rounded-2xl font-black text-xs transition-all
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submittingFeedback ? "Submitting..." : "Submit & Leave"}
               </button>
             </div>
           </div>
