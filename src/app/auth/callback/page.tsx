@@ -8,11 +8,14 @@ import { Loader2 } from "lucide-react";
 function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isMountedRef = useRef(true);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    isMountedRef.current = true;
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     let subscription: any = null;
+    let timeoutId: any = null;
 
     const handleAuthCallback = async () => {
       const nextRedirect = searchParams.get("redirect") || searchParams.get("next") || "/dashboard";
@@ -23,9 +26,7 @@ function CallbackContent() {
 
         if (error) {
           console.error("Auth callback error:", error, errorDescription);
-          if (isMountedRef.current) {
-            router.push(`/login?error=${encodeURIComponent(errorDescription || "Authentication failed")}`);
-          }
+          router.push(`/login?error=${encodeURIComponent(errorDescription || "Authentication failed")}`);
           return;
         }
 
@@ -49,15 +50,15 @@ function CallbackContent() {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          if (isMountedRef.current) {
-            window.location.href = nextRedirect;
-          }
+          clearTimeout(timeoutId);
+          window.location.href = nextRedirect;
           return;
         }
 
         // Fallback real-time state listener
         const authResponse = supabase.auth.onAuthStateChange((event, newSession) => {
-          if (newSession && isMountedRef.current) {
+          if (newSession) {
+            clearTimeout(timeoutId);
             if (subscription) {
               if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
               else if (typeof subscription === "function") subscription();
@@ -69,28 +70,26 @@ function CallbackContent() {
         subscription = authResponse.data?.subscription || authResponse;
 
         // Fallback timeout redirect (forces page transition if Supabase doesn't reply in time)
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            console.log("Forcing fallback timeout redirect to:", nextRedirect);
-            if (subscription) {
-              if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
-              else if (typeof subscription === "function") subscription();
-            }
-            window.location.href = nextRedirect;
+        timeoutId = setTimeout(() => {
+          console.log("Forcing fallback timeout redirect to:", nextRedirect);
+          if (subscription) {
+            if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
+            else if (typeof subscription === "function") subscription();
           }
-        }, 1200);
+          window.location.href = nextRedirect;
+        }, 3000);
 
       } catch (err) {
         console.error("Error in callback execution:", err);
-        if (isMountedRef.current) {
-          router.push(nextRedirect);
-        }
+        clearTimeout(timeoutId);
+        window.location.href = nextRedirect;
       }
     };
 
     handleAuthCallback();
 
     return () => {
+      clearTimeout(timeoutId);
       if (subscription) {
         if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
         else if (typeof subscription === "function") subscription();
