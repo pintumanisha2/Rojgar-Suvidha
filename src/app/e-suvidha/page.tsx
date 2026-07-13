@@ -111,10 +111,13 @@ export default function ESuvidhaPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {section.items.map((item) => (
-                  <div key={item.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 group relative overflow-hidden flex flex-col justify-between h-full">
-                    
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150" />
-                    
+                  <Link
+                    key={item.id}
+                    href={`/e-suvidha/apply/${item.slug}`}
+                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 group relative overflow-hidden flex flex-col justify-between h-full cursor-pointer"
+                  >
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150 pointer-events-none" />
+
                     <div>
                       <div className="text-4xl mb-4 relative z-10">{item.icon}</div>
                       <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1 leading-tight relative z-10 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -133,14 +136,11 @@ export default function ESuvidhaPage() {
                         <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Fees (Starting)</p>
                         <p className="font-extrabold text-lg text-gray-900 dark:text-white">₹{item.price} INR</p>
                       </div>
-                      <Link 
-                        href={`/e-suvidha/apply/${item.slug}`}
-                        className="bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-600 hover:text-white text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-sm"
-                      >
-                        Apply Now
-                      </Link>
+                      <span className="bg-indigo-50 dark:bg-indigo-900/30 group-hover:bg-indigo-600 group-hover:text-white text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-sm">
+                        Apply Now →
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
