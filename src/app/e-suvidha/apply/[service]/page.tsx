@@ -86,6 +86,49 @@ const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: s
     docsRequired: [],
     extraFields: ["Exam Name (e.g., SSC CGL, Bihar Police)", "Registration No. / Roll No.", "Date of Birth (DOB) or Password"]
   },
+  // ── NEWLY ADDED SERVICES ──────────────────────────────────────
+  "aadhaar-pvc": {
+    title: "Order Aadhaar PVC Card",
+    price: 100,
+    docsRequired: ["Aadhaar Card (Front / Full PDF)"],
+    docsOptional: ["Aadhaar Card (Back)"],
+    extraFields: ["Aadhaar Linked Mobile Number", "Aadhaar Number (12 digits)"]
+  },
+  "income-cert": {
+    title: "Income Certificate (Aay Praman Patra)",
+    price: 100,
+    docsRequired: ["Aadhaar Card (Front / Full PDF)", "Ration Card / Family ID", "Bank Passbook Front Page"],
+    docsOptional: ["Aadhaar Card (Back)"],
+    extraFields: ["Father's Full Name", "Annual Income (Approx. in Rs)", "Village / City / District Name"]
+  },
+  "caste-cert": {
+    title: "Caste Certificate (Jati Praman Patra)",
+    price: 150,
+    docsRequired: ["Aadhaar Card (Front / Full PDF)", "Ration Card / Family ID"],
+    docsOptional: ["Aadhaar Card (Back)", "Father's Caste Certificate (If available)"],
+    extraFields: ["Father's Full Name", "Caste Name (e.g., OBC, SC, ST)", "Village / City / District Name"]
+  },
+  "domicile-cert": {
+    title: "Domicile Certificate (Niwas Praman Patra)",
+    price: 100,
+    docsRequired: ["Aadhaar Card (Front / Full PDF)", "Ration Card / Family ID"],
+    docsOptional: ["Aadhaar Card (Back)"],
+    extraFields: ["Father's Full Name", "How many years living in this state?", "Village / City / District Name"]
+  },
+  "pf-withdrawal": {
+    title: "PF Withdrawal Form (EPFO)",
+    price: 200,
+    docsRequired: ["Aadhaar Card (Front / Full PDF)", "Bank Passbook Front Page", "PAN Card"],
+    docsOptional: ["Cancelled Cheque"],
+    extraFields: ["UAN Number (Universal Account Number)", "Company Name (Last Employer)", "Reason for Withdrawal (e.g., Resignation, Retirement)"]
+  },
+  "driving-learner": {
+    title: "Learner Driving License Apply",
+    price: 250,
+    docsRequired: ["Aadhaar Card (Front / Full PDF)", "Passport Size Photo", "Signature (On white paper)"],
+    docsOptional: ["Aadhaar Card (Back)"],
+    extraFields: ["Date of Birth", "Vehicle Type (e.g., Motorcycle, Car, Both)", "Nearest RTO City"]
+  },
 };
 
 function ESuvidhaApplyContent() {
