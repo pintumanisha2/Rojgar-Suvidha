@@ -214,8 +214,16 @@ function ESuvidhaApplyContent() {
 
     const fetchUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // ⏱️ Timeout: agar Supabase 8 second mein respond nahi kare → login pe redirect
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Auth check timed out")), 8000)
+        );
+
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+
         if (!session) {
+          setLoading(false);
           router.push(`/login?redirect=/e-suvidha/apply/${serviceId}`);
           return;
         }
@@ -235,13 +243,18 @@ function ESuvidhaApplyContent() {
           .single();
         if (lockerData?.documents) setLockerDocs(lockerData.documents);
       } catch (err) {
-        console.error(err);
+        console.error("Auth error, redirecting to login:", err);
+        // Kisi bhi error par — network, timeout, supabase — login pe bhejo
+        setLoading(false);
+        router.push(`/login?redirect=/e-suvidha/apply/${serviceId}`);
+        return;
       } finally {
         setLoading(false);
       }
     };
     fetchUser();
   }, [router, serviceId]);
+
 
   useEffect(() => {
     const checkPaymentRedirect = async () => {

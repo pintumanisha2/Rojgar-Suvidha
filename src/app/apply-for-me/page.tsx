@@ -116,8 +116,16 @@ function ApplyForMeContent() {
     generateCaptcha();
     const fetchUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // ⏱️ Timeout: agar Supabase 8 second mein respond nahi kare → login pe redirect
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Auth check timed out")), 8000)
+        );
+
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+
         if (!session) {
+          setLoading(false);
           const fullUrl = window.location.pathname + window.location.search;
           router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
           return;
@@ -138,12 +146,16 @@ function ApplyForMeContent() {
 
       } catch (err) {
         console.error("Apply-for-me fetch error:", err);
+        setLoading(false);
+        router.push(`/login?redirect=${encodeURIComponent("/apply-for-me")}`);
+        return;
       } finally {
         setLoading(false);
       }
     };
     fetchUser();
   }, [router]);
+
 
   // Tab switcher activity tracking
   const handleTabChange = (tab: "apply" | "orders") => {
