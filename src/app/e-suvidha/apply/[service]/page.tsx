@@ -394,39 +394,12 @@ function ESuvidhaApplyContent() {
         throw new Error("Failed to initialize your request record in the database.");
       }
 
-      if (!(window as any).Cashfree) {
-        throw new Error("Payment gateway is loading. Check your internet connection.");
+      // Redirect to PhonePe Pay Page
+      if (order.redirectUrl) {
+        window.location.href = order.redirectUrl;
+      } else {
+        throw new Error("Unable to obtain checkout URL from PhonePe");
       }
-
-      const cashfree = (window as any).Cashfree({
-          mode: process.env.NEXT_PUBLIC_CASHFREE_MODE || "sandbox",
-      });
-
-      cashfree.checkout({
-          paymentSessionId: order.payment_session_id,
-          redirectTarget: "_modal",
-      }).then(async (result: any) => {
-          if (result.error) {
-              setError(`Payment failed: ${result.error.message}`);
-              setSubmitting(false);
-              return;
-          }
-          if (result.paymentDetails) {
-            // Update request status to 'paid' in DB
-            const { error: updateError } = await supabase
-              .from("apply_for_me_requests")
-              .update({ status: "paid" })
-              .eq("tracking_id", order.order_id);
-
-            if (updateError) {
-              setError("Payment successful but failed to update request status. Contact support.");
-            } else {
-              setTrackingId(order.order_id);
-              setSubmitted(true);
-            }
-            setSubmitting(false);
-          }
-      });
       
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
@@ -455,7 +428,6 @@ function ESuvidhaApplyContent() {
 
   return (
     <>
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
 
     {/* FAQPage Structured Data (JSON-LD Schema) for Google Search Rich Snippets */}
     <script
@@ -802,7 +774,7 @@ function ESuvidhaApplyContent() {
                 <ShieldCheck className="w-6 h-6 text-blue-500" />
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white">Service Fees</p>
-                  <p className="text-xs text-gray-500">Secure Cashfree Payment</p>
+                  <p className="text-xs text-gray-500">Secure PhonePe Payment</p>
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-blue-600">₹{serviceDetails.price} INR</p>

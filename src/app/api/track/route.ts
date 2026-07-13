@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// GET handler: Verify payment order status (Cashfree)
-// Called by apply-for-me page after payment redirect: GET /api/track?order_id=xxx
+// GET handler: Verify payment order status (PhonePe)
+// Called by page after payment redirect: GET /api/track?order_id=xxx
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -17,45 +18,58 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "order_id is required" }, { status: 400 });
     }
 
-    const appId = process.env.CASHFREE_APP_ID;
-    const secretKey = process.env.CASHFREE_SECRET_KEY;
-    const environment = process.env.CASHFREE_ENVIRONMENT || "sandbox";
+    const merchantId = process.env.PHONEPE_MERCHANT_ID;
+    const saltKey = process.env.PHONEPE_SALT_KEY;
+    const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
+    const environment = process.env.PHONEPE_ENV || "sandbox";
 
-    if (!appId || !secretKey) {
-      // Fallback: if no Cashfree keys, treat as PAID (for testing/dev)
-      console.warn("Cashfree API keys missing — returning mock PAID status");
+    if (!merchantId || !saltKey) {
+      console.warn("PhonePe credentials missing — returning mock PAID status");
       return NextResponse.json({ order_status: "PAID", order_id: orderId });
     }
 
-    const baseUrl =
-      environment === "production"
-        ? `https://api.cashfree.com/pg/orders/${orderId}`
-        : `https://sandbox.cashfree.com/pg/orders/${orderId}`;
+    const apiPath = `/pg/v1/status/${merchantId}/${orderId}`;
+    const stringToHash = apiPath + saltKey;
+    const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
+    const checksum = sha256 + "###" + saltIndex;
+
+    const baseUrl = environment === "production"
+      ? `https://api.phonepe.com/apis/hermes${apiPath}`
+      : `https://api-preprod.phonepe.com/apis/pg-sandbox${apiPath}`;
 
     const response = await fetch(baseUrl, {
       method: "GET",
       headers: {
-        "x-api-version": "2023-08-01",
-        "x-client-id": appId,
-        "x-client-secret": secretKey,
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+        "X-MERCHANT-ID": merchantId,
         Accept: "application/json",
       },
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      console.error("Cashfree order fetch error:", data);
+    if (!response.ok || !data.success) {
+      console.error("PhonePe order fetch error:", data);
       return NextResponse.json(
         { error: data.message || "Failed to fetch order status", order_status: "UNKNOWN" },
-        { status: response.status }
+        { status: response.status || 400 }
       );
     }
 
+    let mappedStatus = "UNKNOWN";
+    if (data.code === "PAYMENT_SUCCESS") {
+      mappedStatus = "PAID";
+    } else if (data.code === "PAYMENT_PENDING") {
+      mappedStatus = "ACTIVE";
+    } else {
+      mappedStatus = "FAILED";
+    }
+
     return NextResponse.json({
-      order_status: data.order_status,
-      order_id: data.order_id,
-      order_amount: data.order_amount,
+      order_status: mappedStatus,
+      order_id: orderId,
+      order_amount: data.data?.amount ? data.data.amount / 100 : 0, // convert paise back to Rs
     });
   } catch (err: any) {
     console.error("Track GET exception:", err);

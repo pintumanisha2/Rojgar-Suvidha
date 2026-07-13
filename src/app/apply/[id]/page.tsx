@@ -163,6 +163,24 @@ function ApplyContent() {
             .eq("tracking_id", trackingCode);
 
           if (!updateErr) {
+            // Update Coupon Usage if applied
+            if (app && app.coupon_applied) {
+              try {
+                const { data: couponData } = await supabase
+                  .from("coupons")
+                  .select("id, used_count")
+                  .eq("code", app.coupon_applied)
+                  .single();
+                if (couponData) {
+                  const { error: rpcErr } = await supabase.rpc('increment_coupon_usage', { coupon_id: couponData.id });
+                  if (rpcErr) {
+                    await supabase.from("coupons").update({ used_count: couponData.used_count + 1 }).eq("id", couponData.id);
+                  }
+                }
+              } catch (cErr) {
+                console.error("Failed to update coupon usage:", cErr);
+              }
+            }
             setSuccessTrackingId(trackingCode);
           } else {
             setSubmitError("Payment verified but failed to update status. Please contact support.");
@@ -404,48 +422,12 @@ function ApplyContent() {
 
         if (dbError) throw dbError;
 
-        // Open Cashfree Checkout Modal
-        const cashfree = new (window as any).Cashfree({
-             mode: process.env.NEXT_PUBLIC_CASHFREE_MODE || "sandbox",
-        });
-
-        const checkoutOptions = {
-            paymentSessionId: order.payment_session_id,
-            redirectTarget: "_modal",
-        };
-
-        cashfree.checkout(checkoutOptions).then(async (result: any) => {
-            if (result.error) {
-                setSubmitError(`Payment failed: ${result.error.message}`);
-                setIsSubmitting(false);
-                return;
-            }
-            if (result.paymentDetails) {
-                try {
-                  // Update payment_status to 'paid' in DB
-                  const { error: updateErr } = await supabase
-                    .from("user_applications")
-                    .update({ payment_status: "paid" })
-                    .eq("tracking_id", trackingCode);
-
-                  if (updateErr) throw updateErr;
-
-                  // Update Coupon Usage if applied
-                  if (appliedCoupon) {
-                    const { error: rpcErr } = await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
-                    if (rpcErr) {
-                      await supabase.from("coupons").update({ used_count: appliedCoupon.used_count + 1 }).eq("id", appliedCoupon.id);
-                    }
-                  }
-
-                  setSuccessTrackingId(trackingCode);
-                } catch (err: any) {
-                  setSubmitError("Payment successful but failed to save request: " + err.message);
-                } finally {
-                  setIsSubmitting(false);
-                }
-            }
-        });
+        // Redirect to PhonePe Pay Page
+        if (order.redirectUrl) {
+          window.location.href = order.redirectUrl;
+        } else {
+          throw new Error("Unable to obtain checkout URL from PhonePe");
+        }
 
       } else {
         // Free application (finalPayable == 0)
@@ -531,7 +513,6 @@ function ApplyContent() {
 
   return (
     <>
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="lazyOnload" />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto space-y-6">
         

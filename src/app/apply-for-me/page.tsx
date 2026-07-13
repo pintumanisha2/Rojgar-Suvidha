@@ -185,7 +185,12 @@ function ApplyForMeContent() {
           customerName: profile.full_name,
           customerPhone: profile.mobile_number,
           customerEmail: user.email,
-          formId: "apply_for_me"
+          formId: "apply_for_me",
+          extraParams: {
+            job_title: jobTitle,
+            job_url: jobUrl,
+            special_note: note
+          }
         }),
       });
 
@@ -204,15 +209,12 @@ function ApplyForMeContent() {
         });
       }
 
-      // 2. Initialize Cashfree Web SDK
-      const cashfree = (window as any).Cashfree({
-        mode: data.payment_session_id.includes("prod") ? "production" : "sandbox",
-      });
-
-      await cashfree.checkout({
-        paymentSessionId: data.payment_session_id,
-        returnUrl: `${window.location.origin}/apply-for-me?order_id={order_id}&job_title=${encodeURIComponent(jobTitle)}&job_url=${encodeURIComponent(jobUrl)}&special_note=${encodeURIComponent(note)}`,
-      });
+      // 2. Redirect to PhonePe Pay Page
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        throw new Error("Unable to obtain checkout URL from PhonePe");
+      }
 
     } catch (err: any) {
       console.error("Checkout Exception:", err);
@@ -312,7 +314,6 @@ function ApplyForMeContent() {
 
   return (
     <>
-    <Script src="https://sdk.cashfree.com/js/v3/cashfree.js" strategy="beforeInteractive" />
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       
       <div className="max-w-4xl w-full mx-auto space-y-6">
