@@ -224,7 +224,8 @@ function ESuvidhaApplyContent() {
 
         if (!session) {
           setLoading(false);
-          router.push(`/login?redirect=/e-suvidha/apply/${serviceId}`);
+          const fullUrl = window.location.pathname + window.location.search;
+          router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
           return;
         }
         setUser(session.user);
@@ -246,7 +247,8 @@ function ESuvidhaApplyContent() {
         console.error("Auth error, redirecting to login:", err);
         // Kisi bhi error par — network, timeout, supabase — login pe bhejo
         setLoading(false);
-        router.push(`/login?redirect=/e-suvidha/apply/${serviceId}`);
+        const fullUrl = window.location.pathname + window.location.search;
+        router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
         return;
       } finally {
         setLoading(false);

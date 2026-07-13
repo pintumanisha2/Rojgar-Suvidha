@@ -50,7 +50,7 @@ function CallbackContent() {
         
         if (session) {
           if (isMountedRef.current) {
-            router.push(nextRedirect);
+            window.location.href = nextRedirect;
           }
           return;
         }
@@ -62,7 +62,7 @@ function CallbackContent() {
               if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
               else if (typeof subscription === "function") subscription();
             }
-            router.push(nextRedirect);
+            window.location.href = nextRedirect;
           }
         });
         
@@ -76,7 +76,7 @@ function CallbackContent() {
               if (typeof subscription.unsubscribe === "function") subscription.unsubscribe();
               else if (typeof subscription === "function") subscription();
             }
-            router.push(nextRedirect);
+            window.location.href = nextRedirect;
           }
         }, 1200);
 

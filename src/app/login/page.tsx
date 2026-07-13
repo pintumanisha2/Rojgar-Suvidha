@@ -199,10 +199,11 @@ function LoginContent() {
   const redirectAfterLogin = async (userId: string) => {
     try {
       const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
-      if (profile?.full_name) router.push(redirectUrl);
-      else router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`);
-    } catch { router.push(`/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`); }
-    router.refresh();
+      const target = profile?.full_name ? redirectUrl : `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`;
+      window.location.href = target;
+    } catch {
+      window.location.href = `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}`;
+    }
   };
 
   // ── Google ────────────────────────────────────────────
