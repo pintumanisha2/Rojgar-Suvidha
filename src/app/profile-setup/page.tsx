@@ -23,6 +23,7 @@ function ProfileSetupContent() {
   const [gender, setGender] = useState("male");
   const [category, setCategory] = useState("gen");
   const [address, setAddress] = useState("");
+  const [phoneLinked, setPhoneLinked] = useState(false);
 
   // Per-field validation errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -111,7 +112,11 @@ function ProfileSetupContent() {
       setError(upsertError.message);
       setSaving(false);
     } else {
-      router.push(redirectUrl);
+      // Show phone-linked confirmation before redirect
+      if (mobile.trim()) setPhoneLinked(true);
+      // Clear sessionStorage avatar cache so Navbar re-fetches updated profile
+      try { sessionStorage.removeItem("rs_avatar_url"); } catch {}
+      setTimeout(() => { window.location.href = redirectUrl; }, phoneLinked || !mobile.trim() ? 0 : 1800);
     }
   };
 
@@ -119,6 +124,32 @@ function ProfileSetupContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // Phone linked success screen (shown briefly before redirect)
+  if (phoneLinked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-950 dark:to-green-950">
+        <div className="text-center px-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 rounded-full mb-6 shadow-xl shadow-green-500/30 animate-bounce">
+            <CheckCircle2 className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">
+            Profile Saved! 🎉
+          </h2>
+          <p className="text-green-700 dark:text-green-400 font-semibold text-base mb-1">
+            ✅ Phone number link ho gaya!
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Ab aap phone OTP se bhi login kar sakte hain
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-400">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Redirecting...
+          </div>
+        </div>
       </div>
     );
   }

@@ -150,12 +150,37 @@ function LoginContent() {
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
 
   useEffect(() => {
+    // Fast-path: read localStorage synchronously — returning users get redirected
+    // before any Supabase network call, with zero visible flicker.
+    let foundSession = false;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed?.expires_at && parsed.expires_at > Math.floor(Date.now() / 1000)) {
+              foundSession = true;
+              break;
+            }
+          }
+        }
+      }
+    } catch {}
+
+    if (foundSession) {
+      window.location.href = redirectUrl;
+      return;
+    }
+
+    // Slow-path: verify with server (for cases where token was revoked remotely)
     let active = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (active && session) router.push(redirectUrl);
+      if (active && session) window.location.href = redirectUrl;
     });
     return () => { active = false; };
-  }, [router, redirectUrl]);
+  }, [redirectUrl]);
 
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);

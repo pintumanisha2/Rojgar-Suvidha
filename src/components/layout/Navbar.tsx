@@ -125,9 +125,34 @@ export default function Navbar() {
     }
   }
 
-  // Auth State
-  const [user, setUser] = useState<any>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // ── Auth State ─────────────────────────────────────────────────────────────
+  // Initialise synchronously from localStorage so returning users NEVER see a
+  // "Login" flash — the correct state is shown on the very first render.
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            // Only use cached session if access token is still valid
+            if (parsed?.expires_at && parsed.expires_at > Math.floor(Date.now() / 1000)) {
+              return parsed.user || null;
+            }
+          }
+        }
+      }
+    } catch {}
+    return null;
+  });
+
+  // Avatar URL — cached in sessionStorage to avoid a DB fetch on every navigation
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try { return sessionStorage.getItem("rs_avatar_url") || null; } catch { return null; }
+  });
 
   // Saved Jobs State
   const [savedCount, setSavedCount] = useState(0);
@@ -137,24 +162,29 @@ export default function Navbar() {
       const savedJobs = JSON.parse(localStorage.getItem("saved_jobs") || "[]");
       setSavedCount(savedJobs.length);
     };
-
-    updateSavedCount(); // Initial check
+    updateSavedCount();
     window.addEventListener('savedJobsUpdated', updateSavedCount);
-    
     return () => window.removeEventListener('savedJobsUpdated', updateSavedCount);
   }, []);
 
   useEffect(() => {
+    // Verify session with server and fetch latest avatar (runs after first paint)
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user || null);
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', session.user.id)
-          .single();
-        setAvatarUrl(profile?.avatar_url || null);
+        // Use cached avatar if available, otherwise fetch from DB
+        const cached = sessionStorage.getItem("rs_avatar_url");
+        if (!cached) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', session.user.id)
+            .single();
+          const av = profile?.avatar_url || null;
+          setAvatarUrl(av);
+          if (av) sessionStorage.setItem("rs_avatar_url", av);
+        }
       }
     };
     checkUser();
@@ -167,15 +197,19 @@ export default function Navbar() {
           .select('avatar_url')
           .eq('id', session.user.id)
           .single();
-        setAvatarUrl(profile?.avatar_url || null);
+        const av = profile?.avatar_url || null;
+        setAvatarUrl(av);
+        if (av) sessionStorage.setItem("rs_avatar_url", av);
+        else sessionStorage.removeItem("rs_avatar_url");
       } else {
         setAvatarUrl(null);
+        sessionStorage.removeItem("rs_avatar_url");
       }
     });
 
-    // FIX: Cross-tab auth sync — detect login/logout from other tabs via localStorage
+    // Cross-tab auth sync — detect login/logout from other tabs
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'sb-kkfgdzaoukekhlijlfsw-auth-token' || e.key?.includes('supabase.auth.token')) {
+      if (e.key?.startsWith("sb-") && e.key.endsWith("-auth-token")) {
         checkUser();
       }
     };

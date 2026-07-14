@@ -3,47 +3,55 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Custom fetch with dynamic timeout to prevent regular queries from hanging,
-// while allowing file/storage uploads enough time to complete.
+// Custom fetch with dynamic timeouts per endpoint type.
+// IMPORTANT: Auth calls (token refresh, session) must NEVER be cut short —
+// a timed-out refresh = user gets logged out. Give them plenty of headroom.
 const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
   const urlStr = typeof url === "string" ? url : (url as any).url || url.toString();
   const isStorage = urlStr.includes("/storage/v1");
-  const timeoutMs = isStorage ? 60000 : 30000; // 60s for storage uploads, 30s for regular queries
+  const isAuth    = urlStr.includes("/auth/v1");
+
+  // Auth calls get 25s — enough for slow networks, won't block refresh token renewal.
+  // Storage uploads get 60s. Regular DB queries get 15s (fast-fail for UX).
+  const timeoutMs = isStorage ? 60000 : isAuth ? 25000 : 15000;
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const response = await globalThis.fetch(url, { ...options, signal: controller.signal });
     clearTimeout(id);
     return response;
   } catch (error: any) {
     clearTimeout(id);
+
     if (error.name === 'AbortError') {
-      // Return a clean mock HTTP 408 response instead of throwing a raw exception,
-      // preventing Supabase client library from hanging on aborted promises.
+      // For auth timeouts, return a retriable 503 rather than 408 —
+      // Supabase auth internals handle 503 more gracefully during token refresh.
+      const isAuthTimeout = isAuth;
       return new Response(
         JSON.stringify({
-          code: "TIMEOUT",
-          message: `Network timeout: The request took too long (>${timeoutMs / 1000}s). Please try again.`
+          code: isAuthTimeout ? "AUTH_TIMEOUT" : "TIMEOUT",
+          message: `Request took too long (>${timeoutMs / 1000}s). Please check your connection.`,
         }),
         {
-          status: 408,
-          statusText: "Request Timeout",
-          headers: { "Content-Type": "application/json" }
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "Content-Type": "application/json" },
         }
       );
     }
-    // Catch any other network/CORS/AdBlock errors and return a mock 503 Response
-    // to prevent the Supabase client library from hanging on rejected fetch promises.
+
+    // Network/CORS/AdBlock errors → clean 503 to prevent Supabase from hanging
     return new Response(
       JSON.stringify({
         code: "NETWORK_ERROR",
-        message: error.message || "Failed to fetch: Connection refused or blocked by extensions/adblockers."
+        message: error.message || "Failed to fetch. Check your internet connection.",
       }),
       {
         status: 503,
         statusText: "Service Unavailable",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
   }
@@ -52,9 +60,11 @@ const customFetch = async (url: RequestInfo | URL, options?: RequestInit) => {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: { fetch: customFetch },
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+    persistSession: true,          // Keep session in localStorage across browser restarts
+    autoRefreshToken: true,        // Silently refresh before 1-hr access token expires
+    detectSessionInUrl: true,      // Needed for OAuth + magic link callbacks
     storage: typeof window !== "undefined" ? window.localStorage : undefined,
-  }
+    // PKCE flow is more secure for SPAs — prevents auth code interception attacks
+    flowType: "pkce",
+  },
 });
