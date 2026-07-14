@@ -159,7 +159,7 @@ export default function PublicHallPage() {
         /* 2. Run real auth check in background */
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          router.push("/login?redirect=/dashboard/study/hall");
+          window.location.href = "/login?redirect=/dashboard/study/hall";
           return;
         }
         const uid = session.user.id;

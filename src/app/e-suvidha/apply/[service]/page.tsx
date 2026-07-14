@@ -225,7 +225,7 @@ function ESuvidhaApplyContent() {
         if (!session) {
           setLoading(false);
           const fullUrl = window.location.pathname + window.location.search;
-          router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
+          window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
           return;
         }
         setUser(session.user);
@@ -248,7 +248,7 @@ function ESuvidhaApplyContent() {
         // Kisi bhi error par — network, timeout, supabase — login pe bhejo
         setLoading(false);
         const fullUrl = window.location.pathname + window.location.search;
-        router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
+        window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
         return;
       } finally {
         setLoading(false);
@@ -879,7 +879,7 @@ function ESuvidhaApplyContent() {
 
             {error && <p className="text-sm font-bold text-red-500 text-center bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
 
-            <button type="submit" disabled={submitting || !profile?.full_name || !agreed || !captchaA}
+            <button type="submit" disabled={submitting || !applicantName.trim() || !applicantPhone.trim() || !agreed || !captchaA}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-extrabold text-base shadow-lg transition-all disabled:opacity-60 flex items-center justify-center gap-2">
               {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Pay & Submit Application"}
             </button>

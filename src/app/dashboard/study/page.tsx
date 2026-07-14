@@ -78,13 +78,13 @@ export default function StudyLobbyPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          router.push("/login?redirect=/dashboard/study");
+          window.location.href = "/login?redirect=/dashboard/study";
           return;
         }
         const { data: profile } = await supabase
           .from("profiles").select("full_name").eq("id", session.user.id).single();
         if (!profile?.full_name) {
-          router.push("/profile-setup?redirect=/dashboard/study");
+          window.location.href = "/profile-setup?redirect=/dashboard/study";
           return;
         }
         setUser(session.user);

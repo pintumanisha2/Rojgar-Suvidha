@@ -127,7 +127,7 @@ function ApplyForMeContent() {
         if (!session) {
           setLoading(false);
           const fullUrl = window.location.pathname + window.location.search;
-          router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
+          window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
           return;
         }
         setUser(session.user);
@@ -147,7 +147,7 @@ function ApplyForMeContent() {
       } catch (err) {
         console.error("Apply-for-me fetch error:", err);
         setLoading(false);
-        router.push(`/login?redirect=${encodeURIComponent("/apply-for-me")}`);
+        window.location.href = `/login?redirect=${encodeURIComponent("/apply-for-me")}`;
         return;
       } finally {
         setLoading(false);

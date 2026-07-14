@@ -79,7 +79,7 @@ function ApplyContent() {
         if (!session) {
           // Force login before applying, with exact redirect parameter
           const fullUrl = window.location.pathname + window.location.search;
-          router.push(`/login?redirect=${encodeURIComponent(fullUrl)}`);
+          window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
           return;
         }
 
