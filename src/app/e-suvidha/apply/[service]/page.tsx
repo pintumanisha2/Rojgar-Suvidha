@@ -4,10 +4,29 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud, AlertTriangle } from "lucide-react";
 import Script from "next/script";
 import imageCompression from "browser-image-compression";
 import { SERVICE_INFO_DB } from "@/lib/eSuvidhaContent";
+import { useToast } from "@/components/ui/Toast";
+
+// Maps raw payment API errors to clear, actionable English messages.
+function mapPaymentError(raw: string): string {
+  const r = (raw || "").toLowerCase();
+  if (r.includes("credentials") || r.includes("merchant") || r.includes("missing"))
+    return "Payment service is temporarily unavailable. Please try again in a few minutes or contact support at support@rojgarsuvidha.com";
+  if (r.includes("network") || r.includes("fetch") || r.includes("503") || r.includes("failed to fetch"))
+    return "Network error. Please check your internet connection and try again.";
+  if (r.includes("timeout") || r.includes("timed out"))
+    return "The request timed out. Please try again.";
+  if (r.includes("session") || r.includes("unauthorized") || r.includes("401"))
+    return "Your session has expired. Please refresh the page and log in again.";
+  if (r.includes("checkout url") || r.includes("redirect"))
+    return "Could not connect to the payment gateway. Please try again or use a different browser.";
+  if (r.includes("database") || r.includes("insert"))
+    return "Your application data could not be saved. Please try again. If this persists, contact support.";
+  return raw || "Something went wrong. Please try again.";
+}
 
 // Database of Services
 const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: string[]; docsOptional?: string[]; extraFields: string[] }> = {
@@ -194,6 +213,8 @@ function ESuvidhaApplyContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [missingDocs, setMissingDocs] = useState<Set<string>>(new Set());
+  const toast = useToast();
   
   const [extraData, setExtraData] = useState<Record<string, string>>({});
   const [files, setFiles] = useState<Record<string, File>>({});
@@ -338,28 +359,45 @@ function ESuvidhaApplyContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!applicantName.trim() || !applicantPhone.trim()) { setError("Kripya Applicant ka naam aur number bharein."); return; }
+
+    // Validate applicant name
+    if (!applicantName.trim() || applicantName.trim().length < 2) {
+      const msg = "Please enter the applicant's full name (at least 2 characters).";
+      setError(msg); toast.error("Missing Information", msg); return;
+    }
+    // Validate phone number
+    const phoneDigits = applicantPhone.replace(/\D/g, "");
+    if (!phoneDigits || phoneDigits.length !== 10) {
+      const msg = "Please enter a valid 10-digit mobile number for the applicant.";
+      setError(msg); toast.error("Invalid Phone Number", msg); return;
+    }
 
     if (parseInt(captchaA) !== captchaQ.a + captchaQ.b) {
-      setError("Incorrect Captcha. Please try again.");
-      // Reset captcha
+      const msg = "Incorrect answer to the security question. Please try again.";
+      setError(msg); toast.warning("Captcha Failed", msg);
       setCaptchaQ({ a: Math.floor(Math.random() * 10) + 1, b: Math.floor(Math.random() * 10) + 1 });
       setCaptchaA("");
       return;
     }
 
     if (!agreed) {
-      setError("Please agree to the Terms & Conditions and Refund Policy.");
-      return;
+      const msg = "Please read and agree to the Terms & Conditions and Refund Policy before proceeding.";
+      setError(msg); toast.warning("Agreement Required", msg); return;
     }
 
-    // Validate if all required documents are uploaded (file OR locker match)
+    // Validate all required documents (highlight missing ones)
+    const missing = new Set<string>();
     for (const doc of serviceDetails.docsRequired) {
-      if (!files[doc] && !findLockerMatch(doc)) {
-        setError(`Please upload required document: ${doc}`);
-        return;
-      }
+      if (!files[doc] && !findLockerMatch(doc)) missing.add(doc);
     }
+    if (missing.size > 0) {
+      setMissingDocs(missing);
+      const msg = missing.size === 1
+        ? `Required document missing: "${Array.from(missing)[0]}". Please upload it to continue.`
+        : `${missing.size} required documents are missing. Please upload all highlighted documents.`;
+      setError(msg); toast.error("Documents Required", msg); return;
+    }
+    setMissingDocs(new Set());
 
     setSubmitting(true);
     setError(null);
@@ -460,7 +498,9 @@ function ESuvidhaApplyContent() {
       }
       
     } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      const friendly = mapPaymentError(err.message || "Something went wrong.");
+      setError(friendly);
+      toast.error("Submission Failed", friendly);
       setSubmitting(false);
     }
   };

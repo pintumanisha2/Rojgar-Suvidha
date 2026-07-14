@@ -8,8 +8,39 @@ import {
   Mail, Loader2, ShieldCheck, KeyRound,
   Building, ArrowRight,
   Eye, EyeOff, Phone, CheckCircle, ArrowLeft,
-  Lock, Users, Star, Zap,
+  Lock, Users, Star, Zap, AlertTriangle, CheckCircle2,
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
+
+// Maps raw Supabase/API error strings to clear, actionable English messages.
+function mapAuthError(raw: string, context?: string): string {
+  const r = (raw || "").toLowerCase();
+  if (r.includes("invalid login credentials") || r.includes("invalid credentials"))
+    return "Incorrect email or password. Please double-check and try again.";
+  if (r.includes("email not confirmed"))
+    return "Your email address is not verified. Please check your inbox for the verification email.";
+  if (r.includes("user already registered") || r.includes("already registered"))
+    return "An account with this email already exists. Please sign in instead.";
+  if (r.includes("password should be at least"))
+    return "Password must be at least 8 characters long.";
+  if (r.includes("rate limit") || r.includes("too many requests") || r.includes("429"))
+    return "Too many attempts. Please wait a few minutes and try again.";
+  if (r.includes("network") || r.includes("fetch") || r.includes("503") || r.includes("failed to fetch"))
+    return "Network error. Please check your internet connection and try again.";
+  if (r.includes("expired") || r.includes("token has expired"))
+    return context === "otp"
+      ? "This OTP has expired (valid for 10 minutes). Please request a new one."
+      : "Your session has expired. Please log in again.";
+  if (r.includes("otp") || r.includes("invalid token") || r.includes("invalid or expired"))
+    return "The OTP you entered is incorrect or has expired. Please try again.";
+  if (r.includes("mobile number already registered"))
+    return "This phone number is already linked to an account. Please sign in.";
+  if (r.includes("does not exist") || r.includes("not found"))
+    return "No account found with this phone number. Please sign up first.";
+  if (r.includes("auth timeout") || r.includes("timed out"))
+    return "The request timed out. Please check your connection and try again.";
+  return raw || "Something went wrong. Please try again.";
+}
 
 // ── OTP 6-box component (banking-app style) ──────────────
 function OtpBoxes({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
@@ -182,11 +213,22 @@ function LoginContent() {
     return () => { active = false; };
   }, [redirectUrl]);
 
+  const toast = useToast();
+
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [msg, setMsg]             = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [authMethod, setAuthMethod] = useState<"phone" | "google" | "email">("phone");
   const [portalType, setPortalType] = useState<"user" | "employer">("user");
+
+  // Helper — show error both inline and as toast
+  const showError = (msg: string, context?: string) => {
+    const friendly = mapAuthError(msg, context);
+    setError(friendly);
+    toast.error("Authentication Error", friendly);
+    return friendly;
+  };
 
   // ── Email state ───────────────────────────────────────
   const [email, setEmail]           = useState("");
@@ -231,20 +273,26 @@ function LoginContent() {
     }
   };
 
-  // ── Google ────────────────────────────────────────────
+  // ── Google ────────────────────────────────────────────────────────────────
   const handleGoogle = async () => {
     setLoading(true); setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectUrl)}` },
     });
-    if (error) { setError(error.message); setLoading(false); }
+    if (oauthError) { showError(oauthError.message); setLoading(false); }
   };
 
-  // ── Phone OTP: Send ───────────────────────────────────
+  // ── Phone OTP: Send ───────────────────────────────────────────────────────
   const handleSendPhoneOtp = async () => {
     const digits = phone.replace(/\D/g, "");
-    if (digits.length !== 10) { setError("Please enter a valid 10-digit mobile number."); return; }
+    if (digits.length !== 10) {
+      const msg = "Please enter a valid 10-digit Indian mobile number.";
+      setError(msg);
+      setFieldErrors(prev => ({ ...prev, phone: msg }));
+      return;
+    }
+    setFieldErrors(prev => { const n = { ...prev }; delete n.phone; return n; });
     setLoading(true); setError(null); setMsg(null);
     try {
       const res = await fetch("/api/send-phone-otp", {
@@ -252,15 +300,19 @@ function LoginContent() {
         body: JSON.stringify({ phone: `+91${digits}` }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Failed to send OTP. Please try again."); }
-      else { setPhoneOtpSent(true); setPhoneCooldown(60); setMsg(`OTP sent successfully to +91 ${digits}!`); }
-    } catch { setError("Network error. Please try again."); }
+      if (!res.ok) { showError(data.error || "Failed to send OTP. Please try again.", "otp"); }
+      else {
+        setPhoneOtpSent(true); setPhoneCooldown(60);
+        setMsg(`OTP sent to +91 ${digits}!`);
+        toast.success("OTP Sent!", `A 6-digit code was sent to +91 ${digits}.`);
+      }
+    } catch { showError("Network error. Please check your connection and try again."); }
     finally { setLoading(false); }
   };
 
-  // ── Phone OTP: Verify (auto detect new/existing user) ─
+  // ── Phone OTP: Verify (auto detect new/existing user) ──
   const handleVerifyPhoneOtp = async () => {
-    if (phoneOtp.length !== 6) { setError("Please enter the 6-digit OTP."); return; }
+    if (phoneOtp.length !== 6) { setError("Please enter the complete 6-digit OTP."); return; }
     const digits = phone.replace(/\D/g, "");
     setLoading(true); setError(null); setMsg(null);
     try {
@@ -269,26 +321,30 @@ function LoginContent() {
         body: JSON.stringify({ phone: `+91${digits}`, otp: phoneOtp }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Invalid OTP code. Please try again."); setLoading(false); return; }
+      if (!res.ok) { showError(data.error || "Invalid OTP code. Please try again.", "otp"); setLoading(false); return; }
       if (data.accessToken && data.refreshToken) {
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: data.accessToken,
           refresh_token: data.refreshToken,
         });
-        if (sessionError) { setError("Session error. Please try again."); setLoading(false); return; }
+        if (sessionError) { showError("Failed to create session. Please try again."); setLoading(false); return; }
         if (sessionData?.user) {
-          setMsg(data.isNewUser ? "Account created! Preparing profile setup..." : "Logged in successfully! Redirecting...");
+          const successMsg = data.isNewUser ? "Account created successfully!" : "Signed in successfully!";
+          setMsg(successMsg + " Redirecting...");
+          toast.success(successMsg);
           await redirectAfterLogin(sessionData.user.id);
         }
       } else if (data.actionLink) {
-        setMsg(data.isNewUser ? "Account created! Logging in..." : "Logged in successfully!");
+        const successMsg = data.isNewUser ? "Account created! Signing you in..." : "Signed in successfully!";
+        setMsg(successMsg);
+        toast.success(successMsg);
         const redirectParam = encodeURIComponent(data.isNewUser ? `/profile-setup?redirect=${encodeURIComponent(redirectUrl)}` : redirectUrl);
         window.location.href = `${data.actionLink}&next=${redirectParam}`;
       } else {
-        setError("Session creation failed. Please try again.");
+        showError("Session creation failed. Please try again.");
         setLoading(false);
       }
-    } catch { setError("Network error. Please try again."); setLoading(false); }
+    } catch { showError("Network error. Please check your connection and try again."); setLoading(false); }
   };
 
   const handleResendPhoneOtp = async () => {
@@ -300,13 +356,18 @@ function LoginContent() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: `+91${digits}` }),
       });
-      if (res.ok) { setMsg("A new OTP has been sent!"); setPhoneCooldown(60); }
-      else { const d = await res.json(); setError(d.error || "OTP resend failed."); }
-    } catch { setError("Network error."); }
+      if (res.ok) {
+        setMsg("A new OTP has been sent!");
+        setPhoneCooldown(60);
+        toast.success("New OTP Sent", `A fresh code was sent to +91 ${digits}.`);
+      } else {
+        const d = await res.json();
+        showError(d.error || "OTP resend failed. Please try again.", "otp");
+      }
+    } catch { showError("Network error. Please check your connection."); }
     finally { setLoading(false); }
   };
-
-  // ── Email auth ────────────────────────────────────────
+   // ── Email auth ──────────────────────────────────────
   const checkEmailTypo = (e: string) => {
     const domain = e.split("@")[1]?.toLowerCase();
     const typos: Record<string,string> = { "gamil.com":"gmail.com","gmal.com":"gmail.com","gnail.com":"gmail.com","gmail.co":"gmail.com","yaho.com":"yahoo.com","hotmai.com":"hotmail.com" };
@@ -315,26 +376,37 @@ function LoginContent() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); setMsg(null);
+    setError(null); setMsg(null); setFieldErrors({});
     const typo = checkEmailTypo(email);
-    if (typo) { setError(`Typo in email? Did you mean "${typo}"?`); return; }
+    if (typo) {
+      const msg = `Possible typo in email — did you mean "${typo}"?`;
+      setError(msg);
+      setFieldErrors({ email: msg });
+      return;
+    }
     if (isSignUp) {
-      if (password.length < 8) { setError("Password must be at least 8 characters long."); return; }
-      if (password !== confirmPass) { setError("Passwords do not match."); return; }
+      if (password.length < 8) { const m = "Password must be at least 8 characters long."; setError(m); setFieldErrors({ password: m }); return; }
+      if (password !== confirmPass) { const m = "Passwords do not match."; setError(m); setFieldErrors({ confirmPass: m }); return; }
       setLoading(true);
       try {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
-          if (error.message.toLowerCase().includes("already")) { setError("Account already exists! Please Sign In."); setIsSignUp(false); }
-          else setError(error.message);
+          if (error.message.toLowerCase().includes("already")) {
+            const m = "An account with this email already exists. Please sign in instead.";
+            setError(m); setIsSignUp(false);
+            toast.warning("Account Exists", m);
+          } else showError(error.message);
         } else if (data?.session) {
           setMsg("Account created successfully! Redirecting...");
+          toast.success("Account Created!", "Welcome to Rojgar Suvidha.");
           await redirectAfterLogin(data.user!.id);
         } else {
           setEmailOtpSent(true); setEmailCooldown(60);
-          setMsg("Account created! A 6-digit OTP has been sent to your email — please verify it.");
+          const m = "Account created! A 6-digit verification code has been sent to your email.";
+          setMsg(m);
+          toast.info("Check Your Email", m);
         }
-      } catch (err: any) { setError(err.message); }
+      } catch (err: any) { showError(err.message); }
       finally { setLoading(false); }
     } else {
       setLoading(true);
@@ -344,15 +416,18 @@ function LoginContent() {
           if (error.message.includes("Email not confirmed")) {
             await supabase.auth.resend({ type: "signup", email });
             setIsSignUp(true); setEmailOtpSent(true); setEmailCooldown(60);
-            setError("Email not verified. A new verification OTP has been sent.");
-          } else if (error.message.includes("Invalid login credentials")) {
-            setError("Incorrect email or password. Please check your credentials.");
-          } else setError(error.message);
+            const m = "Your email is not verified. A new verification code has been sent to your inbox.";
+            setError(m);
+            toast.warning("Email Not Verified", m);
+          } else {
+            showError(error.message);
+          }
         } else if (data?.user) {
-          setMsg("Logged in successfully! Redirecting...");
+          setMsg("Signed in successfully! Redirecting...");
+          toast.success("Welcome Back!", `Signed in as ${data.user.email}.`);
           await redirectAfterLogin(data.user.id);
         }
-      } catch (err: any) { setError(err.message); }
+      } catch (err: any) { showError(err.message); }
       finally { setLoading(false); }
     }
   };
@@ -361,20 +436,31 @@ function LoginContent() {
     e.preventDefault();
     setLoading(true); setError(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) setError(error.message);
-    else { setEmailOtpSent(true); setMsg("Password reset OTP has been sent to your email address!"); }
+    if (error) showError(error.message);
+    else {
+      setEmailOtpSent(true);
+      setMsg("Password reset instructions have been sent to your email address.");
+      toast.info("Check Your Email", "Follow the instructions in the email to reset your password.");
+    }
     setLoading(false);
   };
 
+
+
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 8) { setError("New password must be at least 8 characters."); return; }
+    if (newPassword.length < 8) { setError("New password must be at least 8 characters long."); return; }
     setLoading(true); setError(null);
     const { error: ve } = await supabase.auth.verifyOtp({ email, token: emailOtp, type: "recovery" });
-    if (ve) { setError(ve.message); setLoading(false); return; }
+    if (ve) { showError(ve.message, "otp"); setLoading(false); return; }
     const { error: ue } = await supabase.auth.updateUser({ password: newPassword });
-    if (ue) setError(ue.message);
-    else { setMsg("Password reset successfully! Logging you in..."); setTimeout(() => window.location.reload(), 1500); }
+    if (ue) showError(ue.message);
+    else {
+      setMsg("Password updated successfully! Redirecting...");
+      toast.success("Password Updated!", "Your password has been reset successfully.");
+      setTimeout(() => window.location.reload(), 1500);
+    }
     setLoading(false);
   };
 

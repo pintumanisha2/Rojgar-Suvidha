@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Toaster } from "react-hot-toast";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -12,6 +11,7 @@ import JobPreferenceModal from "@/components/layout/JobPreferenceModal";
 import LazyGlobalComponents from "@/components/layout/LazyGlobalComponents";
 import GlobalOtpListener from "@/components/layout/GlobalOtpListener";
 import CountdownGate from "@/components/layout/CountdownGate";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -249,33 +249,22 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Toaster 
-            position="top-center" 
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-                borderRadius: '16px',
-                fontWeight: '600',
-              },
-            }} 
-          />
-          <Suspense fallback={null}>
-            <TopLoader />
-          </Suspense>
-          <CountdownGate>
-            <PublicHeader />
-            <main className="flex-grow flex flex-col">
-              {children}
-            </main>
-            <PublicFooter />
-            <BottomNav />
-            <JobPreferenceModal />
-            <LazyGlobalComponents />
-            <GlobalOtpListener />
-          </CountdownGate>
-          
+          <ToastProvider>
+            <Suspense fallback={null}>
+              <TopLoader />
+            </Suspense>
+            <CountdownGate>
+              <PublicHeader />
+              <main className="flex-grow flex flex-col">
+                {children}
+              </main>
+              <PublicFooter />
+              <BottomNav />
+              <JobPreferenceModal />
+              <LazyGlobalComponents />
+              <GlobalOtpListener />
+            </CountdownGate>
+          </ToastProvider>
           {/* Auto-update Service Worker to prevent caching issues for users */}
           <script
             dangerouslySetInnerHTML={{
