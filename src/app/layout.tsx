@@ -1,7 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
 import "./globals.css";
+
+// ── Premium Typography: Inter — zero layout-shift via next/font ──────────────
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+});
 import { ThemeProvider } from "@/components/ThemeProvider";
 import dynamic from "next/dynamic";
 import { PublicHeader, PublicFooter } from "@/components/layout/PublicUI";
@@ -102,14 +111,19 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/logo-blue.png',
-    shortcut: '/logo-blue.png',
-    apple: '/logo-blue.png',
+    icon: [
+      { url: '/logo-v2.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/icons/icon-192.png',
+    apple: [
+      { url: '/icons/icon-152.png', sizes: '152x152', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
   },
   verification: {
-    // Add your verification codes here when ready
-    // google: "your-google-verification-code",
-    // yandex: "your-yandex-verification-code",
+    // google: "PASTE_YOUR_SEARCH_CONSOLE_CODE_HERE",
   },
   category: "Education",
   other: {
@@ -204,13 +218,21 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className="h-full antialiased"
+      className={`h-full antialiased ${inter.variable}`}
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#4f46e5" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Rojgar Suvidha" />
+        {/* iOS Home Screen Icons (apple-touch-icon) */}
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        {/* SVG favicon for modern browsers (scales perfectly at all sizes) */}
+        <link rel="icon" type="image/svg+xml" href="/logo-v2.svg" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96.png" />
         
         {/* JSON-LD Structured Data for SEO + AEO + GEO */}
         <script

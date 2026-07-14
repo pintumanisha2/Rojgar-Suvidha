@@ -8,6 +8,16 @@
   --card-border: #e2e8f0;
   --card-text-primary: #0f172a;
   --card-text-secondary: #475569;
+
+  /* ── Rojgar Suvidha Brand Design Tokens ── */
+  --brand-primary:        #4f46e5;              /* Indigo 600 — CTAs, links */
+  --brand-primary-hover:  #4338ca;              /* Indigo 700 — hover state */
+  --brand-secondary:      #6366f1;              /* Indigo 500 — secondary elements */
+  --brand-accent:         #f59e0b;              /* Amber 500 — badges, highlights */
+  --brand-success:        #10b981;              /* Emerald 500 — success */
+  --brand-danger:         #ef4444;              /* Red 500 — errors */
+  --brand-warning:        #f59e0b;              /* Amber — warnings */
+  --brand-glow:           rgba(79,70,229,0.15); /* Indigo glow for shadows */
 }
 
 @variant dark (.dark &, &.dark);
@@ -41,7 +51,12 @@ html, body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* ── Premium Typography: Inter (loaded via next/font for zero layout shift) ── */
+  font-family: var(--font-inter), 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* ── Font Smoothing: crisp, premium text rendering on all devices ── */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* === Marquee / Ticker Animation === */
