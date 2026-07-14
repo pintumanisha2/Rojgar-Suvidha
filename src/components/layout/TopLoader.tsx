@@ -47,27 +47,33 @@ export default function TopLoader() {
             (url.pathname !== currentUrl.pathname || url.search !== currentUrl.search) &&
             !url.hash // ignore pure hash links
           ) {
-            setVisible(true);
-            setProgress(15);
+            // Delay showing the loader by 100ms. If navigation completes (skeleton loads), it won't show.
+            const delayTimer = setTimeout(() => {
+              setVisible(true);
+              setProgress(15);
 
-            // Trickle effect (like YouTube)
-            interval = setInterval(() => {
-              setProgress((prev) => {
-                if (prev >= 90) {
-                  clearInterval(interval);
-                  return prev;
-                }
-                const step = (100 - prev) * 0.05 + Math.random() * 3;
-                return prev + step;
-              });
-            }, 300);
+              // Trickle effect (like YouTube)
+              interval = setInterval(() => {
+                setProgress((prev) => {
+                  if (prev >= 90) {
+                    clearInterval(interval);
+                    return prev;
+                  }
+                  const step = (100 - prev) * 0.05 + Math.random() * 3;
+                  return prev + step;
+                });
+              }, 300);
+            }, 100);
 
             // Fallback timeout in case navigation stalls
             setTimeout(() => {
               clearInterval(interval);
+              clearTimeout(delayTimer);
               setProgress(100);
               setTimeout(() => setVisible(false), 300);
             }, 6000);
+            
+            // Cleanup function for the delayTimer on unmount/success is handled by the overall effect
           }
         } catch (err) {
           // invalid URL, ignore
