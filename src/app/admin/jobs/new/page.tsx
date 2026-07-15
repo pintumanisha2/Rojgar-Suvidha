@@ -376,115 +376,58 @@ export default function NewJobPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-20">
+    <div className="max-w-[1600px] mx-auto pb-20">
       
-      {/* Standard Header */}
-      <div className="flex items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
+      {/* ── Sticky Action Bar (Premium Feel) ── */}
+      <div className="sticky top-0 z-50 bg-white/80 dark:bg-[#000000]/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-800 p-4 mb-8 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
-          <Link href="/admin/jobs" className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-600 transition-colors">
+          <Link href="/admin/jobs" className="p-2.5 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 text-gray-600 dark:text-gray-300 transition-colors border border-transparent dark:border-zinc-800">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Post</h2>
-            <p className="text-sm text-gray-500 font-medium">Add a new job or blog entry</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">Create Post</h2>
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">Studio Editor</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button onClick={() => setIsPreviewMode(!isPreviewMode)} className="px-4 py-2.5 rounded-xl font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-2">
-            {isPreviewMode ? "Back to Edit" : "Preview Post"}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button onClick={() => handleSave(true)} disabled={savingDraft || saving || isUploadingFile !== null} className="hidden sm:block px-5 py-2.5 rounded-xl font-bold border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors">
+            {savingDraft ? "Saving..." : "Save Draft"}
           </button>
-          <button onClick={() => handleSave(true)} disabled={savingDraft || saving || isUploadingFile !== null} className="px-5 py-2.5 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50">
-            {savingDraft ? "Saving..." : "Draft"}
-          </button>
-          <button onClick={() => handleSave(false)} disabled={savingDraft || saving || isUploadingFile !== null} className="px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-sm">
+          <button onClick={() => handleSave(false)} disabled={savingDraft || saving || isUploadingFile !== null} className="px-5 sm:px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all active:scale-95 border border-indigo-500">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {userRole === 'content_writer' ? "Submit for Approval" : "Publish"}
+            {userRole === 'content_writer' ? "Submit" : "Publish"}
           </button>
         </div>
       </div>
 
       {isUploadingFile && (
-        <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 p-4 rounded-xl text-sm font-bold mb-6 flex items-center gap-3 animate-pulse shadow-sm">
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 p-4 rounded-xl text-sm font-bold mb-6 flex items-center gap-3 animate-pulse shadow-sm">
           <Loader2 className="h-5 w-5 animate-spin text-indigo-600 dark:text-indigo-400" />
-          <span>Please wait: Uploading your {isUploadingFile === "banner" ? "featured banner image" : "official PDF notification"} to the database...</span>
+          <span>Uploading {isUploadingFile === "banner" ? "featured banner" : "PDF notification"} to secure storage...</span>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-xl text-sm font-medium mb-6 flex items-center gap-2">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-xl text-sm font-medium mb-6 flex items-center gap-2 shadow-sm">
           ⚠️ {error}
-          {error.includes("bucket") && (
-            <span className="ml-2 underline font-bold">Tip: Go to Supabase {" > "} Storage and create a public bucket named 'banners'.</span>
-          )}
         </div>
       )}
 
-      {isPreviewMode ? (
-        <div className="space-y-6">
-          <div className="flex items-center justify-center gap-4 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-2xl border border-gray-100 dark:border-gray-800">
-             <button onClick={() => setPreviewDevice("desktop")} className={`p-2 rounded-lg ${previewDevice === "desktop" ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600" : "text-gray-400"}`}><Monitor className="h-5 w-5" /></button>
-             <button onClick={() => setPreviewDevice("mobile")} className={`p-2 rounded-lg ${previewDevice === "mobile" ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600" : "text-gray-400"}`}><Phone className="h-5 w-5" /></button>
-          </div>
-
-          <div className={`mx-auto bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden transition-all duration-500 ${previewDevice === "mobile" ? "max-w-[375px]" : "max-w-full"}`}>
-             {bannerUrl && <img src={bannerUrl} alt="Banner" className="w-full aspect-video object-cover" />}
-             <div className="p-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold uppercase tracking-wider">{category.replace("-", " ")}</span>
-                  <span className="text-gray-400 text-xs">{new Date().toLocaleDateString("en-IN")}</span>
-                </div>
-                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6 leading-tight">{title || "Your Blog Title Will Appear Here"}</h1>
-                <div className="prose prose-indigo dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: blogContent || "<p className='text-gray-400 italic'>No content written yet...</p>" }} />
-                {links.length > 0 && links[0].url && (
-                   <div className="mt-10 pt-8 border-t border-gray-100 dark:border-gray-800">
-                      <h4 className="font-bold text-gray-900 dark:text-white mb-4">Important Links</h4>
-                      <div className="flex flex-wrap gap-3">
-                         {links.filter(l => l.url).map((l, i) => (
-                            <a key={i} href={l.url} target="_blank" className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md shadow-indigo-600/20">{l.label}</a>
-                         ))}
-                      </div>
-                   </div>
-                )}
-             </div>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {category !== 'news' && (
-            <SectionCard icon={<Zap className="h-5 w-5" />} title="Job Quick Highlights">
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
-                  <Field label="Application Fee">
-                     <input type="text" value={appFee} onChange={e => setAppFee(e.target.value)} placeholder="e.g., Gen: 500, SC/ST: 0" className={inputCls} />
-                  </Field>
-                  <Field label="Age Limit">
-                     <input type="text" value={ageLimit} onChange={e => setAgeLimit(e.target.value)} placeholder="e.g., 18-27 Years" className={inputCls} />
-                  </Field>
-                  <Field label="Education">
-                     <input type="text" value={education} onChange={e => setEducation(e.target.value)} placeholder="e.g., 10th / Graduate" className={inputCls} />
-                  </Field>
-                  <Field label="Total Posts">
-                     <input type="text" value={totalPosts} onChange={e => setTotalPosts(e.target.value)} placeholder="e.g., 1500 Posts" className={inputCls} />
-                  </Field>
-               </div>
-               <button 
-                  type="button"
-                  onClick={generateJobTable}
-                  className="w-full py-3 border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all flex items-center justify-center gap-2"
-               >
-                  <TableIcon className="h-4 w-4" /> Generate & Insert Table into Editor
-               </button>
-            </SectionCard>
-          )}
-
-          <SectionCard icon={<Briefcase className="h-5 w-5" />} title="Basic Information">
+      {/* ── Studio Layout: Split Screen ── */}
+      <div className="flex flex-col xl:flex-row gap-8 items-start">
+        
+        {/* Left Column: Form Editor */}
+        <div className="flex-1 w-full space-y-6">
+          
+          <SectionCard icon={<Briefcase className="h-5 w-5" />} title="Basic Details">
             <div className="space-y-5">
-              <Field label="Blog / Job Title" required>
-                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., SSC CGL 2026 Notification Out" className={`${inputCls} text-lg font-medium border-indigo-100 dark:border-indigo-900 focus:border-indigo-500`} />
+              <Field label="Post Title" required>
+                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., SSC CGL 2026 Notification Out" className={`${inputCls} text-lg font-semibold bg-gray-50 dark:bg-zinc-900`} />
               </Field>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <Field label="Category" required>
-                  <select value={category} onChange={e => setCategory(e.target.value)} className={selectCls}>
+                  <select value={category} onChange={e => setCategory(e.target.value)} className={`${selectCls} bg-gray-50 dark:bg-zinc-900`}>
                     {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </Field>
@@ -493,175 +436,237 @@ export default function NewJobPage() {
                     value={userRole === 'content_writer' ? "pending_approval" : status} 
                     onChange={e => setStatus(e.target.value)} 
                     disabled={userRole === 'content_writer'}
-                    className={`${selectCls} ${userRole === 'content_writer' ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    className={`${selectCls} bg-gray-50 dark:bg-zinc-900 ${userRole === 'content_writer' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {userRole === 'content_writer' 
-                      ? <option value="pending_approval">🛡️ Pending Approval (Sent to Admin)</option>
+                      ? <option value="pending_approval">🛡️ Pending Approval</option>
                       : STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)
                     }
                   </select>
                 </Field>
                 {category !== "news" && (
-                  <Field label="Last Date (Optional)">
+                  <Field label="Last Date">
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                      <input type="text" value={lastDate} onChange={e => setLastDate(e.target.value)} placeholder="e.g., 20-Oct-2026" className={`${inputCls} pl-9`} />
+                      <input type="text" value={lastDate} onChange={e => setLastDate(e.target.value)} placeholder="e.g., 20-Oct-2026" className={`${inputCls} pl-9 bg-gray-50 dark:bg-zinc-900`} />
                     </div>
                   </Field>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Field label="State / Region">
-                  <select value={stateCode} onChange={e => setStateCode(e.target.value)} className={selectCls}>
+                  <select value={stateCode} onChange={e => setStateCode(e.target.value)} className={`${selectCls} bg-gray-50 dark:bg-zinc-900`}>
                     {INDIAN_STATES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </Field>
-                <Field label="Tag">
-                  <select value={tag} onChange={e => setTag(e.target.value)} className={selectCls}>
+                <Field label="Badge / Tag">
+                  <select value={tag} onChange={e => setTag(e.target.value)} className={`${selectCls} bg-gray-50 dark:bg-zinc-900`}>
                     {TAGS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </Field>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                 <Field label="Short Description (Card par dikhega)">
-                    <textarea rows={2} value={shortInfo} onChange={e => setShortInfo(e.target.value)} placeholder="Short summary for the homepage card..." className={inputCls} />
-                 </Field>
-                 <Field label="Meta Description (SEO ke liye)">
-                    <textarea rows={2} value={metaDesc} onChange={e => setMetaDesc(e.target.value)} maxLength={160} placeholder="Max 160 characters..." className={inputCls} />
-                 </Field>
+              
+              {/* Smart SEO Section */}
+              <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl mt-6">
+                <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-400 flex items-center gap-2 mb-4"><Sparkles className="w-4 h-4" /> SEO & Meta Data</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <Field label="Short Summary (Homepage Card)">
+                    <textarea rows={2} value={shortInfo} onChange={e => setShortInfo(e.target.value)} placeholder="Short engaging summary..." className={`${inputCls} bg-white dark:bg-zinc-900`} />
+                  </Field>
+                  <Field label="Meta Description (Google Search)">
+                    <textarea rows={2} value={metaDesc} onChange={e => setMetaDesc(e.target.value)} maxLength={160} placeholder="AI automatically uses this for Google ranking..." className={`${inputCls} bg-white dark:bg-zinc-900`} />
+                  </Field>
+                </div>
               </div>
             </div>
           </SectionCard>
 
-          <SectionCard icon={<FileText className="h-5 w-5" />} title="Blog Content">
-            <div className="mb-5">
-              <Field label="Featured / Banner Image">
-                <div className="flex flex-col gap-3">
-                  {/* Auto-Generate Button */}
-                  <div className="flex items-center gap-3">
-                    <BannerGenerator
-                      title={title}
-                      lastDate={lastDate}
-                      appFee={appFee}
-                      totalPosts={totalPosts}
-                      category={category}
-                      onBannerGenerated={(url) => setBannerUrl(url)}
-                    />
-                    <span className="text-xs text-gray-400 font-medium">ya neeche manually upload karein</span>
-                  </div>
+          {category !== 'news' && (
+            <SectionCard icon={<Zap className="h-5 w-5" />} title="Quick Highlights">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
+                  <Field label="Application Fee">
+                     <input type="text" value={appFee} onChange={e => setAppFee(e.target.value)} placeholder="e.g., Gen: 500" className={`${inputCls} bg-gray-50 dark:bg-zinc-900`} />
+                  </Field>
+                  <Field label="Age Limit">
+                     <input type="text" value={ageLimit} onChange={e => setAgeLimit(e.target.value)} placeholder="e.g., 18-27 Yrs" className={`${inputCls} bg-gray-50 dark:bg-zinc-900`} />
+                  </Field>
+                  <Field label="Education">
+                     <input type="text" value={education} onChange={e => setEducation(e.target.value)} placeholder="e.g., 10th Pass" className={`${inputCls} bg-gray-50 dark:bg-zinc-900`} />
+                  </Field>
+                  <Field label="Total Posts">
+                     <input type="text" value={totalPosts} onChange={e => setTotalPosts(e.target.value)} placeholder="e.g., 1500 Posts" className={`${inputCls} bg-gray-50 dark:bg-zinc-900`} />
+                  </Field>
+               </div>
+               <button 
+                  type="button"
+                  onClick={generateJobTable}
+                  className="w-full py-2.5 border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all flex items-center justify-center gap-2"
+               >
+                  <TableIcon className="h-4 w-4" /> Insert Highlights Table into Editor
+               </button>
+            </SectionCard>
+          )}
 
-                  {/* Manual URL / Upload */}
+          <SectionCard icon={<FileText className="h-5 w-5" />} title="Article Content">
+            <div className="mb-6">
+              <Field label="Featured Banner">
+                <div className="flex flex-col gap-3 mt-2">
                   <div className="flex flex-col md:flex-row gap-4 items-start">
                     <div className="flex-1 w-full">
                       <div className="relative">
-                        <input type="url" value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="Paste image URL or upload →" className={`${inputCls} pr-12`} />
-                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors">
-                          <UploadCloud className="h-5 w-5" />
+                        <input type="url" value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="Paste image URL or upload →" className={`${inputCls} pr-12 bg-gray-50 dark:bg-zinc-900`} />
+                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-zinc-800 shadow-sm border border-gray-200 dark:border-zinc-700 text-indigo-600 dark:text-indigo-400 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors">
+                          <UploadCloud className="h-4 w-4" />
                           <input type="file" className="hidden" accept="image/*" onChange={handleBannerUpload} />
                         </label>
                       </div>
-                      <p className="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-tight">Recommended: 1200x630</p>
-                    </div>
-                    {bannerUrl && (
-                      <div className="h-24 w-44 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
-                        <img src={bannerUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                      <div className="mt-3">
+                        <BannerGenerator
+                          title={title} lastDate={lastDate} appFee={appFee}
+                          totalPosts={totalPosts} category={category}
+                          onBannerGenerated={(url) => setBannerUrl(url)}
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </Field>
             </div>
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Detailed Article Content</label>
-                <div className="flex items-center gap-2">
-                  <div className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-1 rounded uppercase font-bold">Rich Text Enabled</div>
-                  <button 
-                    type="button" 
-                    onClick={handleGenerateBlog} 
-                    disabled={isGeneratingBlog}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold rounded-lg shadow-md transition-all disabled:opacity-50"
-                  >
-                    {isGeneratingBlog ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {isGeneratingBlog ? "AI is Writing..." : "Auto-Generate SEO Blog"}
-                  </button>
-                </div>
+            
+            <div className="border border-indigo-100 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-sm relative bg-white dark:bg-[#000000]">
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 px-4 py-3">
+                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rich Text Editor</span>
+                <button 
+                  type="button" 
+                  onClick={handleGenerateBlog} 
+                  disabled={isGeneratingBlog}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all disabled:opacity-50"
+                >
+                  {isGeneratingBlog ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                  {isGeneratingBlog ? "AI Writing..." : "AI Auto-Write Blog"}
+                </button>
               </div>
-              <div className="border border-indigo-100 dark:border-indigo-900/50 rounded-2xl overflow-hidden shadow-sm relative">
-                {isGeneratingBlog && (
-                  <div className="absolute inset-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-2" />
-                    <p className="text-indigo-800 dark:text-indigo-200 font-bold animate-pulse">Writing 800+ word SEO optimized content...</p>
-                  </div>
-                )}
-                <div className="bg-indigo-50/50 dark:bg-indigo-900/20 p-3 border-b border-indigo-50 dark:border-indigo-900/30 text-xs text-indigo-800 dark:text-indigo-300 font-medium flex items-center gap-2">
-                  <Wand2 className="h-3.5 w-3.5" />
-                  Tip: Copy content from ChatGPT/Word and paste directly.
+              
+              {isGeneratingBlog && (
+                <div className="absolute inset-0 bg-white/80 dark:bg-[#000000]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
+                  <p className="text-indigo-900 dark:text-indigo-200 font-bold animate-pulse text-sm">Generating SEO Optimized Content...</p>
                 </div>
-                <RichTextEditor value={blogContent} onChange={setBlogContent} placeholder="Yahan apna blog likhna shuru karein..." />
+              )}
+              <div className="bg-white dark:bg-zinc-950">
+                <RichTextEditor value={blogContent} onChange={setBlogContent} placeholder="Write the full notification details here..." />
               </div>
             </div>
           </SectionCard>
 
           <SectionCard icon={<LinkIcon className="h-5 w-5" />} title="Important Links">
-            <div className="mb-6 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/50 rounded-xl">
-              <label className="block text-sm font-bold text-indigo-800 dark:text-indigo-400 mb-2">
-                Custom "Apply For Me" Link (Optional)
+            <div className="mb-6 p-4 bg-yellow-50 dark:bg-amber-900/10 border border-yellow-200 dark:border-amber-900/30 rounded-2xl">
+              <label className="block text-sm font-bold text-yellow-900 dark:text-amber-500 mb-2">
+                "Apply For Me" Target URL (Optional)
               </label>
               <input 
                 type="url" 
                 value={applyForMeLink} 
                 onChange={e => setApplyForMeLink(e.target.value)} 
-                placeholder="e.g., https://rzp.io/l/apply-ssc-cgl" 
-                className={`${inputCls} border-indigo-200 focus:border-indigo-500 bg-white dark:bg-gray-900`} 
+                placeholder="https://payment-link.com/..." 
+                className={`${inputCls} border-yellow-200 focus:border-yellow-500 bg-white dark:bg-zinc-900`} 
               />
-              <p className="text-xs text-indigo-600 dark:text-indigo-500 mt-1">If filled, the orange banner on the blog will redirect here instead of the default page.</p>
+              <p className="text-xs text-yellow-700 dark:text-amber-600/70 mt-1.5 font-medium">Overwrites the default service page link for this specific job.</p>
             </div>
             
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Regular Links (Table)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Application & PDF Links</label>
               {links.map((l, i) => {
                 const isNotificationRow = l.label.toLowerCase().includes("notification") || l.label.toLowerCase().includes("pdf");
                 const isThisUploading = uploadingPdfIndex === i;
                 return (
-                  <div key={i} className="flex gap-3 group animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${i * 50}ms` }}>
-                    <div className="relative flex-1">
-                      <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-indigo-300 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="Label" className={`${inputCls} flex-1 pl-4 group-hover:pl-9 transition-all`} />
-                    </div>
-                    <div className="relative flex-1 flex items-center">
+                  <div key={i} className="flex gap-3 items-center">
+                    <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="e.g. Apply Online" className={`${inputCls} flex-1 bg-gray-50 dark:bg-zinc-900`} />
+                    <div className="relative flex-[1.5] flex items-center">
                       <input 
                         type="url" 
                         value={isThisUploading ? "Uploading PDF..." : l.url} 
                         onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} 
                         disabled={isThisUploading}
-                        placeholder="URL (or upload PDF →)" 
-                        className={`${inputCls} pr-12 ${isThisUploading ? "bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 font-semibold" : ""}`} 
+                        placeholder="https://..." 
+                        className={`${inputCls} pr-12 bg-gray-50 dark:bg-zinc-900 ${isThisUploading ? "opacity-70 text-indigo-500" : ""}`} 
                       />
-                      {isThisUploading ? (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <Loader2 className="h-4 w-4 animate-spin text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                      ) : (
-                        isNotificationRow && (
-                          <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 rounded-lg cursor-pointer transition-colors" title="Upload PDF to your server">
-                            <UploadCloud className="h-4 w-4" />
-                            <input type="file" className="hidden" accept="application/pdf" onChange={(e) => handleNotificationPdfUpload(e, i)} />
-                          </label>
-                        )
+                      {isNotificationRow && !isThisUploading && (
+                        <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-indigo-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors" title="Upload Official PDF">
+                          <UploadCloud className="h-4 w-4" />
+                          <input type="file" className="hidden" accept="application/pdf" onChange={(e) => handleNotificationPdfUpload(e, i)} />
+                        </label>
                       )}
+                      {isThisUploading && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-indigo-500" />}
                     </div>
-                    <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
+                    <button type="button" onClick={() => setLinks(links.filter((_, idx) => idx !== i))} className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"><Trash2 className="h-5 w-5" /></button>
                   </div>
                 );
               })}
-              <button type="button" onClick={() => setLinks([...links, { label: "", url: "" }])} className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 mt-4 p-2 rounded-lg hover:bg-indigo-50 transition-colors w-fit">
-                <PlusCircle className="h-4 w-4" /> Add Another Link
+              <button type="button" onClick={() => setLinks([...links, { label: "", url: "" }])} className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2 mt-4 px-3 py-2 rounded-lg transition-colors w-fit border border-indigo-100 dark:border-indigo-900/50">
+                <PlusCircle className="h-4 w-4" /> Add Link
               </button>
             </div>
           </SectionCard>
         </div>
-      )}
+
+        {/* Right Column: Live Mobile Preview (Sticky) */}
+        <div className="hidden xl:block w-[420px] shrink-0 sticky top-28 h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar">
+          <div className="bg-[#000000] border-4 border-gray-800 dark:border-zinc-800 rounded-[2.5rem] shadow-2xl overflow-hidden relative w-full pb-10">
+            {/* Dynamic Island / Notch Mock */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-800 dark:bg-zinc-800 rounded-b-2xl z-20"></div>
+            
+            <div className="h-full bg-gray-50 dark:bg-[#000000] overflow-y-auto pt-6">
+              {/* Preview Header */}
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-zinc-900 bg-white dark:bg-[#000000] sticky top-0 z-10 flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-400">Rojgar Suvidha</span>
+                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full animate-pulse">Live Preview</span>
+              </div>
+              
+              {/* Preview Content */}
+              <div>
+                {bannerUrl ? (
+                  <img src={bannerUrl} alt="Banner" className="w-full aspect-video object-cover" />
+                ) : (
+                  <div className="w-full aspect-video bg-gray-200 dark:bg-zinc-900 flex items-center justify-center text-gray-400 text-xs font-bold">Image Placeholder</div>
+                )}
+                <div className="p-5">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md text-[10px] font-extrabold uppercase tracking-wider">{category.replace("-", " ")}</span>
+                    {tag && <span className="px-2.5 py-1 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-md text-[10px] font-extrabold uppercase tracking-wider">{tag}</span>}
+                  </div>
+                  <h1 className="text-xl font-black text-gray-900 dark:text-white leading-snug mb-4">{title || "Your Job Title Will Appear Here"}</h1>
+                  
+                  {/* Highlights Mock */}
+                  {(appFee || ageLimit || education || lastDate) && (
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 p-3 mb-6 grid grid-cols-2 gap-3 text-xs">
+                      {lastDate && <div><span className="text-gray-400 block mb-0.5">Last Date</span><span className="font-bold text-gray-900 dark:text-white">{lastDate}</span></div>}
+                      {appFee && <div><span className="text-gray-400 block mb-0.5">Fee</span><span className="font-bold text-gray-900 dark:text-white">{appFee}</span></div>}
+                      {ageLimit && <div><span className="text-gray-400 block mb-0.5">Age</span><span className="font-bold text-gray-900 dark:text-white">{ageLimit}</span></div>}
+                      {education && <div><span className="text-gray-400 block mb-0.5">Eligibility</span><span className="font-bold text-gray-900 dark:text-white">{education}</span></div>}
+                    </div>
+                  )}
+
+                  {/* HTML Content Render */}
+                  <div className="prose prose-sm prose-indigo dark:prose-invert max-w-none text-gray-700 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: blogContent || "<p class='text-gray-400 italic text-sm'>Article content will appear here. Start typing on the left!</p>" }} />
+                  
+                  {/* Links Mock */}
+                  {links.filter(l => l.url && l.label).length > 0 && (
+                     <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800">
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white mb-3">Important Links</h4>
+                        <div className="flex flex-col gap-2">
+                           {links.filter(l => l.url && l.label).map((l, i) => (
+                              <div key={i} className="px-4 py-2.5 bg-indigo-50 dark:bg-zinc-900 text-indigo-700 dark:text-indigo-400 rounded-lg text-xs font-bold text-center border border-indigo-100 dark:border-zinc-800">{l.label}</div>
+                           ))}
+                        </div>
+                     </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
