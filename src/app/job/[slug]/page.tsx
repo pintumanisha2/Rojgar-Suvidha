@@ -205,23 +205,39 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
   // 3. JobPosting Schema (SEO - Google Jobs integration)
   let lastDate = "";
+  let lastDateIso = "";
   if (job.important_dates && job.important_dates.length > 0) {
     const ldObj = job.important_dates.find((d: any) => d.label === "Last Date");
-    if (ldObj) lastDate = ldObj.value;
+    if (ldObj && ldObj.value) {
+      lastDate = ldObj.value;
+      if (!lastDate.toLowerCase().includes("soon")) {
+        // Try to parse standard dates, fallback to string if invalid
+        try {
+          const d = new Date(lastDate);
+          if (!isNaN(d.getTime())) lastDateIso = d.toISOString();
+        } catch (e) {}
+      }
+    }
   }
+
+  // Ensure description is HTML or clean text for Google Jobs
+  const jobDescriptionHTML = job.content 
+    ? job.content 
+    : `<p>${job.meta_description || job.short_info || `Apply for ${job.title}`}</p>`;
   
   const jobPostingSchema = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
-    description: job.meta_description || job.short_info || `Apply for ${job.title}`,
-    datePosted: job.created_at,
-    ...(lastDate && { validThrough: lastDate }),
-    employmentType: "FULL_TIME",
+    description: jobDescriptionHTML,
+    datePosted: new Date(job.created_at).toISOString(),
+    ...(lastDateIso && { validThrough: lastDateIso }),
+    employmentType: job.employment_type || "FULL_TIME",
     hiringOrganization: {
       "@type": "Organization",
-      name: "Government of India",
-      sameAs: BASE_URL,
+      name: job.organization_name || "Government of India",
+      sameAs: job.organization_url || BASE_URL,
+      logo: `${BASE_URL}/logo-blue.png`
     },
     jobLocation: {
       "@type": "Place",
@@ -231,6 +247,17 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
         addressRegion: job.state_code || "India",
       },
     },
+    ...(job.salary && {
+      baseSalary: {
+        "@type": "MonetaryAmount",
+        currency: "INR",
+        value: {
+          "@type": "QuantitativeValue",
+          value: job.salary,
+          unitText: "MONTH"
+        }
+      }
+    }),
     applicantLocationRequirements: {
       "@type": "Country",
       name: "India",
