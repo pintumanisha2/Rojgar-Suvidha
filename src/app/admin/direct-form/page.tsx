@@ -65,6 +65,20 @@ export default function AdminDirectFormPage() {
     });
   };
 
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    const { error } = await supabase
+      .from("custom_forms")
+      .update({ status: newStatus })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to update status: " + error.message);
+    } else {
+      toast.success(`Form status updated to ${newStatus}`);
+      setForms(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));
+    }
+  };
+
   const filtered = forms.filter(f =>
     !search || f.title?.toLowerCase().includes(search.toLowerCase())
   );
@@ -142,6 +156,26 @@ export default function AdminDirectFormPage() {
                     {submissionCounts[row.id] ?? "…"} submissions
                   </span>
                 </div>
+              </div>
+
+              {/* Status Select dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status:</span>
+                <select
+                  value={row.status || "active"}
+                  onChange={e => handleStatusChange(row.id, e.target.value)}
+                  className={`text-xs font-bold px-2 py-1 rounded-lg border outline-none cursor-pointer transition-colors ${
+                    row.status === "active" 
+                      ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400" 
+                      : row.status === "closed"
+                      ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400"
+                      : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400"
+                  }`}
+                >
+                  <option value="active" className="text-gray-900 dark:text-white">Active</option>
+                  <option value="closed" className="text-gray-900 dark:text-white">Closed</option>
+                  <option value="coming_soon" className="text-gray-900 dark:text-white">Coming Soon</option>
+                </select>
               </div>
 
               {/* Documents chips */}
