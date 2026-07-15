@@ -116,7 +116,7 @@ export default async function Home() {
   const initialBanners = await getBanners();
 
   return (
-    <div className="flex-1 bg-gray-50 dark:bg-gray-950">
+    <div className="flex-1 bg-gray-50 dark:bg-[#000000]">
       {/* JSON-LD for Homepage SEO + AEO */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageFaqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
@@ -170,7 +170,7 @@ export default async function Home() {
       <EmailAlertBanner />
 
       {/* SEO Content Block for Home Page */}
-      <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+      <div className="bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
           <div className="prose dark:prose-invert max-w-none prose-indigo prose-headings:font-extrabold prose-h2:text-2xl md:prose-h2:text-3xl prose-p:text-gray-600 dark:prose-p:text-gray-400">
             <h2>Welcome to Rojgar Suvidha: India's No. 1 Portal for Sarkari Naukri & Government Jobs 2025</h2>
@@ -212,19 +212,19 @@ export default async function Home() {
 
             <h3>Frequently Asked Questions (FAQs)</h3>
             <div className="space-y-4 not-prose mt-6">
-              <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q1. Is Rojgar Suvidha completely free to use?</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yes, accessing job notifications, downloading admit cards, and checking results on Rojgar Suvidha is 100% free. A service charge of <strong className="text-indigo-600">₹50 (Fifty Rupees) per application</strong> applies only for our premium &quot;Apply For Me&quot; form-filling assistance service.</p>
               </div>
-              <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q2. How accurate are the job notifications here?</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">We maintain strict editorial standards. Every job posted is verified directly from official government portals, employment newspapers (Rojgar Samachar), and official press releases.</p>
               </div>
-              <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q3. What is the &quot;Apply For Me&quot; feature and how much does it cost?</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">It is an expert form-filling service. You upload your documents, and our trained team fills and submits your government job application accurately. <strong className="text-indigo-600">Service charge: ₹50 INR per application</strong> (non-refundable). The official government exam fee is paid separately.</p>
               </div>
-              <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q4. How do I get daily job updates?</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">You can join our active Telegram channel and WhatsApp group by clicking the floating buttons on your screen to receive instant alerts right on your phone.</p>
               </div>

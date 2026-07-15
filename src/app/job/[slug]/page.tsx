@@ -311,7 +311,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
       <JobAbandonTracker jobTitle={job.title} jobSlug={job.slug} />
 
-      <div className="bg-gray-50 dark:bg-gray-950 min-h-screen py-8 px-4">
+      <div className="bg-gray-50 dark:bg-[#000000] min-h-screen py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
           
           {/* Semantic Breadcrumb (SEO + accessibility) */}
@@ -324,7 +324,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           </nav>
 
           {/* 1. Header Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
             
             <div className="relative z-10">
@@ -335,7 +335,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                   </span>
                   <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{job.category.replace("-", " ")}</span>
                 </div>
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-zinc-800">
                   <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
                 </div>
               </div>
@@ -348,7 +348,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 </p>
               )}
               {job.important_dates && job.important_dates.length > 0 && (
-                 <p className="text-xs text-gray-500 font-bold bg-gray-50 dark:bg-gray-800 inline-block px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700">
+                 <p className="text-xs text-gray-500 font-bold bg-gray-50 dark:bg-zinc-900 inline-block px-3 py-1 rounded-full border border-gray-200 dark:border-zinc-800">
                     Last Updated: {new Date(job.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                  </p>
               )}
@@ -357,7 +357,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
           {/* 2. Job Banner (Thumbnail) */}
           {job.banner_url && (
-            <div className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm bg-gray-50 dark:bg-gray-900 mb-6">
+            <div className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-zinc-900 shadow-sm bg-gray-50 dark:bg-zinc-950 mb-6">
               <img 
                 src={job.banner_url} 
                 alt={job.title} 
@@ -367,7 +367,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           )}
 
           {/* 3. Blog Post Content Area (Primary Details / Tables) */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 sm:p-8 shadow-sm">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-4 sm:p-8 shadow-sm">
              <style>{`
               .blog-content { line-height: 1.75; color: #374151; font-size: 15px; }
               .dark .blog-content { color: #d1d5db; }
@@ -390,9 +390,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 .blog-content th, .blog-content td { padding: 12px 14px; font-size: 14px; }
               }
               .blog-content th { background-color: #4f46e5; color: white; font-weight: 700; }
-              .dark .blog-content table, .dark .blog-content th, .dark .blog-content td { border-color: #374151; }
-              .dark .blog-content th { background-color: #3730a3; }
-              .dark .blog-content td { background-color: #111827; color: #d1d5db; }
+              .dark .blog-content table, .dark .blog-content th, .dark .blog-content td { border-color: #18181b; }
+              .dark .blog-content th { background-color: #1e1b4b; }
+              .dark .blog-content td { background-color: #000000; color: #d1d5db; }
               /* ── Hide AI-generated Table of Contents ── */
               .blog-content div[style*='background:#f9fafb'],
               .blog-content div[style*="background:#f9fafb"],
@@ -424,31 +424,35 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
           {/* 4. Promo Banner ("Apply For Me" service callout) */}
           {(() => {
-            // Find custom Apply For Me link
             const customApplyLink = job.links?.find((l: any) => l.label.toLowerCase().includes('apply for me'))?.url;
             return (
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 shadow-lg shadow-orange-500/20 text-white flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 p-3 rounded-xl shrink-0">
-                    <UploadCloud className="w-8 h-8 text-white" />
+              <div className="relative rounded-2xl overflow-hidden mt-8 shadow-2xl shadow-orange-500/10 border border-orange-200/50 dark:border-orange-900/50">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-rose-600 dark:from-orange-600 dark:to-rose-800 opacity-95"></div>
+                <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                  
+                  <div className="flex items-center gap-5 w-full sm:w-auto">
+                    <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl shrink-0 shadow-inner">
+                      <UploadCloud className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white mb-1 tracking-wide">Form Bharne Ka Time Nahi?</h3>
+                      <p className="text-orange-100 text-sm font-medium">Upload documents & let our expert team safely apply for you.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold mb-1">Form Bharne Ka Time Nahi?</h3>
-                    <p className="text-orange-100 text-sm">Upload documents and let our experts apply 100% safely.</p>
-                  </div>
+                  
+                  {customApplyLink ? (
+                    <Link href={customApplyLink} target={customApplyLink.startsWith("http") ? "_blank" : "_self"} className="shrink-0 w-full sm:w-auto text-center bg-white text-orange-600 hover:scale-105 hover:bg-orange-50 px-8 py-4 rounded-xl font-black shadow-xl transition-all duration-300">
+                      Apply For Me Now →
+                    </Link>
+                  ) : (
+                    <span 
+                      title="Special 'Apply For Me' service for this job will be activated soon. Stay tuned!"
+                      className="shrink-0 w-full sm:w-auto text-center bg-white/20 text-white px-8 py-4 rounded-xl font-bold border border-white/30 cursor-not-allowed"
+                    >
+                      Coming Soon
+                    </span>
+                  )}
                 </div>
-                {customApplyLink ? (
-                  <Link href={customApplyLink} target={customApplyLink.startsWith("http") ? "_blank" : "_self"} className="shrink-0 bg-white text-orange-600 hover:bg-orange-50 px-6 py-3 rounded-xl font-bold shadow-md transition-all">
-                    Apply For Me
-                  </Link>
-                ) : (
-                  <span 
-                    title="Special 'Apply For Me' service for this job will be activated soon. Stay tuned!"
-                    className="shrink-0 bg-white/20 text-white px-6 py-3 rounded-xl font-bold shadow-sm border border-white/30 cursor-not-allowed"
-                  >
-                    Coming Soon
-                  </span>
-                )}
               </div>
             );
           })()}
@@ -457,7 +461,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           <AgeCalculator />
 
           {/* 6. Viral Share Module */}
-          <div className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+          <div className="bg-white dark:bg-zinc-950 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-[#25D366] to-[#0088cc]"></div>
             <div>
               <h3 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
@@ -499,13 +503,13 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {similarJobs.map((simJob: any) => (
-                  <Link href={`/job/${simJob.slug}`} key={simJob.slug} className="group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700/50 flex flex-col justify-between">
+                  <Link href={`/job/${simJob.slug}`} key={simJob.slug} className="group bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-900 rounded-2xl p-4 hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700/50 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
                           {simJob.category}
                         </span>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-zinc-900 px-2 py-0.5 rounded-md">
                           {simJob.status}
                         </span>
                       </div>
@@ -526,8 +530,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           )}
 
           {/* 5. Important Links */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
-            <div className="bg-indigo-50 dark:bg-gray-800/50 px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 overflow-hidden shadow-sm">
+            <div className="bg-indigo-50 dark:bg-zinc-900/50 px-5 py-4 border-b border-gray-200 dark:border-zinc-900 flex items-center gap-2">
               <LinkIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <h2 className="font-bold text-gray-900 dark:text-white">Important Links</h2>
             </div>
@@ -539,7 +543,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                   <a href={link.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto ${
                     link.label.toLowerCase().includes('apply') || link.label.toLowerCase().includes('online') 
                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      : 'bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}>
                     {link.label.toLowerCase().includes('apply') ? 'Click Here' : <LinkIcon className="w-4 h-4" />}
                   </a>

@@ -74,13 +74,13 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
   // Loading skeleton
   if (loading) {
     return (
-      <div className="w-full bg-white dark:bg-gray-950 px-3 sm:px-4 py-3">
+      <div className="w-full bg-white dark:bg-[#000000] px-3 sm:px-4 py-3">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
-            <div className="sm:col-span-2 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse h-[140px] sm:h-[200px]" />
+            <div className="sm:col-span-2 rounded-2xl bg-gray-100 dark:bg-zinc-900 animate-pulse h-[140px] sm:h-[200px]" />
             <div className="hidden sm:flex flex-col gap-3">
-              <div className="flex-1 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-              <div className="flex-1 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              <div className="flex-1 rounded-2xl bg-gray-100 dark:bg-zinc-900 animate-pulse" />
+              <div className="flex-1 rounded-2xl bg-gray-100 dark:bg-zinc-900 animate-pulse" />
             </div>
           </div>
         </div>
@@ -97,13 +97,13 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
 
   return (
     <>
-    <div className="w-full bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 px-3 sm:px-4 py-3">
+    <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-3">
       <div className="max-w-7xl mx-auto">
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
 
           {/* Main Banner - fully clickable */}
-          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer h-[140px] sm:h-[200px]">
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 h-[140px] sm:h-[200px]">
             {/* Wrap entire banner in Link if link_url exists */}
             {main.link_url ? (
               <Link href={main.link_url} className="absolute inset-0 z-10" aria-label={main.title} />
@@ -230,7 +230,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
     </div>
 
     {/* ── Mobile Quick Nav (only on phones, hidden on sm+) ── */}
-    <div className="sm:hidden bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+    <div className="sm:hidden bg-white dark:bg-zinc-950 border-b border-gray-100 dark:border-zinc-900">
       <div className="flex items-center justify-between px-3 pt-2 pb-1">
         <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Job categories</span>
         <Link href="/latest-jobs" className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">All Jobs →</Link>
@@ -246,7 +246,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
                 window.scrollTo({ top, behavior: "smooth" });
               }
             }}
-            className="flex-shrink-0 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/40 dark:hover:text-indigo-300 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all active:scale-95"
+            className="flex-shrink-0 bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-indigo-100 hover:text-indigo-700 dark:hover:bg-indigo-900/40 dark:hover:text-indigo-300 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all active:scale-95"
           >
             {cat.label}
           </button>
