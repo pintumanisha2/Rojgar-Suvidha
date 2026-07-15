@@ -90,9 +90,10 @@ export default function AdminPaymentsPage() {
   });
 
   const statusStyles: Record<string, string> = {
-    paid: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    free: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    paid: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50",
+    completed: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50",
+    free: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50",
+    pending: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50",
   };
 
   return (
@@ -105,7 +106,7 @@ export default function AdminPaymentsPage() {
           </h2>
           <p className="text-sm text-gray-500 mt-1">All payments from user applications</p>
         </div>
-        <button onClick={exportCSV} className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 text-gray-700 dark:text-gray-300 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors">
+        <button onClick={exportCSV} className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 text-gray-700 dark:text-gray-300 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-colors">
           <Download className="h-5 w-5" /> Export CSV
         </button>
       </div>
@@ -118,7 +119,7 @@ export default function AdminPaymentsPage() {
           { label: "Total Applications", value: payments.length, icon: FileText, color: "#f59e0b", sub: `${freeCount} free submissions` },
           { label: "Coupons Used", value: couponUsed, icon: CreditCard, color: "#8b5cf6", sub: `${Math.round((couponUsed/payments.length||0)*100)}% of applications` },
         ].map(({ label, value, icon: Icon, color, sub, growth: g }) => (
-          <div key={label} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+          <div key={label} className="bg-white dark:bg-zinc-950 rounded-2xl p-5 border border-gray-100 dark:border-zinc-900 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="p-2 rounded-xl" style={{ backgroundColor: color + "20" }}>
                 <Icon className="w-5 h-5" style={{ color }} />
@@ -138,19 +139,19 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-3">
+      <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-900 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-zinc-900 flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             placeholder="Search by name, phone, tracking ID..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 px-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <div className="flex gap-2">
             {["all", "paid", "free"].map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold capitalize transition-all ${filter === f ? "bg-indigo-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}>
+                className={`px-3 py-2 rounded-xl text-xs font-bold capitalize transition-all ${filter === f ? "bg-indigo-600 text-white" : "bg-gray-100 dark:bg-zinc-900 text-gray-600 dark:text-gray-400"}`}>
                 {f}
               </button>
             ))}
@@ -164,14 +165,14 @@ export default function AdminPaymentsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+              <thead className="bg-gray-50 dark:bg-zinc-950/50 border-b border-gray-100 dark:border-zinc-900">
                 <tr>
                   {["Tracking ID", "Name / Phone", "Amount", "Payment", "App Status", "Coupon", "Date"].map(h => (
                     <th key={h} className="px-4 py-3 text-xs font-bold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-50 dark:divide-zinc-900">
                 {filtered.map(p => (
                   <tr key={p.tracking_id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-3 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{p.tracking_id}</td>

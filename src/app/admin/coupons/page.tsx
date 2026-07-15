@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { PlusCircle, Search, Ticket, Trash2, Loader2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -47,18 +48,20 @@ export default function AdminCouponsPage() {
 
     setSaving(false);
     if (error) {
-      alert("Error: " + error.message);
+      toast.error("Error: " + error.message);
     } else {
       setShowModal(false);
       setCode("");
       setDiscountValue("");
+      toast.success("Coupon created successfully! 🎉");
       fetchCoupons();
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this coupon?")) return;
+    if (!window.confirm("Are you sure you want to delete this coupon?")) return;
     await supabase.from("coupons").delete().eq("id", id);
+    toast.success("Coupon deleted.");
     fetchCoupons();
   };
 
@@ -81,11 +84,11 @@ export default function AdminCouponsPage() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+      <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-900 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-zinc-900">
           <div className="relative max-w-sm">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input type="text" placeholder="Search coupons by code..." className="w-full pl-11 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" placeholder="Search coupons by code..." className="w-full pl-11 pr-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
         </div>
         
@@ -99,7 +102,7 @@ export default function AdminCouponsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+              <thead className="bg-gray-50 dark:bg-zinc-950/50 border-b border-gray-100 dark:border-zinc-900">
                 <tr>
                   <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase">Coupon Code</th>
                   <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase">Discount</th>
@@ -108,7 +111,7 @@ export default function AdminCouponsPage() {
                   <th className="px-5 py-3 text-xs font-bold text-gray-500 uppercase text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-50 dark:divide-zinc-900">
                 {coupons.map((row: any) => (
                   <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-5 py-4 text-sm font-black text-indigo-600 dark:text-indigo-400 tracking-wider">
@@ -143,8 +146,8 @@ export default function AdminCouponsPage() {
       {/* Create Coupon Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800">
-            <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <div className="bg-white dark:bg-zinc-950 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 dark:border-zinc-900">
+            <div className="p-5 border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between">
               <h3 className="font-bold text-lg text-gray-900 dark:text-white">Create New Coupon</h3>
               <button onClick={() => setShowModal(false)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
                 <X className="h-5 w-5" />
@@ -160,7 +163,7 @@ export default function AdminCouponsPage() {
                   onChange={e => setCode(e.target.value.toUpperCase())} 
                   placeholder="e.g. DIWALI50" 
                   required
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-black tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl font-black tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500" 
                 />
               </div>
 
@@ -170,7 +173,7 @@ export default function AdminCouponsPage() {
                   <select 
                     value={discountType} 
                     onChange={e => setDiscountType(e.target.value)} 
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="flat">Flat Amount (₹)</option>
                     <option value="percentage">Percentage (%)</option>
@@ -185,7 +188,7 @@ export default function AdminCouponsPage() {
                     placeholder={discountType === "flat" ? "e.g. 50" : "e.g. 20"} 
                     required
                     min="1"
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500" 
                   />
                 </div>
               </div>
@@ -199,7 +202,7 @@ export default function AdminCouponsPage() {
                   placeholder="How many people can use this?" 
                   required
                   min="1"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" 
                 />
                 <p className="text-xs text-gray-500 mt-1.5">E.g. Set to 100 if only first 100 users get this discount.</p>
               </div>
