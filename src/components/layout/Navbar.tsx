@@ -33,6 +33,7 @@ import {
   Flame,
 } from 'lucide-react';
 import NotificationBell from '@/components/layout/NotificationBell';
+import GlobalSearch from '@/components/ui/GlobalSearch';
 
 const navSections = [
   { name: "Latest Jobs", href: "/latest-jobs", icon: Briefcase, color: "text-indigo-500" },
@@ -102,12 +103,6 @@ export default function Navbar() {
   // State Dropdown Search
   const [stateSearchQuery, setStateSearchQuery] = useState('');
 
-  // Smart Search State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{title: string, slug: string}[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
-  const searchRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const isPrivate = pathname === '/private-jobs';
@@ -225,35 +220,7 @@ export default function Navbar() {
     };
   }, []);
 
-  useEffect(() => {
-    if (isSearchOpen && searchRef.current) {
-      searchRef.current.focus();
-    } else {
-      setSearchQuery('');
-      setSearchResults([]);
-    }
-  }, [isSearchOpen]);
-
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.trim().length >= 2) {
-        setIsSearching(true);
-        const { data } = await supabase
-          .from('jobs')
-          .select('title, slug')
-          .ilike('title', `%${searchQuery}%`)
-          .neq('status', 'draft')
-          .limit(6);
-        
-        setSearchResults(data || []);
-        setIsSearching(false);
-      } else {
-        setSearchResults([]);
-      }
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  // Debounced search logic removed (now handled by GlobalSearch component)
 
   const handleLanguageChange = (lang: { code: string; label: string }) => {
     setSelectedLang(lang);
@@ -441,57 +408,8 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-
-        {/* Search Expandable Bar */}
-        <div className={`overflow-visible transition-all duration-300 bg-indigo-800/95 backdrop-blur-md ${isSearchOpen ? 'py-3' : 'h-0 py-0 opacity-0 pointer-events-none'}`}>
-          <div className="max-w-2xl mx-auto px-4 relative">
-            <div className="relative">
-              <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isSearching ? 'text-yellow-400 animate-pulse' : 'text-indigo-300'}`} />
-              <input
-                ref={searchRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQuery.trim() && searchResults.length > 0) {
-                    setIsSearchOpen(false);
-                    router.push(`/job/${searchResults[0].slug}`);
-                    setSearchQuery('');
-                  }
-                }}
-                placeholder="Search for jobs, states, departments..."
-                className="w-full bg-white/10 border border-white/20 text-white placeholder-indigo-300 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/60 focus:bg-white/15 transition-all"
-              />
-            </div>
-
-            {/* Smart Search Auto-suggestions */}
-            {searchQuery.trim().length >= 2 && (
-              <div className="absolute top-full left-4 right-4 mt-2 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden z-50">
-                {isSearching ? (
-                  <div className="p-4 text-center text-sm text-gray-500">Searching...</div>
-                ) : searchResults.length > 0 ? (
-                  <ul className="divide-y divide-gray-50 dark:divide-gray-800">
-                    {searchResults.map((job) => (
-                      <li key={job.slug}>
-                        <Link 
-                          href={`/job/${job.slug}`}
-                          onClick={() => setIsSearchOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors group"
-                        >
-                          <Search className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 shrink-0" />
-                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 line-clamp-1">{job.title}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="p-4 text-center text-sm text-gray-500">No jobs found matching "{searchQuery}"</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
+        {/* Global Search Modal */}
+        <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         {/* === BOTTOM NAVIGATION BAR === */}
         <div className="hidden sm:block bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

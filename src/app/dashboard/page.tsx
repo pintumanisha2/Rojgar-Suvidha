@@ -13,6 +13,7 @@ import imageCompression from "browser-image-compression";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
 import PrivateApplicationTracker from "@/components/candidate/PrivateApplicationTracker";
 import RatingPrompt from "@/components/ui/RatingPrompt";
+import ProfileStrengthMeter from "@/components/ui/ProfileStrengthMeter";
 
 function DashboardContent() {
   const router = useRouter();
@@ -768,6 +769,9 @@ function DashboardContent() {
           {/* PROFILE TAB */}
           {activeTab === "profile" && (
             <div className="space-y-6">
+
+              {/* ⭐ Gamification Meter */}
+              <ProfileStrengthMeter user={user} profile={profile} avatarUrl={avatarUrl} />
 
               {/* Profile Info Card */}
               <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 md:p-8">

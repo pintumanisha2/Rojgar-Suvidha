@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, Bookmark, UserCircle, MessageSquare, MessageCircle } from "lucide-react";
+import { Home, Briefcase, Bookmark, UserCircle, MessageSquare, MessageCircle, Search } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import GlobalSearch from "@/components/ui/GlobalSearch";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -13,6 +14,7 @@ export default function BottomNav() {
   const lastScrollYRef = useRef(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isCommunityOpen, setIsCommunityOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // FIX: All hooks MUST be called before any conditional return
@@ -126,10 +128,10 @@ export default function BottomNav() {
       activeCheck: isCommunityOpen,
     }] : []),
     {
-      name: "Saved",
-      href: "/saved-jobs",
-      icon: Bookmark,
-      activeCheck: !isChatOpen && !isCommunityOpen && (pathname === "/saved-jobs" || pathname.startsWith("/saved-jobs/")),
+      name: "Search",
+      onClick: () => setIsSearchOpen(true),
+      icon: Search,
+      activeCheck: isSearchOpen,
     },
     {
       name: "Account",
@@ -233,6 +235,9 @@ export default function BottomNav() {
           </div>
         </div>
       </nav>
+
+      {/* Global Search Modal */}
+      <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 }
