@@ -88,11 +88,10 @@ const privateNavSections = [
   }
 ];
 
-export type Role = "super_admin" | "admin" | "govt_manager" | "govt_data_entry" | "private_manager" | "private_data_entry" | "unauthorized";
+export type Role = "super_admin" | "admin" | "govt_manager" | "govt_data_entry" | "private_manager" | "private_data_entry" | "content_writer" | "form_filler" | "unauthorized";
 
 // Function to fetch role from Supabase 'admin_roles' table
 const getRoleFromEmail = async (email: string | null): Promise<Role> => {
-  console.error("DEBUG [getRoleFromEmail]: Querying role for email:", email);
   if (!email) return "unauthorized";
   
   try {
@@ -101,30 +100,20 @@ const getRoleFromEmail = async (email: string | null): Promise<Role> => {
       .select('role, status')
       .eq('email', email)
       .single();
-      
-    if (error) {
-      console.error("DEBUG [getRoleFromEmail]: Supabase query returned error:", error);
-    }
     
-    if (data && data.role) {
-      console.error("DEBUG [getRoleFromEmail]: Found role in DB:", data.role, "status:", data.status);
-      if (data.status === 'Inactive') {
-        return "unauthorized";
-      }
+    if (!error && data?.role) {
+      if (data.status === 'Inactive') return "unauthorized";
       return data.role as Role;
     }
   } catch (err) {
-    console.error("DEBUG [getRoleFromEmail]: Exception during query:", err);
+    // Silent fail — use fallback
   }
   
-  console.error("DEBUG [getRoleFromEmail]: Checking fallbacks for email:", email);
   // Hardcoded fallback for the primary owner just in case table fails
   if (email === "admin@rojgarsuvidha.com" || email === "superadmin@rojgarsuvidha.com") {
-    console.error("DEBUG [getRoleFromEmail]: Fallback matched super_admin");
     return "super_admin";
   }
   
-  console.error("DEBUG [getRoleFromEmail]: Fallback defaulted to unauthorized");
   return "unauthorized";
 };
 
@@ -135,52 +124,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<Role>("unauthorized");
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  // Fix 1.3 — Live Clock
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const tick = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   // Check authentication and fetch role ONCE on mount
   useEffect(() => {
     let mounted = true;
-    console.error("DEBUG [layout mount useEffect]: Triggered");
 
     const initAuth = async () => {
-      console.error("DEBUG [initAuth]: Started");
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.error("DEBUG [initAuth]: getSession resolved, session exists:", session !== null);
         if (!mounted) return;
         
         if (session) {
           const email = session.user.email ?? null;
-          console.error("DEBUG [initAuth]: Email is:", email);
           setAdminEmail(email);
           const fetchedRole = await getRoleFromEmail(email);
-          console.error("DEBUG [initAuth]: Role is:", fetchedRole);
           if (!mounted) return;
           setUserRole(fetchedRole);
         } else {
-          console.error("DEBUG [initAuth]: No active session");
           setAdminEmail(null);
           setUserRole("unauthorized");
         }
       } catch (err) {
-        console.error("DEBUG [initAuth]: Caught exception:", err);
+        // Silent fail
       } finally {
-        console.error("DEBUG [initAuth]: Finally block reached");
         if (mounted) setIsAuthLoading(false);
       }
     };
 
     initAuth();
 
-    console.error("DEBUG [layout mount]: Subscribing to onAuthStateChange");
     const authListener = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.error("DEBUG [onAuthStateChange]: Event fired:", event, "session exists:", session !== null);
       if (!mounted) return;
       
       // Skip the initial callback as it is already handled reliably by getSession()
-      if (event === "INITIAL_SESSION") {
-        console.error("DEBUG [onAuthStateChange]: Skipping INITIAL_SESSION");
-        return;
-      }
+      if (event === "INITIAL_SESSION") return;
 
       if (session) {
         const email = session.user.email ?? null;
@@ -204,7 +189,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     return () => {
-      console.error("DEBUG [layout mount useEffect]: Cleanup fired");
       mounted = false;
       unsubscribe();
     };
@@ -212,17 +196,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Instant client-side redirect protection
   useEffect(() => {
-    console.error("DEBUG [redirect useEffect]: Triggered. isAuthLoading:", isAuthLoading, "adminEmail:", adminEmail, "pathname:", pathname);
     if (isAuthLoading) return;
 
     if (!adminEmail) {
       if (pathname !== "/admin/login") {
-        console.error("DEBUG [redirect useEffect]: Redirecting to /admin/login because adminEmail is null");
         window.location.href = "/admin/login";
       }
     } else {
       if (pathname === "/admin/login") {
-        console.error("DEBUG [redirect useEffect]: Redirecting to /admin because user is logged in");
         window.location.href = "/admin";
       }
     }
@@ -404,7 +385,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const allowedNavSections = getAllowedNavSections();
 
   return (
-    <div className="h-screen w-full bg-gray-100 dark:bg-gray-950 flex overflow-hidden">
+    <div className="h-screen w-full bg-gray-100 dark:bg-[#000000] flex overflow-hidden">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
@@ -414,9 +395,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-30 flex flex-col transform transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0`}>
+      <aside className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-900 z-30 flex flex-col transform transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0`}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-200 dark:border-zinc-900 shrink-0">
           <div className="bg-white rounded-xl p-1 shrink-0 shadow-sm border border-gray-200">
             <Image src="/logo-blue.png" alt="Rojgar Suvidha Logo" width={32} height={32} className="object-contain" priority />
           </div>
@@ -432,19 +413,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        {/* Global Admin Mode Toggle (Sarkari vs Private) */}
+        {/* Global Admin Mode Toggle (Sarkari vs Private) — Animated Pill */}
         {(userRole === "super_admin" || userRole === "admin") && (
           <div className="px-4 pt-4 shrink-0">
-            <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex items-center relative">
-              <button 
+            <div className="relative bg-gray-100 dark:bg-zinc-900 p-1 rounded-2xl flex items-center border border-gray-200 dark:border-zinc-800">
+              {/* Sliding active pill */}
+              <div
+                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white dark:bg-zinc-700 rounded-xl shadow-sm transition-transform duration-300 ease-in-out ${
+                  isPrivateMode ? "translate-x-[calc(100%+8px)]" : "translate-x-0"
+                }`}
+              />
+              <button
                 onClick={() => router.push("/admin")}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all z-10 ${!isPrivateMode ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700"}`}
+                className={`relative z-10 flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${
+                  !isPrivateMode ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-zinc-500"
+                }`}
               >
                 🏛️ Sarkari
               </button>
-              <button 
+              <button
                 onClick={() => router.push("/admin/private-portal")}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all z-10 ${isPrivateMode ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400" : "text-gray-500 hover:text-gray-700"}`}
+                className={`relative z-10 flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${
+                  isPrivateMode ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-zinc-500"
+                }`}
               >
                 💼 Private
               </button>
@@ -456,7 +447,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-4">
           {allowedNavSections.map((section) => (
             <div key={section.title} className="space-y-1.5">
-              <span className="block text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 mb-1">
+              <span className="block text-[9px] font-black text-gray-400 dark:text-zinc-600 uppercase tracking-widest px-3 mb-1">
                 {section.title}
               </span>
               <div className="space-y-0.5">
@@ -468,14 +459,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group ${active
-                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                        }`}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group ${
+                        active
+                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 border border-indigo-500/50 ring-1 ring-indigo-400/20"
+                          : "text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-white"
+                      }`}
                     >
                       <Icon className="h-5 w-5 shrink-0" />
                       {item.label}
-                      {active && <ChevronRight className="h-4 w-4 ml-auto" />}
+                      {active && <ChevronRight className="h-4 w-4 ml-auto opacity-70" />}
                     </Link>
                   );
                 })}
@@ -484,20 +476,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        {/* Admin Profile */}
-        <div className="border-t border-gray-200 dark:border-gray-800 px-4 py-4 shrink-0 bg-gray-50/50 dark:bg-gray-900/50">
+        {/* Admin Profile — Fix 1.6 */}
+        <div className="border-t border-gray-200 dark:border-zinc-900 px-4 py-4 shrink-0 bg-gray-50/50 dark:bg-zinc-950">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0">
               <ShieldCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate capitalize">{userRole.replace("_", " ")}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{adminEmail || "Loading..."}</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate capitalize">{userRole.replace(/_/g, " ")}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-500 truncate">{adminEmail || "Loading..."}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-bold"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all font-bold border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
           >
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
@@ -506,30 +498,45 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Top Bar */}
-        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-4 flex items-center gap-4 shrink-0">
+        {/* Top Bar — Fix 1.3: Live clock + role badge */}
+        <header className="bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-900 px-4 sm:px-6 py-3 flex items-center gap-4 shrink-0">
           <button
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900 transition-colors"
             onClick={() => setIsSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <Menu className="h-5 w-5 text-gray-600 dark:text-zinc-400" />
           </button>
 
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white capitalize">
+            <h1 className="text-base font-bold text-gray-900 dark:text-white capitalize leading-tight">
               {navItems.find(i => isActive(i))?.label || "Admin Panel"}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* FIX: Removed hardcoded red dot - bell icon now goes to notifications page */}
-            <Link href="/admin/notifications" className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <Bell className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Live Clock */}
+            <span className="hidden sm:block text-xs font-mono font-bold text-gray-500 dark:text-zinc-500 tabular-nums bg-gray-100 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-800">
+              {currentTime?.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }) || "--:--:--"}
+            </span>
+
+            {/* Role Badge */}
+            <span className={`hidden sm:block text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+              userRole === "super_admin" ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/40" :
+              userRole === "admin" ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800/40" :
+              userRole === "content_writer" ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/40" :
+              userRole === "form_filler" ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40" :
+              "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/40"
+            }`}>
+              {userRole.replace(/_/g, " ")}
+            </span>
+
+            <Link href="/admin/notifications" className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-900 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-zinc-800">
+              <Bell className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
             </Link>
             <Link
               href="/"
               target="_blank"
-              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/40 transition-colors"
             >
               View Site ↗
             </Link>
