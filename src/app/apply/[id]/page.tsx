@@ -54,6 +54,7 @@ function ApplyContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successTrackingId, setSuccessTrackingId] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
     const fetchForm = async () => {
@@ -750,21 +751,33 @@ function ApplyContent() {
               {couponError && <p className="text-sm text-red-500 font-medium mt-2">{couponError}</p>}
             </div>
 
-            <div className="space-y-3 px-2">
-              <div className="flex justify-between text-sm font-medium text-gray-500 dark:text-gray-400">
-                <span>Official Form Fee</span>
-                <span>₹{baseFee}</span>
-              </div>
-              <div className="flex justify-between text-sm font-medium text-gray-500 dark:text-gray-400">
-                <span>Portal Service Charge</span>
-                <span>₹{serviceCharge}</span>
-              </div>
-              {appliedCoupon && (
-                <div className="flex justify-between text-sm font-bold text-green-600 dark:text-green-400">
-                  <span>Coupon Discount</span>
-                  <span>- ₹{discountAmount}</span>
+            {/* Enhanced Pricing Breakdown Section */}
+            <div className="bg-gray-50 dark:bg-zinc-900/50 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 space-y-4">
+              <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest border-b border-gray-200/50 dark:border-zinc-800 pb-2">
+                💰 Payment Summary & Breakdown
+              </h4>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm font-semibold text-gray-600 dark:text-gray-300">
+                  <span>Official Form Fee</span>
+                  <span className="font-extrabold text-gray-900 dark:text-white">₹{baseFee}</span>
                 </div>
-              )}
+                <div className="flex justify-between text-sm font-semibold text-gray-600 dark:text-gray-300">
+                  <span>Portal Service Charge</span>
+                  <span className="font-extrabold text-gray-900 dark:text-white">₹{serviceCharge}</span>
+                </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    <span>Coupon Discount</span>
+                    <span>- ₹{discountAmount}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Informational routing banner */}
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-3.5 text-[11px] leading-relaxed text-indigo-700 dark:text-indigo-300 font-medium">
+                ℹ️ <strong>Service Scope:</strong> Rojgar Suvidha collects the Official Exam Fee (₹{baseFee}) to submit it directly to the official government recruitment portal. Our processing/facilitation service charge is limited to ₹{serviceCharge} only.
+              </div>
             </div>
 
             <div className="mt-4 p-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl text-white flex items-center justify-between shadow-lg">
@@ -778,19 +791,34 @@ function ApplyContent() {
             </div>
 
             {/* Merchant billing information & policy agreement */}
-            <div className="mt-3 px-2 text-center space-y-2">
-              <p className="text-[11px] text-gray-400 leading-normal">
-                Secure payments processed via Cashfree. Your card/account statement will show billing under registered merchant: <strong className="text-gray-600 dark:text-gray-300">PINTU KUMAR</strong>.
-              </p>
-              <p className="text-[10px] text-gray-500">
-                By clicking "Submit Application", you agree to our{" "}
-                <Link href="/terms" className="text-indigo-500 hover:underline">Terms of Service</Link>{" "}
-                and{" "}
-                <Link href="/refund-policy" className="text-indigo-500 hover:underline">Refund & Cancellation Policy</Link>.
-              </p>
+            <div className="mt-4 space-y-3 px-1">
+              {/* Mandatory Consent Checkbox */}
+              <label className="flex items-start gap-3 p-3.5 border border-gray-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-900/50 transition-colors">
+                <div className="flex items-center h-5 mt-0.5">
+                  <input 
+                    type="checkbox" 
+                    checked={isAuthorized}
+                    onChange={(e) => setIsAuthorized(e.target.checked)}
+                    className="w-4.5 h-4.5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </div>
+                <div className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 font-bold">
+                  I authorize Rojgar Suvidha to fill the recruitment form and pay the official fee of ₹{baseFee} on my behalf. I agree to the <Link href="/refund-policy" className="text-indigo-500 hover:underline">Refund Policy</Link> and <Link href="/terms" className="text-indigo-500 hover:underline">Terms of Service</Link>.
+                </div>
+              </label>
+
+              <div className="text-center space-y-1.5 pt-1">
+                <p className="text-[11px] text-gray-400 leading-normal font-semibold">
+                  Secure payments processed via Cashfree. Your billing statement will show charge under registered merchant: <strong className="text-gray-600 dark:text-gray-300">PINTU KUMAR</strong>.
+                </p>
+              </div>
             </div>
 
-            <button type="submit" disabled={isSubmitting} className="w-full mt-2 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-lg rounded-2xl shadow-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100">
+            <button 
+              type="submit" 
+              disabled={isSubmitting || !isAuthorized} 
+              className="w-full mt-2 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-lg rounded-2xl shadow-xl hover:scale-[1.01] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
               {isSubmitting ? (
                 <><Loader2 className="h-6 w-6 animate-spin" /> Submitting securely...</>
               ) : (
