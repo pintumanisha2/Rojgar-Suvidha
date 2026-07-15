@@ -4,6 +4,7 @@ import JobPreferenceToggle from "@/components/home/JobPreferenceToggle";
 import { supabase } from "@/lib/supabase";
 import { Suspense } from "react";
 import MainContentSkeleton from "@/components/ui/MainContentSkeleton";
+import RecommendedJobs from "@/components/ui/RecommendedJobs";
 
 // Lazy load non-critical components for faster initial load
 const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"));
@@ -135,6 +136,11 @@ export default async function Home() {
 
       {/* Feature Highlights (Apply For Me & YouTube) */}
       <Highlights />
+
+      {/* AI Personalization Engine (7.1) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <RecommendedJobs />
+      </div>
 
       {/* Main Content - Job Listings (Wrapped in Suspense for Shimmer Effect) */}
       <Suspense fallback={<MainContentSkeleton />}>

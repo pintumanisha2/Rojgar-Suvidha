@@ -78,7 +78,7 @@ function CountdownTimer({ targetDate, label }: { targetDate: string; label: stri
     <div className={`flex items-center gap-2 text-xs font-bold px-2.5 py-1.5 rounded-lg border ${
       isUrgent
         ? "text-rose-700 bg-rose-50 border-rose-200 animate-pulse"
-        : "text-slate-700 bg-slate-50 border-slate-200"
+        : "text-slate-700 dark:text-zinc-300 bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800"
     }`}>
       {isUrgent ? <Flame className="w-3.5 h-3.5 text-rose-500" /> : <Clock className="w-3.5 h-3.5" />}
       <span className="tabular-nums">
@@ -141,20 +141,20 @@ function ExamCard({ exam }: { exam: Exam }) {
         {/* Key Stats Grid */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className={`${c.bg} rounded-xl p-3 border ${c.border}`}>
-            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Vacancies</p>
+            <p className="text-[9px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Vacancies</p>
             <p className={`text-sm font-extrabold ${c.text}`}>{exam.vacancies}</p>
           </div>
           <div className={`${c.bg} rounded-xl p-3 border ${c.border}`}>
-            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Eligibility</p>
-            <p className="text-sm font-extrabold text-slate-700 truncate">{exam.eligibility}</p>
+            <p className="text-[9px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Eligibility</p>
+            <p className="text-sm font-extrabold text-slate-700 dark:text-zinc-300 truncate">{exam.eligibility}</p>
           </div>
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Age Limit</p>
-            <p className="text-sm font-extrabold text-slate-700">{exam.ageLimit}</p>
+          <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-3 border border-slate-200 dark:border-zinc-800">
+            <p className="text-[9px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Age Limit</p>
+            <p className="text-sm font-extrabold text-slate-700 dark:text-zinc-300">{exam.ageLimit}</p>
           </div>
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Exam Date</p>
-            <p className="text-sm font-extrabold text-slate-700">
+          <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-3 border border-slate-200 dark:border-zinc-800">
+            <p className="text-[9px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Exam Date</p>
+            <p className="text-sm font-extrabold text-slate-700 dark:text-zinc-300">
               {examDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
             </p>
           </div>
@@ -163,11 +163,11 @@ function ExamCard({ exam }: { exam: Exam }) {
         {/* Last Date Countdown */}
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Last Date to Apply</span>
+            <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
+            <span className="text-[10px] font-extrabold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Last Date to Apply</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-sm font-extrabold ${isLastDatePassed ? "text-slate-400 line-through" : "text-slate-800"}`}>
+            <span className={`text-sm font-extrabold ${isLastDatePassed ? "text-slate-400 dark:text-zinc-500 line-through" : "text-slate-800"}`}>
               {lastDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
             </span>
             <CountdownTimer targetDate={exam.lastDateApply} label="left" />
@@ -285,13 +285,13 @@ export default function ExamCalendarClient({ exams }: Props) {
 
             {/* Search */}
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
               <input
                 type="text"
                 placeholder="Search exams..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-white transition-all"
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-zinc-800 dark:border-slate-700 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white dark:bg-gray-800 text-slate-900 dark:text-white transition-all"
               />
             </div>
 
@@ -304,7 +304,7 @@ export default function ExamCalendarClient({ exams }: Props) {
                   className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-extrabold border transition-all active:scale-95 whitespace-nowrap ${
                     selectedCategory === cat
                       ? "bg-indigo-600 text-white border-transparent shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 border-slate-200 dark:border-gray-700 hover:border-indigo-300"
+                      : "bg-white dark:bg-gray-800 text-slate-600 dark:text-gray-300 border-slate-200 dark:border-zinc-800 dark:border-gray-700 hover:border-indigo-300"
                   }`}
                 >
                   {cat}
@@ -317,7 +317,7 @@ export default function ExamCalendarClient({ exams }: Props) {
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as any)}
-                className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-300 cursor-pointer"
+                className="px-3 py-2 border border-slate-200 dark:border-zinc-800 dark:border-slate-700 rounded-xl text-xs font-bold outline-none bg-white dark:bg-gray-800 text-slate-700 dark:text-zinc-300 dark:text-gray-300 cursor-pointer"
               >
                 <option value="lastDate">Sort: Last Date</option>
                 <option value="examDate">Sort: Exam Date</option>
@@ -366,10 +366,10 @@ export default function ExamCalendarClient({ exams }: Props) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
         {filtered.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-slate-200 dark:border-gray-800 p-16 text-center">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-slate-200 dark:border-zinc-800 dark:border-gray-800 p-16 text-center">
             <div className="text-5xl mb-4">🔍</div>
-            <p className="text-lg font-bold text-slate-700 dark:text-gray-300">No exams found</p>
-            <p className="text-sm text-slate-400 mt-1">Try a different search or category</p>
+            <p className="text-lg font-bold text-slate-700 dark:text-zinc-300 dark:text-gray-300">No exams found</p>
+            <p className="text-sm text-slate-400 dark:text-zinc-500 mt-1">Try a different search or category</p>
           </div>
         ) : viewMode === "grid" ? (
           /* Grid View */
@@ -387,7 +387,7 @@ export default function ExamCalendarClient({ exams }: Props) {
                     {month}
                   </div>
                   <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-                  <span className="text-xs font-bold text-slate-400">{monthExams.length} deadline{monthExams.length !== 1 ? "s" : ""}</span>
+                  <span className="text-xs font-bold text-slate-400 dark:text-zinc-500">{monthExams.length} deadline{monthExams.length !== 1 ? "s" : ""}</span>
                 </div>
                 <div className="space-y-3">
                   {monthExams.map((exam, i) => {
@@ -402,7 +402,7 @@ export default function ExamCalendarClient({ exams }: Props) {
                           <p className="text-xs text-slate-500 mt-0.5">{exam.vacancies} vacancies • {exam.eligibility}</p>
                         </div>
                         <div className="text-right shrink-0 hidden sm:block">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Date</p>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Last Date</p>
                           <p className="text-sm font-extrabold text-slate-800 dark:text-gray-200">
                             {lastDate.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                           </p>
@@ -426,7 +426,7 @@ export default function ExamCalendarClient({ exams }: Props) {
         )}
 
         {/* ── AEO FAQ Section ────────────────────────────────────── */}
-        <div className="mt-16 bg-white dark:bg-gray-900 rounded-3xl border border-slate-200 dark:border-gray-800 overflow-hidden">
+        <div className="mt-16 bg-white dark:bg-gray-900 rounded-3xl border border-slate-200 dark:border-zinc-800 dark:border-gray-800 overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 sm:p-8 text-white">
             <h2 className="text-2xl font-extrabold mb-2 flex items-center gap-3">
               <TrendingUp className="w-6 h-6 text-yellow-300" />
@@ -498,7 +498,7 @@ export default function ExamCalendarClient({ exams }: Props) {
         </div>
 
         {/* ── SEO Content Block ─────────────────────────────────── */}
-        <div className="mt-8 bg-white dark:bg-gray-900 rounded-3xl border border-slate-200 dark:border-gray-800 p-6 sm:p-8">
+        <div className="mt-8 bg-white dark:bg-gray-900 rounded-3xl border border-slate-200 dark:border-zinc-800 dark:border-gray-800 p-6 sm:p-8">
           <article className="prose dark:prose-invert max-w-none prose-sm prose-headings:font-extrabold prose-h2:text-xl prose-p:text-slate-600 dark:prose-p:text-gray-400">
             <h2>Government Exam Calendar 2025-2026: Complete Guide</h2>
             <p>
