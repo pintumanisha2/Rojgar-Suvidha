@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { 
   ClipboardCheck, Clock, CheckCircle2, Loader2, 
   User, Phone, Mail, ExternalLink, Upload, 
-  MessageSquare, RefreshCw, FileDown, HandHeart, Trash2,
+  MessageSquare, RefreshCw, FileDown, HandHeart, Trash2, Lock,
   Sparkles
 } from "lucide-react";
 
@@ -220,10 +221,10 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
         .update({ assigned_to: currentUserEmail, status: "in_progress" })
         .eq("id", data.id);
       
-      alert(`Great! A new form (${data.job_title}) has been assigned to you.`);
+      toast.success(`Great! A new form (${data.job_title}) has been assigned to you.`);
       fetchRequests();
     } else {
-      alert("No pending forms available right now!");
+      toast.error("No pending forms available right now!");
       setLoading(false);
     }
   };
@@ -310,7 +311,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
       .eq("id", selected.id);
 
     if (error) {
-      alert(`Status update failed: ${error.message}\nEnsure you have run the database migration script in your Supabase SQL Editor.`);
+      toast.error(`Status update failed: ${error.message}`);
     } else {
       // Send Web Push notification if status changed (works even when user's browser is closed)
       try {
@@ -417,7 +418,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
       }
     } catch (err: any) {
       console.error("OTP Request failed:", err);
-      alert(`OTP Request failed: ${err.message}\nEnsure you have run the updated SQL Editor script to create the 'otp_requests' table.`);
+      toast.error(`OTP Request failed: ${err.message}`);
       setRequestingOtp(false);
       return;
     }
@@ -474,7 +475,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
   const handleDeleteRequest = async () => {
     if (!selected || currentUserRole !== 'super_admin') return;
     
-    if (confirm(`Are you absolutely sure you want to delete this request from ${selected.applicant_name}? This action cannot be undone.`)) {
+    if (window.confirm(`Are you absolutely sure you want to delete this request from ${selected.applicant_name}? This action cannot be undone.`)) {
       setSaving(true);
       await supabase.from("apply_for_me_requests").delete().eq("id", selected.id);
       
@@ -528,7 +529,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#000000] p-6">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
@@ -545,7 +546,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
                 <FileDown className="w-4 h-4" /> Export CSV
               </button>
             )}
-            <button onClick={fetchRequests} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 transition-all">
+            <button onClick={fetchRequests} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 transition-all">
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
           </div>
@@ -559,7 +560,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
             { label: "In Progress",    value: stats.in_progress, color: "blue" },
             { label: "Completed",      value: stats.completed, color: "green" },
           ].map(s => (
-            <div key={s.label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <div key={s.label} className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-5 shadow-sm">
               <p className="text-3xl font-extrabold text-gray-900 dark:text-white">{s.value}</p>
               <p className="text-sm text-gray-500 font-medium mt-1">{s.label}</p>
             </div>
@@ -568,7 +569,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
 
         {/* Filter Tabs & Assign Button */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <div className="flex bg-gray-200/50 dark:bg-gray-800 rounded-xl p-1 w-full md:w-auto overflow-x-auto">
+          <div className="flex bg-gray-200/50 dark:bg-zinc-900 rounded-xl p-1 w-full md:w-auto overflow-x-auto">
             <button onClick={() => setServiceType("all")} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${serviceType === "all" ? "bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
               🌍 All Applications
             </button>
@@ -585,7 +586,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
           <div className="flex gap-2 flex-wrap">
             {["all", "pending", "in_progress", "needs_info", "completed", "refund_pending", "rejected"].map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all capitalize ${filter === f ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50"}`}>
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all capitalize ${filter === f ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50"}`}>
                 {f === "all" ? "All Status" : STATUS_CONFIG[f]?.label}
               </button>
             ))}
@@ -602,7 +603,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 text-indigo-500 animate-spin" /></div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-16 text-center">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-16 text-center">
             <ClipboardCheck className="w-14 h-14 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 font-bold">Koi request nahi mili</p>
           </div>
@@ -612,7 +613,7 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
               const cfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
               return (
                 <div key={req.id} onClick={() => openRequest(req)}
-                  className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all">
+                  className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 shadow-sm p-5 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
@@ -661,322 +662,218 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
           </div>
         )}
 
-        {/* Detail Modal */}
+        {/* ── 2-COLUMN COMMAND CENTER MODAL ── */}
         {selected && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">Request Details</h2>
-                <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-6">
+            <div className="bg-white dark:bg-[#000000] border dark:border-zinc-800 rounded-[2rem] shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Header */}
+              <div className="px-8 py-5 border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between bg-white/50 dark:bg-[#000000]/50 backdrop-blur-xl shrink-0">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white">Form Filler Workspace</h2>
+                  <p className="text-xs font-bold text-gray-500 mt-0.5">Application ID: {selected.id}</p>
+                </div>
+                <button onClick={() => setSelected(null)} className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 text-gray-500 rounded-full transition-all text-xl font-bold">×</button>
               </div>
 
-              <div className="p-6 space-y-5">
-
-                {/* Student Info */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5 space-y-3">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm uppercase tracking-wider">Student Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><p className="text-gray-400 text-xs">Full Name</p><p className="font-bold text-gray-900 dark:text-white">{selected.applicant_name}</p></div>
-                    <div><p className="text-gray-400 text-xs">Mobile</p><p className="font-bold text-gray-900 dark:text-white">{selected.phone_number}</p></div>
-                    <div><p className="text-gray-400 text-xs">Email</p><p className="font-bold text-gray-900 dark:text-white">{selected.email}</p></div>
-                    <div><p className="text-gray-400 text-xs">Submitted</p><p className="font-bold text-gray-900 dark:text-white">{new Date(selected.created_at).toLocaleString("en-IN")}</p></div>
-
-                    {/* Super admin: tracking ID */}
-                    {currentUserRole === "super_admin" && selected.tracking_id && (
-                      <div className="col-span-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl px-3 py-2">
-                        <p className="text-gray-400 text-xs">Tracking ID</p>
-                        <p className="font-extrabold text-indigo-700 dark:text-indigo-300 font-mono text-base">{selected.tracking_id}</p>
-                      </div>
-                    )}
-
-                    {/* Form filler: only secret code, no tracking ID */}
-                    {currentUserRole === "form_filler" && selected.verification_code && (
-                      <div className="col-span-2 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-600 rounded-xl px-3 py-2">
-                        <p className="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">🔐 Secret Verification Code</p>
-                        <p className="font-extrabold text-red-700 dark:text-red-300 font-mono text-xl tracking-widest mt-1">{selected.verification_code}</p>
-                        <p className="text-[10px] text-red-500 mt-1">Jab user call kare, pehle aap yeh code bolo — tab woh OTP share karega.</p>
-                      </div>
-                    )}
-                    {selected.assigned_to && currentUserRole !== 'form_filler' && (
-                      <div className="col-span-2 mt-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 p-3 rounded-xl">
-                        <p className="text-purple-600 dark:text-purple-400 text-xs font-bold mb-1">Form Filler / Assigned To:</p>
-                        <p className="font-extrabold text-purple-900 dark:text-purple-300 flex items-center gap-2">
-                          <User className="w-4 h-4" /> {selected.assigned_to}
-                        </p>
-                      </div>
-                    )}
+              {/* 2-Column Content */}
+              <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+                
+                {/* LEFT COLUMN: Data & Docs (Scrollable) */}
+                <div className="flex-1 overflow-y-auto p-8 border-r border-gray-100 dark:border-zinc-900 space-y-8 custom-scrollbar">
+                  
+                  {/* Job Details */}
+                  <div>
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Service Details</h3>
+                    <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-5">
+                      <p className="text-xl font-black text-gray-900 dark:text-white leading-tight">{selected.job_title}</p>
+                      {selected.job_url && (
+                        <a href={selected.job_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded-lg">
+                          <ExternalLink className="w-4 h-4" /> Open Original Post
+                        </a>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Rojgar Suvidha Form Guard Sync Connector */}
-                  <div className="border-t border-gray-300/20 dark:border-gray-700/50 pt-4 mt-2">
+                  {/* Student Info */}
+                  <div>
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Student Profile</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-2xl">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">Full Name</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">{selected.applicant_name}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-2xl">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">Mobile</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">{selected.phone_number}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-2xl col-span-2 sm:col-span-1">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">Email</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5 truncate">{selected.email}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-2xl col-span-2 sm:col-span-1">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">Submitted At</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">{new Date(selected.created_at).toLocaleString("en-IN")}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sync Connector */}
+                  <div className="bg-zinc-900 dark:bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-white font-bold text-sm">Form Guard Sync</h4>
+                      <p className="text-zinc-400 text-xs mt-0.5">AI powered autofill extension</p>
+                    </div>
                     {(() => {
                       const candidateData = parseCandidateData(selected, eSuvidhaData);
                       return (
                         <>
                           <div id="rs-active-candidate-sync-data" data-candidate={JSON.stringify(candidateData)} className="hidden" />
-                          <button
-                            id="rs-sync-form-guard-btn"
-                            type="button"
-                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md shadow-indigo-600/10 active:scale-98 hover:scale-[1.01] transition-all duration-200"
-                          >
-                            <Sparkles className="w-4.5 h-4.5 animate-pulse" /> Sync to Form Guard Extension
+                          <button id="rs-sync-form-guard-btn" type="button" className="px-5 py-2.5 bg-white hover:bg-gray-200 text-black font-extrabold text-sm rounded-xl flex items-center gap-2 transition-all">
+                            <Sparkles className="w-4 h-4 text-indigo-600" /> Sync Details
                           </button>
                         </>
                       );
                     })()}
                   </div>
-                </div>
 
-                {/* WhatsApp Messaging Assistant */}
-                <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-5 space-y-3">
-                  <h3 className="font-extrabold text-emerald-800 dark:text-emerald-400 text-sm uppercase tracking-wider flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    WhatsApp Messaging Assistant
-                  </h3>
-                  <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 font-medium">
-                    Student ko automatic details ke saath pre-filled messages bhejein. Niche diye presets par click karein:
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { id: "in_progress", label: "🔄 In Progress Alert", color: "bg-blue-600 hover:bg-blue-700 text-white" },
-                      { id: "needs_info", label: "⚠️ Missing Doc Request", color: "bg-amber-600 hover:bg-amber-700 text-white" },
-                      { id: "otp_alert", label: "🔐 OTP Request", color: "bg-purple-600 hover:bg-purple-700 text-white" },
-                      { id: "success", label: "✅ Receipt Delivery", color: "bg-emerald-600 hover:bg-emerald-700 text-white" },
-                    ].map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleSelectWhatsappPreset(preset.id, selected)}
-                        className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap ${
-                          activePreset === preset.id
-                            ? "ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900 " + preset.color
-                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {whatsappPreviewText && (
-                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                      <label className="block text-[11px] font-bold text-gray-400 uppercase">Message Preview (Aap edit bhi kar sakte hain)</label>
-                      <textarea
-                        value={whatsappPreviewText}
-                        onChange={(e) => setWhatsappPreviewText(e.target.value)}
-                        rows={4}
-                        className="w-full p-3 bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-gray-800 dark:text-gray-200 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="Yahan apna custom message likhein..."
-                      />
-                      <button
-                        onClick={() => handleSendWhatsapp(selected)}
-                        type="button"
-                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-md shadow-emerald-600/10 active:scale-95 transition-all"
-                      >
-                        <MessageSquare className="w-4 h-4" /> Student Ko WhatsApp Bhejein
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Job Info */}
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-5">
-                  <h3 className="font-bold text-indigo-900 dark:text-indigo-300 text-sm mb-2">Job / Service Details</h3>
-                  <p className="font-extrabold text-gray-900 dark:text-white">{selected.job_title}</p>
-                  {selected.job_url && (
-                    <a href={selected.job_url} target="_blank" rel="noopener noreferrer"
-                      className="text-indigo-600 text-sm font-bold flex items-center gap-1 mt-1 hover:underline">
-                      <ExternalLink className="w-4 h-4" /> Job Link Kholein
-                    </a>
-                  )}
-                  
-                  {eSuvidhaData && (
-                    <div className="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-800">
-                      <h4 className="text-xs font-bold text-indigo-800 dark:text-indigo-400 mb-2 uppercase tracking-wider">E-Suvidha Extra Details</h4>
-                      <div className="space-y-1.5">
-                        {eSuvidhaData.split('\n').map((line, i) => {
-                          const [key, ...valParts] = line.split(':');
-                          if (!key || !valParts.length) return null;
+                  {/* Documents Viewer */}
+                  <div>
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Uploaded Documents</h3>
+                    {!selected.user_id ? (
+                      <div className="p-6 bg-gray-50 dark:bg-zinc-900/50 rounded-2xl text-center border border-dashed border-gray-200 dark:border-zinc-800">
+                        <p className="text-xs font-bold text-gray-400">Dummy request (No docs)</p>
+                      </div>
+                    ) : docsLoading ? (
+                      <div className="p-6 bg-gray-50 dark:bg-zinc-900/50 rounded-2xl flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> <span className="text-sm font-bold text-gray-500">Loading vault...</span>
+                      </div>
+                    ) : studentDocs.length === 0 ? (
+                      <div className="p-6 bg-amber-50 dark:bg-amber-950/20 rounded-2xl text-center border border-dashed border-amber-200 dark:border-amber-900/50">
+                        <p className="text-sm font-bold text-amber-600">No documents uploaded</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {studentDocs.map(doc => {
+                          const docLabels: Record<string, string> = { photo: "🖼️ Photo", signature: "✍️ Signature", aadhar: "🪪 Aadhar", marksheet_10: "📄 10th", marksheet_12: "📄 12th" };
+                          const key = doc.name.split(".")[0];
+                          const label = docLabels[key] || doc.name;
                           return (
-                            <div key={i} className="text-sm">
-                              <span className="font-bold text-gray-700 dark:text-gray-300">{key}:</span> 
-                              <span className="text-gray-900 dark:text-white ml-1">{valParts.join(':')}</span>
-                            </div>
+                            <a key={doc.name} href={getDocUrl(doc.url)} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 hover:border-indigo-400 transition-all group shadow-sm">
+                              <span className="text-sm font-bold text-gray-800 dark:text-white">{label}</span>
+                              <ExternalLink className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600" />
+                            </a>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Student Documents - Direct Download */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5">
-                  <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3">📁 Student Documents</h3>
-                  {!selected.user_id ? (
-                    <p className="text-xs text-gray-400">Ye ek dummy request hai, documents available nahi hain.</p>
-                  ) : docsLoading ? (
-                    <div className="flex items-center gap-2 text-gray-400 text-sm">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Loading documents...
-                    </div>
-                  ) : studentDocs.length === 0 ? (
-                    <p className="text-xs text-amber-600 font-bold">⚠️ Student ne abhi tak koi document upload nahi kiya hai.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {studentDocs.map(doc => {
-                        const docLabels: Record<string, string> = {
-                          photo: "🖼️ Passport Photo",
-                          signature: "✍️ Signature",
-                          aadhar: "🪪 Aadhar Card",
-                          marksheet_10: "📄 10th Marksheet",
-                          marksheet_12: "📄 12th Marksheet",
-                        };
-                        const key = doc.name.split(".")[0];
-                        const label = docLabels[key] || doc.name;
-                        return (
-                          <a key={doc.name} href={getDocUrl(doc.url)} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-indigo-400 transition-all group">
-                            <span className="text-sm font-bold text-gray-800 dark:text-white">{label}</span>
-                            <span className="text-xs font-bold text-indigo-600 group-hover:underline flex items-center gap-1">
-                              <ExternalLink className="w-3.5 h-3.5" /> View / Download
-                            </span>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Status Update */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Status Update Karo</label>
-                  <select value={newStatus} onChange={e => setNewStatus(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                    <option value="pending">⏳ Pending</option>
-                    <option value="in_progress">🔄 In Progress</option>
-                    <option value="needs_info">⚠️ Needs Info (Document Missing)</option>
-                    <option value="completed">✅ Completed</option>
-                    <option value="refund_pending">💸 Refund Pending (Can't Fill Form)</option>
-                    <option value="rejected">❌ Rejected</option>
-                  </select>
-                </div>
-
-                {/* Admin Note */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                    <MessageSquare className="w-4 h-4 inline mr-1" /> Admin Note (Visible to Candidate)
-                  </label>
-                  <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)} rows={3}
-                    className={`w-full px-4 py-3 border ${(newStatus === 'needs_info' || newStatus === 'refund_pending') && !adminNote ? 'border-red-400 ring-2 ring-red-200' : 'border-gray-200 dark:border-gray-700'} rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                    placeholder={newStatus === 'needs_info' ? "Required: Explain which document is missing (e.g., Aadhaar scan is blurry)..." : newStatus === 'refund_pending' ? "Reason for refund (e.g., Server error, Age limit crossed)..." : "e.g., Form submitted successfully, please download your receipt..."} />
-                  {(newStatus === 'needs_info' || newStatus === 'refund_pending') && !adminNote && (
-                    <p className="text-xs font-bold text-red-500 mt-1">Please provide a valid note explaining the reason.</p>
-                  )}
-                </div>
-
-                {/* Receipt Upload */}
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-5 text-center">
-                  <FileDown className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <h4 className="font-bold text-gray-900 dark:text-white mb-1">Form Confirmation / Receipt Upload</h4>
-                  <p className="text-xs text-gray-500 mb-4">Upload the confirmation receipt or portal screenshot after filling the form. The candidate can download it directly from their dashboard.</p>
+                    )}
+                  </div>
                   
-                  {selected.final_receipt_url ? (
-                    <div className="space-y-3">
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-xl p-3">
-                        <p className="text-green-700 font-bold text-sm">✅ Receipt Uploaded!</p>
-                        <a href={selected.final_receipt_url} target="_blank" rel="noopener noreferrer"
-                          className="text-indigo-600 text-xs font-bold underline break-all">{selected.final_receipt_url}</a>
-                      </div>
-                      <label className="cursor-pointer text-sm font-bold text-gray-500 hover:text-indigo-600">
-                        Replace Receipt
-                        <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={e => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f); }} />
-                      </label>
+                  {eSuvidhaData && (
+                    <div className="bg-gray-50 dark:bg-zinc-900 p-5 rounded-2xl">
+                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">E-Suvidha Raw Data</h4>
+                      <pre className="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap font-mono">{eSuvidhaData}</pre>
                     </div>
-                  ) : (
-                    <label className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm cursor-pointer transition-all">
-                      {uploadingReceipt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                      {uploadingReceipt ? "Uploading..." : "Receipt Upload Karo"}
-                      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={e => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f); }} />
-                    </label>
                   )}
+
                 </div>
 
-              </div>
+                {/* RIGHT COLUMN: Action Panel (Sticky) */}
+                <div className="w-full lg:w-[420px] bg-gray-50 dark:bg-zinc-950/50 p-6 overflow-y-auto space-y-6">
+                  
+                  {/* Status Box */}
+                  <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Status Pipeline</label>
+                    <select value={newStatus} onChange={e => setNewStatus(e.target.value)} className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+                      <option value="pending">⏳ Pending</option>
+                      <option value="in_progress">🔄 In Progress (Active)</option>
+                      <option value="needs_info">⚠️ Needs Info (Halted)</option>
+                      <option value="completed">✅ Completed Successfully</option>
+                      <option value="refund_pending">💸 Refund Pending</option>
+                      <option value="rejected">❌ Rejected</option>
+                    </select>
 
-              {/* ── IN-APP OTP SECTION ── */}
-              <div className="p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-3">🔐 User se OTP Maango (In-App)</p>
-
-                {/* OTP received! Show it prominently */}
-                {otpRequest?.status === "fulfilled" && (
-                  <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-400 rounded-2xl p-4 mb-3 text-center">
-                    <p className="text-xs font-extrabold text-green-600 uppercase tracking-wider mb-1">✅ OTP Mil Gaya!</p>
-                    <p className="text-4xl font-extrabold font-mono text-green-700 dark:text-green-300 tracking-[0.3em]">
-                      {otpRequest.otp_value}
-                    </p>
-                    <p className="text-xs text-green-500 mt-1">Abhi portal par enter karo — jaldi!</p>
-                  </div>
-                )}
-
-                {/* Waiting for OTP */}
-                {otpRequest?.status === "pending" && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 rounded-xl p-3 mb-3 flex items-center gap-3">
-                    <Loader2 className="w-5 h-5 text-amber-500 animate-spin shrink-0" />
-                    <div>
-                      <p className="text-xs font-extrabold text-amber-700 dark:text-amber-300">Waiting for candidate's OTP response...</p>
-                      <p className="text-xs text-amber-500">
-                        Expires in: {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, "0")}
-                      </p>
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Admin Note (Sent to student)</label>
+                      <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)} rows={2} placeholder="Explain reason if halted/rejected..." className="w-full p-3 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl text-xs font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 custom-scrollbar" />
                     </div>
                   </div>
-                )}
 
-                {/* Expired */}
-                {otpRequest?.status === "expired" && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
-                    <p className="text-xs font-bold text-red-600">⏰ OTP request expired. The candidate did not respond. Please try again.</p>
+                  {/* OTP System */}
+                  <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm">
+                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Lock className="w-4 h-4"/> Live Verification</label>
+                     {currentUserRole === "form_filler" && selected.verification_code && (
+                        <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-xl mb-4 border border-red-100 dark:border-red-900/50">
+                          <p className="text-[10px] font-bold text-red-500 uppercase">Secret Call Code</p>
+                          <p className="text-xl font-black font-mono text-red-600 dark:text-red-400 tracking-widest">{selected.verification_code}</p>
+                        </div>
+                     )}
+                     
+                     {otpRequest?.status === "fulfilled" ? (
+                       <div className="bg-green-500 text-white rounded-xl p-4 text-center">
+                         <p className="text-[10px] font-black uppercase tracking-wider mb-1">OTP Received</p>
+                         <p className="text-3xl font-black font-mono tracking-[0.2em]">{otpRequest.otp_value}</p>
+                       </div>
+                     ) : otpRequest?.status === "pending" ? (
+                       <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 flex gap-3">
+                         <Loader2 className="w-5 h-5 text-amber-500 animate-spin shrink-0" />
+                         <div>
+                           <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Waiting for user...</p>
+                           <p className="text-[10px] font-bold text-amber-600 mt-1">Timeout: {Math.floor(otpTimer/60)}:{(otpTimer%60).toString().padStart(2,"0")}</p>
+                         </div>
+                       </div>
+                     ) : (
+                       <button onClick={handleRequestOtp} disabled={requestingOtp || !selected?.user_id} className="w-full py-3 bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 disabled:opacity-50 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all">
+                         {requestingOtp ? <Loader2 className="w-4 h-4 animate-spin"/> : <Lock className="w-4 h-4" />} Send Push Notification for OTP
+                       </button>
+                     )}
                   </div>
-                )}
 
-                {/* Request button */}
-                {(!otpRequest || otpRequest.status === "expired") && (
-                  <button onClick={handleRequestOtp} disabled={requestingOtp || !selected?.user_id}
-                    className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
-                    {requestingOtp
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending Request...</>
-                      : <>🔔 Request OTP from Candidate</>
-                    }
-                  </button>
-                )}
-                <p className="text-[10px] text-gray-400 mt-2 text-center">
-                  User ke dashboard par ek live alert aayega — woh OTP enter karenge, aapko yahan dikhe ga.
-                </p>
+                  {/* Receipt Box */}
+                  <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm text-center">
+                    {selected.final_receipt_url ? (
+                      <div>
+                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Receipt Delivered</p>
+                        <a href={selected.final_receipt_url} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline break-all block mb-3 px-2">{selected.final_receipt_url}</a>
+                        <label className="cursor-pointer text-[10px] font-bold text-gray-400 hover:text-indigo-500 uppercase tracking-widest">
+                          Replace File <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={e => { const f = e.target.files?.[0]; if(f) handleReceiptUpload(f); }} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer block">
+                         <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-3 border border-indigo-100 dark:border-indigo-900/50">
+                           {uploadingReceipt ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                         </div>
+                         <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">Upload Final Receipt</p>
+                         <p className="text-[10px] text-gray-400 mt-1">Completes the pipeline</p>
+                         <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={e => { const f = e.target.files?.[0]; if(f) handleReceiptUpload(f); }} />
+                      </label>
+                    )}
+                  </div>
+
+                </div>
               </div>
 
-              <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex gap-3">
+              {/* Footer Actions */}
+              <div className="p-5 border-t border-gray-100 dark:border-zinc-900 bg-gray-50 dark:bg-zinc-950/50 flex gap-3 shrink-0">
                 {currentUserRole === 'super_admin' && (
-                  <button onClick={handleDeleteRequest} disabled={saving}
-                    className="px-4 py-3 rounded-xl border border-red-200 dark:border-red-800/30 text-red-600 dark:text-red-400 font-bold bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 transition-all flex items-center justify-center disabled:opacity-70">
+                  <button onClick={handleDeleteRequest} disabled={saving} className="px-5 py-3 rounded-xl border border-red-200 dark:border-red-900/50 bg-white dark:bg-zinc-900 text-red-600 dark:text-red-500 font-bold hover:bg-red-50 transition-all flex items-center justify-center">
                     <Trash2 className="w-5 h-5" />
                   </button>
                 )}
-                <button onClick={() => setSelected(null)}
-                  className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 transition-all">
-                  Cancel
-                </button>
-                <button onClick={handleSave} disabled={saving || ((newStatus === 'needs_info' || newStatus === 'refund_pending') && !adminNote.trim())}
-                  className="flex-[2] py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  Save Changes
+                <div className="flex-1" />
+                <button onClick={() => setSelected(null)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 dark:hover:bg-zinc-800 transition-all text-sm">Dismiss</button>
+                <button onClick={handleSave} disabled={saving || ((newStatus === 'needs_info' || newStatus === 'refund_pending') && !adminNote.trim())} className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Save Workspace
                 </button>
               </div>
 
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
