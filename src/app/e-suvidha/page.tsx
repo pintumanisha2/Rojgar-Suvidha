@@ -2,16 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, MonitorSmartphone, CheckCircle2, Star, FileText, ShieldCheck } from "lucide-react";
+import { ArrowLeft, MonitorSmartphone, CheckCircle2, Star, FileText, ShieldCheck, Zap, TrendingUp, Flame } from "lucide-react";
 
 export default function ESuvidhaPage() {
   const services = [
     {
       category: "Identity Cards",
       items: [
-        { id: "pan-new", slug: "apply-new-pan-card-online", name: "New PAN Card", desc: "Apply online for new PAN Card with Aadhaar card.", price: "150", icon: "💳", time: "3-5 Days" },
+        { id: "pan-new", slug: "apply-new-pan-card-online", name: "New PAN Card", desc: "Apply online for new PAN Card with Aadhaar card.", price: "150", icon: "💳", time: "3-5 Days", badge: "popular" },
         { id: "pan-correction", slug: "pan-card-correction-online", name: "PAN Card Correction", desc: "Change name, photo, signature or DOB in existing PAN.", price: "150", icon: "✏️", time: "5-7 Days" },
-        { id: "voter-new", slug: "apply-new-voter-id-card", name: "New Voter ID", desc: "Voter card registration form submission online.", price: "100", icon: "🗳️", time: "10-15 Days" },
+        { id: "voter-new", slug: "apply-new-voter-id-card", name: "New Voter ID", desc: "Voter card registration form submission online.", price: "100", icon: "🗳️", time: "10-15 Days", badge: "trending" },
         { id: "aadhaar-pvc", slug: "order-aadhaar-pvc-card", name: "Order Aadhaar PVC Card", desc: "Order official plastic PVC Aadhaar card online.", price: "100", icon: "🪪", time: "7-10 Days" },
       ]
     },
@@ -27,7 +27,7 @@ export default function ESuvidhaPage() {
     {
       category: "Government Schemes",
       items: [
-        { id: "eshram", slug: "eshram-card-registration-online", name: "E-Shram Card Registration", desc: "Shramik card self registration and download.", price: "80", icon: "👷", time: "24 Hours" },
+        { id: "eshram", slug: "eshram-card-registration-online", name: "E-Shram Card Registration", desc: "Shramik card self registration and download.", price: "80", icon: "👷", time: "24 Hours", badge: "instant" },
         { id: "ayushman", slug: "ayushman-bharat-card-apply", name: "Ayushman Bharat Card", desc: "PMJAY Golden Health Card check & apply online.", price: "100", icon: "🏥", time: "24 Hours" },
         { id: "pf-withdrawal", slug: "pf-withdrawal-claim-online", name: "PF Withdrawal Form", desc: "EPFO PF withdrawal Form 31, 19, 10c online apply.", price: "200", icon: "💰", time: "48 Hours" },
       ]
@@ -42,7 +42,7 @@ export default function ESuvidhaPage() {
     {
       category: "Student & Career Services",
       items: [
-        { id: "admit-card", slug: "download-admit-card-result", name: "Admit Card / Result Download", desc: "Get Sarkari Result and admit card prints online.", price: "30", icon: "📥", time: "1-2 Hours" },
+        { id: "admit-card", slug: "download-admit-card-result", name: "Admit Card / Result Download", desc: "Get Sarkari Result and admit card prints online.", price: "30", icon: "📥", time: "1-2 Hours", badge: "trending" },
         { id: "resume-cv", slug: "professional-resume-cv-maker", name: "Professional Resume / CV Maker", desc: "Create modern job CV or resume biodata format.", price: "99", icon: "📄", time: "24 Hours" },
       ]
     },
@@ -101,6 +101,37 @@ export default function ESuvidhaPage() {
         </div>
 
         {/* Services Grid */}
+        {/* 🔥 Popular Services Quick-Select */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="w-5 h-5 text-orange-500" />
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Most Popular Services</h2>
+            <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">Quick Apply</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {[
+              { slug: "apply-new-pan-card-online", icon: "💳", name: "New PAN Card", price: "150", badge: "🔥 #1 Popular" },
+              { slug: "apply-new-voter-id-card", icon: "🗳️", name: "New Voter ID", price: "100", badge: "📈 Trending" },
+              { slug: "eshram-card-registration-online", icon: "👷", name: "E-Shram Card", price: "80", badge: "⚡ Instant" },
+              { slug: "itr-filing-nil-return", icon: "📊", name: "ITR Filing", price: "300", badge: "✅ Expert" },
+              { slug: "download-admit-card-result", icon: "📥", name: "Admit Card Download", price: "30", badge: "🆕 Trending" },
+              { slug: "order-aadhaar-pvc-card", icon: "🪪", name: "Aadhaar PVC Card", price: "100", badge: "🔒 Secure" },
+            ].map(s => (
+              <Link
+                key={s.slug}
+                href={`/e-suvidha/apply/${s.slug}`}
+                className="shrink-0 flex flex-col items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:shadow-md rounded-2xl p-4 transition-all group w-36"
+              >
+                <span className="text-3xl mb-2">{s.icon}</span>
+                <span className="text-xs font-bold text-gray-800 dark:text-white text-center leading-tight mb-1">{s.name}</span>
+                <span className="text-[10px] text-indigo-500 font-bold mb-2">{s.badge}</span>
+                <span className="text-xs font-black text-gray-900 dark:text-white">₹{s.price}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* All Services Grid */}
         <div className="space-y-10">
           {services.map((section, idx) => (
             <div key={idx}>
@@ -117,6 +148,16 @@ export default function ESuvidhaPage() {
                     className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 group relative overflow-hidden flex flex-col justify-between h-full cursor-pointer"
                   >
                     <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150 pointer-events-none" />
+                    {/* Badge */}
+                    {(item as any).badge && (
+                      <div className={`absolute top-3 left-3 text-[10px] font-black px-2 py-0.5 rounded-full z-10 ${
+                        (item as any).badge === 'popular' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400' :
+                        (item as any).badge === 'instant' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+                      }`}>
+                        {(item as any).badge === 'popular' ? '🔥 Most Popular' : (item as any).badge === 'instant' ? '⚡ Instant' : '📈 Trending'}
+                      </div>
+                    )}
 
                     <div>
                       <div className="text-4xl mb-4 relative z-10">{item.icon}</div>

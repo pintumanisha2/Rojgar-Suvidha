@@ -12,6 +12,7 @@ import {
 import imageCompression from "browser-image-compression";
 import RecentlyViewed from "@/components/home/RecentlyViewed";
 import PrivateApplicationTracker from "@/components/candidate/PrivateApplicationTracker";
+import RatingPrompt from "@/components/ui/RatingPrompt";
 
 function DashboardContent() {
   const router = useRouter();
@@ -61,6 +62,9 @@ function DashboardContent() {
   // Delete account confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  // Rating prompt state — shows after an order is completed
+  const [ratingOrder, setRatingOrder] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -242,12 +246,24 @@ function DashboardContent() {
           .order("created_at", { ascending: false });
         setMyRequests(reqData || []);
 
+        // ⭐ Rating Prompt: show for first completed order not yet reviewed
+        if (reqData) {
+          const reviewedOrders: string[] = JSON.parse(localStorage.getItem("rs_reviewed_orders") || "[]");
+          const completedUnreviewed = reqData.find(
+            (req: any) => req.status === "completed" && !reviewedOrders.includes(req.id)
+          );
+          if (completedUnreviewed) {
+            setRatingOrder(completedUnreviewed);
+          }
+        }
+
         // Initialize status notification ref to prevent initial page-load alerts
         if (reqData) {
           reqData.forEach((req: any) => {
             lastNotifiedStatus.current[req.id] = req.status;
           });
         }
+
 
         // FIX: Fetch applications by user_id first, fallback to phone number
         const { data: appData } = await supabase
@@ -487,6 +503,17 @@ function DashboardContent() {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen py-10 px-4">
+
+      {/* ⭐ Rating Prompt — shows for completed unreviewed orders */}
+      {ratingOrder && user && (
+        <RatingPrompt
+          orderId={ratingOrder.id}
+          jobTitle={ratingOrder.job_title || "Your Application"}
+          userId={user.id}
+          reviewerName={profile?.full_name || user.email || "Aspirant"}
+          onDismiss={() => setRatingOrder(null)}
+        />
+      )}
 
       {/* ── LIVE OTP ALERT — appears when team needs OTP ── */}
       {otpAlert && (

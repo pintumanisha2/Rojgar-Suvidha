@@ -12,6 +12,7 @@ const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSectio
 import CalendarSelector from "@/components/calendar/CalendarSelector";
 const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
 const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
+const EmailAlertBanner = dynamic(() => import("@/components/home/EmailAlertBanner"));
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -152,8 +153,11 @@ export default async function Home() {
       {/* Aspirants Adda Live Chat Promotion Banner */}
       <AspirantsAddaPromo />
 
-      {/* Trust Building Signals (Stats + Reviews) - Moved below advertisement */}
+      {/* Trust Building Signals (Stats + Reviews) */}
       <TrustSignals />
+
+      {/* 📧 Email Alert Capture Banner — shown between trust signals and SEO block */}
+      <EmailAlertBanner />
 
       {/* SEO Content Block for Home Page */}
       <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">

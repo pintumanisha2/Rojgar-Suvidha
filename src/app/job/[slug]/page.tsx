@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AdSensePlaceholder from "@/components/ads/AdSensePlaceholder";
 import SaveJobButton from "@/components/ui/SaveJobButton";
-import CopyLinkButton from "@/components/ui/CopyLinkButton";
+import ShareJobButton from "@/components/ui/ShareJobButton";
 import TrackJobViewWrapper from "@/components/ui/TrackJobViewWrapper";
 import JobAbandonTracker from "@/components/ui/JobAbandonTracker";
 import AgeCalculator from "@/components/ui/AgeCalculator";
@@ -456,7 +456,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 <Send className="w-5 h-5" /> Telegram
               </a>
               {/* Copy Link button */}
-              <CopyLinkButton url={`https://rojgarsuvidha.com/job/${slug}`} title={job.title} />
+              <ShareJobButton url={`https://www.rojgarsuvidha.com/job/${slug}`} title={job.title} />
             </div>
           </div>
 

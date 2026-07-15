@@ -2,6 +2,7 @@
 
 import { Users, FileText, CheckCircle, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const stats = [
   {
@@ -30,60 +31,62 @@ const stats = [
   },
 ];
 
-const testimonials = [
+const seedTestimonials = [
   {
-    id: 1,
-    content: "Pehle SSC ke form me photo upload karne me hamesha error aata tha. Rojgar Suvidha ke 'Apply For Me' feature ne mera kaam 5 minute me kar diya. Zero error, full trust!",
+    id: 'seed-1',
+    content: "Pehle form bharne me hamesha error aata tha. Rojgar Suvidha's 'Apply For Me' feature did my job in 5 mins. Zero error, full trust!",
     author: "Rahul Kumar",
-    role: "SSC CGL Aspirant",
+    role: "SSC Aspirant",
     location: "Patna, Bihar",
     rating: 5,
   },
   {
-    id: 2,
-    content: "Mujhe jobs ki update sabse pehle yahan milti hai. Inka Telegram group bahot fast hai. Fake jobs ka koi tension nahi kyunki sab verified hota hai.",
+    id: 'seed-2',
+    content: "I get job updates here first. Their Telegram group is very fast. No tension of fake jobs because everything is verified.",
     author: "Priya Sharma",
     role: "Banking Aspirant",
-    location: "Jaipur, Rajasthan",
+    location: "Jaipur, RJ",
     rating: 5,
-  },
-  {
-    id: 3,
-    content: "Admit card download link hamesha time par milta hai. Website bahut clean hai, koi faltu ke ads nahi hain jo distract karein. Best job portal in India right now.",
-    author: "Amit Yadav",
-    role: "UP Police Candidate",
-    location: "Lucknow, UP",
-    rating: 5,
-  },
-  {
-    id: 4,
-    content: "My brother recommended this site. I uploaded my documents on WhatsApp and their team filled my Railway NTPC form perfectly. Very genuine service.",
-    author: "Sneha Reddy",
-    role: "RRB NTPC Aspirant",
-    location: "Hyderabad, Telangana",
-    rating: 5,
-  },
-  {
-    id: 5,
-    content: "Har sarkari result ka direct scorecard link yaha mil jata hai. Server down hone ka issue nahi hota kyunki inke links fast hote hain. Thanks!",
-    author: "Vikas Singh",
-    role: "UPSC Candidate",
-    location: "Delhi",
-    rating: 4,
-  },
-  {
-    id: 6,
-    content: "Bhaiya logo ne mera form last minute pe bhara aur payment fail hone se bacha liya. 100% bharosemand log hain piche. Must use Apply for Me.",
-    author: "Manish Gupta",
-    role: "State PSC Aspirant",
-    location: "Bhopal, MP",
-    rating: 5,
-  },
+  }
 ];
 
 export default function TrustSignals() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [liveTestimonials, setLiveTestimonials] = useState<any[]>(seedTestimonials);
+
+  useEffect(() => {
+    async function fetchReviews() {
+      try {
+        const { data, error } = await supabase
+          .from("reviews")
+          .select("*")
+          .eq("is_visible", true)
+          .order("created_at", { ascending: false })
+          .limit(6);
+          
+        if (data && data.length > 0) {
+          const formatted = data.map((r: any) => ({
+            id: r.id,
+            content: r.review_text || "Great service! Highly recommended.",
+            author: r.reviewer_name || "Aspirant",
+            role: "Verified User",
+            location: "India",
+            rating: r.rating || 5,
+          }));
+          
+          if (formatted.length >= 2) {
+             setLiveTestimonials(formatted);
+          } else {
+             setLiveTestimonials([...formatted, ...seedTestimonials.slice(formatted.length)]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews", err);
+      }
+    }
+    fetchReviews();
+  }, []);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -190,7 +193,7 @@ export default function TrustSignals() {
             className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {testimonials.map((testimonial) => (
+            {liveTestimonials.map((testimonial) => (
               <div 
                 key={testimonial.id} 
                 className="min-w-[300px] max-w-[320px] shrink-0 snap-center bg-gray-50 dark:bg-gray-900/50 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 relative flex flex-col"
