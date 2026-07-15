@@ -920,12 +920,12 @@ function DashboardContent() {
               {myRequests.length === 0 ? (
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden p-16 text-center">
                   <ClipboardCheck className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Applications Found</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Applications Yet</h3>
                   <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-                    Kisi bhi job par "Apply For Me" button dabao aur hum aapka form bhar denge!
+                    You haven&apos;t placed any applications yet. Browse jobs and click &quot;Apply For Me&quot; — our expert team will fill the form for you!
                   </p>
                   <Link href="/apply-for-me" className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/30">
-                    Pehli Request Daalo
+                    Browse Jobs &amp; Apply
                   </Link>
                 </div>
               ) : (

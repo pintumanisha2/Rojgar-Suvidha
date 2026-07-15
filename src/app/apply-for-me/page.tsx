@@ -268,6 +268,19 @@ function ApplyForMeContent() {
               
               // 🔔 Trigger payment success notification
               triggerPaymentSuccessNotification(user.id, jobTitleParam || "Vacancy", orderId);
+
+              // 📧 Send confirmation email (fire-and-forget — does not block UI)
+              fetch("/api/send-confirmation-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userEmail: user.email,
+                  userName: profile?.full_name || user.email || "Aspirant",
+                  jobTitle: jobTitleParam || "Applied Vacancy",
+                  orderId,
+                  serviceType: "apply-for-me",
+                }),
+              }).catch(() => {}); // Non-fatal: silently ignore email failures
               
               // 🎉 Trigger Confetti micro-interaction
               try {

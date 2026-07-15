@@ -21,6 +21,8 @@ import LazyGlobalComponents from "@/components/layout/LazyGlobalComponents";
 import GlobalOtpListener from "@/components/layout/GlobalOtpListener";
 import CountdownGate from "@/components/layout/CountdownGate";
 import { ToastProvider } from "@/components/ui/Toast";
+import CookieBanner from "@/components/ui/CookieBanner";
+
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -287,6 +289,7 @@ export default function RootLayout({
               <GlobalOtpListener />
             </CountdownGate>
           </ToastProvider>
+          <CookieBanner />
           {/* Auto-update Service Worker to prevent caching issues for users */}
           <script
             dangerouslySetInnerHTML={{
