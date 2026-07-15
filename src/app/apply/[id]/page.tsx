@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle } from "lucide-react";
 import Script from "next/script";
@@ -776,7 +777,20 @@ function ApplyContent() {
               </div>
             </div>
 
-            <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-lg rounded-2xl shadow-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100">
+            {/* Merchant billing information & policy agreement */}
+            <div className="mt-3 px-2 text-center space-y-2">
+              <p className="text-[11px] text-gray-400 leading-normal">
+                Secure payments processed via Cashfree. Your card/account statement will show billing under registered merchant: <strong className="text-gray-600 dark:text-gray-300">PINTU KUMAR</strong>.
+              </p>
+              <p className="text-[10px] text-gray-500">
+                By clicking "Submit Application", you agree to our{" "}
+                <Link href="/terms" className="text-indigo-500 hover:underline">Terms of Service</Link>{" "}
+                and{" "}
+                <Link href="/refund-policy" className="text-indigo-500 hover:underline">Refund & Cancellation Policy</Link>.
+              </p>
+            </div>
+
+            <button type="submit" disabled={isSubmitting} className="w-full mt-2 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-lg rounded-2xl shadow-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100">
               {isSubmitting ? (
                 <><Loader2 className="h-6 w-6 animate-spin" /> Submitting securely...</>
               ) : (

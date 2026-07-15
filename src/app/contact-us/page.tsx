@@ -132,8 +132,8 @@ export default function ContactUsPage() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">Registered Address</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">
                     PINTU KUMAR<br />
-                    Sector 62, Noida,<br />
-                    Uttar Pradesh, India – 201309
+                    Champanagar, Purnia,<br />
+                    Bihar, India – 854304
                   </p>
                 </div>
               </div>

@@ -181,7 +181,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <MapPin className="h-4 w-4 text-indigo-400 shrink-0" />
-                <span className="text-gray-400 text-sm">New Delhi, India</span>
+                <span className="text-gray-400 text-sm">Champanagar, Purnia, Bihar - 854304</span>
               </li>
             </ul>
           </div>
@@ -219,6 +219,16 @@ export default function Footer() {
             {' '}<strong className="text-gray-500">Answer Keys</strong> & University Admissions. 
             Our exclusive "Apply For Me" service ensures error-free government job form filling.
           </p>
+        </div>
+
+        {/* ── Prominent Disclaimer Alert Box ── */}
+        <div className="border-t border-gray-800 pt-6 mt-6">
+          <div className="bg-gray-800/40 border border-gray-700/50 rounded-2xl p-5 text-center text-xs text-gray-400 space-y-2">
+            <p className="font-extrabold text-gray-300 uppercase tracking-widest">⚠️ Legal Disclaimer & Affiliation Notice</p>
+            <p className="leading-relaxed max-w-3xl mx-auto">
+              Rojgar Suvidha is a completely private educational information portal and online service provider owned and operated by PINTU KUMAR. We are <strong>NOT affiliated with, nor do we represent</strong>, any central/state government organization, department, or recruitment board. We only charge a processing service fee of ₹50 to assist candidates in error-free online form filling.
+            </p>
+          </div>
         </div>
 
         {/* ── Legal Bar ── */}
