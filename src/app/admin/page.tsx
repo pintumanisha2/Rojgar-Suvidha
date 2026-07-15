@@ -96,11 +96,11 @@ export default function AdminDashboardPage() {
           setUserRole(currentRole);
         }
 
-        // FIX: Fetch real stats from Supabase (was hardcoded to 0 before)
+        // FIX: Fetch real stats from Supabase using proper statuses (active, out, last, soon)
         const [activeJobsRes, admitCardsRes, resultsRes, applyReqRes] = await Promise.all([
-          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "published"),
-          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "admit-card").eq("status", "published"),
-          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "result").eq("status", "published"),
+          supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["active", "out", "last", "soon"]),
+          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "admit-card").eq("status", "out"),
+          supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "result").eq("status", "out"),
           supabase.from("apply_for_me_requests").select("*", { count: "exact", head: true }).in("status", ["pending", "paid"]),
         ]);
         setStatCounts({
@@ -260,23 +260,48 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Quick Launchpad */}
+      {(userRole === 'super_admin' || userRole === 'admin') && (
+        <div className="mb-8">
+          <h3 className="text-sm font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-4 px-1">Quick Launchpad</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {quickActions.map((action, i) => {
+              const Icon = action.icon;
+              return (
+                <Link key={i} href={action.href} className={`flex flex-col items-center justify-center p-4 rounded-2xl shadow-sm hover:shadow-md transition-all hover:-translate-y-1 text-center group ${action.color}`}>
+                  <Icon className="h-6 w-6 mb-2 opacity-90 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] sm:text-xs font-bold leading-tight">{action.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Premium Stats Grid */}
       {(userRole === 'super_admin' || userRole === 'admin' || userRole === 'content_writer') && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Total Active Jobs", value: statCounts.activeJobs, icon: Briefcase, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-50 dark:bg-indigo-900/30", href: "/admin/jobs" },
-            { label: "Admit Cards", value: statCounts.admitCards, icon: BookOpen, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-900/30", href: "/admin/jobs" },
-            { label: "Results Published", value: statCounts.results, icon: FileText, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-900/30", href: "/admin/jobs" },
-            { label: "Apply Requests", value: statCounts.applyRequests, icon: Users, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-900/30", href: "/admin/applications" },
+            { label: "Total Active Jobs", value: statCounts.activeJobs, icon: Briefcase, color: "text-indigo-600 dark:text-indigo-400", bgColor: "bg-indigo-50 dark:bg-indigo-900/30", glow: "group-hover:bg-indigo-500/10", href: "/admin/jobs" },
+            { label: "Admit Cards", value: statCounts.admitCards, icon: BookOpen, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-50 dark:bg-orange-900/30", glow: "group-hover:bg-orange-500/10", href: "/admin/jobs" },
+            { label: "Results Published", value: statCounts.results, icon: FileText, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-50 dark:bg-green-900/30", glow: "group-hover:bg-green-500/10", href: "/admin/jobs" },
+            { label: "Apply Requests", value: statCounts.applyRequests, icon: Users, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-50 dark:bg-red-900/30", glow: "group-hover:bg-red-500/10", href: "/admin/applications" },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
-              <Link key={stat.label} href={stat.href} className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow group">
-                <div className={`inline-flex p-3 rounded-xl mb-4 ${stat.bgColor}`}>
+              <Link key={stat.label} href={stat.href} className="relative group overflow-hidden bg-white dark:bg-zinc-950 rounded-3xl border border-gray-100 dark:border-zinc-900 p-6 shadow-sm hover:shadow-xl transition-all duration-300">
+                {/* Subtle glowing corner */}
+                <div className={`absolute -top-10 -right-10 w-32 h-32 blur-3xl transition-all duration-500 rounded-full ${stat.glow} bg-transparent pointer-events-none`} />
+                
+                <div className={`inline-flex p-3.5 rounded-2xl mb-4 ${stat.bgColor} border border-white/50 dark:border-white/5`}>
                   <Icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
-                <p className="text-2xl font-extrabold text-gray-900 dark:text-white">{loading ? "..." : stat.value}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{stat.label}</p>
+                <p className="text-3xl font-extrabold text-gray-900 dark:text-white tabular-nums tracking-tight">
+                  {loading ? (
+                    <span className="flex items-center gap-2"><span className="w-4 h-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" /></span>
+                  ) : stat.value}
+                </p>
+                <p className="text-sm font-semibold text-gray-500 dark:text-zinc-400 mt-1">{stat.label}</p>
               </Link>
             );
           })}
@@ -285,7 +310,7 @@ export default function AdminDashboardPage() {
 
       {/* Form Filler Performance Overview */}
       {userRole === 'form_filler' && (
-        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+        <div className="bg-white dark:bg-zinc-950 rounded-3xl border border-gray-100 dark:border-zinc-900 p-6 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-lg">
               <CheckCircle2 className="h-6 w-6 text-green-500" />
@@ -323,7 +348,7 @@ export default function AdminDashboardPage() {
 
       {/* Content Writer Performance Overview */}
       {userRole === 'content_writer' && (
-        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+        <div className="bg-white dark:bg-zinc-950 rounded-3xl border border-gray-100 dark:border-zinc-900 p-6 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-lg">
               <CheckCircle2 className="h-6 w-6 text-purple-500" />
@@ -357,8 +382,8 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
           {/* Form Fillers Leaderboard */}
           {allFillersStats.length > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-900 shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-indigo-500" />
                   Form Fillers Leaderboard
@@ -369,7 +394,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50">
+                  <thead className="bg-gray-50 dark:bg-zinc-900/50">
                     <tr>
                       <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Employee</th>
                       <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase text-center">Today</th>
@@ -377,11 +402,12 @@ export default function AdminDashboardPage() {
                       <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase text-center">Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {allFillersStats.map((filler) => (
-                      <tr key={filler.email} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                  <tbody className="divide-y divide-gray-100 dark:divide-zinc-900">
+                    {allFillersStats.map((filler, index) => (
+                      <tr key={filler.email} className="hover:bg-gray-50 dark:hover:bg-zinc-900/30">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
+                            <span className="text-lg w-6 text-center">{index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}️⃣`}</span>
                             <Users className="h-4 w-4 text-indigo-400" />
                             <span className="text-sm font-bold text-gray-900 dark:text-white">{filler.email.split('@')[0]}</span>
                           </div>
@@ -403,8 +429,8 @@ export default function AdminDashboardPage() {
 
           {/* Content Writers Leaderboard */}
           {allWritersStats.length > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-900 shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-purple-500" />
                   Content Writers Leaderboard
@@ -415,7 +441,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-purple-50 dark:bg-gray-800/50">
+                  <thead className="bg-purple-50 dark:bg-zinc-900/50">
                     <tr>
                       <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase">Employee</th>
                       <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase text-center">Today</th>
@@ -423,11 +449,12 @@ export default function AdminDashboardPage() {
                       <th className="px-6 py-3 text-xs font-bold text-gray-500 uppercase text-center">Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {allWritersStats.map((writer) => (
+                  <tbody className="divide-y divide-gray-100 dark:divide-zinc-900">
+                    {allWritersStats.map((writer, index) => (
                       <tr key={writer.email} className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
+                            <span className="text-lg w-6 text-center">{index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}️⃣`}</span>
                             <FileText className="h-4 w-4 text-purple-400" />
                             <span className="text-sm font-bold text-gray-900 dark:text-white">{writer.email.split('@')[0]}</span>
                           </div>
@@ -449,35 +476,10 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Quick Actions + Recent Jobs */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-indigo-500" />
-            Quick Actions
-          </h3>
-          <div className="space-y-2.5">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link
-                  key={action.label}
-                  href={action.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${action.color} group`}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {action.label}
-                  <ArrowRight className="h-4 w-4 ml-auto group-hover:translate-x-1 transition-transform" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Recent Jobs */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden lg:col-span-2">
-          <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+      {/* Recent Jobs */}
+      <div className="mt-6">
+        <div className="bg-white dark:bg-zinc-950 rounded-3xl border border-gray-100 dark:border-zinc-900 shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between">
             <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Clock className="h-5 w-5 text-indigo-500" />
               Recent Posts
