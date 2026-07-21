@@ -10,85 +10,79 @@ const popularServices = [
 
 export default function FeaturedServices() {
   return (
-    <section className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
+    <section className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
-        <div>
-          <span className="inline-flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-xs font-black px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
-            <Sparkles className="w-3 h-3" /> e-Suvidha Portal
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            Ghar Baithe Banwayein Government Documents
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+          <h2 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white leading-tight">
+            Ghar Baithe Banwayein Govt Documents
           </h2>
-          <p className="text-gray-500 dark:text-zinc-400 mt-2 text-sm sm:text-base max-w-2xl">
-            Cyber cafe jaane ki koi tension nahi. Bas documents submit karein, hamare experts aapka Voter ID, PAN card, ITR aur certificates safely apply karenge.
-          </p>
+          <span className="text-xs text-gray-400 hidden md:inline">• 15+ Digital Services</span>
         </div>
         <Link 
           href="/e-suvidha" 
-          className="mt-4 md:mt-0 inline-flex items-center gap-1.5 text-sm font-extrabold text-indigo-600 dark:text-indigo-400 hover:gap-2.5 transition-all"
+          className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 flex items-center gap-1"
         >
-          Sabhi 15+ Services Dekhein <ArrowRight className="w-4 h-4" />
+          Sabhi Services <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Compact Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         {popularServices.map((service) => (
           <div 
             key={service.id} 
-            className="group bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-5 shadow-sm hover:shadow-lg hover:border-indigo-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between"
+            className="group bg-white dark:bg-zinc-900 border border-gray-150 dark:border-zinc-800 rounded-2xl p-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
           >
             <div>
-              <div className="flex justify-between items-start mb-4">
-                <span className="text-4xl">{service.icon}</span>
+              <div className="flex items-center justify-between gap-1 mb-1.5">
+                <span className="text-2xl shrink-0">{service.icon}</span>
                 {service.badge && (
-                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">
                     {service.badge}
                   </span>
                 )}
               </div>
-              <h3 className="font-extrabold text-gray-900 dark:text-white text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 className="font-extrabold text-gray-900 dark:text-white text-xs group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
                 {service.name}
               </h3>
-              <p className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed mt-2 mb-4">
+              <p className="text-[10px] text-gray-400 dark:text-zinc-500 line-clamp-1 mt-0.5">
                 {service.desc}
               </p>
             </div>
-            <div className="border-t border-gray-100 dark:border-zinc-800 pt-4 flex items-center justify-between mt-auto">
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase font-bold">Service Fee</p>
-                <p className="text-lg font-black text-gray-900 dark:text-white">{service.price}</p>
-              </div>
+            
+            <div className="border-t border-gray-100 dark:border-zinc-800/80 pt-2 flex items-center justify-between mt-2">
+              <span className="text-xs font-black text-gray-900 dark:text-white">{service.price}</span>
               <Link 
                 href={`/e-suvidha/apply/${service.id}`}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm group-hover:scale-105 active:scale-95"
+                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[10px] font-black rounded-lg transition-all shadow-sm"
               >
-                Apply Now
+                Apply
               </Link>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Trust Badges */}
-      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 rounded-3xl p-5">
-        <div className="flex items-center gap-2.5">
-          <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">100% Safe Payment</span>
+      {/* Ultra-Compact Trust Badges */}
+      <div className="mt-3 flex items-center justify-between gap-2 bg-gray-50 dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-800/60 rounded-xl px-3 py-2 text-[10px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-1.5">
+          <Shield className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+          <span>100% Safe Payment</span>
         </div>
-        <div className="flex items-center gap-2.5">
-          <BadgeCheck className="w-5 h-5 text-emerald-500 shrink-0" />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Verified Govt Portals</span>
+        <div className="flex items-center gap-1.5">
+          <BadgeCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+          <span>Verified Govt Portals</span>
         </div>
-        <div className="flex items-center gap-2.5">
-          <FileText className="w-5 h-5 text-amber-500 shrink-0" />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Zero Error Guarantee</span>
+        <div className="flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <span>Zero Error Guarantee</span>
         </div>
-        <div className="flex items-center gap-2.5">
-          <Compass className="w-5 h-5 text-rose-500 shrink-0" />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Ghar Baithe Tracking</span>
+        <div className="flex items-center gap-1.5">
+          <Compass className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+          <span>Ghar Baithe Tracking</span>
         </div>
       </div>
 
