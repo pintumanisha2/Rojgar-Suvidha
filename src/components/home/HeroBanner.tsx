@@ -112,35 +112,8 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
 
   return (
     <>
-    <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-3">
+    <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-2 sm:py-3">
       <div className="max-w-7xl mx-auto">
-        {/* H1 Hero Headline with clear value prop */}
-        <div className="text-center py-6 sm:py-8 max-w-3xl mx-auto">
-          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight mb-2 tracking-tight">
-            Aaj Ka <span className="text-indigo-600 dark:text-indigo-400">Sarkari Naukri</span> Update
-          </h1>
-          <p className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 max-w-lg mx-auto mb-4 leading-relaxed">
-            15,000+ forms successfully submitted. Cyber Cafe ke dhakke chhoro, experts se online form bharwao!
-          </p>
-          <div className="flex gap-2.5 justify-center">
-            <Link 
-              href="/apply-for-me" 
-              className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-500/20 active:scale-95"
-            >
-              Mera Form Bharo <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-            <button 
-              onClick={() => {
-                const el = document.getElementById("job-sections-grid");
-                if (el) el.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-gray-100 dark:bg-zinc-900 text-gray-800 dark:text-gray-200 text-xs font-bold rounded-xl border border-gray-200 dark:border-zinc-800 transition-all hover:bg-gray-200 dark:hover:bg-zinc-800 active:scale-95"
-            >
-              Jobs Dekhein
-            </button>
-          </div>
-        </div>
-
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
 
