@@ -141,11 +141,6 @@ export default async function Home() {
       {/* Featured e-Suvidha Services */}
       <FeaturedServices />
 
-      {/* AI Personalization Engine (7.1) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <RecommendedJobs />
-      </div>
-
       {/* Main Content - Job Listings (Wrapped in Suspense for Shimmer Effect) */}
       <Suspense fallback={<MainContentSkeleton />}>
         <MainContent />
