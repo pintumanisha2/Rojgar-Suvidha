@@ -220,7 +220,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`h-full antialiased ${inter.variable}`}
+      className={`antialiased ${inter.variable}`}
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
@@ -253,7 +253,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
         <link rel="dns-prefetch" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
       </head>
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 overflow-x-hidden w-full">
+      <body className="min-h-screen flex flex-col bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300 w-full overflow-x-clip">
         {/* Google Analytics (gtag.js) */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-NYNEZYFGD5"
@@ -279,7 +279,7 @@ export default function RootLayout({
             </Suspense>
             <CountdownGate>
               <PublicHeader />
-              <main className="flex-grow flex flex-col w-full max-w-full overflow-x-hidden">
+              <main className="flex-grow flex flex-col w-full max-w-full overflow-x-clip">
                 {children}
               </main>
               <PublicFooter />
