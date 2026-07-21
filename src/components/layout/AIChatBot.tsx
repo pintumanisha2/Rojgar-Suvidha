@@ -115,7 +115,7 @@ export default function AIChatBot() {
       return [
         { label: "Eligibility? 🎓", query: "Is job ki eligibility criteria aur age limit kya hai?" },
         { label: "Salary Details? 💵", query: "Is recruitment me kitni salary milti hai?" },
-        { label: "Form Apply (₹50) 🚀", query: "Mera form apply kar do. Apply For Me service kya hai?" },
+        { label: "Form Apply (₹49) 🚀", query: "Mera form apply kar do. Apply For Me service kya hai?" },
       ];
     }
     if (pathname === "/apply-for-me") {
