@@ -96,7 +96,7 @@ const whatsappChats = [
     messages: [
       { type: "in", text: "IBPS PO ka declaration handwriting correct fill hua?", time: "04:02 PM" },
       { type: "out", text: "Haan, aapka uploaded declaration verified and attached hai.", time: "04:05 PM" },
-      { type: "in", text: "Perfect! Trusted service, 5 stars ⭐⭐⭐⭐⭐", time: "04:07 PM" }
+      { type: "in", text: "Perfect! Trusted service, 5 star rating", time: "04:07 PM" }
     ]
   },
   {

@@ -60,7 +60,7 @@ export default function ProfileStrengthMeter({ user, profile, avatarUrl }: { use
             <CheckCircle2 className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h3 className="text-xl font-extrabold mb-1">Superstar Profile! 🌟</h3>
+            <h3 className="text-xl font-extrabold mb-1">Superstar Profile!</h3>
             <p className="text-emerald-50 font-medium">Your profile is 100% complete. You are ready to apply for any government job in seconds.</p>
           </div>
         </div>

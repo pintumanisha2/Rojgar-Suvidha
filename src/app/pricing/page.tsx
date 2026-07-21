@@ -13,7 +13,7 @@ const applyForMePlans = [
     price: "₹49",
     desc: "SSC, Railway, Police, Defence, State Govt jobs",
     features: ["Photo & Signature resize karna", "Data entry aur form fill", "Final submission", "Tracking ID milega"],
-    badge: "⭐ Most Popular",
+    badge: "Most Popular",
     color: "from-indigo-600 to-violet-700",
     highlight: true,
   },
@@ -129,7 +129,7 @@ export default function PricingPage() {
           <div className="mt-4 flex flex-wrap gap-4 text-xs font-bold text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Secure Payment</span>
             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-blue-500" /> 24hr Processing</span>
-            <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-500" /> 4.9★ Rating</span>
+            <span className="flex items-center gap-1"><Star className="w-3.5 h-3.5 text-yellow-500" /> 4.9 Rating</span>
             <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-orange-500" /> Zero Error Guarantee</span>
           </div>
         </div>

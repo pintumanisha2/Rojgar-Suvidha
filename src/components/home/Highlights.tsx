@@ -39,7 +39,7 @@ export default function Highlights() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-violet-900 text-white shadow-lg border border-indigo-600/40 flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute top-3 right-3 z-10">
-            <span className="bg-orange-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow">⭐ Popular</span>
+            <span className="bg-orange-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow">Popular</span>
           </div>
           <div className="relative z-10 p-5 md:p-6 flex-1 flex flex-col">
             <div className="flex items-center gap-2.5 mb-3">
@@ -54,7 +54,7 @@ export default function Highlights() {
             <div className="flex items-center gap-3 mb-4 text-xs font-bold flex-wrap">
               <span className="flex items-center gap-1 text-emerald-400"><ShieldCheck className="w-3.5 h-3.5" /> Secure</span>
               <span className="flex items-center gap-1 text-blue-300"><Clock className="w-3.5 h-3.5" /> 24hr</span>
-              <span className="flex items-center gap-1 text-yellow-400"><Star className="w-3.5 h-3.5" /> 4.9★</span>
+              <span className="flex items-center gap-1 text-yellow-400"><Star className="w-3.5 h-3.5" /> 4.9 Rating</span>
             </div>
             <Link href="/apply-for-me" className="mt-auto flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white px-5 py-3 rounded-xl text-sm font-extrabold shadow-lg transition-all active:scale-95 w-full">
               Mera Form Bharo <ChevronRight className="w-4 h-4" />

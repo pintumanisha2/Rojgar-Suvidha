@@ -491,9 +491,9 @@ function ApplyForMeContent() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                   { value: "15,000+", label: "Forms Filled", icon: "📝", color: "bg-indigo-50/50 text-indigo-700 border-indigo-100/50 dark:bg-indigo-900/10 dark:text-indigo-400 dark:border-indigo-800/40" },
-                  { value: "4.9★", label: "Average Rating", icon: "⭐", color: "bg-amber-50/50 text-amber-700 border-amber-100/50 dark:bg-amber-900/10 dark:text-amber-400 dark:border-amber-800/40" },
+                  { value: "4.9 / 5", label: "Average Rating", icon: "👍", color: "bg-amber-50/50 text-amber-700 border-amber-100/50 dark:bg-amber-900/10 dark:text-amber-400 dark:border-amber-800/40" },
                   { value: "100%", label: "Accuracy Rate", icon: "✅", color: "bg-green-50/50 text-green-700 border-green-100/50 dark:bg-green-900/10 dark:text-green-400 dark:border-green-800/40" },
-                  { value: "₹99", label: "Facilitation Charge", icon: "💰", color: "bg-purple-50/50 text-purple-700 border-purple-100/50 dark:bg-purple-900/10 dark:text-purple-400 dark:border-purple-800/40" },
+                  { value: "₹49", label: "Facilitation Charge", icon: "💰", color: "bg-purple-50/50 text-purple-700 border-purple-100/50 dark:bg-purple-900/10 dark:text-purple-400 dark:border-purple-800/40" },
                 ].map((stat) => (
                   <div key={stat.label} className={`p-4 rounded-2xl border text-center ${stat.color} transition-all`}>
                     <div className="text-2xl mb-1">{stat.icon}</div>

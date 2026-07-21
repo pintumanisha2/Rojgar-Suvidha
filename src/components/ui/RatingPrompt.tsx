@@ -115,7 +115,7 @@ export default function RatingPrompt({
             {/* Label */}
             {rating > 0 && (
               <p className="text-center text-sm font-bold text-amber-600 dark:text-amber-400 mb-3">
-                {["", "Poor 😞", "Fair 😐", "Good 👍", "Great 😊", "Excellent! 🌟"][rating]}
+                {["", "Poor 😞", "Fair 😐", "Good 👍", "Great 😊", "Excellent!"][rating]}
               </p>
             )}
 
