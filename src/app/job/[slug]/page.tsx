@@ -18,6 +18,7 @@ import MatchScoreCard from "@/components/ui/MatchScoreCard";
 import SocialProofBadges from "@/components/ui/SocialProofBadges";
 import PushSubscribeWidget from "@/components/ui/PushSubscribeWidget";
 import ApplyFomoBar from "@/components/ui/ApplyFomoBar";
+import FloatingApplyBar from "@/components/ui/FloatingApplyBar";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -318,6 +319,14 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       {/* Track this job visit for Recently Viewed feature (client-side) */}
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
       <JobAbandonTracker jobTitle={job.title} jobSlug={job.slug} />
+
+      {/* Floating 3-Second Delayed Mobile Apply Action Bar */}
+      <FloatingApplyBar
+        applyLink={applyLink}
+        customApplyLink={customApplyLink}
+        jobTitle={job.title}
+        jobSlug={job.slug}
+      />
 
       <div className="bg-gray-50 dark:bg-[#000000] min-h-screen py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
