@@ -4,13 +4,13 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Pricing — Rojgar Suvidha | Apply For Me & e-Suvidha Services",
-  description: "Transparent pricing for Apply For Me form-filling service and e-Suvidha digital services. Starting from ₹99. No hidden fees.",
+  description: "Transparent pricing for Apply For Me form-filling service and e-Suvidha digital services. Starting from ₹49. No hidden fees.",
 };
 
 const applyForMePlans = [
   {
     name: "Normal Govt Forms",
-    price: "₹99",
+    price: "₹49",
     desc: "SSC, Railway, Police, Defence, State Govt jobs",
     features: ["Photo & Signature resize karna", "Data entry aur form fill", "Final submission", "Tracking ID milega"],
     badge: "⭐ Most Popular",
@@ -19,7 +19,7 @@ const applyForMePlans = [
   },
   {
     name: "Complex / PSC Forms",
-    price: "₹149",
+    price: "₹99",
     desc: "UPSC, Bank PO, State PSC, Multi-step forms",
     features: ["Sab Normal features", "Multi-step form handling", "Document verification", "Priority processing"],
     badge: null,
