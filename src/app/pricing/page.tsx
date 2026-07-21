@@ -29,22 +29,22 @@ const applyForMePlans = [
 ];
 
 const eSuvidhaServices = [
-  { name: "New PAN Card", price: "₹150", time: "3–5 Days", icon: "💳" },
-  { name: "PAN Card Correction", price: "₹150", time: "5–7 Days", icon: "✏️" },
-  { name: "New Voter ID", price: "₹100", time: "10–15 Days", icon: "🗳️" },
-  { name: "Aadhaar PVC Card", price: "₹100", time: "7–10 Days", icon: "🪪" },
-  { name: "Income Certificate (Aay)", price: "₹100", time: "7 Days", icon: "📄" },
-  { name: "Caste Certificate (Jati)", price: "₹150", time: "10–15 Days", icon: "📜" },
-  { name: "Domicile (Niwas Praman)", price: "₹100", time: "7 Days", icon: "🏠" },
-  { name: "Police Clearance (PCC)", price: "₹200", time: "10–15 Days", icon: "👮" },
-  { name: "E-Shram Card", price: "₹80", time: "24 Hours", icon: "👷" },
-  { name: "Ayushman Bharat Card", price: "₹100", time: "24 Hours", icon: "🏥" },
-  { name: "PF Withdrawal Form", price: "₹200", time: "48 Hours", icon: "💰" },
-  { name: "Udyam Aadhaar (MSME)", price: "₹200", time: "2–3 Days", icon: "🏢" },
-  { name: "ITR Filing (Nil Return)", price: "₹300", time: "3–5 Days", icon: "📊" },
-  { name: "Passport Appointment", price: "₹300", time: "24 Hours", icon: "✈️" },
-  { name: "Learner License Apply", price: "₹250", time: "48 Hours", icon: "🚗" },
-  { name: "Professional Resume/CV", price: "₹99", time: "24 Hours", icon: "📄" },
+  { slug: "pan-new", name: "New PAN Card", price: "₹150", time: "3–5 Days", icon: "💳" },
+  { slug: "pan-correction", name: "PAN Card Correction", price: "₹150", time: "5–7 Days", icon: "✏️" },
+  { slug: "voter-new", name: "New Voter ID", price: "₹100", time: "10–15 Days", icon: "🗳️" },
+  { slug: "aadhaar-pvc", name: "Aadhaar PVC Card", price: "₹100", time: "7–10 Days", icon: "🪪" },
+  { slug: "income-cert", name: "Income Certificate (Aay)", price: "₹100", time: "7 Days", icon: "📄" },
+  { slug: "caste-cert", name: "Caste Certificate (Jati)", price: "₹150", time: "10–15 Days", icon: "📜" },
+  { slug: "domicile-cert", name: "Domicile (Niwas Praman)", price: "₹100", time: "7 Days", icon: "🏠" },
+  { slug: "pcc", name: "Police Clearance (PCC)", price: "₹200", time: "10–15 Days", icon: "👮" },
+  { slug: "eshram", name: "E-Shram Card", price: "₹80", time: "24 Hours", icon: "👷" },
+  { slug: "ayushman", name: "Ayushman Bharat Card", price: "₹100", time: "24 Hours", icon: "🏥" },
+  { slug: "pf-withdraw", name: "PF Withdrawal Form", price: "₹200", time: "48 Hours", icon: "💰" },
+  { slug: "udyam", name: "Udyam Aadhaar (MSME)", price: "₹200", time: "2–3 Days", icon: "🏢" },
+  { slug: "itr-nil", name: "ITR Filing (Nil Return)", price: "₹300", time: "3–5 Days", icon: "📊" },
+  { slug: "passport", name: "Passport Appointment", price: "₹300", time: "24 Hours", icon: "✈️" },
+  { slug: "learner-license", name: "Learner License Apply", price: "₹250", time: "48 Hours", icon: "🚗" },
+  { slug: "resume-cv", name: "Professional Resume/CV", price: "₹99", time: "24 Hours", icon: "📄" },
 ];
 
 const faqs = [
@@ -139,14 +139,18 @@ export default function PricingPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Ghar baithe govt documents banwao. Cyber cafe jaane ki zaroorat nahi.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {eSuvidhaServices.map((s) => (
-              <div key={s.name} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-3 hover:border-indigo-200 dark:hover:border-indigo-900 transition-colors">
-                <span className="text-2xl shrink-0">{s.icon}</span>
+              <Link
+                key={s.name}
+                href={`/e-suvidha/apply/${s.slug}`}
+                className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center gap-3 hover:border-indigo-500 dark:hover:border-indigo-500 hover:shadow-md transition-all group cursor-pointer"
+              >
+                <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">{s.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{s.name}</p>
+                  <p className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">{s.name}</p>
                   <p className="text-xs text-gray-400">{s.time}</p>
                 </div>
-                <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 shrink-0">{s.price}</span>
-              </div>
+                <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 shrink-0 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">{s.price} →</span>
+              </Link>
             ))}
           </div>
           <div className="mt-5 text-center">
