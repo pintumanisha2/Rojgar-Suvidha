@@ -54,9 +54,10 @@ function MiniBar({ label, value, total, color }: { label: string; value: number;
 
 export default function AnalyticsPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>("7d");
-  const [activeTab, setActiveTab] = useState<"overview" | "pages" | "audience" | "behavior" | "services">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "pages" | "audience" | "behavior" | "services" | "revenue">("overview");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -66,13 +67,21 @@ export default function AnalyticsPage() {
     else if (range === "7d") from.setDate(now.getDate() - 7);
     else from.setDate(now.getDate() - 30);
 
-    const { data } = await supabase
-      .from("analytics")
-      .select("page,source,browser,os,device_type,user_type,session_id,referrer,time_on_page,scroll_depth,created_at,event")
-      .gte("created_at", from.toISOString())
-      .order("created_at", { ascending: false });
+    const [analyticsRes, appsRes] = await Promise.all([
+      supabase
+        .from("analytics")
+        .select("page,source,browser,os,device_type,user_type,session_id,referrer,time_on_page,scroll_depth,created_at,event")
+        .gte("created_at", from.toISOString())
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("user_applications")
+        .select("created_at, total_paid, selected_post_name, payment_status")
+        .gte("created_at", from.toISOString())
+        .order("created_at", { ascending: false })
+    ]);
 
-    setRows((data as Row[]) || []);
+    setRows((analyticsRes.data as Row[]) || []);
+    setApplications((appsRes.data as any[]) || []);
     setLoading(false);
   }, [range]);
 
@@ -159,6 +168,7 @@ export default function AnalyticsPage() {
     { id: "audience", label: "Audience", icon: Users },
     { id: "behavior", label: "Behavior", icon: MousePointerClick },
     { id: "services", label: "Services", icon: Zap },
+    { id: "revenue", label: "Revenue", icon: TrendingUp },
   ] as const;
 
   // ── Services deep analytics ──────────────────────────────
@@ -515,6 +525,86 @@ export default function AnalyticsPage() {
               ))}
             </div>
           )}
+
+          {/* TAB: Revenue */}
+          {activeTab === "revenue" && (() => {
+            const paidApps = applications.filter(a => a.payment_status === "paid");
+            const unpaidApps = applications.filter(a => a.payment_status !== "paid");
+            const totalRevenue = paidApps.reduce((s, a) => s + (a.total_paid || 0), 0);
+            
+            // Calculate conversion rates
+            const applyPageViews = rows.filter(r => r.page.includes("/apply-for-me") || r.page.includes("/apply/")).length || 1;
+            const conversionRate = ((paidApps.length / applyPageViews) * 100).toFixed(1);
+
+            // Group by job title
+            const postMap: Record<string, { orders: number; revenue: number }> = {};
+            paidApps.forEach(a => {
+              const name = a.selected_post_name || "Direct Form / General";
+              if (!postMap[name]) postMap[name] = { orders: 0, revenue: 0 };
+              postMap[name].orders++;
+              postMap[name].revenue += (a.total_paid || 0);
+            });
+            const topRevenueJobs = Object.entries(postMap)
+              .map(([title, v]) => ({ title, ...v }))
+              .sort((a, b) => b.revenue - a.revenue);
+
+            return (
+              <div className="space-y-6">
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 shadow-sm">
+                    <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Total Revenue</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">₹{totalRevenue.toLocaleString()}</p>
+                    <p className="text-xs text-gray-400 mt-1">From paid applications</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 shadow-sm">
+                    <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Paid Orders</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">{paidApps.length}</p>
+                    <p className="text-xs text-gray-400 mt-1">Forms filled/processing</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 shadow-sm">
+                    <p className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest">Unpaid Orders</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">{unpaidApps.length}</p>
+                    <p className="text-xs text-gray-400 mt-1">Abandoned checkouts</p>
+                  </div>
+                  <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 shadow-sm">
+                    <p className="text-[10px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-widest">Conversion Rate</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">{conversionRate}%</p>
+                    <p className="text-xs text-gray-400 mt-1">Paid orders / apply clicks</p>
+                  </div>
+                </div>
+
+                {/* Conversion Posts Table */}
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
+                  <h3 className="font-extrabold text-gray-900 dark:text-white text-base mb-4">Top Converting Job Applications</h3>
+                  {topRevenueJobs.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100 dark:border-gray-800 text-xs font-bold text-gray-400 uppercase">
+                            <th className="pb-3 font-semibold">Job Title / Custom Form</th>
+                            <th className="pb-3 text-center font-semibold">Paid Forms</th>
+                            <th className="pb-3 text-right font-semibold">Total Paid</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-850">
+                          {topRevenueJobs.map((job, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-850/50 transition-colors">
+                              <td className="py-3 font-bold text-gray-800 dark:text-gray-200">{job.title}</td>
+                              <td className="py-3 text-center text-gray-600 dark:text-gray-400">{job.orders} orders</td>
+                              <td className="py-3 text-right font-black text-indigo-600 dark:text-indigo-400">₹{job.revenue.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 text-center py-6">Is range mein koi paid order conversion data nahi hai.</p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

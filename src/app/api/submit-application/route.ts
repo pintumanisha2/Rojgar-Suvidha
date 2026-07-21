@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const merchantId = process.env.PHONEPE_MERCHANT_ID;
     const saltKey = process.env.PHONEPE_SALT_KEY;
     const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
-    const environment = process.env.PHONEPE_ENV || "sandbox";
+    const environment = process.env.PHONEPE_ENV || "production";
 
     if (!merchantId || !saltKey) {
       return NextResponse.json(

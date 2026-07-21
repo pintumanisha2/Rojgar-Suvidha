@@ -25,10 +25,17 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchPayments();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter, startDate, endDate]);
 
   async function fetchPayments() {
     setLoading(true);
@@ -86,8 +93,14 @@ export default function AdminPaymentsPage() {
     const matchSearch = !q || p.tracking_id?.toLowerCase().includes(q) ||
       p.full_name?.toLowerCase().includes(q) || p.phone?.includes(q) || p.email?.toLowerCase().includes(q);
     const matchFilter = filter === "all" || p.payment_status === filter;
-    return matchSearch && matchFilter;
+    const matchDate = (!startDate || new Date(p.created_at) >= new Date(startDate)) &&
+      (!endDate || new Date(p.created_at) <= new Date(endDate + "T23:59:59"));
+    return matchSearch && matchFilter && matchDate;
   });
+
+  const itemsPerPage = 30;
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const statusStyles: Record<string, string> = {
     paid: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50",
@@ -140,14 +153,42 @@ export default function AdminPaymentsPage() {
 
       {/* Table */}
       <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-900 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-zinc-900 flex flex-col sm:flex-row gap-3">
+        <div className="p-4 border-b border-gray-100 dark:border-zinc-900 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
           <input
             type="text"
             placeholder="Search by name, phone, tracking ID..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="flex-1 px-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 min-w-[200px] px-4 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-bold">
+              <span>From:</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="px-2 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-xs focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 font-bold">
+              <span>To:</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="px-2 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl text-xs focus:outline-none"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={() => { setStartDate(""); setEndDate(""); }}
+                className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold transition-all"
+              >
+                Clear Dates
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             {["all", "paid", "free"].map(f => (
               <button key={f} onClick={() => setFilter(f)}
@@ -173,7 +214,7 @@ export default function AdminPaymentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-zinc-900">
-                {filtered.map(p => (
+                {paginatedData.map(p => (
                   <tr key={p.tracking_id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-3 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{p.tracking_id}</td>
                     <td className="px-4 py-3">
@@ -202,6 +243,29 @@ export default function AdminPaymentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination controls */}
+        {!loading && totalPages > 1 && (
+          <div className="p-4 border-t border-gray-150 dark:border-zinc-900 flex items-center justify-between gap-4">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3.5 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg text-xs font-bold disabled:opacity-50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-colors"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3.5 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg text-xs font-bold disabled:opacity-50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-colors"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

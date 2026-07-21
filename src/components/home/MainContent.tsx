@@ -38,11 +38,11 @@ const sectionConfig = [
 ];
 
 const statusMap: Record<StatusKey, { label: string; dot: string; text: string; bg: string }> = {
-  out:    { label: "Out",     dot: "bg-green-500",  text: "text-green-700 dark:text-green-400",   bg: "bg-green-50 dark:bg-green-900/20" },
-  active: { label: "Active",  dot: "bg-blue-500",   text: "text-blue-700 dark:text-blue-400",     bg: "bg-blue-50 dark:bg-blue-900/20" },
-  last:   { label: "Today!",  dot: "bg-red-500",    text: "text-red-700 dark:text-red-400",       bg: "bg-red-50 dark:bg-red-900/20" },
-  soon:   { label: "Closing", dot: "bg-orange-400", text: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-900/20" },
-  new:    { label: "New",     dot: "bg-purple-500", text: "text-purple-700 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-900/20" },
+  out:    { label: "Out",     dot: "bg-emerald-500",  text: "text-emerald-700 dark:text-emerald-300",   bg: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-250/50 dark:border-emerald-800/30" },
+  active: { label: "Active",  dot: "bg-indigo-500",   text: "text-indigo-700 dark:text-indigo-300",     bg: "bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-250/50 dark:border-indigo-800/30" },
+  last:   { label: "Today!",  dot: "bg-red-500",    text: "text-red-700 dark:text-red-300",       bg: "bg-red-50 dark:bg-red-950/40 border border-red-250/50 dark:border-red-800/30" },
+  soon:   { label: "Closing", dot: "bg-amber-400", text: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50 dark:bg-amber-950/40 border border-amber-250/50 dark:border-amber-800/30" },
+  new:    { label: "New",     dot: "bg-purple-500", text: "text-purple-700 dark:text-purple-300", bg: "bg-purple-50 dark:bg-purple-950/40 border border-purple-250/50 dark:border-purple-800/30" },
 };
 
 function InlineTag({ tag }: { tag?: TagType }) {
@@ -116,7 +116,7 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
             <h2 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white">Browse Jobs by Sector</h2>
             <span className="text-xs text-gray-400 ml-1">• 8 Categories</span>
           </div>
-          <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 xs:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-3">
             {[
               { href: "/jobs/ssc", label: "SSC", emoji: "🏛️", sub: "CGL·CHSL·MTS", color: "from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800/50 hover:border-blue-400" },
               { href: "/jobs/railway", label: "Railway", emoji: "🚂", sub: "NTPC·GroupD", color: "from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800/50 hover:border-red-400" },
@@ -132,8 +132,8 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                 href={cat.href}
                 className={`flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-xl bg-gradient-to-br ${cat.color} border transition-all hover:-translate-y-0.5 hover:shadow-md group`}
               >
-                <span className="text-xl sm:text-2xl mb-1">{cat.emoji}</span>
-                <span className="text-[10px] sm:text-xs font-extrabold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight line-clamp-1">{cat.label}</span>
+                <span className="text-lg sm:text-2xl mb-0.5 sm:mb-1">{cat.emoji}</span>
+                <span className="text-xs sm:text-xs font-extrabold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight line-clamp-1">{cat.label}</span>
                 <span className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5 hidden sm:block line-clamp-1">{cat.sub}</span>
               </Link>
             ))}
@@ -167,27 +167,59 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
               </div>
 
               {/* List */}
-              <ul className="divide-y divide-gray-50 dark:divide-gray-800/60">
+              <ul className="divide-y divide-gray-100/50 dark:divide-zinc-800/40">
                 {section.items.map((item, i) => {
                   const st = statusMap[item.status];
+                  
+                  // Calculate dynamic last date urgency text
+                  let urgencyText = `Last Date: ${item.lastDate}`;
+                  let isUrgentDate = false;
+                  if (item.lastDate) {
+                    const lower = item.lastDate.toLowerCase();
+                    if (lower.includes("today")) {
+                      urgencyText = "LAST DATE TODAY!";
+                      isUrgentDate = true;
+                    } else {
+                      try {
+                        const parsed = Date.parse(item.lastDate);
+                        if (!isNaN(parsed)) {
+                          const diffMs = parsed - Date.now();
+                          const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                          if (diffDays === 0) {
+                            urgencyText = "Last Date: Today!";
+                            isUrgentDate = true;
+                          } else if (diffDays === 1) {
+                            urgencyText = "Last Date: Tomorrow!";
+                            isUrgentDate = true;
+                          } else if (diffDays > 1 && diffDays <= 4) {
+                            urgencyText = `Only ${diffDays} Days Left!`;
+                            isUrgentDate = true;
+                          } else if (diffDays < 0) {
+                            urgencyText = `Closed`;
+                          }
+                        }
+                      } catch (e) {}
+                    }
+                  }
+
                   return (
                     <li key={i} className="relative">
                       <Link
                         href={`/job/${item.slug}`}
-                        className="flex flex-col px-4 py-2.5 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group"
+                        className="flex flex-col px-4.5 py-3 hover:bg-slate-50 dark:hover:bg-zinc-850/50 transition-all group"
                       >
                         {/* Left accent bar on hover */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 scale-y-0 group-hover:scale-y-100 transition-transform origin-top rounded-r-md" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-top rounded-r-md" />
 
                         {/* Row 1: dot + title + tag + status badge + Save button */}
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2.5">
                           <div className="flex items-center gap-2 flex-1 mt-0.5">
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot} ${item.status === "last" ? "animate-pulse" : ""}`} />
-                            <span className="flex-1 text-sm font-bold text-blue-700 dark:text-blue-400 group-hover:text-blue-800 dark:group-hover:text-blue-300 transition-colors line-clamp-2 leading-snug group-hover:underline underline-offset-4 decoration-blue-200 dark:decoration-blue-800">
+                            <span className="flex-1 text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug group-hover:underline underline-offset-4 decoration-indigo-200 dark:decoration-indigo-850">
                               {item.title}
                             </span>
                             <InlineTag tag={item.tag} />
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${st.text} ${st.bg}`}>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 ${st.text} ${st.bg}`}>
                               {st.label}
                             </span>
                           </div>
@@ -200,22 +232,22 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
 
                         {/* Row 2: meta info — last date, posts, eligibility */}
                         {(item.lastDate || item.posts || item.eligibility) && (
-                          <div className="flex items-center gap-3 mt-1.5 ml-3.5 flex-wrap">
+                          <div className="flex items-center gap-3 mt-2 ml-3.5 flex-wrap">
                             {item.lastDate && (
-                              <span className={`flex items-center gap-1 text-[11px] font-semibold ${item.lastDate === "Today" ? "text-red-500 animate-pulse" : "text-gray-500 dark:text-gray-400"}`}>
-                                <Calendar className="w-3 h-3 shrink-0 opacity-70" />
-                                {item.lastDate === "Today" ? "LAST DATE TODAY!" : `Last Date: ${item.lastDate}`}
+                              <span className={`flex items-center gap-1 text-[11px] font-extrabold ${isUrgentDate ? "text-red-600 dark:text-red-400 animate-pulse bg-red-50 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 px-1.5 py-0.5 rounded-md" : "text-gray-500 dark:text-gray-400"}`}>
+                                <Calendar className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                                {urgencyText}
                               </span>
                             )}
                             {item.posts && (
-                              <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                                <Users className="w-3 h-3 shrink-0 opacity-70" />
+                              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800 px-1.5 py-0.5 rounded-md">
+                                <Users className="w-3.5 h-3.5 shrink-0 opacity-80" />
                                 {item.posts} Posts
                               </span>
                             )}
                             {item.eligibility && (
-                              <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                                <GraduationCap className="w-3 h-3 shrink-0 opacity-70" />
+                              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800 px-1.5 py-0.5 rounded-md line-clamp-1 max-w-[200px]">
+                                <GraduationCap className="w-3.5 h-3.5 shrink-0 opacity-80" />
                                 {item.eligibility}
                               </span>
                             )}

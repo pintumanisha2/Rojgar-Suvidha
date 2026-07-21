@@ -25,8 +25,17 @@ function ProfileSetupContent() {
   const [address, setAddress] = useState("");
   const [phoneLinked, setPhoneLinked] = useState(false);
 
+  // New Match Score and Email Digest Fields
+  const [qualification, setQualification] = useState("graduation");
+  const [userState, setUserState] = useState("");
+  const [jobPreferences, setJobPreferences] = useState<string[]>([]);
+  const [emailDigest, setEmailDigest] = useState(true);
+
   // Per-field validation errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const mode = searchParams.get("mode");
+  const isEditMode = mode === "edit";
 
   useEffect(() => {
     let active = true;
@@ -44,13 +53,29 @@ function ProfileSetupContent() {
         // Check if profile already exists with try-catch resilience
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("id, full_name")
+          .select("*")
           .eq("id", session.user.id)
           .maybeSingle();
 
-        if (profile?.full_name) {
-          router.push(redirectUrl);
-          return;
+        if (profile) {
+          if (!isEditMode && profile.full_name) {
+            router.push(redirectUrl);
+            return;
+          }
+          if (isEditMode && active) {
+            setFullName(profile.full_name || "");
+            setDob(profile.date_of_birth || "");
+            setMobile(profile.mobile_number || "");
+            setFatherName(profile.father_name || "");
+            setMotherName(profile.mother_name || "");
+            setGender(profile.gender || "male");
+            setCategory(profile.category || "gen");
+            setAddress(profile.address || "");
+            setQualification(profile.qualification || "graduation");
+            setUserState(profile.state || "");
+            setJobPreferences(profile.job_preferences || []);
+            setEmailDigest(profile.email_digest !== false);
+          }
         }
 
         if (active) {
@@ -63,7 +88,7 @@ function ProfileSetupContent() {
     };
     checkUser();
     return () => { active = false; };
-  }, [router, redirectUrl]);
+  }, [router, redirectUrl, isEditMode]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +131,10 @@ function ProfileSetupContent() {
       gender,
       category,
       address: address.trim(),
+      qualification,
+      state: userState,
+      job_preferences: jobPreferences,
+      email_digest: emailDigest
     });
 
     if (upsertError) {
@@ -309,6 +338,82 @@ function ProfileSetupContent() {
               <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2}
                 className="appearance-none block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm resize-none"
                 placeholder="Ghar no., Mohalla, Tehsil, Jila, State, PIN" />
+            </div>
+
+            {/* F2-C: Qualification Select */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Highest Qualification <span className="text-red-500">*</span></label>
+                <select value={qualification} onChange={(e) => setQualification(e.target.value)} required
+                  className="block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm">
+                  <option value="10th">10th Pass</option>
+                  <option value="12th">12th Pass / Intermediate</option>
+                  <option value="iti">ITI Pass</option>
+                  <option value="diploma">Diploma Holder</option>
+                  <option value="graduation">Graduate / Bachelor's Degree</option>
+                  <option value="post-grad">Post Graduate / Master's</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Home State <span className="text-red-500">*</span></label>
+                <select value={userState} onChange={(e) => setUserState(e.target.value)} required
+                  className="block w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-sm">
+                  <option value="">Choose State...</option>
+                  {[
+                    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+                    "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+                    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+                    "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi"
+                  ].map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* F2-C: Job Preference Chips */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Preferred Job Categories</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "latest-jobs", label: "Central Jobs" },
+                  { value: "banking", label: "Banking Exams" },
+                  { value: "railway", label: "Railways/RRB" },
+                  { value: "police", label: "Police & Defence" },
+                  { value: "results", label: "Results" },
+                  { value: "admit-cards", label: "Admit Cards" }
+                ].map(pref => {
+                  const active = jobPreferences.includes(pref.value);
+                  return (
+                    <button
+                      key={pref.value}
+                      type="button"
+                      onClick={() => setJobPreferences(p => p.includes(pref.value) ? p.filter(x => x !== pref.value) : [...p, pref.value])}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                        active
+                          ? "bg-indigo-600 border-indigo-600 text-white"
+                          : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-400"
+                      }`}
+                    >
+                      {pref.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* F6-D: Email Digest Toggle */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+              <input
+                type="checkbox"
+                id="emailDigest"
+                checked={emailDigest}
+                onChange={(e) => setEmailDigest(e.target.checked)}
+                className="w-4.5 h-4.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="emailDigest" className="text-xs font-bold text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                Weekly digest email alerts (Sunday Jobs Bulletin) enable karein
+              </label>
             </div>
 
             {/* Error */}

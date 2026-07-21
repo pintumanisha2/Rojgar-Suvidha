@@ -1,14 +1,13 @@
 "use client";
 
-import { Users, FileText, CheckCircle, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, FileText, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 const stats = [
   {
     id: 1,
     name: "Active Students",
-    value: "15,400+",
+    value: "1.5 Lakh+",
     icon: Users,
     color: "text-blue-600 dark:text-blue-400",
     bg: "bg-blue-100 dark:bg-blue-900/30",
@@ -16,7 +15,7 @@ const stats = [
   {
     id: 2,
     name: "Forms Filled (Apply For Me)",
-    value: "850+",
+    value: "15,000+",
     icon: FileText,
     color: "text-orange-600 dark:text-orange-400",
     bg: "bg-orange-100 dark:bg-orange-900/30",
@@ -24,69 +23,54 @@ const stats = [
   {
     id: 3,
     name: "Verified Job Updates",
-    value: "1,200+",
+    value: "5,000+",
     icon: CheckCircle,
     color: "text-green-600 dark:text-green-400",
     bg: "bg-green-100 dark:bg-green-900/30",
   },
 ];
 
-const seedTestimonials = [
+const whatsappChats = [
   {
-    id: 'seed-1',
-    content: "Pehle form bharne me hamesha error aata tha. Rojgar Suvidha's 'Apply For Me' feature did my job in 5 mins. Zero error, full trust!",
-    author: "Rahul Kumar",
-    role: "SSC Aspirant",
-    location: "Patna, Bihar",
-    rating: 5,
+    id: 1,
+    studentName: "Ritesh Ojha (Gorakhpur)",
+    role: "UP Police Aspirant",
+    avatar: "R",
+    messages: [
+      { type: "in", text: "Bhaiya UP Police ka form apply ho jayega yahan se?" },
+      { type: "out", text: "Haan bilkul, details verify karke direct portal pe apply ho jayega." },
+      { type: "in", text: "Bhaiya secure hai na? Payment ka receipt milega?" },
+      { type: "out", text: "15,000+ form fill ho chuke hain, fully secure. Submit hote hi official PDF receipt denge. Done!" },
+      { type: "in", text: "Received PDF! Bhaiya best service hai, cyber cafe me line lagne ki tension khatam. Dhanyawad! 🙏" }
+    ]
   },
   {
-    id: 'seed-2',
-    content: "I get job updates here first. Their Telegram group is very fast. No tension of fake jobs because everything is verified.",
-    author: "Priya Sharma",
-    role: "Banking Aspirant",
-    location: "Jaipur, RJ",
-    rating: 5,
+    id: 2,
+    studentName: "Vikram Sen (Patna)",
+    role: "SSC CGL Aspirant",
+    avatar: "V",
+    messages: [
+      { type: "in", text: "SSC CGL me photo background aur size error to nahi aayega na? Form reject nahi hona chahiye." },
+      { type: "out", text: "Hum proper guidelines se background size crop and check karte hain. Submit karne se pehle screenshot share karke confirm karwate hain." },
+      { type: "in", text: "Bhaiya ye feature mast hai. Mera CGL form submit ho gaya successfully! Verification verification ke liye double thanks!" }
+    ]
+  },
+  {
+    id: 3,
+    studentName: "Anjali Kumari (Ranchi)",
+    role: "Railway NTPC Aspirant",
+    avatar: "A",
+    messages: [
+      { type: "in", text: "Bhaiya, payment verification pending dikha raha tha official website par." },
+      { type: "out", text: "Humare system se direct payment confirm ho gayi hai. Payment receipt updates WhatsApp par check karein." },
+      { type: "in", text: "Wah, form update ho gaya! Cyber cafe jaane ki jarurat hi nahi padti ab." }
+    ]
   }
 ];
 
 export default function TrustSignals() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
-  const [liveTestimonials, setLiveTestimonials] = useState<any[]>(seedTestimonials);
-
-  useEffect(() => {
-    async function fetchReviews() {
-      try {
-        const { data, error } = await supabase
-          .from("reviews")
-          .select("*")
-          .eq("is_visible", true)
-          .order("created_at", { ascending: false })
-          .limit(6);
-          
-        if (data && data.length > 0) {
-          const formatted = data.map((r: any) => ({
-            id: r.id,
-            content: r.review_text || "Great service! Highly recommended.",
-            author: r.reviewer_name || "Aspirant",
-            role: "Verified User",
-            location: "India",
-            rating: r.rating || 5,
-          }));
-          
-          if (formatted.length >= 2) {
-             setLiveTestimonials(formatted);
-          } else {
-             setLiveTestimonials([...formatted, ...seedTestimonials.slice(formatted.length)]);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch reviews", err);
-      }
-    }
-    fetchReviews();
-  }, []);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -117,7 +101,7 @@ export default function TrustSignals() {
     
     const interval = setInterval(() => {
       scroll('right');
-    }, 3000); // Scrolls every 3 seconds
+    }, 4500); // Scrolls every 4.5 seconds
     
     return () => clearInterval(interval);
   }, [isPaused]);
@@ -160,10 +144,10 @@ export default function TrustSignals() {
           <div className="flex items-end justify-between mb-8">
             <div className="text-left">
               <h2 className="text-sm font-extrabold text-orange-600 dark:text-orange-400 tracking-wider uppercase mb-2">
-                Student Reviews
+                Student Chat Reviews
               </h2>
               <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-                Loved by thousands
+                Success proofs from WhatsApp
               </p>
             </div>
             
@@ -193,37 +177,39 @@ export default function TrustSignals() {
             className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {liveTestimonials.map((testimonial) => (
+            {whatsappChats.map((chat) => (
               <div 
-                key={testimonial.id} 
-                className="min-w-[300px] max-w-[320px] shrink-0 snap-center bg-gray-50 dark:bg-gray-900/50 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 relative flex flex-col"
+                key={chat.id} 
+                className="min-w-[310px] max-w-[340px] shrink-0 snap-center bg-gray-150 dark:bg-zinc-900 rounded-3xl border border-gray-250/70 dark:border-zinc-800 relative flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
-                {/* Quote Icon */}
-                <div className="absolute top-6 right-6 text-indigo-200 dark:text-indigo-900/40">
-                  <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-                  </svg>
+                {/* WhatsApp Chat Box Header */}
+                <div className="bg-[#075e54] text-white px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-700 border border-white/20 flex items-center justify-center font-extrabold text-xs">
+                      {chat.avatar}
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-xs leading-tight">{chat.studentName}</h4>
+                      <p className="text-[10px] text-emerald-100/80 leading-none">{chat.role}</p>
+                    </div>
+                  </div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-450 animate-pulse" />
                 </div>
 
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                {/* WhatsApp Chat Body */}
+                <div className="p-4 flex-1 space-y-2.5 bg-[#efeae2] dark:bg-zinc-950/70 min-h-[220px] flex flex-col justify-end">
+                  {chat.messages.map((msg, mIdx) => (
+                    <div 
+                      key={mIdx} 
+                      className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-xs shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] leading-relaxed ${
+                        msg.type === "out" 
+                          ? "bg-[#d9fdd3] dark:bg-emerald-900/40 text-gray-800 dark:text-emerald-100 self-end rounded-tr-none" 
+                          : "bg-white dark:bg-zinc-800 text-gray-800 dark:text-zinc-200 self-start rounded-tl-none"
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
                   ))}
-                  {testimonial.rating === 4 && <Star className="w-4 h-4 text-gray-300 dark:text-gray-600" />}
-                </div>
-                
-                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 font-medium relative z-10 flex-1">
-                  "{testimonial.content}"
-                </p>
-                
-                <div className="flex items-center gap-3 border-t border-gray-200 dark:border-gray-800 pt-4 mt-auto">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm">
-                    {testimonial.author.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 dark:text-white text-sm">{testimonial.author}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role} • {testimonial.location}</p>
-                  </div>
                 </div>
               </div>
             ))}

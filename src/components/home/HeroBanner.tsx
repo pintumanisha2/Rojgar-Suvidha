@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MousePointerClick } from "lucide-react";
+import { ChevronLeft, ChevronRight, MousePointerClick, Search, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import GlobalSearch from "@/components/ui/GlobalSearch";
+import dynamic from "next/dynamic";
+const SiteVisitorTicker = dynamic(() => import("@/components/ui/SiteVisitorTicker"), { ssr: false });
 
 // Mobile Quick Nav data
 const QUICK_CATS = [
@@ -31,6 +34,18 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
   const [banners, setBanners] = useState<Banner[]>(initialBanners);
   const [current, setCurrent] = useState(0);
   const [loading, setLoading] = useState(initialBanners.length === 0);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (initialBanners.length > 0) return; // Skip client fetch if SSR provided data
@@ -99,6 +114,33 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
     <>
     <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-3">
       <div className="max-w-7xl mx-auto">
+        {/* H1 Hero Headline with clear value prop */}
+        <div className="text-center py-6 sm:py-8 max-w-3xl mx-auto">
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight mb-2 tracking-tight">
+            Aaj Ka <span className="text-indigo-600 dark:text-indigo-400">Sarkari Naukri</span> Update
+          </h1>
+          <p className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 max-w-lg mx-auto mb-4 leading-relaxed">
+            15,000+ forms successfully submitted. Cyber Cafe ke dhakke chhoro, experts se online form bharwao!
+          </p>
+          <div className="flex gap-2.5 justify-center">
+            <Link 
+              href="/apply-for-me" 
+              className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-500/20 active:scale-95"
+            >
+              Mera Form Bharo <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <button 
+              onClick={() => {
+                const el = document.getElementById("job-sections-grid");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-gray-100 dark:bg-zinc-900 text-gray-800 dark:text-gray-200 text-xs font-bold rounded-xl border border-gray-200 dark:border-zinc-800 transition-all hover:bg-gray-200 dark:hover:bg-zinc-800 active:scale-95"
+            >
+              Jobs Dekhein
+            </button>
+          </div>
+        </div>
+
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
 
@@ -224,8 +266,42 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
               </div>
             ) : null}
           </div>
-
         </div>
+
+        {/* Above-the-fold Premium Search Bar */}
+        <div className="mt-4 sm:mt-6 px-1">
+          <div 
+            onClick={() => setIsSearchOpen(true)}
+            className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-zinc-700 hover:shadow-lg rounded-2xl flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group"
+          >
+            <Search className="w-5 h-5 text-gray-400 dark:text-zinc-500 group-hover:text-indigo-500 transition-colors shrink-0" />
+            <div className="flex-1 text-sm font-medium text-gray-400 dark:text-zinc-500 select-none">
+              Search Job, SSC, Railway, Bank, Police, Results...
+            </div>
+            <kbd className="hidden sm:inline-flex h-6 select-none items-center gap-1 rounded border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 px-2 font-mono text-[10px] font-medium text-gray-400">
+              <span>Ctrl</span>K
+            </kbd>
+            <span className="shrink-0 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-500/25">
+              Search
+            </span>
+          </div>
+        </div>
+
+        {/* Brand Tagline Badge */}
+        <div className="mt-4 flex justify-center px-1">
+          <Link href="/pricing" className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-200/50 dark:border-indigo-900/30 rounded-full px-3 sm:px-4 py-1.5 flex items-center gap-1.5 sm:gap-2 max-w-full text-center hover:scale-105 hover:border-indigo-400/60 transition-all duration-300 flex-wrap justify-center">
+            <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm shrink-0">Rojgar Suvidha</span>
+            <span className="text-[11px] sm:text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1 flex-wrap justify-center">
+              ⚡ "Form Hamara, Naukri Aapki" — 15,000+ forms submitted! <span className="underline decoration-indigo-400">Plans Dekhein →</span>
+            </span>
+          </Link>
+        </div>
+
+        {/* 🔴 LIVE FOMO Visitor Ticker — shows increasing visitor + Apply For Me count */}
+        <div className="mt-3">
+          <SiteVisitorTicker />
+        </div>
+
       </div>
     </div>
 
@@ -253,6 +329,8 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
         ))}
       </div>
     </div>
+    
+    <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 }

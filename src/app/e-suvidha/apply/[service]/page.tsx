@@ -518,7 +518,7 @@ function ESuvidhaApplyContent() {
             <p className="text-xs font-bold text-indigo-500 uppercase">Tracking ID</p>
             <p className="font-mono text-lg font-bold text-indigo-900">{trackingId}</p>
           </div>
-          <Link href="/dashboard" className="block w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Go to Dashboard</Link>
+          <Link href="/dashboard?tab=requests" className="block w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Go to Dashboard</Link>
         </div>
       </div>
     );

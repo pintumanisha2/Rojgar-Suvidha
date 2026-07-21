@@ -16,7 +16,7 @@ export default function GlobalLoading() {
           ROJGAR SUVIDHA
         </p>
         <p className="mt-1 text-xs font-bold text-gray-400 dark:text-gray-500">
-          Loading Page, Please Wait...
+          Form ki tayyari ho rahi hai... ☕
         </p>
       </div>
     </div>

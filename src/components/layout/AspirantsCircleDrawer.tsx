@@ -749,7 +749,7 @@ export default function AspirantsCircleDrawer() {
       />
 
       {/* Drawer Panel */}
-      <div className="relative w-full md:w-[50%] lg:w-[45%] xl:w-[40%] h-full bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-800 flex flex-col z-10 transition-transform duration-300">
+      <div className="relative w-full max-w-full md:w-[50%] lg:w-[45%] xl:w-[40%] h-[100dvh] bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-800 flex flex-col z-10 transition-transform duration-300 overflow-hidden">
         
         {/* Drawer Header */}
         <div className="bg-indigo-600 dark:bg-indigo-700 px-5 py-4 flex items-center justify-between shrink-0 relative overflow-hidden">

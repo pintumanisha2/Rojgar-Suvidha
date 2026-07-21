@@ -66,7 +66,7 @@ export default function EmailAlertBanner() {
           Get Daily Job Alerts in Your Inbox — Free Forever
         </h2>
         <p className="text-indigo-200 text-sm sm:text-base mb-6 max-w-lg mx-auto">
-          Join 50,000+ aspirants. One curated email per day. SSC, Railway, Banking & State jobs. No spam, ever.
+          Join 1.5 Lakh+ aspirants. Ek curated email roz. SSC, Railway, Banking & State jobs. No spam, ever.
         </p>
 
         {/* Form */}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, Users, CreditCard, BookOpen, Briefcase,
@@ -125,6 +125,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [userRole, setUserRole] = useState<Role>("unauthorized");
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const lastActivityRef = useRef(typeof window !== "undefined" ? Date.now() : 0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(60);
 
   // Fix 1.3 — Live Clock
   useEffect(() => {
@@ -214,30 +217,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Only run this if we are authenticated and NOT on the login page
     if (pathname === "/admin/login" || !adminEmail) return;
 
-    let timeoutId: NodeJS.Timeout;
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
+    const WARNING_THRESHOLD = 9 * 60 * 1000; // 9 minutes
+
+    const interval = setInterval(async () => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      if (elapsed >= INACTIVITY_LIMIT) {
+        clearInterval(interval);
+        await supabase.auth.signOut();
+        window.location.href = "/admin/login";
+      } else if (elapsed >= WARNING_THRESHOLD) {
+        setShowWarningModal(true);
+        const secondsLeft = Math.ceil((INACTIVITY_LIMIT - elapsed) / 1000);
+        setCountdownSeconds(secondsLeft);
+      } else {
+        setShowWarningModal(false);
+      }
+    }, 1000);
 
     const resetTimer = () => {
-      clearTimeout(timeoutId);
-      // Set to 10 minutes (600,000 ms)
-      timeoutId = setTimeout(async () => {
-        await supabase.auth.signOut();
-        alert("Session Expired due to 10 minutes of inactivity. For security reasons, you have been logged out.");
-        router.push("/admin/login");
-      }, 600000); 
+      lastActivityRef.current = Date.now();
     };
 
     // Attach event listeners for activity
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
     events.forEach(event => document.addEventListener(event, resetTimer));
 
-    // Initialize timer
-    resetTimer();
+    // Initialize timer reference
+    lastActivityRef.current = Date.now();
 
     return () => {
-      clearTimeout(timeoutId);
+      clearInterval(interval);
       events.forEach(event => document.removeEventListener(event, resetTimer));
     };
-  }, [pathname, adminEmail, router]);
+  }, [pathname, adminEmail]);
 
   // --- Disable DevTools / Right Click for Lower Roles ---
   useEffect(() => {
@@ -548,6 +561,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+
+      {showWarningModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="inline-flex p-4 bg-amber-50 dark:bg-amber-950/20 text-amber-500 rounded-2xl mb-4 border border-amber-200 dark:border-amber-900/50">
+              <ShieldCheck className="h-8 w-8 animate-bounce" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Inactivity Warning ⚠️</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+              Aapki admin session 10 minutes of inactivity ke baad log out hone wali hai.
+            </p>
+            <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400 mb-6 font-mono tabular-nums">
+              {countdownSeconds}s
+            </div>
+            <button
+              onClick={() => {
+                lastActivityRef.current = Date.now();
+                setShowWarningModal(false);
+              }}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Continue Working
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

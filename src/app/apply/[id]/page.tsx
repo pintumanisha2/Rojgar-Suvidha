@@ -4,9 +4,11 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle } from "lucide-react";
+import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink } from "lucide-react";
 import Script from "next/script";
 import imageCompression from "browser-image-compression";
+import dynamic from "next/dynamic";
+const ApplyFomoBar = dynamic(() => import("@/components/ui/ApplyFomoBar"), { ssr: false });
 
 function ApplyContent() {
   const { id } = useParams();
@@ -37,6 +39,7 @@ function ApplyContent() {
   const [lockerDocs, setLockerDocs] = useState<{[key: string]: string}>({}); // URLs from locker
   const [overriddenDocs, setOverriddenDocs] = useState<Set<string>>(new Set()); // User dismissed locker match
   const [token, setToken] = useState("");
+  const [userId, setUserId] = useState("");
 
 
 
@@ -55,6 +58,13 @@ function ApplyContent() {
   const [submitError, setSubmitError] = useState("");
   const [successTrackingId, setSuccessTrackingId] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(successTrackingId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     const fetchForm = async () => {
@@ -87,6 +97,7 @@ function ApplyContent() {
 
         if (session) {
           setToken(session.access_token);
+          setUserId(session.user.id);
           // Auto-fill profile data
           const { data: profileData } = await supabase
             .from("profiles")
@@ -106,6 +117,21 @@ function ApplyContent() {
               gender: profileData.gender || prev.gender,
               category: profileData.category || prev.category,
             }));
+
+            // Fetch and prefill Aadhar number securely
+            try {
+              const aadharRes = await fetch("/api/user/aadhar", {
+                headers: { "Authorization": `Bearer ${session.access_token}` }
+              });
+              if (aadharRes.ok) {
+                const aadharData = await aadharRes.json();
+                if (aadharData.aadhar) {
+                  setFormData(prev => ({ ...prev, aadhar: aadharData.aadhar }));
+                }
+              }
+            } catch (e) {
+              console.error("Failed to auto-fill Aadhar:", e);
+            }
           }
 
           // Fetch Locker Documents
@@ -118,6 +144,17 @@ function ApplyContent() {
           if (lockerData && lockerData.documents) {
             setLockerDocs(lockerData.documents);
           }
+
+          // Check for saved draft in sessionStorage
+          try {
+            const draft = sessionStorage.getItem(`form_draft_${id}`);
+            if (draft) {
+              const parsedDraft = JSON.parse(draft);
+              setFormData(prev => ({ ...prev, ...parsedDraft }));
+            }
+          } catch (e) {
+            console.error("Failed to parse form draft:", e);
+          }
         }
 
       } catch (error) {
@@ -128,6 +165,33 @@ function ApplyContent() {
     };
     fetchForm();
   }, [id]);
+
+  // Save form draft to sessionStorage automatically on change
+  useEffect(() => {
+    if (formData.fullName || formData.phone || formData.aadhar) {
+      try {
+        sessionStorage.setItem(`form_draft_${id}`, JSON.stringify({
+          fullName: formData.fullName,
+          fatherName: formData.fatherName,
+          motherName: formData.motherName,
+          phone: formData.phone,
+          email: formData.email,
+          altPhone: formData.altPhone,
+          aadhar: formData.aadhar,
+          dob: formData.dob,
+          gender: formData.gender,
+          category: formData.category,
+          isPwd: formData.isPwd,
+        }));
+      } catch (e) {}
+    }
+  }, [formData, id]);
+
+  useEffect(() => {
+    if (formConfig) {
+      logCheckoutFunnel("checkout_start");
+    }
+  }, [formConfig]);
 
   useEffect(() => {
     const checkPaymentRedirect = async () => {
@@ -202,11 +266,18 @@ function ApplyContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!formConfig || !formConfig.fees_structure || formConfig.fees_structure.length === 0) return;
-    
-    let currentFeeStructure = formConfig.fees_structure;
+    if (!formConfig) return;
+
+    let currentFeeStructure: any = {};
+    if (!formConfig.fees_structure) {
+      setBaseFee(0);
+      setServiceCharge(50);
+      return;
+    }
     if (Array.isArray(formConfig.fees_structure)) {
       currentFeeStructure = formConfig.fees_structure[selectedPostIndex]?.fees || {};
+    } else if (typeof formConfig.fees_structure === 'object') {
+      currentFeeStructure = formConfig.fees_structure;
     }
 
     let calculatedBase = 0;
@@ -233,32 +304,56 @@ function ApplyContent() {
     setValidatingCoupon(true);
     setCouponError("");
 
-    const { data, error } = await supabase
-      .from("coupons")
-      .select("*")
-      .eq("code", couponCodeInput.trim().toUpperCase())
-      .single();
+    try {
+      const res = await fetch("/api/verify-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCodeInput.trim() }),
+      });
+      const result = await res.json();
 
-    if (error || !data) {
-      setCouponError("Invalid coupon code");
+      if (!res.ok || !result.success) {
+        setCouponError(result.error || "Invalid coupon code");
+        setValidatingCoupon(false);
+        return;
+      }
+
+      setAppliedCoupon({
+        code: couponCodeInput.trim().toUpperCase(),
+        discount_type: "flat",
+        discount_value: result.discount,
+      });
+      setCouponError("");
+      setCouponCodeInput("");
+    } catch {
+      setCouponError("Failed to verify coupon code. Please try again.");
+    } finally {
       setValidatingCoupon(false);
-      return;
     }
-
-    if (data.status !== "active" || data.used_count >= data.max_uses) {
-      setCouponError("This coupon has expired or reached its usage limit");
-      setValidatingCoupon(false);
-      return;
-    }
-
-    setAppliedCoupon(data);
-    setCouponError("");
-    setCouponCodeInput("");
-    setValidatingCoupon(false);
   };
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
+  };
+
+  const logCheckoutFunnel = async (action: string) => {
+    try {
+      await fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: userId || "anonymous",
+          action,
+          path: window.location.pathname,
+          metadata: {
+            formId: id,
+            formTitle: formConfig?.title || "",
+          }
+        })
+      });
+    } catch (e) {
+      console.warn("Failed to log checkout event:", e);
+    }
   };
 
   const handleFileChange = (docName: string, file: File | null) => {
@@ -275,21 +370,36 @@ function ApplyContent() {
   const findLockerMatch = (docName: string): string | null => {
     if (overriddenDocs.has(docName)) return null; // User dismissed this match
     const target = normalize(docName);
+    const isValidVal = (v: any) => typeof v === 'string' && v.trim().length > 0 && (v.startsWith('http') || v.startsWith('/api') || v.startsWith('/uploads'));
+
     // 1. Exact match first
-    if (lockerDocs[docName]) return lockerDocs[docName];
+    if (lockerDocs[docName] && isValidVal(lockerDocs[docName])) return lockerDocs[docName];
     // 2. Case-insensitive exact match
     const exactCI = Object.keys(lockerDocs).find(k => normalize(k) === target);
-    if (exactCI) return lockerDocs[exactCI];
+    if (exactCI && isValidVal(lockerDocs[exactCI])) return lockerDocs[exactCI];
     // 3. Fuzzy: locker key contains or is contained in doc name
     const fuzzy = Object.keys(lockerDocs).find(k => {
       const kn = normalize(k);
-      return kn.includes(target) || target.includes(kn) ||
+      return (kn.includes(target) || target.includes(kn) ||
         // Check if 80%+ characters match (handles 1-2 typos)
         (target.length > 4 && kn.length > 4 && (
           target.split("").filter(c => kn.includes(c)).length / Math.max(target.length, kn.length) > 0.8
-        ));
+        ))) && isValidVal(lockerDocs[k]);
     });
     return fuzzy ? lockerDocs[fuzzy] : null;
+  };
+
+  const getOfficialPortal = (title: string): string => {
+    const t = title.toLowerCase();
+    if (t.includes("ssc")) return "https://ssc.gov.in";
+    if (t.includes("upsc")) return "https://upsc.gov.in";
+    if (t.includes("railway") || t.includes("rrb")) return "https://indianrailways.gov.in";
+    if (t.includes("banking") || t.includes("ibps")) return "https://ibps.in";
+    if (t.includes("bpsc")) return "https://bpsc.bih.nic.in";
+    if (t.includes("navy")) return "https://joinindiannavy.gov.in";
+    if (t.includes("army")) return "https://joinindianarmy.nic.in";
+    if (t.includes("airforce")) return "https://careerindianairforce.cdac.in";
+    return "Official Recruitment Board Website";
   };
 
   // Calculate Discount
@@ -308,6 +418,12 @@ function ApplyContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
+
+    // Validate Aadhar — must be exactly 12 digits
+    if (formData.aadhar.replace(/\D/g, "").length !== 12) {
+      setSubmitError("Please enter a valid 12-digit Aadhar number.");
+      return;
+    }
     
     // Validate Required Documents (Must have either File or Locker URL, using fuzzy match)
     if (formConfig.documents && formConfig.documents.length > 0) {
@@ -319,8 +435,27 @@ function ApplyContent() {
     }
 
     setIsSubmitting(true);
+    logCheckoutFunnel("details_entered");
 
     try {
+      // Secure Aadhar encryption via server-side API
+      let secureAadhar = formData.aadhar;
+      try {
+        const encRes = await fetch("/api/crypto/encrypt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: formData.aadhar }),
+        });
+        if (encRes.ok) {
+          const encData = await encRes.json();
+          secureAadhar = encData.encrypted;
+        } else {
+          throw new Error("Unable to encrypt Aadhar.");
+        }
+      } catch (err: any) {
+        throw new Error("Security verification failed: " + err.message);
+      }
+
       // 1. Upload Documents to Backblaze B2 or use Locker URLs
       // Pre-fill with fuzzy-matched locker docs
       const uploadedUrls: {[key: string]: string} = {};
@@ -402,6 +537,7 @@ function ApplyContent() {
         // Save Application to Database as 'pending' to secure user input before payment redirect
         const { error: dbError } = await supabase.from("user_applications").insert([{
           tracking_id: trackingCode,
+          user_id: userId || null,
           form_id: id,
           full_name: formData.fullName,
           father_name: formData.fatherName,
@@ -409,7 +545,7 @@ function ApplyContent() {
           phone: formData.phone,
           email: formData.email,
           alt_phone: formData.altPhone,
-          aadhar: formData.aadhar,
+          aadhar: secureAadhar,
           dob: formData.dob,
           gender: formData.gender,
           category: formData.category,
@@ -423,9 +559,11 @@ function ApplyContent() {
         }]);
 
         if (dbError) throw dbError;
+        try { sessionStorage.removeItem(`form_draft_${id}`); } catch (e) {}
 
         // Redirect to PhonePe Pay Page
         if (order.redirectUrl) {
+          logCheckoutFunnel("payment_clicked");
           window.location.href = order.redirectUrl;
         } else {
           throw new Error("Unable to obtain checkout URL from PhonePe");
@@ -440,6 +578,7 @@ function ApplyContent() {
 
         const { error: dbError } = await supabase.from("user_applications").insert([{
           tracking_id: trackingCode,
+          user_id: userId || null,
           form_id: id,
           full_name: formData.fullName,
           father_name: formData.fatherName,
@@ -447,7 +586,7 @@ function ApplyContent() {
           phone: formData.phone,
           email: formData.email,
           alt_phone: formData.altPhone,
-          aadhar: formData.aadhar,
+          aadhar: secureAadhar,
           dob: formData.dob,
           gender: formData.gender,
           category: formData.category,
@@ -461,6 +600,7 @@ function ApplyContent() {
         }]);
 
         if (dbError) throw dbError;
+        try { sessionStorage.removeItem(`form_draft_${id}`); } catch (e) {}
 
         if (appliedCoupon) {
           const { error: rpcErr2 } = await supabase.rpc('increment_coupon_usage', { coupon_id: appliedCoupon.id });
@@ -481,43 +621,196 @@ function ApplyContent() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /></div>;
   if (!formConfig) return <div className="min-h-screen flex items-center justify-center text-red-500 font-bold">Form Not Found or Expired.</div>;
 
-  // Success Screen
+  // ── Premium Confetti Success Screen (W4) ─────────────────────────────────
   if (successTrackingId) {
+    const jobName = Array.isArray(formConfig?.fees_structure) && formConfig.fees_structure[selectedPostIndex]?.postName
+      ? formConfig.fees_structure[selectedPostIndex].postName
+      : formConfig?.title || "Government Job";
+    const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const trackLink = `/track/${successTrackingId}`;
+    const waText = encodeURIComponent(`Mera Apply For Me order confirm hua! Tracking ID: ${successTrackingId}. Check karo: https://www.rojgarsuvidha.com${trackLink}`);
+
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4 sm:px-6 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-xl border border-gray-200 dark:border-gray-800 text-center space-y-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-            <CheckCircle className="h-10 w-10" />
-          </div>
-          <div>
-            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Application Received! 🎉</h2>
-            <p className="text-gray-500 mt-2">Aapki application safely submit ho gayi hai. Ek confirmation email bhi bheja gaya hai.</p>
-          </div>
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
-            <p className="text-sm text-indigo-800 dark:text-indigo-300 font-bold mb-2">YOUR TRACKING ID</p>
-            <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-widest">{successTrackingId}</div>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-3 font-medium">📸 Screenshot le lijiye — status check ke liye Dashboard mein dekh sakte hain.</p>
-          </div>
-          <div className="flex flex-col gap-3">
-            <button onClick={() => router.push("/dashboard?tab=applications")} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-colors">
-              📋 Track My Application
-            </button>
-            <button onClick={() => router.push("/")} className="w-full py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors">
-              Return to Homepage
-            </button>
+      <>
+        <style>{`
+          @keyframes confettiFall {
+            0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+          }
+          @keyframes successPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.08); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          @keyframes trackingSlide {
+            from { transform: translateY(30px); opacity: 0; }
+            to   { transform: translateY(0); opacity: 1; }
+          }
+          .confetti-piece {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            top: -20px;
+            animation: confettiFall linear forwards;
+          }
+          .success-pop { animation: successPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+          .tracking-slide { animation: trackingSlide 0.5s 0.3s ease-out both; }
+          .step-done { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border-color: transparent; }
+          .step-todo { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
+        `}</style>
+
+        {/* Confetti Pieces */}
+        {Array.from({ length: 60 }).map((_, i) => {
+          const colors = ["#4f46e5", "#7c3aed", "#db2777", "#f59e0b", "#10b981", "#3b82f6", "#ec4899"];
+          const color = colors[i % colors.length];
+          const left = Math.random() * 100;
+          const delay = Math.random() * 3;
+          const dur = 3 + Math.random() * 4;
+          const size = 6 + Math.random() * 10;
+          const isCircle = Math.random() > 0.5;
+          return (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${left}%`,
+                background: color,
+                width: `${size}px`,
+                height: `${size}px`,
+                borderRadius: isCircle ? "50%" : "2px",
+                animationDelay: `${delay}s`,
+                animationDuration: `${dur}s`,
+              }}
+            />
+          );
+        })}
+
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-12 px-4 flex items-center justify-center overflow-hidden">
+          <div className="max-w-lg w-full space-y-5 relative z-10">
+
+            {/* Success Hero */}
+            <div className="text-center success-pop">
+              <div className="inline-flex flex-col items-center gap-3">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-green-500/30">
+                  <span className="text-5xl">🎉</span>
+                </div>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white leading-tight">
+                  Application Submitted!
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs">
+                  Badhai ho! Hamare experts aapka form <strong>24 hours</strong> mein fill kar denge. Email + WhatsApp pe confirmation milega.
+                </p>
+              </div>
+            </div>
+
+            {/* Tracking ID Hero Card */}
+            <div className="tracking-slide bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-center shadow-2xl shadow-indigo-500/30 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+              <p className="text-indigo-200 text-[10px] font-black uppercase tracking-[3px] mb-2">Your Tracking ID</p>
+              <div className="text-4xl font-black font-mono tracking-[5px] mb-1">{successTrackingId}</div>
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-black px-4 py-2 rounded-xl transition-all"
+                >
+                  {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-green-300" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "Copied!" : "Copy ID"}
+                </button>
+                <a
+                  href={trackLink}
+                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-black px-4 py-2 rounded-xl transition-all"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Track Order
+                </a>
+              </div>
+            </div>
+
+            {/* Order Receipt Card */}
+            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-50 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/40 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Receipt</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Invoice No: RS-{successTrackingId}</p>
+                </div>
+                <span className="text-[10px] font-black bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full">✓ PAID</span>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                {[
+                  { label: "Service", value: "Apply For Me — Form Filling" },
+                  { label: "Applied For", value: jobName },
+                  { label: "Applicant", value: formData.fullName },
+                  { label: "Date", value: todayStr },
+                  { label: "Amount Paid", value: `₹${finalPayable || 0}` },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-start justify-between gap-3">
+                    <span className="text-xs text-gray-400 font-semibold shrink-0">{row.label}</span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white text-right">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Progress Timeline */}
+            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Application Progress</p>
+              <div className="flex items-center">
+                {["Received", "Processing", "Submitted", "Done"].map((step, i) => (
+                  <div key={step} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center font-black text-xs ${i === 0 ? "step-done shadow-lg shadow-indigo-500/30" : "step-todo dark:bg-gray-800 dark:border-gray-700"}`}>
+                        {i === 0 ? "✓" : i + 1}
+                      </div>
+                      <p className={`text-[9px] font-bold mt-1.5 ${i === 0 ? "text-indigo-600" : "text-gray-400"}`}>{step}</p>
+                    </div>
+                    {i < 3 && <div className={`flex-1 h-0.5 mx-1 rounded-full ${i === 0 ? "bg-indigo-200" : "bg-gray-100 dark:bg-gray-800"}`} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => router.push("/dashboard?tab=applications")}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 text-sm"
+              >
+                📋 Full Dashboard & Tracking
+              </button>
+              <a
+                href={`https://wa.me/?text=${waText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-black rounded-2xl transition-all active:scale-95 text-sm text-center block"
+              >
+                💬 Share on WhatsApp
+              </a>
+              <button
+                onClick={() => router.push("/latest-jobs")}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-all text-sm"
+              >
+                🔍 Browse More Jobs
+              </button>
+            </div>
+
           </div>
         </div>
-      </div>
+      </>
     );
   }
+
 
   const isMultiPost = Array.isArray(formConfig.fees_structure) && formConfig.fees_structure.length > 1;
 
   return (
     <>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-12 px-4 sm:px-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-4">
         
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors mb-2 self-start">
+          <ArrowLeft className="w-4 h-4" /> Back to Home
+        </Link>
+
         {/* Header */}
         <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-800 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-4">
@@ -526,14 +819,44 @@ function ApplyContent() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
             Apply For: <span className="text-indigo-600">{formConfig.title}</span>
           </h1>
-          <p className="text-gray-500 mt-2">Please fill in all details carefully. Our team will fill the official form on your behalf.</p>
+          <p className="text-gray-500 mt-2">Documents upload karo — hamari expert team galti-free form submit karegi. <span className="text-indigo-600 font-bold">Form Hamara, Naukri Aapki</span> ✅</p>
         </div>
+
+        {/* Compliance Official Link Banner */}
+        {(() => {
+          const portal = getOfficialPortal(formConfig.title);
+          return (
+            <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800 rounded-2xl flex items-start gap-2.5 text-left">
+              <span className="text-sm shrink-0 mt-0.5">ℹ️</span>
+              <div className="text-xs text-indigo-900/80 dark:text-indigo-300/80 leading-relaxed font-semibold">
+                This form filling assistance service is managed by Rojgar Suvidha (private agency). 
+                The official recruitment application portal is:{" "}
+                {portal.startsWith("http") ? (
+                  <a href={portal} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline font-extrabold inline-flex items-center gap-0.5">
+                    {portal.replace("https://", "")} <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                ) : (
+                  <span className="font-extrabold text-indigo-800 dark:text-indigo-250">{portal}</span>
+                )}
+                . We charge a facilitation service fee of ₹50 to securely assist candidates in form submission.
+              </div>
+            </div>
+          );
+        })()}
 
         {submitError && (
           <div className="p-4 bg-red-50 text-red-600 font-bold rounded-2xl border border-red-200 text-center">
             {submitError}
           </div>
         )}
+
+        {/* 🔥 FOMO Bar — shows live Apply For Me count for this job */}
+        <ApplyFomoBar
+          identifier={String(id)}
+          category={formConfig?.category || "default"}
+          lastDate={formConfig?.last_date}
+          compact
+        />
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           
@@ -593,7 +916,20 @@ function ApplyContent() {
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Aadhar Number</label>
-                <input type="text" value={formData.aadhar} onChange={e=>setFormData({...formData, aadhar: e.target.value})} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" required />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{12}"
+                  maxLength={12}
+                  placeholder="Enter 12-digit Aadhar number"
+                  value={formData.aadhar}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 12);
+                    setFormData({ ...formData, aadhar: val });
+                  }}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
               </div>
 
               {/* These fields control the dynamic fee */}
@@ -821,6 +1157,8 @@ function ApplyContent() {
             >
               {isSubmitting ? (
                 <><Loader2 className="h-6 w-6 animate-spin" /> Submitting securely...</>
+              ) : finalPayable > 0 ? (
+                `Proceed to Payment (₹${finalPayable}) →`
               ) : (
                 "Submit Application"
               )}

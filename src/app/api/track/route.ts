@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const merchantId = process.env.PHONEPE_MERCHANT_ID;
     const saltKey = process.env.PHONEPE_SALT_KEY;
     const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
-    const environment = process.env.PHONEPE_ENV || "sandbox";
+    const environment = process.env.PHONEPE_ENV || "production";
 
     if (!merchantId || !saltKey) {
       console.warn("PhonePe credentials missing — returning mock PAID status");

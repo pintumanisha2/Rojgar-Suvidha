@@ -100,10 +100,17 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
 
           const st = statusMap[job.status] || statusMap["active"];
 
+          let applyLink = "";
+          if (job.links && Array.isArray(job.links)) {
+            const applyLinkObj = job.links.find((l: any) => l.label && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
+            if (applyLinkObj) {
+              applyLink = applyLinkObj.url;
+            }
+          }
+
           return (
-            <Link
+            <div
               key={job.slug}
-              href={`/job/${job.slug}`}
               className="group bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 hover:-translate-y-1 transition-all duration-300 flex flex-col relative overflow-hidden"
             >
               <div className="flex items-start justify-between mb-3 relative z-10">
@@ -118,8 +125,8 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                 </div>
               </div>
 
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors relative z-10">
-                {job.title}
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors relative z-10">
+                <Link href={`/job/${job.slug}`}>{job.title}</Link>
               </h3>
 
               <div className="space-y-2 mb-5 relative z-10">
@@ -135,13 +142,29 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                 </div>
               </div>
 
-              <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between relative z-10">
-                <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">View Details</span>
-                <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  <ChevronRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:text-white" />
-                </div>
+              <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3 relative z-10">
+                <Link href={`/job/${job.slug}`} className="flex-1 text-center py-2 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl border border-gray-200 dark:border-zinc-800 transition-all">
+                  View Details
+                </Link>
+                {applyLink ? (
+                  <a 
+                    href={applyLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm shadow-indigo-500/10"
+                  >
+                    Apply Official
+                  </a>
+                ) : (
+                  <Link 
+                    href="/apply-for-me" 
+                    className="flex-1 text-center py-2 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-black rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 transition-all"
+                  >
+                    Apply For Me ✨
+                  </Link>
+                )}
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>

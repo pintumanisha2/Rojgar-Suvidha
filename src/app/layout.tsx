@@ -279,7 +279,7 @@ export default function RootLayout({
             </Suspense>
             <CountdownGate>
               <PublicHeader />
-              <main className="flex-grow flex flex-col">
+              <main className="flex-grow flex flex-col w-full max-w-full overflow-x-hidden">
                 {children}
               </main>
               <PublicFooter />

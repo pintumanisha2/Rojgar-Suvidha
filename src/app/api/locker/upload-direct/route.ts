@@ -30,6 +30,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Server-side type validation
+    const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+    const allowedExtensions = ["pdf", "jpg", "jpeg", "png"];
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!allowedMimeTypes.includes(file.type) || !allowedExtensions.includes(fileExt)) {
+      return NextResponse.json({ error: "Invalid file type. Only PDF and JPG/PNG images are allowed." }, { status: 400 });
+    }
+
     // B2 Credentials Check
     const keyId = process.env.B2_KEY_ID;
     const appKey = process.env.B2_APPLICATION_KEY;
@@ -52,7 +60,6 @@ export async function POST(req: Request) {
     });
 
     // Construct Private File Key
-    const fileExt = file.name.split(".").pop() || "jpg";
     const cleanFileName = file.name.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_");
     const key = `locker/${user.id}/${Date.now()}_${cleanFileName}.${fileExt}`;
 

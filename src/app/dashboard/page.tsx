@@ -19,6 +19,7 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
+  const [topJob, setTopJob] = useState<any>(null);
 
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -59,6 +60,8 @@ function DashboardContent() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [markingAllNotifs, setMarkingAllNotifs] = useState(false);
+  const unreadCount = notifications.filter((n: any) => !n.is_read).length;
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
 
   // Delete account confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -84,6 +87,24 @@ function DashboardContent() {
       }
     }
   }, [user, activeTab]);
+
+  useEffect(() => {
+    async function fetchTopJob() {
+      try {
+        const { data } = await supabase
+          .from("jobs")
+          .select("id, title, slug, department, last_date")
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (data) setTopJob(data);
+      } catch (err) {
+        console.warn("Failed to fetch top job in dashboard:", err);
+      }
+    }
+    fetchTopJob();
+  }, []);
 
   const handleSavePreferences = () => {
     setSavingPrefs(true);
@@ -266,11 +287,12 @@ function DashboardContent() {
         }
 
 
-        // FIX: Fetch applications by user_id first, fallback to phone number
+        // FIX: Fetch applications by user_id first, fallback to phone number if profile mobile number exists
+        const phoneFilter = profileData?.mobile_number ? `,phone.eq.${profileData.mobile_number}` : "";
         const { data: appData } = await supabase
           .from("user_applications")
           .select("tracking_id, form_id, full_name, selected_post_name, application_status, total_paid, created_at")
-          .or(`user_id.eq.${session.user.id},phone.eq.${profileData?.mobile_number || "__none__"}`)
+          .or(`user_id.eq.${session.user.id}${phoneFilter}`)
           .order("created_at", { ascending: false });
         setMyApplications(appData || []);
       } catch (err) {
@@ -281,6 +303,12 @@ function DashboardContent() {
     };
     fetchUser();
   }, [router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardNotifications();
+    }
+  }, [user]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -454,13 +482,26 @@ function DashboardContent() {
 
   const handleDeleteAccount = async () => {
     setLoading(true);
-    // 1. Delete profile data (this will cascade or at least remove their personal data)
-    await supabase.from("profiles").delete().eq("id", user.id);
-    // 2. Sign out the user completely
-    await supabase.auth.signOut();
-    setShowDeleteModal(false);
-    router.push("/");
-    router.refresh();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, accessToken: session?.access_token }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Deletion failed. Please try again.");
+      }
+      await supabase.auth.signOut();
+      setShowDeleteModal(false);
+      router.push("/");
+      router.refresh();
+    } catch (err: any) {
+      alert("Account deletion failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -684,7 +725,7 @@ function DashboardContent() {
         <div className="w-full md:w-80 shrink-0">
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden sticky top-24">
 
-            <div className="p-6 bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-center relative overflow-hidden">
+            <div className="hidden md:block p-6 bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-center relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mt-10 -mr-10" />
               <div className="relative z-10 flex flex-col items-center">
                 {/* Avatar with small camera corner button */}
@@ -718,24 +759,33 @@ function DashboardContent() {
               </div>
             </div>
 
-            <div className="p-3 space-y-1">
+            <div className="p-3 flex md:flex-col overflow-x-auto md:overflow-x-visible pb-3 md:pb-3 gap-2 md:gap-0 md:space-y-1 scrollbar-hide">
               {([
-                { id: "profile",              icon: <FileText className="w-5 h-5" />,      label: "Profile" },
-                { id: "applications",         icon: <Briefcase className="w-5 h-5" />,     label: "Govt Job Apps" },
-                { id: "private-applications", icon: <Briefcase className="w-5 h-5" />,     label: "Private Job Tracker" },
-                { id: "saved",                icon: <Bookmark className="w-5 h-5" />,      label: "Saved Jobs" },
-                { id: "requests",             icon: <ClipboardCheck className="w-5 h-5" />,label: "Apply For Me" },
-                { id: "messages",             icon: <MessageSquare className="w-5 h-5" />, label: "Messages" },
-                { id: "notifications",        icon: <Bell className="w-5 h-5" />,          label: "Notifications" },
-                { id: "preferences",          icon: <Settings className="w-5 h-5" />,      label: "Preferences" },
-              ] as const).map(item => (
+                { id: "profile",              icon: <FileText className="w-4.5 h-4.5 shrink-0" />,      label: "Profile" },
+                { id: "applications",         icon: <Briefcase className="w-4.5 h-4.5 shrink-0" />,     label: "Govt Job Apps" },
+                { id: "private-applications", icon: <Briefcase className="w-4.5 h-4.5 shrink-0" />,     label: "Private Job Tracker" },
+                { id: "saved",                icon: <Bookmark className="w-4.5 h-4.5 shrink-0" />,      label: "Saved Jobs" },
+                { id: "requests",             icon: <ClipboardCheck className="w-4.5 h-4.5 shrink-0" />,label: "Apply For Me" },
+                { id: "messages",             icon: <MessageSquare className="w-4.5 h-4.5 shrink-0" />, label: "Messages" },
+                { id: "notifications",        icon: (
+                  <div className="relative">
+                    <Bell className="w-4.5 h-4.5 shrink-0" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-black text-white ring-1 ring-white dark:ring-gray-900 leading-none">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                ),          label: "Notifications" },
+                { id: "preferences",          icon: <Settings className="w-4.5 h-4.5 shrink-0" />,      label: "Preferences" },
+              ]).map(item => (
                 <button
                   key={item.id}
                   onClick={() => {
                     setActiveTab(item.id);
                     router.replace(`/dashboard?tab=${item.id}`, { scroll: false });
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${
+                  className={`shrink-0 flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
                     activeTab === item.id
                       ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                       : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -745,16 +795,23 @@ function DashboardContent() {
                 </button>
               ))}
               <Link href="/dashboard/locker"
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <Lock className="w-5 h-5" /> Digital Locker
+                className="shrink-0 flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap">
+                <Lock className="w-4.5 h-4.5 shrink-0" /> Digital Locker
               </Link>
               <button onClick={() => window.dispatchEvent(new CustomEvent("openAspirantsCircle"))}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <span className="text-base shrink-0">💬</span> Aspirants Adda
+                className="shrink-0 flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3.5 rounded-xl text-xs md:text-sm font-bold transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap">
+                <span className="text-base shrink-0 leading-none">💬</span> Aspirants Adda
               </button>
+              
+              <div className="md:hidden border-l border-gray-150 dark:border-gray-800 pl-2 flex items-center">
+                <button onClick={handleLogout}
+                  className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all whitespace-nowrap">
+                  <LogOut className="w-4 h-4 shrink-0" /> Log Out
+                </button>
+              </div>
             </div>
 
-            <div className="p-3 border-t border-gray-100 dark:border-gray-800">
+            <div className="hidden md:block p-3 border-t border-gray-100 dark:border-gray-800">
               <button onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
                 <LogOut className="w-4 h-4" /> Log Out
@@ -772,6 +829,70 @@ function DashboardContent() {
 
               {/* ⭐ Gamification Meter */}
               <ProfileStrengthMeter user={user} profile={profile} avatarUrl={avatarUrl} />
+
+              {/* Profile Completion Nudge */}
+              {profile && (!profile.father_name || !profile.mother_name || !profile.date_of_birth) && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-5 flex items-start gap-4">
+                  <div className="text-2xl mt-0.5">⚠️</div>
+                  <div className="flex-1">
+                    <h4 className="font-extrabold text-amber-900 dark:text-amber-400 text-sm">Aapka Profile incomplete hai!</h4>
+                    <p className="text-xs text-amber-700 dark:text-amber-500 mt-1">
+                      Personalized job matches aur quick form-filling ke liye details fill karein.
+                    </p>
+                    <Link href="/profile-setup?mode=edit" className="inline-flex items-center gap-1 text-xs font-black text-amber-900 dark:text-amber-400 underline mt-2">
+                      Profile Complete Karein →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Aaj ki Top Job Card */}
+              {topJob && (
+                <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-200/40 dark:border-orange-950/50 rounded-2xl p-5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔥</span>
+                    <div>
+                      <p className="text-[10px] text-orange-600 dark:text-orange-400 font-extrabold uppercase tracking-wider">Aaj Ki Recommended Job</p>
+                      <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mt-0.5">{topJob.title}</h4>
+                      <p className="text-xs text-gray-400 mt-0.5">{topJob.department} • Last Date: {topJob.last_date ? new Date(topJob.last_date).toLocaleDateString("en-IN") : "Apply Soon"}</p>
+                    </div>
+                  </div>
+                  <Link href={`/job/${topJob.slug}`} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black rounded-xl transition-all shadow shadow-orange-500/10 active:scale-95 shrink-0">
+                    Apply Now
+                  </Link>
+                </div>
+              )}
+
+              {/* Referral Invite Card */}
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center text-xl shrink-0">
+                    🤝
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">Dost Ko Invite Karein — ₹10 Discount Paayein!</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                      Apna unique referral code share karein. Jab aapka dost checkout pe apply karega, unhe ₹10 off milega aur aapko credit!
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">Aapka Code:</span>
+                      <code className="bg-gray-100 dark:bg-gray-800 text-xs font-mono font-black text-indigo-600 px-2.5 py-1 rounded-lg">
+                        {profile?.full_name ? profile.full_name.split(" ")[0].toUpperCase() + "10" : "BHAIYA10"}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const code = profile?.full_name ? profile.full_name.split(" ")[0].toUpperCase() + "10" : "BHAIYA10";
+                    navigator.clipboard.writeText(code);
+                    alert("Coupon code copied to clipboard! Share it with friends.");
+                  }}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow shadow-emerald-500/10 active:scale-95 shrink-0 w-full md:w-auto text-center font-bold"
+                >
+                  Copy Code
+                </button>
+              </div>
 
               {/* Profile Info Card */}
               <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-6 md:p-8">
@@ -800,7 +921,7 @@ function DashboardContent() {
                   </div>
                 )}
                 <div className="mt-4">
-                  <Link href="/profile-setup" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+                  <Link href="/profile-setup?mode=edit" className="text-sm font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
                     ✏️ Edit Profile
                   </Link>
                 </div>
@@ -909,7 +1030,7 @@ function DashboardContent() {
                     };
                     const statusColor = statusColors[app.application_status] || statusColors["Received"];
                     return (
-                      <div key={app.tracking_id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
+                      <div key={app.tracking_id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5 space-y-4">
                         <div className="flex items-start justify-between gap-4 flex-wrap">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 flex-wrap mb-1">
@@ -924,6 +1045,38 @@ function DashboardContent() {
                             <p className="font-extrabold text-gray-900 dark:text-white">₹{app.total_paid || 0}</p>
                           </div>
                         </div>
+
+                        {/* Progress Stepper */}
+                        {app.application_status !== "Rejected" ? (
+                          <div className="pt-2 border-t border-gray-50 dark:border-gray-800/50">
+                            <div className="grid grid-cols-3 gap-2 relative">
+                              <div className="absolute top-3.5 left-[16%] right-[16%] h-0.5 bg-gray-150 dark:bg-gray-800 -z-10" />
+                              {[
+                                { label: "Received", done: true },
+                                { label: "Processing", done: app.application_status === "Processing" || app.application_status === "Approved" },
+                                { label: "Completed", done: app.application_status === "Approved" }
+                              ].map((step, idx) => (
+                                <div key={idx} className="text-center space-y-1">
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-black transition-all ${
+                                    step.done 
+                                      ? "bg-green-500 text-white shadow-md shadow-green-500/20" 
+                                      : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                                  }`}>
+                                    {step.done ? "✓" : idx + 1}
+                                  </div>
+                                  <p className={`text-[10px] font-black ${step.done ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>{step.label}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                            <span className="text-red-500 text-base leading-none">❌</span>
+                            <p className="text-[11px] text-red-700 dark:text-red-400 font-bold leading-normal">
+                              Application was rejected. Please review team messages or contact support.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1040,12 +1193,20 @@ function DashboardContent() {
                             })()}
                           </div>
 
-                          {/* Receipt Download */}
+                          {/* Receipt Action Buttons */}
                           {req.final_receipt_url && (
-                            <a href={req.final_receipt_url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-500/20 shrink-0">
-                              ⬇️ Receipt Download
-                            </a>
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                onClick={() => setPreviewPdfUrl(req.final_receipt_url)}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/25 active:scale-95"
+                              >
+                                👁️ View
+                              </button>
+                              <a href={req.final_receipt_url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-green-600/25">
+                                ⬇️ Download
+                              </a>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1407,6 +1568,25 @@ function DashboardContent() {
 
         </div>
       </div>
+
+      {/* PDF Receipt Preview Modal */}
+      {previewPdfUrl && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPreviewPdfUrl(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden w-full max-w-4xl h-[85vh] shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-150 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="font-extrabold text-gray-900 dark:text-white">Receipt Preview</h3>
+              <button onClick={() => setPreviewPdfUrl(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl font-bold leading-none">×</button>
+            </div>
+            <div className="flex-1 bg-gray-100 dark:bg-gray-950 relative">
+              <iframe
+                src={previewPdfUrl}
+                className="w-full h-full border-none"
+                title="Receipt Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

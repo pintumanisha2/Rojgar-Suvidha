@@ -22,6 +22,7 @@ interface Submission {
   documents_urls: Record<string, string>;
   coupon_applied: string | null;
   created_at: string;
+  aadhar?: string;
 }
 
 export default function FormSubmissionsPage() {
@@ -33,6 +34,34 @@ export default function FormSubmissionsPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Submission | null>(null);
   const [token, setToken] = useState("");
+  const [decryptedAadhars, setDecryptedAadhars] = useState<Record<string, string>>({});
+  const [decryptingId, setDecryptingId] = useState<string | null>(null);
+
+  const handleDecryptAadhar = async (trackingId: string, encryptedAadhar: string) => {
+    if (!encryptedAadhar) return;
+    setDecryptingId(trackingId);
+    try {
+      const res = await fetch("/api/crypto/decrypt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ text: encryptedAadhar })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDecryptedAadhars(prev => ({ ...prev, [trackingId]: data.decrypted }));
+      } else {
+        const errData = await res.json();
+        alert("Failed to decrypt: " + (errData.error || "Unauthorized"));
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setDecryptingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!formId) return;
@@ -197,6 +226,33 @@ export default function FormSubmissionsPage() {
                   <span className="font-bold text-gray-900 dark:text-white text-right">{value}</span>
                 </div>
               ))}
+              
+              {/* Secure Aadhar Row */}
+              <div className="flex justify-between py-2 border-b border-gray-50 dark:border-gray-800 gap-4 items-center">
+                <span className="text-gray-500 font-medium shrink-0">Aadhar Number</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-gray-900 dark:text-white">
+                    {decryptedAadhars[selected.tracking_id] ? (
+                      decryptedAadhars[selected.tracking_id]
+                    ) : (
+                      "•••• •••• ••••"
+                    )}
+                  </span>
+                  {!decryptedAadhars[selected.tracking_id] && selected.aadhar && (
+                    <button
+                      onClick={() => handleDecryptAadhar(selected.tracking_id, selected.aadhar || "")}
+                      disabled={decryptingId === selected.tracking_id}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-50 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950 px-2.5 py-1 rounded-lg"
+                    >
+                      {decryptingId === selected.tracking_id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "👁️ Reveal"
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
               {selected.documents_urls && Object.keys(selected.documents_urls).length > 0 && (
                 <div className="pt-2">
                   <p className="text-gray-500 font-bold mb-2">Documents:</p>

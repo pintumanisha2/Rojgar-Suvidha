@@ -60,7 +60,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ── Main Grid ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-10 mb-10 sm:mb-14">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-10 mb-10 sm:mb-14">
 
           {/* Brand & Description */}
           <div className="col-span-2 md:col-span-1">
@@ -79,6 +79,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
+              <span className="text-yellow-300 font-black block text-xs tracking-wider uppercase mb-1">"Form Hamara, Naukri Aapki"</span>
               India's most trusted platform for <strong className="text-gray-300">Sarkari Naukri</strong>, 
               Government & Private Job updates. Apply for any job with our exclusive{' '}
               <Link href="/apply-for-me" className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2">

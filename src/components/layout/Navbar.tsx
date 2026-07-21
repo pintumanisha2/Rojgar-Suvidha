@@ -251,23 +251,23 @@ export default function Navbar() {
             <div className="flex items-center justify-between h-[60px]">
 
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-3 shrink-0">
-                <div className="shrink-0 flex items-center justify-center mr-1 hover:scale-110 transition-transform duration-300 cursor-pointer">
+              <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div className="shrink-0 flex items-center justify-center mr-0.5 sm:mr-1 hover:scale-105 transition-transform duration-300 cursor-pointer">
                   <Image 
                     src="/rojgar suvidha logo.png" 
                     alt="Rojgar Suvidha Icon"
                     width={46}
                     height={46}
-                    className="h-11 w-11 object-contain"
+                    className="h-9 w-9 sm:h-11 sm:w-11 object-contain"
                     priority
                   />
                 </div>
                 <div className="flex flex-col leading-none">
-                  <span className="font-extrabold text-xl tracking-tight text-white">
+                  <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white">
                     Rojgar<span className="text-yellow-300">Suvidha</span>
                   </span>
-                  <span className="text-[10px] text-indigo-200 font-medium tracking-widest uppercase">
-                    Your Career Partner
+                  <span className="text-[9px] sm:text-[10px] text-yellow-300 font-bold tracking-wide truncate max-w-[130px] xs:max-w-none">
+                    Form Hamara, Naukri Aapki
                   </span>
                 </div>
               </Link>

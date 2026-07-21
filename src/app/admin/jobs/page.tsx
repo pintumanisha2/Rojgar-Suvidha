@@ -146,6 +146,12 @@ function AdminJobsContent() {
     }
   };
 
+  const isValidGST = (gst: string): boolean => {
+    if (!gst) return false;
+    const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    return regex.test(gst.trim().toUpperCase());
+  };
+
   const handleVerifyEmployer = async (id: string, verify: boolean) => {
     try {
       const { error } = await supabase
@@ -396,14 +402,31 @@ function AdminJobsContent() {
                           </div>
                         </td>
                         <td className="px-5 py-4 font-semibold">
-                          <div className="space-y-1">
-                            <span className="text-xs text-gray-600 dark:text-gray-400 block">
-                              🆔 GSTIN/CIN: <span className="font-mono font-bold text-gray-800 dark:text-gray-200">{emp.gst_number || "Not Provided ⚠️"}</span>
-                            </span>
-                            <span className="text-xs text-gray-600 dark:text-gray-400 block">
-                              📞 Phone: <span className="font-bold text-gray-800 dark:text-gray-200">{emp.phone || "Not Provided ⚠️"}</span>
-                            </span>
-                          </div>
+                          {(() => {
+                            const isGstValid = emp.gst_number ? isValidGST(emp.gst_number) : false;
+                            return (
+                              <div className="space-y-1">
+                                <span className="text-xs text-gray-600 dark:text-gray-400 block">
+                                  🆔 GSTIN/CIN:{" "}
+                                  <span className={`font-mono font-bold ${
+                                    emp.gst_number 
+                                      ? (isGstValid ? "text-gray-800 dark:text-gray-200" : "text-red-500 dark:text-red-400")
+                                      : "text-gray-400"
+                                  }`}>
+                                    {emp.gst_number || "Not Provided ⚠️"}
+                                    {emp.gst_number && !isGstValid && (
+                                      <span className="text-[9px] bg-red-150 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded ml-1 font-bold font-sans tracking-normal">
+                                        Invalid Format ❌
+                                      </span>
+                                    )}
+                                  </span>
+                                </span>
+                                <span className="text-xs text-gray-600 dark:text-gray-400 block">
+                                  📞 Phone: <span className="font-bold text-gray-800 dark:text-gray-200">{emp.phone || "Not Provided ⚠️"}</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-4 hidden sm:table-cell">
                           {emp.is_verified ? (

@@ -14,6 +14,10 @@ import TrackJobViewWrapper from "@/components/ui/TrackJobViewWrapper";
 import JobAbandonTracker from "@/components/ui/JobAbandonTracker";
 import AgeCalculator from "@/components/ui/AgeCalculator";
 import type { Metadata } from "next";
+import MatchScoreCard from "@/components/ui/MatchScoreCard";
+import SocialProofBadges from "@/components/ui/SocialProofBadges";
+import PushSubscribeWidget from "@/components/ui/PushSubscribeWidget";
+import ApplyFomoBar from "@/components/ui/ApplyFomoBar";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -158,6 +162,10 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
   if (!job) {
     notFound();
   }
+
+  const customApplyLink = job.links?.find((l: any) => l.label.toLowerCase().includes('apply for me'))?.url;
+  const applyLinkObj = job.links?.find((l: any) => l.label && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
+  const applyLink = applyLinkObj ? applyLinkObj.url : null;
 
   // Fetch similar jobs (same category)
   const { data: similarJobs } = await supabase
@@ -323,6 +331,41 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             <span className="text-gray-700 dark:text-gray-300 font-semibold truncate max-w-[200px]">{job.title}</span>
           </nav>
 
+          {/* Top Level Quick Action CTA Bar */}
+          <div className="bg-white dark:bg-zinc-950 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">Quick Application Actions</h2>
+              <p className="text-xs text-gray-500 font-medium">Direct official application link & premium form filling service.</p>
+            </div>
+            <div className="flex gap-2.5 shrink-0">
+              {applyLink && (
+                <a 
+                  href={applyLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
+                >
+                  Apply Official ↗
+                </a>
+              )}
+              {customApplyLink ? (
+                <Link 
+                  href={customApplyLink} 
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
+                >
+                  Apply For Me ✨
+                </Link>
+              ) : (
+                <Link 
+                  href="/apply-for-me" 
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
+                >
+                  Apply For Me ✨
+                </Link>
+              )}
+            </div>
+          </div>
+
           {/* 1. Header Section */}
           <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
@@ -350,10 +393,31 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               {job.important_dates && job.important_dates.length > 0 && (
                  <p className="text-xs text-gray-500 font-bold bg-gray-50 dark:bg-zinc-900 inline-block px-3 py-1 rounded-full border border-gray-200 dark:border-zinc-800">
                     Last Updated: {new Date(job.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                 </p>
+                  </p>
               )}
             </div>
           </div>
+
+          <SocialProofBadges slug={job.slug} lastDate={lastDate} />
+
+          {/* 🔥 FOMO Bar — live Apply For Me count + live viewers for this job */}
+          <ApplyFomoBar
+            identifier={job.slug}
+            category={job.category || "default"}
+            lastDate={lastDate}
+          />
+          
+          <MatchScoreCard job={{
+            title: job.title,
+            category: job.category,
+            education: job.eligibility || job.education || job.content,
+            ageLimit: job.age_limit || job.age_details || job.content,
+            last_date: lastDate,
+            appFeeGen: job.application_fee || job.fee_detail || job.content,
+            totalPosts: job.total_posts || job.total_vacancy
+          }} />
+
+          <PushSubscribeWidget delay={20000} />
 
           {/* 2. Job Banner (Thumbnail) */}
           {job.banner_url && (

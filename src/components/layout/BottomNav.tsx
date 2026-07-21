@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, Bookmark, UserCircle, MessageSquare, MessageCircle, Search } from "lucide-react";
+import { Home, Briefcase, Bookmark, UserCircle, MessageSquare, MessageCircle, Search, UploadCloud } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import GlobalSearch from "@/components/ui/GlobalSearch";
@@ -111,27 +111,22 @@ export default function BottomNav() {
       activeCheck: !isChatOpen && !isCommunityOpen && (pathname === "/latest-jobs" || pathname.startsWith("/latest-jobs/") || pathname.startsWith("/job/")),
     },
     {
-      name: "Adda",
+      name: "Apply",
+      href: "/apply-for-me",
+      icon: UploadCloud,
+      activeCheck: !isChatOpen && !isCommunityOpen && pathname === "/apply-for-me",
+    },
+    {
+      name: "Chat",
       onClick: () => {
-        window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
+        if (isLoggedIn) {
+          window.dispatchEvent(new CustomEvent("openCommunityChat"));
+        } else {
+          window.dispatchEvent(new CustomEvent("openAspirantsCircle"));
+        }
       },
       icon: MessageSquare,
-      activeCheck: isChatOpen,
-    },
-    // Show Community Chat only for logged-in users
-    ...(isLoggedIn ? [{
-      name: "Community",
-      onClick: () => {
-        window.dispatchEvent(new CustomEvent("openCommunityChat"));
-      },
-      icon: MessageCircle,
-      activeCheck: isCommunityOpen,
-    }] : []),
-    {
-      name: "Search",
-      onClick: () => setIsSearchOpen(true),
-      icon: Search,
-      activeCheck: isSearchOpen,
+      activeCheck: isChatOpen || isCommunityOpen,
     },
     {
       name: "Account",
@@ -165,35 +160,42 @@ export default function BottomNav() {
             {navItems.map((item) => {
               const isActive = item.activeCheck;
               const isTapped = tappedItem === item.name;
+              const isApply = item.name === "Apply";
 
               const content = (
                 <>
                   {/* Psychology: Active pill indicator — clear, unambiguous feedback */}
-                  {isActive && (
+                  {isActive && !isApply && (
                     <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-500 rounded-full" />
                   )}
 
                   {/* Icon with tap animation */}
                   <span
                     className={`flex items-center justify-center w-9 h-7 rounded-xl transition-all duration-200 ${
-                      isActive
+                      isApply
+                        ? "bg-gradient-to-tr from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 scale-110 -translate-y-1.5 border border-indigo-400/20"
+                        : isActive
                         ? "bg-indigo-50 dark:bg-indigo-900/40"
                         : "bg-transparent"
                     } ${isTapped ? "scale-90" : "scale-100"}`}
                   >
                     <item.icon
                       className={`transition-all duration-200 ${
-                        isActive
+                        isApply
+                          ? "w-4.5 h-4.5 text-white stroke-[2.5px]"
+                          : isActive
                           ? "w-5 h-5 text-indigo-600 dark:text-indigo-400 stroke-[2.5px]"
                           : "w-5 h-5 text-gray-400 dark:text-gray-500 stroke-2 group-hover:text-gray-600"
                       }`}
                     />
                   </span>
 
-                  {/* Psychology: Short, clear labels (Hick's Law — reduce reading time) */}
+                  {/* Psychology: Short, clear labels */}
                   <span
                     className={`text-[10px] leading-none transition-all duration-200 ${
-                      isActive
+                      isApply
+                        ? "font-black text-indigo-600 dark:text-indigo-400 -mt-0.5"
+                        : isActive
                         ? "font-extrabold text-indigo-600 dark:text-indigo-400"
                         : "font-medium text-gray-400 dark:text-gray-500"
                     }`}

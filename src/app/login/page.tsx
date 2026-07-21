@@ -8,7 +8,7 @@ import {
   Mail, Loader2, ShieldCheck, KeyRound,
   Building, ArrowRight,
   Eye, EyeOff, Phone, CheckCircle, ArrowLeft,
-  Lock, Users, Star, Zap, AlertTriangle, CheckCircle2,
+  Lock, Users, Star, Zap, AlertTriangle, CheckCircle2, Clock
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 
@@ -251,9 +251,17 @@ function LoginContent() {
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [phoneOtp, setPhoneOtp]     = useState("");
   const [phoneCooldown, setPhoneCooldown] = useState(0);
+  const [otpExpiryTime, setOtpExpiryTime] = useState(600); // 10 minutes
+
   useEffect(() => {
     if (phoneCooldown > 0) { const t = setTimeout(() => setPhoneCooldown(c => c - 1), 1000); return () => clearTimeout(t); }
   }, [phoneCooldown]);
+
+  useEffect(() => {
+    if (!phoneOtpSent || otpExpiryTime <= 0) return;
+    const t = setInterval(() => setOtpExpiryTime(prev => Math.max(0, prev - 1)), 1000);
+    return () => clearInterval(t);
+  }, [phoneOtpSent, otpExpiryTime]);
 
   const reset = () => {
     setError(null); setMsg(null);
@@ -359,6 +367,7 @@ function LoginContent() {
       if (res.ok) {
         setMsg("A new OTP has been sent!");
         setPhoneCooldown(60);
+        setOtpExpiryTime(600);
         toast.success("New OTP Sent", `A fresh code was sent to +91 ${digits}.`);
       } else {
         const d = await res.json();
@@ -609,10 +618,14 @@ function LoginContent() {
                       </>
                     ) : (
                       <>
-                        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-center">
+                        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-center space-y-1.5">
                           <p className="text-sm font-black text-indigo-700 dark:text-indigo-300">📲 OTP sent to +91 {phone}</p>
-                          <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); setMsg(null); }}
-                            className="text-xs text-indigo-500 hover:underline font-bold mt-1">Change number</button>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 font-bold flex items-center justify-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                            <span>OTP valid for {Math.floor(otpExpiryTime / 60)}:{String(otpExpiryTime % 60).padStart(2, "0")} minutes</span>
+                          </p>
+                          <button onClick={() => { setPhoneOtpSent(false); setPhoneOtp(""); setMsg(null); setOtpExpiryTime(600); }}
+                            className="text-xs text-indigo-500 hover:underline font-bold mt-1 block mx-auto">Change number</button>
                         </div>
 
                         <div>
@@ -671,7 +684,7 @@ function LoginContent() {
                           <InputField icon={Mail} type="email" required value={email} onChange={(e: any) => setEmail(e.target.value)} placeholder="student@example.com" disabled={loading} />
                         </div>
                         <PrimaryBtn type="submit">Send Reset OTP →</PrimaryBtn>
-                        <button type="button" onClick={() => { resetForm(); }}
+                        <button type="button" onClick={() => { reset(); setIsForgotPass(false); }}
                           className="w-full text-center text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors">
                           ← Back to Sign In
                         </button>

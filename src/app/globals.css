@@ -46,6 +46,12 @@
 
 html, body {
   overscroll-behavior: none; /* Prevent rubber-band/bounce effect on Mac/iOS */
+  max-width: 100%;
+  overflow-x: hidden !important;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -166,6 +172,24 @@ input:-webkit-autofill:active {
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+/* === Touch & Responsive Utility Classes === */
+.table-scroll-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent image and text overflow on mobile containers */
+img, video, iframe, canvas, svg {
+  max-width: 100%;
+}
+
+.break-word-safe {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 

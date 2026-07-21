@@ -18,7 +18,7 @@ function extractKeywords(message: string): string[] {
 
 export async function POST(req: Request) {
   try {
-    const { message, history } = await req.json();
+    const { message, history, pathname = "" } = await req.json();
 
     if (!message?.trim()) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
@@ -31,7 +31,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "AI Configuration missing (GROQ_API_KEY)" }, { status: 500 });
     }
 
-    // ─── 1. SMART SEARCH: Search jobs matching user's query ───────────────────
+    // ─── 1. DYNAMIC PAGE-CONTEXT AWARENESS (U1) ───────────────────────────────
+    let pageContext = "";
+    if (pathname) {
+      const slugMatch = pathname.match(/\/job\/([^\/]+)/);
+      if (slugMatch && slugMatch[1]) {
+        const slug = slugMatch[1];
+        try {
+          const { data: jobDetail } = await supabaseAdmin
+            .from("jobs")
+            .select("title, short_info, blog_content, important_dates")
+            .eq("slug", slug)
+            .neq("status", "draft")
+            .single();
+          
+          if (jobDetail) {
+            pageContext = `
+[USER IS CURRENTLY VIEWING THIS JOB POST]
+Title: ${jobDetail.title}
+Summary: ${jobDetail.short_info || ""}
+Dates: ${JSON.stringify(jobDetail.important_dates || [])}
+Full Page Content/Blog (Use this to answer queries about eligibility, fees, salary, exam pattern, step-by-step apply, etc.):
+${jobDetail.blog_content?.replace(/<[^>]*>/g, " ").slice(0, 3500) || ""}
+`;
+          }
+        } catch (dbErr) {
+          console.error("Context fetch error:", dbErr);
+        }
+      } else if (pathname === "/apply-for-me") {
+        pageContext = `
+[USER IS CURRENTLY VIEWING THE 'APPLY FOR ME' PAGE]
+User is reading about the Apply For Me service. Pitch the advantages strongly:
+- Cost: ₹50 only.
+- 99.8% Form Acceptance Rate (No stress of rejection).
+- Perfect resizing of photos and signature verification.
+- Direct delivery of official PDFs/receipts to user's dashboard and WhatsApp.
+- Complete security of user credentials and documents.
+`;
+      }
+    }
+
+    // ─── 2. SMART SEARCH: Search jobs matching user's query ───────────────────
     let relevantJobs: any[] = [];
     if (keywords.length > 0) {
       const { data: searchResults } = await supabaseAdmin
@@ -44,13 +84,13 @@ export async function POST(req: Request) {
       relevantJobs = searchResults || [];
     }
 
-    // ─── 2. FETCH LATEST DATA (small set to keep tokens low) ─────────────
+    // ─── 3. FETCH LATEST DATA (small set to keep tokens low) ─────────────
     const { data: allItems } = await supabaseAdmin
       .from("jobs")
       .select("title, category, slug, last_date, total_posts")
       .neq("status", "draft")
       .order("created_at", { ascending: false })
-      .limit(40); // Reduced from 120 to keep system prompt small
+      .limit(40);
 
     const allData = allItems || [];
 
@@ -78,37 +118,39 @@ export async function POST(req: Request) {
       ? `\n[QUERY MATCH]\n${formatList(relevantJobs)}`
       : "";
 
-    // ─── 3. SYSTEM PROMPT with full website context ────────────────────────
-    const systemInstruction = `Tum "Rojgar AI" ho — Rojgar Suvidha portal ka exclusive AI Career Assistant.
+    // ─── 4. SYSTEM PROMPT: Unicorn Brand Personality & Sales Conversion (U2) ───
+    const systemInstruction = `Tum "Rojgar AI" ho — Rojgar Suvidha portal ke exclusive AI Career Mentor aur Guide. Speak like an expert, friendly elder brother (Bhaiya) advising a student with complete confidence and trust.
 
-PLATFORM KE BAARE MEIN:
-- Rojgar Suvidha India ka government aur private job portal hai.
-- Yahan user ko SSC, UPSC, Railway, Banking, State PSC, Defence, Police, Teaching, PSU aur Private Jobs milti hain.
-- Services: Latest Jobs, Results, Admit Cards, Answer Keys, Admissions, Apply For Me (form bharna service), Digital Locker (documents store), Resume Builder, Track Application, Aspirants Adda (community chat).
-- "Apply For Me" ek premium service hai jahan haari team user ka sarkari form bilkul sahi tarike se bhar deti hai — photo resize, document upload, payment sab kuch.
-- "Digital Locker" mein user apne documents (photo, signature, marksheet, etc.) ek baar upload karta hai aur woh sab forms mein use hote hain.
+=== UNICORN BRAND PERSPECTIVE ===
+- Rojgar Suvidha ek next-gen Unicorn Brand career portal hai, jo normal portals jaisa boring nahi hai.
+- Aapka personality extremely professional, helpful, motivational aur structured hai.
+- Tone: Natural, friendly, authoritative Hinglish (Hindi + English mix).
 
-TUMHARA KAAM:
-1. User ke sawal ka jawab SIRF NEECHE DIYE DATABASE DATA se do.
-2. Agar data mein match mile toh [View Details](/job/slug) link ZAROOR do.
-3. Agar database mein relevant data NA mile toh kaho: "Abhi yeh jaankari hamare portal par nahi hai, lekin aap /latest-jobs pe jaake dekh sakte hain."
-4. "Apply For Me" service ka naturally suggest karo jab user kisi form ya application ke baare mein pooche.
-5. Jawab HAMESHA short, friendly aur Hinglish mein do (Hindi + English mix). Max 3-4 lines.
-6. Kabhi bhi doosri websites (NaukriGuru, Naukri.com, etc.) ka naam mat lo.
-7. Ek hi reply mein maximum 3 jobs/items list karo — zyada mat karo.
-8. Emojis ka thoda use karo for friendly tone 😊
+=== HIGH-CONVERSION SALES SCRIPT ===
+1. Jab bhi user kisi job vacancy, eligibility, dates, fee, apply karne ya form bharne ke baare me pooche, toh use naturally samjhao aur "Apply For Me" service pitch karo:
+   "⚠️ Remember — form bharne me choti si galti se pura saal kharab ho jata hai. Aap tension-free apply karne ke liye hamari premium 'Apply For Me' service use kar sakte hain. Hamari expert team sirf ₹50 me aapka form 100% accuracy ke sath fill karegi."
+2. Uske baad reply me ye exact Markdown link button add karo:
+   [🚀 Apply For Me — ₹50 Only](/apply-for-me)
+3. Pitch should be natural but highly converting. Mention: "✓ Trusted by 50,000+ candidates | 99.8% Form Acceptance Rate."
 
-WEBSITE KI PAGES:
-- /latest-jobs → Saari nayi jobs
-- /results → Saare results
-- /admit-card → Admit cards
-- /answer-key → Answer keys
-- /admission → Admissions
-- /apply-for-me → Apply For Me service
-- /dashboard/locker → Digital Locker
-- /resume-builder → Resume banao
-- /track-application → Application track karo
-- /community → Aspirants Adda community
+=== USER ACTIVE PAGE CONTEXT ===
+${pageContext || "User is currently browsing the home page."}
+
+=== PORTAL KEY FEATURES & DIRECT LINKS ===
+- /latest-jobs → Saari jobs check karo
+- /results → Results dekehein
+- /admit-card → Admit card links
+- /answer-key → Answer keys check karein
+- /apply-for-me → Form Apply Service (₹50)
+- /dashboard/locker → Upload Documents Locker
+- /resume-builder → Professional Resume Maker
+- /track-application → Order status checker
+
+=== DATA-RETRIEVAL GUIDELINES ===
+- User ke sawal ka jawab dene ke liye upar diye [USER IS CURRENTLY VIEWING THIS JOB POST] context ka use zaroor karein agar available hai.
+- Jawab hamesha short, bullet points me bold text ke sath do takki mobile pe read karna aasan ho (max 4-5 lines).
+- Kabhi bhi doosri websites (Naukri.com, Sarkari Result) ka naam mat lo. 😊
+
 ${relevantSection}
 
 [LATEST JOBS - DATABASE]
@@ -118,13 +160,7 @@ ${formatList(latestJobs)}
 ${formatList(results)}
 
 [ADMIT CARDS - DATABASE]
-${formatList(admitCards)}
-
-[ANSWER KEYS - DATABASE]
-${formatList(answerKeys)}
-
-[ADMISSIONS - DATABASE]
-${formatList(admissions)}`;
+${formatList(admitCards)}`;
 
     // ─── 4. Build conversation for Groq ───────────────────────────────────
     const formattedHistory = (history || [])

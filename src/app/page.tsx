@@ -9,6 +9,7 @@ import RecommendedJobs from "@/components/ui/RecommendedJobs";
 // Lazy load non-critical components for faster initial load
 const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"));
 const Highlights = dynamic(() => import("@/components/home/Highlights"));
+const FeaturedServices = dynamic(() => import("@/components/home/FeaturedServices"));
 const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"));
 const MainContent = dynamic(() => import("@/components/home/MainContent"));
 const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"));
@@ -137,6 +138,9 @@ export default async function Home() {
       {/* Feature Highlights (Apply For Me & YouTube) */}
       <Highlights />
 
+      {/* Featured e-Suvidha Services */}
+      <FeaturedServices />
+
       {/* AI Personalization Engine (7.1) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <RecommendedJobs />
@@ -214,7 +218,7 @@ export default async function Home() {
             <div className="space-y-4 not-prose mt-6">
               <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q1. Is Rojgar Suvidha completely free to use?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yes, accessing job notifications, downloading admit cards, and checking results on Rojgar Suvidha is 100% free. A service charge of <strong className="text-indigo-600">₹50 (Fifty Rupees) per application</strong> applies only for our premium &quot;Apply For Me&quot; form-filling assistance service.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yes, job alerts, download links, and results check are 100% free. A small service charge starting from <strong className="text-indigo-600">₹99 per application</strong> applies only if you use our premium &quot;Apply For Me&quot; helper service. Check all details on our <a href="/pricing" className="text-indigo-600 underline font-bold">Pricing Page</a>.</p>
               </div>
               <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q2. How accurate are the job notifications here?</h4>
@@ -222,7 +226,7 @@ export default async function Home() {
               </div>
               <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q3. What is the &quot;Apply For Me&quot; feature and how much does it cost?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">It is an expert form-filling service. You upload your documents, and our trained team fills and submits your government job application accurately. <strong className="text-indigo-600">Service charge: ₹50 INR per application</strong> (non-refundable). The official government exam fee is paid separately.</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">It is our expert form-filling service. You upload your documents, and our team fills and submits the official form safely. <strong className="text-indigo-600">Service charge starts from ₹99</strong> depending on the form category. See our <a href="/pricing" className="text-indigo-600 underline font-bold">Pricing plans</a> for more details. Official exam fees are extra.</p>
               </div>
               <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
                 <h4 className="font-bold text-gray-900 dark:text-white">Q4. How do I get daily job updates?</h4>

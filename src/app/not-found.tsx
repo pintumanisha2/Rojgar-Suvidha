@@ -14,12 +14,13 @@ export default function NotFound() {
           </p>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-white dark:bg-gray-900 rounded-3xl px-8 py-6 shadow-2xl border border-indigo-100 dark:border-indigo-900">
-              <div className="text-6xl mb-2">🔍</div>
+              <div className="text-6xl mb-2">😅</div>
               <p className="text-xl font-extrabold text-gray-900 dark:text-white">
-                Page Not Found!
+                Ye Page Nahi Mila!
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                This page doesn&apos;t exist or may have been removed.
+                Par form toh <span className="text-indigo-600 font-bold">ghar baithe ho jaata hai</span> —{" "}
+                <a href="/apply-for-me" className="text-indigo-600 underline font-bold">Apply For Me dekhein →</a>
               </p>
             </div>
           </div>

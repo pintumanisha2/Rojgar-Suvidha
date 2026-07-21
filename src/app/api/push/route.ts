@@ -13,16 +13,21 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 export async function POST(req: Request) {
   try {
-    const { subscription, action, payload, userId } = await req.json();
+    const { subscription, action, payload, userId, categories } = await req.json();
 
     if (action === 'test' || action === 'subscribe') {
-      // 1. Save subscription to Supabase
+      // 1. Save subscription to Supabase with categories embedded in subscription_data
+      const subscriptionWithCategories = {
+        ...subscription,
+        categories: categories || ["latest-jobs", "results", "admit-cards", "news", "answer-key"]
+      };
+
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert({ 
           endpoint: subscription.endpoint, 
           user_id: userId || null,
-          subscription_data: subscription 
+          subscription_data: subscriptionWithCategories 
         }, { onConflict: 'endpoint' });
 
       if (error) {
@@ -42,7 +47,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: 'Subscribed and test push sent' });
     }
 
-    if (action === 'broadcast') {
+    if (action === 'broadcast' || action === 'category-broadcast') {
       // Fetch all subscriptions from Supabase
       const { data: subs, error } = await supabase
         .from('push_subscriptions')
@@ -61,12 +66,20 @@ export async function POST(req: Request) {
         icon: '/logo-blue.png'
       };
 
-      // Loop through all subscriptions and send push
-      const sendPromises = subs.map(async (sub) => {
+      const targetCategory = payload?.category || null;
+
+      // Loop through all subscriptions and send push (filtering by category if category-broadcast)
+      const sendPromises = subs.map(async (sub: any) => {
         try {
-          await webpush.sendNotification(sub.subscription_data, JSON.stringify(notificationPayload));
+          const subData = sub.subscription_data;
+          // Filter out if category-broadcast and user doesn't have target category in preferences
+          if (action === 'category-broadcast' && targetCategory) {
+            const userCats = subData.categories || [];
+            if (!userCats.includes(targetCategory)) return;
+          }
+          
+          await webpush.sendNotification(subData, JSON.stringify(notificationPayload));
         } catch (err: any) {
-          // If subscription is expired/invalid (410 Gone), we should ideally delete it from DB
           if (err.statusCode === 410 || err.statusCode === 404) {
              await supabase.from('push_subscriptions').delete().eq('endpoint', sub.subscription_data.endpoint);
           }
@@ -76,7 +89,7 @@ export async function POST(req: Request) {
 
       await Promise.allSettled(sendPromises);
 
-      return NextResponse.json({ success: true, message: `Broadcast sent to ${subs.length} users` });
+      return NextResponse.json({ success: true, message: `Broadcast processed for active subscribers` });
     }
 
     if (action === 'send_to_user') {

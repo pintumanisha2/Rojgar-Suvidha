@@ -5,9 +5,19 @@ import { MessageSquare, Users, ChevronRight, Sparkles } from "lucide-react";
 
 export default function AspirantsAddaPromo() {
   const [mounted, setMounted] = useState(false);
+  const [liveCount, setLiveCount] = useState(1480);
 
   useEffect(() => {
     setMounted(true);
+    // Oscillate the live count every 4 seconds by ±8 to look realistic
+    const interval = setInterval(() => {
+      setLiveCount(prev => {
+        const delta = Math.floor(Math.random() * 17) - 8; // -8 to +8
+        const next = prev + delta;
+        return Math.min(Math.max(next, 1440), 1520); // keep in 1440–1520 range
+      });
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleOpenChat = () => {
@@ -35,7 +45,7 @@ export default function AspirantsAddaPromo() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>🟢 1,480+ Aspirants Online Now</span>
+              <span>🟢 {liveCount.toLocaleString('en-IN')}+ Aspirants Online Now</span>
             </div>
 
             {/* Premium Heading */}
