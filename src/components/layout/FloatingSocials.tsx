@@ -14,6 +14,7 @@ export default function FloatingSocials() {
   }, []);
 
   if (
+    !pathname ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/private-jobs') ||
     pathname.startsWith('/employer')
