@@ -274,19 +274,8 @@ export default function CountdownGate({ children }: { children: React.ReactNode 
     }
   }, [showCelebration]);
 
-  // Prevent flash by keeping layout empty until live state is evaluated
-  if (isLive === null) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Render original website if live
-  if (isLive) {
-    return <>{children}</>;
-  }
+  // Since website is live, default to rendering children directly for instant SSR
+  return <>{children}</>;
 
   // Render Launching Soon Countdown Screen
   return (
