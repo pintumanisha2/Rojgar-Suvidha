@@ -245,6 +245,7 @@ export default function Footer() {
             <Link href="/contact-us" className="text-gray-500 hover:text-white transition-colors text-xs">Contact Us</Link>
             <Link href="/complaint" className="text-red-400 hover:text-red-300 transition-colors text-xs font-semibold">Help & Support</Link>
             <Link href="/track-application" className="text-gray-500 hover:text-white transition-colors text-xs">Track Application</Link>
+            <Link href="/sitemap" className="text-indigo-400 hover:text-indigo-300 transition-colors text-xs font-semibold">HTML Sitemap</Link>
             <Link href="/privacy" className="text-gray-500 hover:text-white transition-colors text-xs">Privacy Policy</Link>
             <Link href="/terms" className="text-gray-500 hover:text-white transition-colors text-xs">Terms of Service</Link>
             <Link href="/refund-policy" className="text-gray-500 hover:text-white transition-colors text-xs">Refund Policy</Link>
