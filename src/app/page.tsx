@@ -17,6 +17,7 @@ import CalendarSelector from "@/components/calendar/CalendarSelector";
 const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
 const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
 const EmailAlertBanner = dynamic(() => import("@/components/home/EmailAlertBanner"));
+import HomeSeoSection from "@/components/home/HomeSeoSection";
 import type { Metadata } from "next";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
@@ -168,76 +169,8 @@ export default async function Home() {
       {/* 📧 Email Alert Capture Banner — shown between trust signals and SEO block */}
       <EmailAlertBanner />
 
-      {/* SEO Content Block for Home Page */}
-      <div className="bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-zinc-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 md:py-16">
-          <div className="prose dark:prose-invert max-w-none prose-indigo prose-headings:font-extrabold prose-h2:text-2xl md:prose-h2:text-3xl prose-p:text-gray-600 dark:prose-p:text-gray-400">
-            <h2>Welcome to Rojgar Suvidha: India's No. 1 Portal for Sarkari Naukri & Government Jobs 2025</h2>
-            <p>
-              Finding accurate and timely information about <strong className="text-gray-900 dark:text-white">government jobs (Sarkari Naukri)</strong> shouldn't be difficult. Unfortunately, misinformation, fake links, and delayed updates often lead to missed opportunities. That's why we built <strong>Rojgar Suvidha</strong>. We are a trusted, fast, and comprehensive platform dedicated to bringing you the <strong>latest government job notifications, admit cards, exam results, answer keys, and university admissions</strong>—all under one roof, with zero clutter and maximum accuracy.
-            </p>
-
-            <h3>Why Choose Rojgar Suvidha for Your Career Updates?</h3>
-            <p>
-              Checking multiple official websites—SSC, UPSC, RRB, IBPS, or State PSCs—every single day can be exhausting. We streamline this process for you. Here is why millions of students trust Rojgar Suvidha daily:
-            </p>
-            <ul>
-              <li><strong>Fast Updates:</strong> Whether it's a midnight SSC result declaration or an early morning Railway notification, our team updates the portal instantly. You will be the first to know.</li>
-              <li><strong>Exclusive "Apply For Me" Service:</strong> Afraid of making mistakes in your application form? Don't have access to a cyber cafe? Upload your documents securely to Rojgar Suvidha, and our expert team will carefully fill and submit your government job forms with complete accuracy.</li>
-              <li><strong>Clean Experience:</strong> Unlike other platforms cluttered with misleading ads and pop-ups, we prioritize user experience with a clean, modern, and mobile-friendly interface.</li>
-              <li><strong>Comprehensive Coverage:</strong> From 10th pass jobs like MTS and GD Constable to highly prestigious exams like UPSC Civil Services, NDA, and Bank PO, we cover opportunities for every educational background.</li>
-              <li><strong>Direct & Verified Links:</strong> We hate clickbait. Every link provided on our platform redirects you straight to the official PDF notification, official apply online portal, or official result PDF.</li>
-            </ul>
-
-            <h3>Our Major Categories</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 not-prose my-8">
-              <div className="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800">
-                <h4 className="font-bold text-indigo-700 dark:text-indigo-400 text-lg mb-2">Latest Jobs (Sarkari Naukri)</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">Daily updates on new vacancies from SSC, Railways, Banking, Defence, Police, and State Governments. Detailed eligibility criteria and exact last dates are clearly mentioned.</p>
-              </div>
-              <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-2xl border border-green-100 dark:border-green-800">
-                <h4 className="font-bold text-green-700 dark:text-green-400 text-lg mb-2">Exam Results</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">Fastest direct links to check your Sarkari Result. We provide downloaded PDFs for merit lists and direct login portals for scorecards to bypass heavy server traffic.</p>
-              </div>
-              <div className="bg-orange-50 dark:bg-orange-900/10 p-5 rounded-2xl border border-orange-100 dark:border-orange-800">
-                <h4 className="font-bold text-orange-700 dark:text-orange-400 text-lg mb-2">Admit Cards</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">Never miss an exam. Download your Hall Tickets and Call Letters 1-2 weeks before the exam. We provide direct region-wise download links.</p>
-              </div>
-              <div className="bg-purple-50 dark:bg-purple-900/10 p-5 rounded-2xl border border-purple-100 dark:border-purple-800">
-                <h4 className="font-bold text-purple-700 dark:text-purple-400 text-lg mb-2">Answer Keys & Syllabi</h4>
-                <p className="text-sm text-gray-700 dark:text-gray-300">Calculate your raw scores immediately after the exam with official answer keys. Download detailed, topic-wise official syllabus PDFs before starting your preparation.</p>
-              </div>
-            </div>
-
-            <h3>Frequently Asked Questions (FAQs)</h3>
-            <div className="space-y-4 not-prose mt-6">
-              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
-                <h4 className="font-bold text-gray-900 dark:text-white">Q1. Is Rojgar Suvidha completely free to use?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Yes, job alerts, download links, and results check are 100% free. A small service charge starting from <strong className="text-indigo-600">₹99 per application</strong> applies only if you use our premium &quot;Apply For Me&quot; helper service. Check all details on our <a href="/pricing" className="text-indigo-600 underline font-bold">Pricing Page</a>.</p>
-              </div>
-              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
-                <h4 className="font-bold text-gray-900 dark:text-white">Q2. How accurate are the job notifications here?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">We maintain strict editorial standards. Every job posted is verified directly from official government portals, employment newspapers (Rojgar Samachar), and official press releases.</p>
-              </div>
-              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
-                <h4 className="font-bold text-gray-900 dark:text-white">Q3. What is the &quot;Apply For Me&quot; feature and how much does it cost?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">It is our expert form-filling service. You upload your documents, and our team fills and submits the official form safely. <strong className="text-indigo-600">Service charge starts from ₹99</strong> depending on the form category. See our <a href="/pricing" className="text-indigo-600 underline font-bold">Pricing plans</a> for more details. Official exam fees are extra.</p>
-              </div>
-              <div className="border border-gray-200 dark:border-zinc-900 rounded-xl p-4">
-                <h4 className="font-bold text-gray-900 dark:text-white">Q4. How do I get daily job updates?</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">You can join our active Telegram channel and WhatsApp group by clicking the floating buttons on your screen to receive instant alerts right on your phone.</p>
-              </div>
-            </div>
-
-            <p className="mt-8">
-              <strong>Disclaimer:</strong> Rojgar Suvidha is an independent educational portal and is NOT affiliated with any government organization. We curate publicly available information to assist students. Always verify details from official government websites before applying.
-            </p>
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-500">
-              <strong>Legal:</strong> Rojgar Suvidha is owned and operated by <strong>PINTU KUMAR</strong> (Sole Proprietor). Registered at Sector 62, Noida, Uttar Pradesh – 201309. Contact: <a href="mailto:support@rojgarsuvidha.com" className="text-indigo-600 hover:underline">support@rojgarsuvidha.com</a> | <a href="tel:+918877434088" className="text-indigo-600 hover:underline">+91 88774 34088</a>. Apply For Me Service: ₹50 per application (INR). <a href="/refund-policy" className="text-indigo-600 hover:underline">Refund Policy</a> | <a href="/terms" className="text-indigo-600 hover:underline">Terms</a> | <a href="/privacy" className="text-indigo-600 hover:underline">Privacy</a>.
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Premium UI SEO & FAQ Section */}
+      <HomeSeoSection />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   Calendar, Users, Newspaper, ChevronRight,
 } from "lucide-react";
 import SaveJobButton from "@/components/ui/SaveJobButton";
-import TrendingCarousel from "@/components/ui/TrendingCarousel";
 
 type StatusKey = "out" | "active" | "last" | "soon" | "new";
 type TagType = "hot" | "new" | "urgent";
@@ -104,9 +103,6 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
 
   return (
     <section className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-5">
-
-      {/* ── Trending Jobs Carousel (6.1) ── */}
-      {!stateCode && <TrendingCarousel />}
 
       {/* ── Jobs by Sector (SEO Internal Linking Hub) ── */}
       {!stateCode && (
