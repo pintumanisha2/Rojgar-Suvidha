@@ -114,6 +114,25 @@ export default function ApplyFomoBar({
 
   const isUrgent = daysLeft !== null && daysLeft <= 5;
 
+  const cat = (category || "").toLowerCase().trim();
+  const isAdmit = cat.includes("admit");
+  const isResult = cat.includes("result");
+  const isKey = cat.includes("answer") || cat.includes("key");
+
+  let fomoHeader = "APPLY FOR ME USERS";
+  let fomoSubtext = "aspirants ne ye form bhara";
+
+  if (isAdmit) {
+    fomoHeader = "ADMIT CARD DOWNLOADS";
+    fomoSubtext = "aspirants ne hall ticket download link verify kiya";
+  } else if (isResult) {
+    fomoHeader = "RESULT CHECKERS";
+    fomoSubtext = "aspirants ne scorecard & cutoff dekha";
+  } else if (isKey) {
+    fomoHeader = "ANSWER KEY CHECKERS";
+    fomoSubtext = "aspirants ne answer key calculate kiya";
+  }
+
   if (compact) {
     // ── Compact version: single line for /apply/[id] page ─────────────────
     return (
@@ -132,7 +151,7 @@ export default function ApplyFomoBar({
         </span>
 
         <span className={isUrgent ? "text-red-700 dark:text-red-400" : "text-indigo-700 dark:text-indigo-300"}>
-          <span className="font-black">{count.toLocaleString("en-IN")}</span> aspirants ne is job ke liye Apply For Me use kiya
+          <span className="font-black">{count.toLocaleString("en-IN")}</span> {fomoSubtext}
         </span>
 
         {isUrgent && daysLeft !== null && (
@@ -161,11 +180,11 @@ export default function ApplyFomoBar({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-black text-gray-400 uppercase tracking-wider leading-none mb-0.5">
-            APPLY FOR ME USERS
+            {fomoHeader}
           </p>
           <p className={`text-sm font-black leading-tight
             ${isUrgent ? "text-red-700 dark:text-red-300" : "text-gray-900 dark:text-white"}`}>
-            <span className="text-base">{count.toLocaleString("en-IN")}</span> aspirants ne ye form bhara
+            <span className="text-base">{count.toLocaleString("en-IN")}</span> {fomoSubtext}
           </p>
         </div>
         <Zap className="w-4 h-4 text-yellow-500 shrink-0 animate-pulse" />

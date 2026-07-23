@@ -342,10 +342,10 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
           {/* Top Level Quick Action CTA Bar */}
           {(() => {
-            const cat = (job.category || "").toLowerCase();
-            const isAdmit = cat === "admit-card" || cat === "admit-cards";
-            const isResult = cat === "results";
-            const isKey = cat === "answer-key";
+            const cat = (job.category || "").toLowerCase().trim();
+            const isAdmit = cat.includes("admit");
+            const isResult = cat.includes("result");
+            const isKey = cat.includes("answer") || cat.includes("key");
 
             let barTitle = "Quick Application Actions";
             let barDesc = "Direct official application link & premium form filling service.";
@@ -443,7 +443,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             </div>
           </div>
 
-          <SocialProofBadges slug={job.slug} lastDate={lastDate} />
+          <SocialProofBadges slug={job.slug} lastDate={lastDate} category={job.category} />
 
           {/* 🔥 FOMO Bar — live Apply For Me count + live viewers for this job */}
           <ApplyFomoBar

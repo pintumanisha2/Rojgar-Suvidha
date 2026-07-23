@@ -7,9 +7,10 @@ import { Eye, Users, ShieldAlert, Award } from "lucide-react";
 interface SocialProofBadgesProps {
   slug: string;
   lastDate?: string;
+  category?: string;
 }
 
-export default function SocialProofBadges({ slug, lastDate }: SocialProofBadgesProps) {
+export default function SocialProofBadges({ slug, lastDate, category }: SocialProofBadgesProps) {
   const [data, setData] = useState<{
     weeklyViews: number;
     applyForMeOrders: number;
@@ -50,6 +51,25 @@ export default function SocialProofBadges({ slug, lastDate }: SocialProofBadgesP
 
   if (!data) return null;
 
+  const cat = (category || "").toLowerCase().trim();
+  const isAdmit = cat.includes("admit");
+  const isResult = cat.includes("result");
+  const isKey = cat.includes("answer") || cat.includes("key");
+
+  let badge2Label = "Form Assistance";
+  let badge2Text = `${data.applyForMeOrders} applied via experts`;
+
+  if (isAdmit) {
+    badge2Label = "Hall Ticket Status";
+    badge2Text = "Official Direct Download Live";
+  } else if (isResult) {
+    badge2Label = "Result Status";
+    badge2Text = "Official Cutoff & Scorecard Live";
+  } else if (isKey) {
+    badge2Label = "Answer Key Status";
+    badge2Text = "Official Key & Objections Open";
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
       {/* Views Badge */}
@@ -65,15 +85,15 @@ export default function SocialProofBadges({ slug, lastDate }: SocialProofBadgesP
         </div>
       </div>
 
-      {/* Orders Badge */}
+      {/* Dynamic Badge */}
       <div className="flex items-center gap-3 bg-white dark:bg-zinc-950 border border-gray-100 dark:border-zinc-900 rounded-2xl p-4 shadow-sm">
         <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-950/40 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
           <Award className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Form Assistance</p>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{badge2Label}</p>
           <p className="text-sm font-black text-gray-900 dark:text-white mt-0.5">
-            {data.applyForMeOrders} applied via experts
+            {badge2Text}
           </p>
         </div>
       </div>
