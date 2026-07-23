@@ -152,6 +152,9 @@ export default function AIWriterPage() {
   const [category, setCategory] = useState("latest-jobs");
   const [customInstructions, setCustomInstructions] = useState("");
   const [trendingKeywords, setTrendingKeywords] = useState("");
+  const [primaryKeyword, setPrimaryKeyword] = useState("");
+  const [secondaryKeywords, setSecondaryKeywords] = useState("");
+  const [activeTab, setActiveTab] = useState<"core" | "advanced">("core");
   const [officialLink, setOfficialLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -243,7 +246,15 @@ export default function AIWriterPage() {
       const response = await fetch("/api/admin/scan-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawText, category, customInstructions: buildEnrichedInstructions(), officialLink, trendingKeywords }),
+        body: JSON.stringify({
+          rawText,
+          category,
+          customInstructions: buildEnrichedInstructions(),
+          officialLink,
+          primaryKeyword,
+          secondaryKeywords: secondaryKeywords || trendingKeywords,
+          trendingKeywords
+        }),
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -484,16 +495,13 @@ export default function AIWriterPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        {/* ── LEFT: Input Panel ── */}
-        <div className="space-y-5">
+        {/* ── LEFT: Studio Input Panel (Compact 2-Tab Layout) ── */}
+        <div className="space-y-4">
 
-          {/* Step 1: Category */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">1</span>
-              Select Content Category
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {/* 1. Category Selector */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+            <label className="text-[11px] font-black text-gray-400 uppercase tracking-wider block mb-2">Select Content Category</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
               {CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
                 const isActive = category === cat.value;
@@ -501,7 +509,7 @@ export default function AIWriterPage() {
                   <button
                     key={cat.value}
                     onClick={() => { setCategory(cat.value); setCategoryMeta({}); setShowTemplates(false); }}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all ${isActive ? cat.activeColor : cat.color + " hover:opacity-80"}`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${isActive ? cat.activeColor : cat.color + " hover:opacity-80"}`}
                   >
                     <Icon className="h-3.5 w-3.5 shrink-0" />
                     {cat.label}
@@ -511,192 +519,269 @@ export default function AIWriterPage() {
             </div>
           </div>
 
-          {/* U1: Step 2 — Category-Smart Extra Fields */}
-          {currentFields.length > 0 && (
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-violet-600 text-white flex items-center justify-center text-[10px] font-black">2</span>
-                Quick Context Fields
-                <span className="text-[10px] font-normal text-gray-400 ml-1">(Helps AI write more precisely)</span>
-              </h3>
-              <div className="space-y-3">
-                {currentFields.map((field) => (
-                  <div key={field.key}>
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">{field.label}</label>
-                    {field.type === "select" ? (
-                      <select
-                        value={categoryMeta[field.key] || ""}
-                        onChange={e => setCategoryMeta(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                      >
-                        <option value="">Select...</option>
-                        {field.placeholder.split("|").map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type={field.type}
-                        placeholder={field.placeholder}
-                        value={categoryMeta[field.key] || ""}
-                        onChange={e => setCategoryMeta(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      />
-                    )}
+          {/* Studio Tab Switcher Bar */}
+          <div className="flex bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => setActiveTab("core")}
+              className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                activeTab === "core"
+                  ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              1. Content & Keywords
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("advanced")}
+              className={`flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 relative ${
+                activeTab === "advanced"
+                  ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              2. Advanced SEO & Links
+              {(customInstructions || officialLink || Object.keys(categoryMeta).length > 0) && (
+                <span className="w-2 h-2 rounded-full bg-indigo-500 absolute top-2 right-3" />
+              )}
+            </button>
+          </div>
+
+          {/* TAB 1: CORE SETUP (KEYWORDS + NOTIFICATION + GENERATE) */}
+          {activeTab === "core" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              
+              {/* Focus & Target Keywords Card */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-indigo-100 dark:border-indigo-900/40 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-indigo-500" />
+                    Target SEO Keywords
+                    <span className="text-[10px] font-normal text-indigo-600 dark:text-indigo-400 font-bold ml-1">(Google Ranking Engine)</span>
+                  </h3>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Primary Focus Keyword */}
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">Primary Focus Keyword</label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-semibold"
+                      placeholder="e.g. SBI PO Admit Card 2026"
+                      value={primaryKeyword}
+                      onChange={(e) => setPrimaryKeyword(e.target.value)}
+                    />
                   </div>
-                ))}
+
+                  {/* Secondary / LSI Keywords */}
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">Secondary / LSI Keywords (Comma separated)</label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                      placeholder="e.g. sbi po hall ticket download link, sbi call letter date, exam hall login"
+                      value={secondaryKeywords || trendingKeywords}
+                      onChange={(e) => {
+                        setSecondaryKeywords(e.target.value);
+                        setTrendingKeywords(e.target.value);
+                      }}
+                    />
+                  </div>
+
+                  {/* Suggested Chips */}
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {[
+                      "download link 2026", "official portal login", "hall ticket date", "expected cutoff marks", "step by step guide", "direct pdf download"
+                    ].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => {
+                          setSecondaryKeywords(prev => {
+                            if (!prev.trim()) return chip;
+                            if (prev.includes(chip)) return prev;
+                            return `${prev}, ${chip}`;
+                          });
+                          setTrendingKeywords(prev => {
+                            if (!prev.trim()) return chip;
+                            if (prev.includes(chip)) return prev;
+                            return `${prev}, ${chip}`;
+                          });
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50 rounded-full hover:bg-indigo-100 transition-colors"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notification Text Input */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs">
+                    <FileText className="h-4 w-4 text-indigo-500" />
+                    Paste Content / Notification Text
+                  </h3>
+                  <button onClick={() => setRawText("")} className="text-[11px] font-bold text-red-500 hover:bg-red-50 px-2 py-0.5 rounded">Clear</button>
+                </div>
+                <textarea
+                  className="w-full h-[220px] p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+                  placeholder={
+                    category === "latest-jobs" ? "Paste official job notification PDF text here..." :
+                    category === "results"     ? "Paste result notification or scorecard page text here..." :
+                    category === "admit-card"  ? "Paste admit card notification or hall ticket instructions text here..." :
+                    category === "news"        ? "Paste press release or news content text here..." :
+                    category === "admission"   ? "Paste admission prospectus or notice text here..." :
+                    category === "answer-key"  ? "Paste answer key notice or objection details text here..." :
+                    "Paste content here..."
+                  }
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[10px] text-gray-400">{rawText.length} chars pasted</p>
+                  <p className="text-[10px] text-gray-400">Min 50 chars required</p>
+                </div>
+
+                {/* Primary Generate Button */}
+                <button
+                  onClick={handleScan}
+                  disabled={loading || !rawText}
+                  className="w-full mt-3 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+                >
+                  {loading ? <><Loader2 className="h-5 w-5 animate-spin" />AI is Writing High-Rank Blog...</> : <><Wand2 className="h-5 w-5" />Generate {selectedCat.label} Blog</>}
+                </button>
               </div>
             </div>
           )}
 
-          {/* U3: Step 3 — Smart Quick-Fill Templates */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">{currentFields.length > 0 ? "3" : "2"}</span>
-              AI Writing Instructions
-              <span className="text-[10px] font-normal text-gray-400 ml-1">(Optional)</span>
-            </h3>
-            <p className="text-[11px] text-gray-400 mb-3 ml-7">Quick templates based on your selected category, or write your own</p>
-
-            {/* Quick Templates */}
-            {quickTemplates.length > 0 && (
-              <div className="mb-3">
-                <button
-                  onClick={() => setShowTemplates(!showTemplates)}
-                  className="flex items-center gap-1.5 text-[11px] font-black text-indigo-600 hover:text-indigo-700 mb-2"
-                >
-                  <Zap className="h-3.5 w-3.5" />
-                  Quick Templates for {selectedCat.label}
-                  {showTemplates ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </button>
-                {showTemplates && (
-                  <div className="grid grid-cols-1 gap-1.5 mb-3">
-                    {quickTemplates.map((t) => (
-                      <button
-                        key={t.label}
-                        onClick={() => { setCustomInstructions(t.text); setShowTemplates(false); }}
-                        className={`text-left text-[11px] px-3 py-2 rounded-xl border font-medium transition-all ${
-                          customInstructions === t.text
-                            ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:text-indigo-600"
-                        }`}
-                      >
-                        <span className="font-black">{t.label}</span>
-                        <span className="text-gray-400 dark:text-gray-500 ml-2 line-clamp-1">{t.text.slice(0, 60)}...</span>
-                      </button>
+          {/* TAB 2: ADVANCED SEO & CONTEXT */}
+          {activeTab === "advanced" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              
+              {/* Category-Smart Extra Fields */}
+              {currentFields.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-xs mb-3 flex items-center gap-2">
+                    Quick Category Context
+                    <span className="text-[10px] font-normal text-gray-400">(Fills meta fields)</span>
+                  </h3>
+                  <div className="space-y-2.5">
+                    {currentFields.map((field) => (
+                      <div key={field.key}>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">{field.label}</label>
+                        {field.type === "select" ? (
+                          <select
+                            value={categoryMeta[field.key] || ""}
+                            onChange={e => setCategoryMeta(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            className="w-full p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                          >
+                            <option value="">Select...</option>
+                            {field.placeholder.split("|").map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={field.type}
+                            placeholder={field.placeholder}
+                            value={categoryMeta[field.key] || ""}
+                            onChange={e => setCategoryMeta(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            className="w-full p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                          />
+                        )}
+                      </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* AI Writing Custom Instructions */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 dark:text-white text-xs mb-1 flex items-center gap-2">
+                  Custom Writing Instructions
+                  <span className="text-[10px] font-normal text-gray-400">(Optional)</span>
+                </h3>
+
+                {/* Quick Templates */}
+                {quickTemplates.length > 0 && (
+                  <div className="mb-2">
+                    <button
+                      onClick={() => setShowTemplates(!showTemplates)}
+                      className="flex items-center gap-1.5 text-[11px] font-black text-indigo-600 hover:text-indigo-700 my-1"
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                      Quick Templates for {selectedCat.label}
+                      {showTemplates ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </button>
+                    {showTemplates && (
+                      <div className="grid grid-cols-1 gap-1.5 my-2">
+                        {quickTemplates.map((t) => (
+                          <button
+                            key={t.label}
+                            onClick={() => { setCustomInstructions(t.text); setShowTemplates(false); }}
+                            className={`text-left text-[11px] px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                              customInstructions === t.text
+                                ? "bg-indigo-600 text-white border-indigo-600"
+                                : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:text-indigo-600"
+                            }`}
+                          >
+                            <span className="font-black">{t.label}</span>
+                            <span className="text-gray-400 dark:text-gray-500 ml-2 line-clamp-1">{t.text.slice(0, 50)}...</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <textarea
+                  className="w-full h-20 p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+                  placeholder={`Apni instruction likho... jaise:\n"Ye SSC CGL 2025 result post hai — cutoff aur next steps pe focus karo"`}
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                />
+                {customInstructions && (
+                  <button onClick={() => setCustomInstructions("")} className="text-[10px] text-red-400 hover:text-red-600 mt-1 font-medium block">Clear instructions</button>
                 )}
               </div>
-            )}
 
-            <textarea
-              className="w-full h-20 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[12px] text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
-              placeholder={`Apni instruction likho... jaise:\n"Ye SSC CGL 2025 result post hai — cutoff aur next steps pe focus karo"`}
-              value={customInstructions}
-              onChange={(e) => setCustomInstructions(e.target.value)}
-            />
-            {customInstructions && (
-              <button onClick={() => setCustomInstructions("")} className="text-[11px] text-red-400 hover:text-red-600 mt-1 font-medium">Clear instructions</button>
-            )}
-          </div>
+              {/* Official Link */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+                <h3 className="font-bold text-gray-900 dark:text-white text-xs mb-1 flex items-center gap-2">
+                  Official Notification Link
+                  <span className="text-[10px] font-normal text-gray-400">(Builds trust)</span>
+                </h3>
+                <div className="flex gap-2 items-center mt-2">
+                  <Globe className="h-4 w-4 text-gray-400 shrink-0" />
+                  <input
+                    type="url"
+                    className="flex-1 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                    placeholder="https://ssc.nic.in/notice/cgl-notice.pdf"
+                    value={officialLink}
+                    onChange={(e) => setOfficialLink(e.target.value)}
+                  />
+                  {officialLink && <button onClick={() => setOfficialLink("")} className="text-[10px] text-red-400 hover:text-red-600 font-medium whitespace-nowrap">Clear</button>}
+                </div>
+                {officialLink && <p className="text-[10px] text-green-600 dark:text-green-400 mt-1.5 ml-6 font-medium">✓ Official source trust box will be added to the blog</p>}
+              </div>
 
-          {/* Trending Keywords (Optional Input) */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black">🔥</span>
-              Trending Google Keywords
-              <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 font-bold ml-1">(Optional — Boost Google Traffic)</span>
-            </h3>
-            <p className="text-[11px] text-gray-400 mb-3">Add Google Trends keywords separated by commas — AI will naturally weave them into titles, H2 headings and paragraphs.</p>
-            <input
-              type="text"
-              className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[12px] text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
-              placeholder="e.g. sbi po admit card 2026 download link, sbi call letter date, hall ticket login"
-              value={trendingKeywords}
-              onChange={(e) => setTrendingKeywords(e.target.value)}
-            />
-            {/* Quick Keyword Chips */}
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {[
-                "download link 2026", "official portal login", "hall ticket date", "expected cutoff marks", "step by step guide", "direct pdf download"
-              ].map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => {
-                    setTrendingKeywords(prev => {
-                      if (!prev.trim()) return chip;
-                      if (prev.includes(chip)) return prev;
-                      return `${prev}, ${chip}`;
-                    });
-                  }}
-                  className="text-[10px] font-bold px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 rounded-full hover:bg-amber-100 transition-colors"
-                >
-                  + {chip}
-                </button>
-              ))}
+              {/* Switch back button */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("core")}
+                className="w-full py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all text-center"
+              >
+                ← Back to Core Setup & Generate
+              </button>
             </div>
-          </div>
-
-          {/* Official Link */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-[10px] font-black">{currentFields.length > 0 ? "4" : "3"}</span>
-              Official Notification Link
-              <span className="text-[10px] font-normal text-gray-400 ml-1">(Optional — builds trust)</span>
-            </h3>
-            <p className="text-[11px] text-gray-400 mb-3 ml-7">Paste the official govt PDF URL — shown as verified source in blog</p>
-            <div className="flex gap-2 items-center">
-              <Globe className="h-4 w-4 text-gray-400 shrink-0" />
-              <input
-                type="url"
-                className="flex-1 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[12px] text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                placeholder="e.g. https://ssc.nic.in/notice/notifications/2025/cgl-notice.pdf"
-                value={officialLink}
-                onChange={(e) => setOfficialLink(e.target.value)}
-              />
-              {officialLink && <button onClick={() => setOfficialLink("")} className="text-[11px] text-red-400 hover:text-red-600 font-medium whitespace-nowrap">Clear</button>}
-            </div>
-            {officialLink && <p className="text-[11px] text-green-600 dark:text-green-400 mt-2 ml-6 font-medium">✓ Official source box will appear in the blog</p>}
-          </div>
-
-          {/* Content Textarea */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">{currentFields.length > 0 ? "5" : "4"}</span>
-                <FileText className="h-4 w-4 text-indigo-500" />
-                Paste Content / Notification Text
-              </h3>
-              <button onClick={() => setRawText("")} className="text-xs font-bold text-red-500 hover:bg-red-50 px-2 py-1 rounded">Clear</button>
-            </div>
-            <textarea
-              className="w-full h-[280px] p-4 bg-gray-50 dark:bg-gray-800 border-none rounded-2xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
-              placeholder={
-                category === "latest-jobs" ? "Paste the official job notification PDF text here..." :
-                category === "results"     ? "Paste the result notification or result page content here..." :
-                category === "admit-cards" ? "Paste the admit card notification or download page content here..." :
-                category === "news"        ? "Paste the news article or press release text here..." :
-                category === "admission"   ? "Paste the admission notification or prospectus text here..." :
-                category === "answer-key"  ? "Paste the answer key notification or objection details here..." :
-                "Paste content here..."
-              }
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-            />
-            <div className="flex items-center justify-between mt-3">
-              <p className="text-[10px] text-gray-400">{rawText.length} chars pasted</p>
-              <p className="text-[10px] text-gray-400">Min 50 chars required</p>
-            </div>
-            <button
-              onClick={handleScan}
-              disabled={loading || !rawText}
-              className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
-            >
-              {loading ? <><Loader2 className="h-5 w-5 animate-spin" />AI is Writing...</> : <><Wand2 className="h-5 w-5" />Generate {selectedCat.label} Blog</>}
-            </button>
-          </div>
+          )}
         </div>
 
         {/* ── RIGHT: Output Panel ── */}

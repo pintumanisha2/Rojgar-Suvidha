@@ -1141,7 +1141,15 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
 // ══════════════════════════════════════════════════════════════════════════════
 export async function POST(req: Request) {
   try {
-    const { rawText, category = "latest-jobs", customInstructions = "", officialLink = "", trendingKeywords = "" } = await req.json();
+    const {
+      rawText,
+      category = "latest-jobs",
+      customInstructions = "",
+      officialLink = "",
+      trendingKeywords = "",
+      primaryKeyword = "",
+      secondaryKeywords = ""
+    } = await req.json();
 
     console.log("AI Super Writer Invoked. Env Check:", {
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
@@ -1152,10 +1160,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please paste longer text (min 50 chars)." }, { status: 400 });
     }
 
-    // Combine customInstructions with trendingKeywords if provided
+    const effectiveSecondary = secondaryKeywords || trendingKeywords;
+
+    // Combine customInstructions with focus keywords if provided
     const combinedInstructions = [
       customInstructions,
-      trendingKeywords && trendingKeywords.trim() ? `TRENDING GOOGLE KEYWORDS TO WEAVE NATURALLY IN TEXT & H2s: ${trendingKeywords.trim()}` : ""
+      primaryKeyword && primaryKeyword.trim() ? `MUST USE PRIMARY FOCUS KEYWORD IN TITLE, META DESC, H1, INTRO & H2s: ${primaryKeyword.trim()}` : "",
+      effectiveSecondary && effectiveSecondary.trim() ? `TRENDING SECONDARY / LSI KEYWORDS TO WEAVE NATURALLY IN TEXT & H2s: ${effectiveSecondary.trim()}` : ""
     ].filter(Boolean).join("\n\n");
 
     // B1: Run content intelligence BEFORE calling AI
@@ -1164,6 +1175,13 @@ export async function POST(req: Request) {
     // B4: Category-aware metadata extraction
     const metadata = await extractMetadata(rawText, category, combinedInstructions);
     metadata.category = category;
+
+    if (primaryKeyword && primaryKeyword.trim()) {
+      metadata.primaryKeyword = primaryKeyword.trim();
+      if (!metadata.title || !metadata.title.toLowerCase().includes(primaryKeyword.trim().toLowerCase())) {
+        metadata.title = `${primaryKeyword.trim()} 2026`;
+      }
+    }
 
     // Update features title-check now that we have the title
     const featuresWithTitle = detectContentFeatures(rawText, metadata.title || "");
