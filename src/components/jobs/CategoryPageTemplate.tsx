@@ -31,11 +31,12 @@ interface CategoryTemplateProps {
 }
 
 export default async function CategoryPageTemplate({ category, title, description, icon: Icon, colorCls, seoContent }: CategoryTemplateProps) {
-  // Fetch from Supabase
+  // Fetch from Supabase — support both 'admit-card' and 'admit-cards' variations
+  const categoryList = category === "admit-card" ? ["admit-card", "admit-cards"] : [category];
   const { data: jobs } = await supabase
     .from("jobs")
     .select("*")
-    .eq("category", category)
+    .in("category", categoryList)
     .neq("status", "draft")
     .order("created_at", { ascending: false })
     .limit(15);

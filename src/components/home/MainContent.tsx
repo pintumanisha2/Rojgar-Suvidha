@@ -75,8 +75,10 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
   const jobsByCategory: Record<string, any[]> = {};
   if (dbJobs) {
     dbJobs.forEach((job: any) => {
-      if (!jobsByCategory[job.category]) jobsByCategory[job.category] = [];
-      jobsByCategory[job.category].push(job);
+      let catKey = job.category;
+      if (catKey === "admit-cards") catKey = "admit-card";
+      if (!jobsByCategory[catKey]) jobsByCategory[catKey] = [];
+      jobsByCategory[catKey].push(job);
     });
   }
 

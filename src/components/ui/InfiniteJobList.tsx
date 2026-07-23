@@ -36,10 +36,11 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
     const from = page * 15;
     const to = from + 14;
 
+    const categoryList = category === "admit-card" ? ["admit-card", "admit-cards"] : [category];
     const { data, error } = await supabase
       .from("jobs")
       .select("*")
-      .eq("category", category)
+      .in("category", categoryList)
       .neq("status", "draft")
       .order("created_at", { ascending: false })
       .range(from, to);

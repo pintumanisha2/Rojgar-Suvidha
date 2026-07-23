@@ -20,7 +20,7 @@ const supabase = createClient(
 const CATEGORIES = [
   { value: "latest-jobs", label: "Latest Jobs",  icon: Briefcase,     color: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300", activeColor: "bg-indigo-600 text-white border-indigo-600" },
   { value: "results",     label: "Results",       icon: Trophy,        color: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300",       activeColor: "bg-green-600 text-white border-green-600" },
-  { value: "admit-cards", label: "Admit Cards",   icon: CreditCard,    color: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300",  activeColor: "bg-orange-500 text-white border-orange-500" },
+  { value: "admit-card",  label: "Admit Cards",   icon: CreditCard,    color: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300",  activeColor: "bg-orange-500 text-white border-orange-500" },
   { value: "news",        label: "News",          icon: Newspaper,     color: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300",            activeColor: "bg-blue-600 text-white border-blue-600" },
   { value: "admission",   label: "Admission",     icon: GraduationCap, color: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300",  activeColor: "bg-purple-600 text-white border-purple-600" },
   { value: "answer-key",  label: "Answer Key",    icon: ClipboardList, color: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300",            activeColor: "bg-rose-600 text-white border-rose-600" },
