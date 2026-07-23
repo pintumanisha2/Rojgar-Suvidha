@@ -129,7 +129,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
               alt={main.title}
               fill
               sizes="(max-width: 640px) 100vw, 66vw"
-              className="object-fill object-center block transition-transform duration-700 group-hover:scale-105"
+              className="object-cover object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
             {/* Gradient overlay */}
