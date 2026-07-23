@@ -115,30 +115,22 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
     <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-2 sm:py-3">
       <div className="max-w-7xl mx-auto">
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3">
 
-          {/* Main Banner - fully clickable & ZERO cropping */}
-          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 h-[150px] sm:h-[200px] w-full bg-zinc-950">
+          {/* Main Banner - Edge to Edge Fill (0 Side Gaps & 0 Text Cropping) */}
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 aspect-[16/6.8] sm:aspect-[2.6/1] w-full bg-zinc-950">
             {/* Wrap entire banner in Link if link_url exists */}
             {main.link_url ? (
               <Link href={main.link_url} className="absolute inset-0 z-20" aria-label={main.title} />
             ) : null}
 
-            {/* Background Ambient Glow Blur */}
-            <Image
-              src={main.image_url}
-              alt=""
-              fill
-              className="object-cover blur-2xl opacity-40 scale-110 pointer-events-none"
-            />
-
-            {/* Sharp Main Banner Graphic — 100% Uncropped */}
+            {/* Edge to Edge Sharp Banner Graphic */}
             <Image
               src={main.image_url}
               alt={main.title}
               fill
               sizes="(max-width: 640px) 100vw, 66vw"
-              className="object-contain object-center block relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
+              className="object-cover object-center block relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
               priority
             />
 
@@ -146,12 +138,12 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
 
             {/* Title / Action Badge */}
-            <div className="absolute bottom-0 left-0 right-0 px-3.5 py-1.5 flex items-end justify-between pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 px-3.5 py-2 flex items-end justify-between pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
               <p className="text-white font-bold text-xs sm:text-sm leading-tight drop-shadow line-clamp-1">
                 {main.title}
               </p>
               {main.link_url && (
-                <span className="shrink-0 inline-flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg font-bold text-[10px] shadow-lg">
+                <span className="shrink-0 inline-flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-1 rounded-lg font-bold text-[11px] shadow-lg">
                   <MousePointerClick className="w-3 h-3" />
                   View
                 </span>
@@ -193,33 +185,25 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
           </div>
 
           {/* ── Right Side: 2 Small Banners (hidden on mobile) ── */}
-          <div className="hidden sm:flex flex-col gap-3 sm:h-[200px]">
+          <div className="hidden sm:flex flex-col gap-3 aspect-[2.6/1] sm:aspect-auto sm:h-full">
             {/* Small Banner 1 */}
             {banners.length >= 2 && (
-              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer bg-zinc-950">
+              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer bg-zinc-950 min-h-[110px]">
                 {/* Full-area clickable link */}
                 {side1.link_url && (
                   <Link href={side1.link_url} className="absolute inset-0 z-20" aria-label={side1.title} />
                 )}
-                {/* Background Ambient Glow */}
-                <Image
-                  src={side1.image_url}
-                  alt=""
-                  fill
-                  className="object-cover blur-xl opacity-40 scale-110 pointer-events-none"
-                />
-                {/* Sharp Graphic */}
                 <Image
                   src={side1.image_url}
                   alt={side1.title}
                   fill
                   sizes="(max-width: 640px) 0vw, 33vw"
-                  className="object-contain object-center relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
+                  className="object-cover object-center relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
                   priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
-                <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
-                  <p className="text-white font-bold text-[10px] leading-tight drop-shadow line-clamp-1">
+                <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1.5 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="text-white font-bold text-[11px] leading-tight drop-shadow line-clamp-1">
                     {side1.title}
                   </p>
                 </div>
@@ -228,37 +212,29 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
 
             {/* Small Banner 2 */}
             {banners.length >= 3 ? (
-              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer bg-zinc-950">
+              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer bg-zinc-950 min-h-[110px]">
                 {/* Full-area clickable link */}
                 {side2.link_url && (
                   <Link href={side2.link_url} className="absolute inset-0 z-20" aria-label={side2.title} />
                 )}
-                {/* Background Ambient Glow */}
-                <Image
-                  src={side2.image_url}
-                  alt=""
-                  fill
-                  className="object-cover blur-xl opacity-40 scale-110 pointer-events-none"
-                />
-                {/* Sharp Graphic */}
                 <Image
                   src={side2.image_url}
                   alt={side2.title}
                   fill
                   sizes="(max-width: 640px) 0vw, 33vw"
-                  className="object-contain object-center relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
+                  className="object-cover object-center relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
                   priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
-                <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
-                  <p className="text-white font-bold text-[10px] leading-tight drop-shadow line-clamp-1">
+                <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1.5 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="text-white font-bold text-[11px] leading-tight drop-shadow line-clamp-1">
                     {side2.title}
                   </p>
                 </div>
               </div>
             ) : banners.length === 2 ? (
               /* Fallback placeholder if only 2 banners */
-              <div className="flex-1 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+              <div className="flex-1 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center min-h-[110px]">
                 <p className="text-white/70 text-xs font-bold text-center px-3">
                   Admin se aur banners add karwayein
                 </p>
