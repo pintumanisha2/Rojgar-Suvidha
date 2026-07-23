@@ -80,9 +80,9 @@ function getSeoScore(result: any, category: string) {
   const primaryKeyword = (result.primaryKeyword || result.title || "").toLowerCase();
 
   const baseChecks = [
-    { label: "Word Count",       ok: wordCount >= 1200,                   detail: `${wordCount.toLocaleString()} words` },
-    { label: "Title Length",     ok: result.title?.length >= 40 && result.title?.length <= 70, detail: `${result.title?.length || 0} chars` },
-    { label: "Meta Description", ok: result.metaDesc?.length >= 120 && result.metaDesc?.length <= 165, detail: `${result.metaDesc?.length || 0} chars` },
+    { label: "Word Count",       ok: wordCount >= 1000,                   detail: `${wordCount.toLocaleString()} words` },
+    { label: "Title Length",     ok: result.title?.length >= 30 && result.title?.length <= 75, detail: `${result.title?.length || 0} chars` },
+    { label: "Meta Description", ok: result.metaDesc?.length >= 100 && result.metaDesc?.length <= 170, detail: `${result.metaDesc?.length || 0} chars` },
     { label: "FAQ Section",      ok: html.includes("<details"),           detail: html.includes("<details") ? "Found" : "Missing" },
     { label: "Data Tables",      ok: html.includes("<table"),             detail: html.includes("<table") ? "Found" : "Missing" },
     { label: "FAQPage Schema",   ok: html.includes("application/ld+json"), detail: html.includes("application/ld+json") ? "Injected" : "Missing" },
@@ -102,6 +102,11 @@ function getSeoScore(result: any, category: string) {
       { label: "How to Check",   ok: html.includes("id='check'"),  detail: html.includes("id='check'") ? "Included" : "Missing" },
       { label: "What's Next",    ok: html.includes("id='next'"),   detail: html.includes("id='next'") ? "Included" : "Missing" },
       { label: "Failed Section", ok: html.includes("id='failed'"), detail: html.includes("id='failed'") ? "Included" : "Missing" },
+    ],
+    "admit-card": [
+      { label: "Download Steps", ok: html.includes("id='download'"), detail: html.includes("id='download'") ? "Included" : "Missing" },
+      { label: "What to Carry",  ok: html.includes("id='carry'"),   detail: html.includes("id='carry'") ? "Included" : "Missing" },
+      { label: "Exam Day Tips",  ok: html.includes("id='tips'"),    detail: html.includes("id='tips'") ? "Included" : "Missing" },
     ],
     "admit-cards": [
       { label: "Download Steps", ok: html.includes("id='download'"), detail: html.includes("id='download'") ? "Included" : "Missing" },
@@ -146,6 +151,7 @@ export default function AIWriterPage() {
   const [rawText, setRawText] = useState("");
   const [category, setCategory] = useState("latest-jobs");
   const [customInstructions, setCustomInstructions] = useState("");
+  const [trendingKeywords, setTrendingKeywords] = useState("");
   const [officialLink, setOfficialLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -237,7 +243,7 @@ export default function AIWriterPage() {
       const response = await fetch("/api/admin/scan-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rawText, category, customInstructions: buildEnrichedInstructions(), officialLink }),
+        body: JSON.stringify({ rawText, category, customInstructions: buildEnrichedInstructions(), officialLink, trendingKeywords }),
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -593,6 +599,44 @@ export default function AIWriterPage() {
             {customInstructions && (
               <button onClick={() => setCustomInstructions("")} className="text-[11px] text-red-400 hover:text-red-600 mt-1 font-medium">Clear instructions</button>
             )}
+          </div>
+
+          {/* Trending Keywords (Optional Input) */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black">🔥</span>
+              Trending Google Keywords
+              <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 font-bold ml-1">(Optional — Boost Google Traffic)</span>
+            </h3>
+            <p className="text-[11px] text-gray-400 mb-3">Add Google Trends keywords separated by commas — AI will naturally weave them into titles, H2 headings and paragraphs.</p>
+            <input
+              type="text"
+              className="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-[12px] text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+              placeholder="e.g. sbi po admit card 2026 download link, sbi call letter date, hall ticket login"
+              value={trendingKeywords}
+              onChange={(e) => setTrendingKeywords(e.target.value)}
+            />
+            {/* Quick Keyword Chips */}
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {[
+                "download link 2026", "official portal login", "hall ticket date", "expected cutoff marks", "step by step guide", "direct pdf download"
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    setTrendingKeywords(prev => {
+                      if (!prev.trim()) return chip;
+                      if (prev.includes(chip)) return prev;
+                      return `${prev}, ${chip}`;
+                    });
+                  }}
+                  className="text-[10px] font-bold px-2.5 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50 rounded-full hover:bg-amber-100 transition-colors"
+                >
+                  + {chip}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Official Link */}

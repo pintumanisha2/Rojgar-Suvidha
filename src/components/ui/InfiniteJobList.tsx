@@ -144,26 +144,63 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
               </div>
 
               <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3 relative z-10">
-                <Link href={`/job/${job.slug}`} className="flex-1 text-center py-2 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl border border-gray-200 dark:border-zinc-800 transition-all">
-                  View Details
-                </Link>
-                {applyLink ? (
-                  <a 
-                    href={applyLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm shadow-indigo-500/10"
-                  >
-                    Apply Official
-                  </a>
-                ) : (
-                  <Link 
-                    href="/apply-for-me" 
-                    className="flex-1 text-center py-2 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-black rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 transition-all"
-                  >
-                    Apply For Me ✨
-                  </Link>
-                )}
+                {(() => {
+                  const cat = (category || "").toLowerCase();
+                  if (cat === "admit-card" || cat === "admit-cards") {
+                    return (
+                      <Link 
+                        href={`/job/${job.slug}`} 
+                        className="w-full text-center py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-orange-500/20"
+                      >
+                        Download Admit Card 📄
+                      </Link>
+                    );
+                  }
+                  if (cat === "results") {
+                    return (
+                      <Link 
+                        href={`/job/${job.slug}`} 
+                        className="w-full text-center py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-emerald-500/20"
+                      >
+                        Check Result & Cutoff 🏆
+                      </Link>
+                    );
+                  }
+                  if (cat === "answer-key") {
+                    return (
+                      <Link 
+                        href={`/job/${job.slug}`} 
+                        className="w-full text-center py-2.5 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-purple-500/20"
+                      >
+                        View Answer Key 🔑
+                      </Link>
+                    );
+                  }
+                  return (
+                    <>
+                      <Link href={`/job/${job.slug}`} className="flex-1 text-center py-2 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl border border-gray-200 dark:border-zinc-800 transition-all">
+                        View Details
+                      </Link>
+                      {applyLink ? (
+                        <a 
+                          href={applyLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex-1 text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm shadow-indigo-500/10"
+                        >
+                          Apply Official
+                        </a>
+                      ) : (
+                        <Link 
+                          href="/apply-for-me" 
+                          className="flex-1 text-center py-2 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-black rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 transition-all"
+                        >
+                          Apply For Me ✨
+                        </Link>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           );

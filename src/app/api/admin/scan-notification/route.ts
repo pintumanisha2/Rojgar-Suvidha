@@ -901,9 +901,17 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
 // ══════════════════════════════════════════════════════════════════════════════
 // B5: Category-Specific Blog Writer (Results, Admit Cards, News, Admission, Answer Key)
 // ══════════════════════════════════════════════════════════════════════════════
-async function writeSpecialCategoryBlog(meta: any, rawText: string, category: string, features: ReturnType<typeof detectContentFeatures>, customInstructions?: string): Promise<string> {
+async function writeSpecialCategoryBlog(
+  meta: any,
+  rawText: string,
+  category: string,
+  features: ReturnType<typeof detectContentFeatures>,
+  customInstructions?: string,
+  trendingKeywords?: string
+): Promise<string> {
 
-  // Derived feature hints per category
+  const normalizedCategory = (category === "admit-card" || category === "admit-cards") ? "admit-card" : category;
+
   const resultToneNote = features.resultType === "selection"
     ? "This is a SELECTION RESULT — thousands of candidates learned if they cleared. Open with emotional awareness. Many will celebrate, some won't. Be warm and real."
     : features.resultType === "scorecard"
@@ -914,187 +922,202 @@ async function writeSpecialCategoryBlog(meta: any, rawText: string, category: st
     ? `<div style='background:#fef2f2;border-left:4px solid #dc2626;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#b91c1c;display:block;margin-bottom:4px;'>CRITICAL WARNING</strong>The deadline for this is approaching fast. Do not delay — take action today.</div>`
     : "";
 
-  const prompts: Record<string, string> = {
-    results: `Write a complete SEO-optimized human blog post about a RESULT in HTML.
-PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
-EXAM: ${meta.examName} | ORG: ${meta.orgName} | RESULT DATE: ${meta.resultDate || meta.lastDate}
-NEXT STEP: ${meta.nextStep || "Not specified"}
-CUTOFFS IF KNOWN: General: ${meta.cutoffGen || "Not Announced"} | OBC: ${meta.cutoffOBC || "N/A"} | SC/ST: ${meta.cutoffSCST || "N/A"}
-CONTENT: ${rawText.substring(0, 2500)}
+  const trendingNote = trendingKeywords && trendingKeywords.trim()
+    ? `\n=== TRENDING GOOGLE KEYWORDS (MUST WEAVE NATURALLY INTO HEADLINES & TEXT) ===\n${trendingKeywords.trim()}\n`
+    : "";
 
-TONE NOTE: ${resultToneNote}
-
-STRUCTURE:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Result Declared" or "Result Out 2025"]</h1>
-<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Updated: <strong>${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong></p>
-<div style='background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#15803d;margin:0 0 4px;'>GOOD NEWS — Result Declared!</p><p style='color:#374151;margin:0;font-size:0.95rem;'>${meta.examName} result is officially out. Check your result using the steps below. Use <strong>your registration number and date of birth</strong> to log in.</p></div>
-
-<h2 id='news'>${meta.primaryKeyword} — What You Need to Know Right Now</h2>
-[4-5 rich paragraphs. Open with the result fact. How many appeared, what stages cleared, what this result covers. Warm human voice. Use <strong> on key numbers. 300+ words.
-${meta.cutoffGen && meta.cutoffGen !== "Not Announced" ? `Also mention the cutoff numbers clearly: General: ${meta.cutoffGen}.` : ""}]
-
-<h2 id='check'>How to Check ${meta.examName} Result Online — Step by Step</h2>
-[2 intro paragraphs. Then numbered ol steps. End: "If the site is slow, try early morning."]
-
-<h2 id='details'>Cutoff, Merit List and Scorecard — Everything Explained</h2>
-[3-4 paragraphs. Category-wise cutoff table if data available. Explain what each number on the scorecard means. First-time candidates need this education.]
-
-<h2 id='next'>What Happens Next — Your Action Plan After ${meta.examName} Result</h2>
-[3-4 practical paragraphs about ${meta.nextStep || "document verification, medical test, joining process"}. "Don't wait for official letter — start collecting documents now." Very specific and authoritative.]
-
-<h2 id='failed'>Did Not Clear This Time? Read This.</h2>
-[3 honest, warm paragraphs. Acknowledge it hurts — no fake motivation. Re-attempt strategy. Other active notifications on Rojgar Suvidha. "This result is one door. There are others open right now."]
-
-<h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary. Questions: scorecard download, cutoff for General, document verification schedule, documents to keep ready, challenging result, next stage]`,
-
-    "admit-cards": `Write a complete SEO-optimized human blog post about ADMIT CARD in HTML.
+  const admitCardPrompt = `Write a complete SEO-optimized human blog post about ADMIT CARD in HTML.
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
 EXAM: ${meta.examName} | ORG: ${meta.orgName} | EXAM DATE: ${meta.examDate || meta.lastDate}
 REPORTING TIME: ${meta.reportingTime || "30 minutes before exam start"}
-CONTENT: ${rawText.substring(0, 2500)}
+CONTENT: ${rawText.substring(0, 3000)}
+${trendingNote}
 
 ${urgencyBox ? `PREPEND THIS URGENT BOX right after the H1 and byline:\n${urgencyBox}` : ""}
 
-STRUCTURE:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admit Card Download" + year]</h1>
+STRUCTURE & CRITICAL SECTIONS (Write at least 1,200 words):
+<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admit Card Download" + 2026]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Exam Date: <strong>${meta.examDate || meta.lastDate}</strong></p>
 <div style='background:#fff7ed;border-left:4px solid #f97316;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#c2410c;margin:0 0 4px;'>Exam Date: ${meta.examDate || meta.lastDate}</p><p style='color:#374151;margin:0;font-size:0.95rem;'>Download your admit card immediately. Do not wait until the last day — servers get overloaded.</p></div>
 
 <h2 id='intro'>The ${meta.examName} Admit Card Is Out — What You Must Do Now</h2>
-[3-4 paragraphs. Why urgency matters. "Every exam season, I see candidates show up at centers without a valid ID or with a blurry printout."]
+[4-5 rich paragraphs. Why urgency matters. "Every exam season, I see candidates show up at centers without a valid ID or with a blurry printout."]
 
-<h2 id='download'>How to Download ${meta.examName} Admit Card — Step by Step</h2>
-[2 intro paragraphs. Then numbered ol steps. After steps: "Print at least 2 copies."]
+<h2 id='download'>How to Download ${meta.examName} Admit Card — Step by Step Guide</h2>
+[3 paragraphs intro. Then numbered ol steps. After steps: "Print at least 2 clear copies."]
 
 <h2 id='details'>What Is Written on Your ${meta.examName} Admit Card — Read This Carefully</h2>
-[3-4 paragraphs explaining each field on the admit card. "Check your name spelling against your ID proof."]
+[4-5 paragraphs explaining each field on the admit card. "Check your name spelling against your ID proof."]
 
 <h2 id='carry'>What to Carry on Exam Day — And What to Leave Behind</h2>
 [2 paragraphs intro. Then this EXAM DAY CHECKLIST HTML TABLE:
 <div style='overflow-x:auto;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'>
 <table style='width:100%;border-collapse:collapse;min-width:400px;font-size:0.9rem;'>
-<thead><tr style='background:#4f46e5;color:white;'><th style='padding:10px 14px;text-align:left;'>MUST CARRY</th><th style='padding:10px 14px;text-align:left;'>LEAVE AT HOME</th></tr></thead>
+<thead><tr style='background:#4f46e5;color:white;'><th style='padding:10px 14px;text-align:left;'>MUST CARRY TO EXAM CENTER</th><th style='padding:10px 14px;text-align:left;'>STRICTLY BANNED (LEAVE AT HOME)</th></tr></thead>
 <tbody>
-<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Admit Card (Printed)</td><td style='padding:10px 14px;color:#dc2626;'>Mobile Phone</td></tr>
-<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Original Photo ID (Aadhaar / Voter ID / Passport)</td><td style='padding:10px 14px;color:#dc2626;'>Smart Watch</td></tr>
-<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Passport-size Photos (2-3 extra)</td><td style='padding:10px 14px;color:#dc2626;'>Bluetooth Devices</td></tr>
-<tr><td style='padding:10px 14px;color:#374151;'>Blue/Black Pen</td><td style='padding:10px 14px;color:#dc2626;'>Calculator (unless permitted)</td></tr>
+<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Admit Card (Printed Copy)</td><td style='padding:10px 14px;color:#dc2626;'>Mobile Phone & Smart Watch</td></tr>
+<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Original Photo ID (Aadhaar / Voter ID / Passport)</td><td style='padding:10px 14px;color:#dc2626;'>Bluetooth Devices & Earphones</td></tr>
+<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Passport-size Photos (2-3 extra copies)</td><td style='padding:10px 14px;color:#dc2626;'>Calculators & Electronic Gadgets</td></tr>
+<tr><td style='padding:10px 14px;color:#374151;'>Transparent Blue/Black Pen</td><td style='padding:10px 14px;color:#dc2626;'>Books, Notes & Paper Chits</td></tr>
 </tbody>
 </table>
 </div>
 Then 2 paragraphs on consequences of violations.]
 
 <h2 id='problem'>Admit Card Problem? Here Is Exactly What to Do</h2>
-[4-5 paragraphs covering different problems: name error, photo not loading, center mismatch, forgot registration number. Who to contact, how long it takes.]
+[4-5 paragraphs covering different problems: name error, photo not loading, center mismatch, forgot registration number. Helpdesk instructions.]
 
-<h2 id='tips'>Last-Week Exam Preparation Tips</h2>
-[6-7 rich paragraphs of practical advice — sleep routine, revision strategy, food on exam day, reaching early, managing exam anxiety.]
-
-<h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary. Questions: forgot registration number, which ID proof accepted, wrong details, appearing without original ID, downloading on mobile, center changes]`,
-
-    news: `Write a complete SEO-optimized human blog post in NEWS ARTICLE style in HTML.
-PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
-TOPIC: ${meta.examName} | ORG: ${meta.orgName}
-IMPACT LEVEL: ${meta.impactLevel || "medium"}
-AFFECTED STUDENTS: ${meta.affectedStudents || "lakhs of candidates"}
-ACTION REQUIRED: ${meta.actionRequired || "Monitor official website for updates"}
-CONTENT: ${rawText.substring(0, 2500)}
-
-${meta.impactLevel === "high" ? `<div style='background:#fef2f2;border-left:4px solid #dc2626;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#b91c1c;display:block;margin-bottom:4px;'>HIGH IMPACT NEWS</strong>This development affects a large number of aspirants. Read carefully and take action.</div>` : ""}
-
-STRUCTURE — Write like NDTV/HinduBusinessLine education reporters:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: specific factual headline, include primary keyword]</h1>
-<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Published: <strong>${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong></p>
-
-<h2 id='summary'>Breaking: ${meta.examName} — What Happened</h2>
-[LEAD PARAGRAPH first — who, what, when, where, why. Then 3-4 more expanding paragraphs. No filler openers. Short paragraphs — 2-4 sentences each. Factual. Direct. Use <strong> on all key facts.]
-
-<h2 id='detail'>Full Details — Everything You Need to Know</h2>
-[5-6 SHORT paragraphs. Each covers one specific angle. Background context. What the official notification says. Numbers, specific dates. Attribution ("official sources say..."). Pure journalism.]
-
-<h2 id='impact'>How This Affects Aspirants — Analysis</h2>
-[4-5 paragraphs. "So what?" section. Practical impact on candidates. What they need to do differently. "Candidates who were planning to apply should now..." Specific action items.]
-
-<h2 id='next'>What Happens Next — Timeline and Upcoming Dates</h2>
-[3-4 paragraphs. What to expect. Dates if available. What candidates should monitor. "Bookmark this page — we update it as soon as official information is released."]
-
-<h2 id='faq'>Frequently Asked Questions</h2>
-[5 FAQs using details/summary. Each answer 50-70 words. Questions should match what people search after reading this news.]`,
-
-    admission: `Write a complete SEO-optimized human blog post about ADMISSION in HTML.
-PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
-COURSE: ${meta.examName} | ORG: ${meta.orgName} | LAST DATE: ${meta.lastDate}
-TOTAL SEATS: ${meta.totalPosts || "As per official notification"}
-FEE: ${meta.appFeeGen || "As per notification"}
-CONTENT: ${rawText.substring(0, 2500)}
-
-STRUCTURE:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admission" + year + "Apply Online"]</h1>
-<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Last Date: <strong>${meta.lastDate}</strong></p>
-<div style='background:#eff6ff;border-left:4px solid #4f46e5;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#1e1b4b;margin:0 0 8px;font-size:1.05rem;'>Quick Overview</p><p style='margin:4px 0;color:#374151;font-size:0.9rem;'><strong>Course:</strong> ${meta.examName}</p><p style='margin:4px 0;color:#374151;font-size:0.9rem;'><strong>Institution:</strong> ${meta.orgName}</p><p style='margin:4px 0;color:#374151;font-size:0.9rem;'><strong>Last Date to Apply:</strong> <mark style='background:#fef9c3;padding:1px 5px;border-radius:3px;font-weight:700;'>${meta.lastDate}</mark></p><p style='margin:4px 0;color:#374151;font-size:0.9rem;'><strong>Total Seats:</strong> ${meta.totalPosts || "As per notification"}</p></div>
-
-<h2 id='about'>What Is This Course and Why Should You Consider It?</h2>
-[4-5 rich paragraphs. What the course is. Career it leads to. Salary expectations. Why students compete for this. "Here is what nobody tells first-time applicants..." 350+ words.]
-
-<h2 id='eligibility'>Are You Eligible? Eligibility Criteria Explained Simply</h2>
-[3-4 paragraphs. Age limit with relaxations. Educational qualification — minimum marks, specific subjects. Domicile requirements. Common confusions addressed directly.]
-
-<h2 id='dates'>Important Dates and Application Fee</h2>
-[1-2 urgency paragraphs. HTML table for dates. HTML table for fee by category. "Pay the fee as soon as you fill the form — last-day payment servers are always jammed."]
-
-<h2 id='apply'>How to Apply — Complete Guide Step by Step</h2>
-[2 intro paragraphs. Numbered ol steps. Documents list. Common mistakes. Then Apply For Me pitch.]
-
-<h2 id='selection'>How Selection Works — Entrance Exam, Merit List or Counselling</h2>
-[4-5 paragraphs. What the selection process is. If merit-based: how merit list is prepared. Counselling rounds. "This is where many students lose their seat — not in the exam but in the counselling process."]
+<h2 id='tips'>Last-Week Exam Preparation & Exam Day Tips</h2>
+[6-7 rich paragraphs of practical advice — sleep routine, revision strategy, reaching exam hall 45 mins early, managing time.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary. 60-80 words each.]`,
+[6 detailed FAQs using details/summary tags. 60-80 words per answer. Covers: forgot registration number, ID proof rules, wrong details correction, center changes.]
 
-    "answer-key": `Write a complete SEO-optimized human blog post about ANSWER KEY in HTML.
+<!-- Official Download CTA -->
+<div style='background:linear-gradient(135deg,#f97316,#ea580c);border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
+<p style='color:white;font-weight:700;font-size:1.1rem;margin:0 0 8px;'>${meta.examName || meta.primaryKeyword} — Official Admit Card Download</p>
+<p style='color:#ffedd5;font-size:0.9rem;margin:0 0 16px;'>Verify your exam center, roll number, and instructions immediately.</p>
+<a href='/admit-card' style='display:inline-block;background:white;color:#ea580c;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Download Official Admit Card →</a>
+</div>`;
+
+  const resultsPrompt = `Write a complete SEO-optimized human blog post about a RESULT in HTML.
+PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
+EXAM: ${meta.examName} | ORG: ${meta.orgName} | RESULT DATE: ${meta.resultDate || meta.lastDate}
+NEXT STEP: ${meta.nextStep || "Not specified"}
+CUTOFFS IF KNOWN: General: ${meta.cutoffGen || "Not Announced"} | OBC: ${meta.cutoffOBC || "N/A"} | SC/ST: ${meta.cutoffSCST || "N/A"}
+CONTENT: ${rawText.substring(0, 3000)}
+${trendingNote}
+TONE NOTE: ${resultToneNote}
+
+STRUCTURE (Write at least 1,200 words):
+<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Result Declared 2026"]</h1>
+<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Updated: <strong>${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong></p>
+<div style='background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#15803d;margin:0 0 4px;'>GOOD NEWS — Result Declared!</p><p style='color:#374151;margin:0;font-size:0.95rem;'>${meta.examName} result is officially out. Check your scorecard and merit list using the steps below.</p></div>
+
+<h2 id='news'>${meta.primaryKeyword} — What You Need to Know Right Now</h2>
+[4-5 rich paragraphs. Open with the result fact. How many appeared, what stages cleared. Warm human voice. Use <strong> on key numbers.]
+
+<h2 id='check'>How to Check ${meta.examName} Result Online — Step by Step</h2>
+[3 paragraphs. Numbered ol steps. Direct download link advice.]
+
+<h2 id='details'>Cutoff Marks, Merit List & Scorecard — Category Wise Breakdown</h2>
+[4-5 paragraphs. Category-wise cutoff HTML table. Explain scorecard details.]
+
+<h2 id='next'>What Happens Next — Your Action Plan After ${meta.examName} Result</h2>
+[4-5 practical paragraphs about ${meta.nextStep || "document verification, medical test, joining process"}. What documents to collect now.]
+
+<h2 id='failed'>Did Not Clear This Time? Read This.</h2>
+[4 honest, warm paragraphs. Acknowledge it hurts — no fake motivation. Re-attempt strategy. Other active job notifications.]
+
+<h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
+[6 FAQs using details/summary. Scorecard download, category cutoffs, DV schedule, re-evaluation.]
+
+<!-- Result CTA -->
+<div style='background:linear-gradient(135deg,#16a34a,#15803d);border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
+<p style='color:white;font-weight:700;font-size:1.1rem;margin:0 0 8px;'>${meta.examName || meta.primaryKeyword} — Check Result & Merit List</p>
+<p style='color:#dcfce7;font-size:0.9rem;margin:0 0 16px;'>Official scorecards and selection lists are live.</p>
+<a href='/results' style='display:inline-block;background:white;color:#15803d;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Check Official Result & Cutoff →</a>
+</div>`;
+
+  const answerKeyPrompt = `Write a complete SEO-optimized human blog post about ANSWER KEY in HTML.
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
 EXAM: ${meta.examName} | ORG: ${meta.orgName} | OBJECTION DEADLINE: ${meta.objectionDeadline || meta.lastDate}
 MARKING SCHEME: ${meta.markingScheme || "Check official notification"}
 OBJECTION FEE: ${meta.objectionFee || "As per notification"}
-CONTENT: ${rawText.substring(0, 2500)}
+CONTENT: ${rawText.substring(0, 3000)}
+${trendingNote}
 
-STRUCTURE:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Answer Key Released" + "Download & Check" + year]</h1>
+STRUCTURE (Write at least 1,200 words):
+<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Answer Key Out" + 2026]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Objection Deadline: <strong>${meta.objectionDeadline || meta.lastDate}</strong></p>
-<div style='background:#fff7ed;border-left:4px solid #f97316;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#c2410c;margin:0 0 4px;'>Time-Sensitive: Objection window closes ${meta.objectionDeadline || meta.lastDate}</p><p style='color:#374151;margin:0;font-size:0.95rem;'>Check your answers against the official key and raise objections before this deadline if you disagree.</p></div>
 
-<h2 id='released'>${meta.examName} Answer Key Is Out — Here Is What to Do in the Next 24 Hours</h2>
-[4-5 paragraphs. What was released. Why checking urgently matters. What happens to accepted objections. Rich, flowing text. 300+ words. Use <strong> on the deadline date.]
+<h2 id='released'>${meta.examName} Answer Key Is Out — Action Needed in 24 Hours</h2>
+[4-5 paragraphs. Why checking key urgently matters.]
 
-<h2 id='download'>How to Download the ${meta.examName} Official Answer Key</h2>
-[2 intro paragraphs. Numbered ol download steps.]
+<h2 id='download'>How to Download ${meta.examName} Official Answer Key</h2>
+[2 paragraphs. Numbered ol download steps.]
 
-<h2 id='calculate'>How to Calculate Your Expected Score — With a Real Example</h2>
-[4-5 paragraphs. Explain the marking scheme: ${meta.markingScheme || "check official notification"}. Give a WORKED EXAMPLE with actual numbers. Then this SCORE CALCULATOR TABLE:
-<div style='overflow-x:auto;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'>
-<table style='width:100%;border-collapse:collapse;min-width:400px;font-size:0.9rem;'>
-<thead><tr style='background:#4f46e5;color:white;'><th style='padding:10px 14px;text-align:left;'>Questions Attempted</th><th style='padding:10px 14px;text-align:left;'>Correct</th><th style='padding:10px 14px;text-align:left;'>Wrong</th><th style='padding:10px 14px;text-align:left;'>Expected Score</th></tr></thead>
-<tbody>
-<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>100</td><td style='padding:10px 14px;color:#15803d;font-weight:700;'>80</td><td style='padding:10px 14px;color:#dc2626;font-weight:700;'>20</td><td style='padding:10px 14px;font-weight:800;color:#1e293b;'>[Calculate based on marking scheme]</td></tr>
-<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>90</td><td style='padding:10px 14px;color:#15803d;font-weight:700;'>70</td><td style='padding:10px 14px;color:#dc2626;font-weight:700;'>20</td><td style='padding:10px 14px;font-weight:800;color:#1e293b;'>[Calculate]</td></tr>
-<tr><td style='padding:10px 14px;color:#374151;'>80</td><td style='padding:10px 14px;color:#15803d;font-weight:700;'>60</td><td style='padding:10px 14px;color:#dc2626;font-weight:700;'>20</td><td style='padding:10px 14px;font-weight:800;color:#1e293b;'>[Calculate]</td></tr>
-</tbody>
-</table>
-</div>]
+<h2 id='calculate'>How to Calculate Your Expected Score — With Worked Examples</h2>
+[4-5 paragraphs. Explain marking scheme. Add a WORKED SCORE CALCULATOR HTML TABLE showing attempted, correct, wrong, and net score calculation.]
 
-<h2 id='objection'>How to Raise an Objection — And When It Is Actually Worth It</h2>
-[5-6 paragraphs. Step-by-step objection process. Fee per question: ${meta.objectionFee || "check official notification"}. What proof you need. Success rate of objections honestly discussed. "Focus only on questions where you have strong textbook evidence."]
+<h2 id='objection'>How to Raise an Objection — Step by Step Guide</h2>
+[5-6 paragraphs. Step-by-step objection process, fee, proof needed.]
 
-<h2 id='cutoff'>Expected Cutoff — Your Chances of Making It</h2>
-[3-4 paragraphs. Category-wise cutoff prediction table (clearly labeled as ESTIMATE). Factors affecting cutoff. "If your expected score is within 5 marks of the estimate, do not lose hope."]
+<h2 id='cutoff'>Expected Cutoff — Category Wise Prediction</h2>
+[4-5 paragraphs. Category-wise cutoff prediction HTML table.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary. 60-80 words each. Questions: how to match answer with set/series, objection fee, when final answer key releases, do accepted objections change cutoff, how long after final key will result come, safe score for General category]`,
+[6 FAQs using details/summary. Matching sets, objection fees, final key release, expected result date.]
+
+<!-- Answer Key CTA -->
+<div style='background:linear-gradient(135deg,#9333ea,#7e22ce);border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
+<p style='color:white;font-weight:700;font-size:1.1rem;margin:0 0 8px;'>${meta.examName || meta.primaryKeyword} — Official Answer Key & Objection Portal</p>
+<p style='color:#f3e8ff;font-size:0.9rem;margin:0 0 16px;'>Check your responses and submit challenges before the deadline.</p>
+<a href='/answer-key' style='display:inline-block;background:white;color:#7e22ce;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>View Official Answer Key →</a>
+</div>`;
+
+  const prompts: Record<string, string> = {
+    results: resultsPrompt,
+    "admit-card": admitCardPrompt,
+    "admit-cards": admitCardPrompt,
+    "answer-key": answerKeyPrompt,
+    news: `Write a complete SEO-optimized human blog post in NEWS ARTICLE style in HTML.
+PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
+TOPIC: ${meta.examName} | ORG: ${meta.orgName}
+CONTENT: ${rawText.substring(0, 3000)}
+${trendingNote}
+
+STRUCTURE:
+<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: specific factual headline, include primary keyword]</h1>
+<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Published: <strong>${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong></p>
+
+<h2 id='summary'>Breaking: ${meta.examName} — What Happened</h2>
+[4-5 paragraphs. Lead paragraph first. Short factual sentences.]
+
+<h2 id='detail'>Full Details — Everything You Need to Know</h2>
+[5-6 paragraphs expanding on official announcement.]
+
+<h2 id='impact'>How This Affects Aspirants — Analysis</h2>
+[4-5 paragraphs. Practical impact on candidates.]
+
+<h2 id='next'>What Happens Next — Timeline and Upcoming Dates</h2>
+[3-4 paragraphs. What to expect next.]
+
+<h2 id='faq'>Frequently Asked Questions</h2>
+[6 FAQs using details/summary tags.]`,
+
+    admission: `Write a complete SEO-optimized human blog post about ADMISSION in HTML.
+PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
+COURSE: ${meta.examName} | ORG: ${meta.orgName} | LAST DATE: ${meta.lastDate}
+CONTENT: ${rawText.substring(0, 3000)}
+${trendingNote}
+
+STRUCTURE:
+<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admission 2026"]</h1>
+<p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Last Date: <strong>${meta.lastDate}</strong></p>
+
+<h2 id='about'>What Is This Course and Why Should You Consider It?</h2>
+[4-5 rich paragraphs. Course overview and career prospects.]
+
+<h2 id='eligibility'>Are You Eligible? Eligibility Criteria Explained Simply</h2>
+[4-5 paragraphs. Educational qualification and age criteria.]
+
+<h2 id='dates'>Important Dates and Application Fee</h2>
+[Dates and fee HTML tables.]
+
+<h2 id='apply'>How to Apply — Complete Step by Step Guide</h2>
+[Numbered steps + Apply For Me service pitch for form filling.]
+
+<h2 id='selection'>How Selection Works — Entrance Exam, Merit List or Counselling</h2>
+[4-5 paragraphs detailing selection rounds.]
+
+<h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
+[6 FAQs using details/summary tags.]`
   };
 
-  const blogPrompt = `${prompts[category] || prompts["news"]}
+  const selectedPrompt = prompts[normalizedCategory] || prompts["news"];
+
+  const blogPrompt = `${selectedPrompt}
 
 HUMAN WRITING RULES:
 - Write like a knowledgeable, warm friend — not a textbook.
@@ -1118,7 +1141,7 @@ ${customInstructions ? `\n=== ADMIN INSTRUCTIONS (FOLLOW STRICTLY) ===\n${custom
 // ══════════════════════════════════════════════════════════════════════════════
 export async function POST(req: Request) {
   try {
-    const { rawText, category = "latest-jobs", customInstructions = "", officialLink = "" } = await req.json();
+    const { rawText, category = "latest-jobs", customInstructions = "", officialLink = "", trendingKeywords = "" } = await req.json();
 
     console.log("AI Super Writer Invoked. Env Check:", {
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
@@ -1129,11 +1152,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please paste longer text (min 50 chars)." }, { status: 400 });
     }
 
+    // Combine customInstructions with trendingKeywords if provided
+    const combinedInstructions = [
+      customInstructions,
+      trendingKeywords && trendingKeywords.trim() ? `TRENDING GOOGLE KEYWORDS TO WEAVE NATURALLY IN TEXT & H2s: ${trendingKeywords.trim()}` : ""
+    ].filter(Boolean).join("\n\n");
+
     // B1: Run content intelligence BEFORE calling AI
     const features = detectContentFeatures(rawText);
 
     // B4: Category-aware metadata extraction
-    const metadata = await extractMetadata(rawText, category, customInstructions);
+    const metadata = await extractMetadata(rawText, category, combinedInstructions);
     metadata.category = category;
 
     // Update features title-check now that we have the title
@@ -1144,9 +1173,9 @@ export async function POST(req: Request) {
     if (category === "latest-jobs") {
       const variant = pickBlogVariant();
 
-      let part1 = await writePart1(metadata, rawText, featuresWithTitle, customInstructions, variant);
+      let part1 = await writePart1(metadata, rawText, featuresWithTitle, combinedInstructions, variant);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      let part2 = await writePart2(metadata, rawText, featuresWithTitle, customInstructions, variant);
+      let part2 = await writePart2(metadata, rawText, featuresWithTitle, combinedInstructions, variant);
 
       // Inject programmatic tables
       const overviewTable = generateOverviewTable(metadata);
@@ -1203,7 +1232,7 @@ export async function POST(req: Request) {
       blogHtml = assembled;
     } else {
       // B5: Category-specific writer with content intelligence
-      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, category, featuresWithTitle, customInstructions);
+      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, category, featuresWithTitle, combinedInstructions, trendingKeywords);
     }
 
     // Post-process pipeline

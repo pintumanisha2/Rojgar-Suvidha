@@ -59,32 +59,69 @@ export default async function CategoryPageTemplate({ category, title, descriptio
           </div>
         </div>
 
-        {/* Promotional Banner: Apply For Me */}
-        <div className="mb-10 rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden group">
-          {/* Abstract background shapes */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          
-          <div className="relative z-10 flex-1 text-center md:text-left">
-            <span className="inline-block px-3 py-1 bg-yellow-400 text-yellow-900 text-[10px] font-extrabold rounded-full uppercase tracking-wider mb-3 shadow-sm">Exclusive Service</span>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">
-              Form Bharne Mein Galti Ka Darr?
-            </h3>
-            <p className="text-indigo-100 text-sm sm:text-base max-w-xl mx-auto md:mx-0">
-              Don't risk your career! Let our experts fill your government job forms with 100% accuracy. Zero errors, zero tension.
-            </p>
-          </div>
-          
-          <div className="relative z-10 shrink-0 w-full md:w-auto">
-            <Link 
-              href="/apply-for-me"
-              className="flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-indigo-900 px-8 py-3.5 rounded-2xl font-extrabold text-sm sm:text-base transition-all shadow-lg hover:shadow-yellow-400/50 hover:-translate-y-1 w-full"
-            >
-              Use "Apply For Me"
-              <ChevronRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </div>
+        {/* Category-Smart Banner */}
+        {(() => {
+          const isAdmit = category === "admit-card" || category === "admit-cards";
+          const isResult = category === "results";
+          const isKey = category === "answer-key";
+
+          let badgeText = "Exclusive Service";
+          let heading = "Form Bharne Mein Galti Ka Darr?";
+          let desc = "Don't risk your career! Let our experts fill your government job forms with 100% accuracy. Zero errors, zero tension.";
+          let btnText = "Use 'Apply For Me'";
+          let btnHref = "/apply-for-me";
+          let bgGradient = "from-indigo-600 via-violet-600 to-purple-600";
+
+          if (isAdmit) {
+            badgeText = "Official Download Alert";
+            heading = "Exam Center Jaane Se Pehle Checked?";
+            desc = "Download your official e-call letter / hall ticket and verify exam venue address, shift timing, and photo ID instructions immediately.";
+            btnText = "Scroll To Download List";
+            btnHref = "#job-cards-list";
+            bgGradient = "from-orange-600 via-amber-600 to-red-600";
+          } else if (isResult) {
+            badgeText = "Result Announcement";
+            heading = "Result Out! Check Your Scorecard & Cutoff";
+            desc = "Find direct download links for selection merit lists, category-wise cutoffs, and official scorecards.";
+            btnText = "View Latest Results";
+            btnHref = "#job-cards-list";
+            bgGradient = "from-emerald-600 via-teal-600 to-green-600";
+          } else if (isKey) {
+            badgeText = "Objection Window";
+            heading = "Check Answer Key & Calculate Marks";
+            desc = "Verify your responses against official keys and submit question challenges before the objection deadline closes.";
+            btnText = "View Answer Keys";
+            btnHref = "#job-cards-list";
+            bgGradient = "from-purple-600 via-violet-600 to-indigo-600";
+          }
+
+          return (
+            <div className={`mb-10 rounded-3xl bg-gradient-to-r ${bgGradient} p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden group`}>
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+              
+              <div className="relative z-10 flex-1 text-center md:text-left">
+                <span className="inline-block px-3 py-1 bg-yellow-400 text-yellow-900 text-[10px] font-extrabold rounded-full uppercase tracking-wider mb-3 shadow-sm">{badgeText}</span>
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">
+                  {heading}
+                </h3>
+                <p className="text-indigo-100 text-sm sm:text-base max-w-xl mx-auto md:mx-0">
+                  {desc}
+                </p>
+              </div>
+              
+              <div className="relative z-10 shrink-0 w-full md:w-auto">
+                <Link 
+                  href={btnHref}
+                  className="flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-slate-900 px-8 py-3.5 rounded-2xl font-extrabold text-sm sm:text-base transition-all shadow-lg hover:shadow-yellow-400/50 hover:-translate-y-1 w-full"
+                >
+                  {btnText}
+                  <ChevronRight className="w-5 h-5" />
+                </Link>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Grid of Small Premium Cards (Infinite Scroll) */}
         <InfiniteJobList initialJobs={jobs || []} category={category} />

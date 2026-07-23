@@ -341,39 +341,75 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           </nav>
 
           {/* Top Level Quick Action CTA Bar */}
-          <div className="bg-white dark:bg-zinc-950 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">Quick Application Actions</h2>
-              <p className="text-xs text-gray-500 font-medium">Direct official application link & premium form filling service.</p>
-            </div>
-            <div className="flex gap-2.5 shrink-0">
-              {applyLink && (
-                <a 
-                  href={applyLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
-                >
-                  Apply Official ↗
-                </a>
-              )}
-              {customApplyLink ? (
-                <Link 
-                  href={customApplyLink} 
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
-                >
-                  Apply For Me ✨
-                </Link>
-              ) : (
-                <Link 
-                  href="/apply-for-me" 
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
-                >
-                  Apply For Me ✨
-                </Link>
-              )}
-            </div>
-          </div>
+          {(() => {
+            const cat = (job.category || "").toLowerCase();
+            const isAdmit = cat === "admit-card" || cat === "admit-cards";
+            const isResult = cat === "results";
+            const isKey = cat === "answer-key";
+
+            let barTitle = "Quick Application Actions";
+            let barDesc = "Direct official application link & premium form filling service.";
+            let primaryBtnLabel = "Apply Official ↗";
+            let secondaryBtnLabel = "Apply For Me ✨";
+            let primaryBg = "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20";
+
+            if (isAdmit) {
+              barTitle = "Official Admit Card Download";
+              barDesc = "Verify your exam center, shift timing & photo ID requirements.";
+              primaryBtnLabel = "Download Admit Card ↗";
+              secondaryBtnLabel = "View Exam Instructions";
+              primaryBg = "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20";
+            } else if (isResult) {
+              barTitle = "Official Result & Selection List";
+              barDesc = "Check selection scorecard and category-wise cutoffs.";
+              primaryBtnLabel = "Check Result ↗";
+              secondaryBtnLabel = "View Scorecard";
+              primaryBg = "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20";
+            } else if (isKey) {
+              barTitle = "Official Answer Key & Objection Portal";
+              barDesc = "Calculate expected score and submit question challenges.";
+              primaryBtnLabel = "View Answer Key ↗";
+              secondaryBtnLabel = "Score Calculator";
+              primaryBg = "bg-purple-600 hover:bg-purple-700 shadow-purple-500/20";
+            }
+
+            return (
+              <div className="bg-white dark:bg-zinc-950 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">{barTitle}</h2>
+                  <p className="text-xs text-gray-500 font-medium">{barDesc}</p>
+                </div>
+                <div className="flex gap-2.5 shrink-0">
+                  {applyLink ? (
+                    <a 
+                      href={applyLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className={`px-5 py-2.5 ${primaryBg} text-white text-xs font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none`}
+                    >
+                      {primaryBtnLabel}
+                    </a>
+                  ) : isAdmit || isResult || isKey ? (
+                    <a 
+                      href="#important-links" 
+                      className={`px-5 py-2.5 ${primaryBg} text-white text-xs font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none`}
+                    >
+                      {primaryBtnLabel}
+                    </a>
+                  ) : null}
+
+                  {!isAdmit && !isResult && !isKey && (
+                    <Link 
+                      href={customApplyLink || "/apply-for-me"} 
+                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
+                    >
+                      {secondaryBtnLabel}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 1. Header Section */}
           <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
