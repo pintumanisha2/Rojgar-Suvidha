@@ -94,7 +94,7 @@ ${extractedText}
 Return ONLY the raw JSON object.`;
 
     // Try modern Gemini models with fallback to handle quota or availability errors
-    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+    const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
     let aiResult: any = null;
     let lastError = "";
 

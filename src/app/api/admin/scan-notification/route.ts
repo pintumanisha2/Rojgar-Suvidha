@@ -518,7 +518,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) throw new Error("Gemini API Key missing in environment");
 
-  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
   let lastError = "";
 
   for (const model of models) {
