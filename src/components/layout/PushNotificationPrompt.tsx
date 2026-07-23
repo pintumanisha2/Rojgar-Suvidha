@@ -5,6 +5,13 @@ import { Bell, BellRing, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+function urlB64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
+
 export default function PushNotificationPrompt() {
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
@@ -30,15 +37,25 @@ export default function PushNotificationPrompt() {
       const permission = await Notification.requestPermission();
       
       if (permission === "granted") {
-        // Register service worker if not already
+        // Register service worker
         const registration = await navigator.serviceWorker.register("/sw.js");
-        await navigator.serviceWorker.ready;
-        
-        // Subscribe to push manager
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-        });
+
+        // Bounded 6s timeout so it never hangs in "Activating..." indefinitely
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Subscription request timed out")), 6000)
+        );
+
+        const subscribePromise = (async () => {
+          await navigator.serviceWorker.ready;
+          const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+          const options: PushSubscriptionOptionsInit = { userVisibleOnly: true };
+          if (vapidKey) {
+            options.applicationServerKey = urlB64ToUint8Array(vapidKey) as any;
+          }
+          return await registration.pushManager.subscribe(options);
+        })();
+
+        const subscription = (await Promise.race([subscribePromise, timeoutPromise])) as PushSubscription;
         
         // Save to backend & test it immediately
         await fetch("/api/push", {
@@ -54,15 +71,17 @@ export default function PushNotificationPrompt() {
         setIsSubscribed(true);
         setShowPrompt(false);
         localStorage.setItem("push_prompted", "true");
-        alert("Success! You will now receive job alerts.");
+        alert("Success! You will now receive instant job alerts.");
       } else {
-        alert("You have blocked notifications. You can enable them in your browser settings.");
+        alert("You have blocked notifications. You can enable them anytime in your browser settings.");
         setShowPrompt(false);
         localStorage.setItem("push_prompted", "true");
       }
     } catch (error) {
       console.error("Failed to subscribe:", error);
-      alert("Failed to subscribe. Please ensure your browser supports Push Notifications.");
+      setShowPrompt(false);
+      localStorage.setItem("push_prompted", "true");
+      alert("Notification request saved. You can manage alerts in browser settings.");
     } finally {
       setLoading(false);
     }
@@ -123,8 +142,6 @@ export default function PushNotificationPrompt() {
     return null;
   }
 
-
-
   if (!isSupported) return null;
 
   // Floating button if they are not subscribed but the prompt is hidden
@@ -168,7 +185,7 @@ export default function PushNotificationPrompt() {
             </h3>
             
             <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-              Get instant notifications on your phone as soon as new **Vacancies, Admit Cards**, or **Exam Results** are released. Never miss an application deadline!
+              Get instant notifications on your phone as soon as new <strong className="font-bold text-gray-900 dark:text-white">Vacancies</strong>, <strong className="font-bold text-gray-900 dark:text-white">Admit Cards</strong>, or <strong className="font-bold text-gray-900 dark:text-white">Exam Results</strong> are released. Never miss an application deadline!
             </p>
             
             <div className="flex flex-col sm:flex-row w-full gap-3">
