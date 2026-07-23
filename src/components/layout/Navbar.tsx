@@ -251,7 +251,7 @@ export default function Navbar() {
             <div className="flex items-center justify-between h-[60px]">
 
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 notranslate" translate="no">
                 <div className="shrink-0 flex items-center justify-center mr-0.5 sm:mr-1 hover:scale-105 transition-transform duration-300 cursor-pointer">
                   <Image 
                     src="/rojgar suvidha logo.png" 
@@ -263,10 +263,10 @@ export default function Navbar() {
                   />
                 </div>
                 <div className="flex flex-col leading-none">
-                  <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white">
+                  <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white notranslate" translate="no">
                     Rojgar<span className="text-yellow-300">Suvidha</span>
                   </span>
-                  <span className="text-[9px] sm:text-[10px] text-yellow-300 font-bold tracking-wide truncate max-w-[130px] xs:max-w-none">
+                  <span className="text-[9px] sm:text-[10.5px] text-yellow-300 font-bold tracking-wide whitespace-nowrap notranslate" translate="no">
                     Form Hamara, Naukri Aapki
                   </span>
                 </div>

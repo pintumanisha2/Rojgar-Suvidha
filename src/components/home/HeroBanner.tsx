@@ -263,8 +263,8 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
         {/* Brand Tagline Badge */}
         <div className="mt-4 flex justify-center px-1">
           <Link href="/pricing" className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-200/50 dark:border-indigo-900/30 rounded-full px-3 sm:px-4 py-1.5 flex items-center gap-1.5 sm:gap-2 max-w-full text-center hover:scale-105 hover:border-indigo-400/60 transition-all duration-300 flex-wrap justify-center">
-            <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm shrink-0">Rojgar Suvidha</span>
-            <span className="text-[11px] sm:text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1 flex-wrap justify-center">
+            <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm shrink-0 notranslate" translate="no">Rojgar Suvidha</span>
+            <span className="text-[11px] sm:text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1 flex-wrap justify-center notranslate" translate="no">
               ⚡ "Form Hamara, Naukri Aapki" — 15,000+ forms submitted! <span className="underline decoration-indigo-400">Plans Dekhein →</span>
             </span>
           </Link>

@@ -64,7 +64,7 @@ export default function Footer() {
 
           {/* Brand & Description */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="flex items-center gap-2 mb-4 notranslate" translate="no">
               <div className="bg-indigo-600 p-2 rounded-lg">
                 <Image
                   src="/logo-blue.png"
@@ -74,15 +74,15 @@ export default function Footer() {
                   className="h-6 w-6 object-contain"
                 />
               </div>
-              <span className="font-bold text-xl tracking-tight text-white">
+              <span className="font-bold text-xl tracking-tight text-white notranslate" translate="no">
                 Rojgar<span className="text-indigo-400">Suvidha</span>
               </span>
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">
-              <span className="text-yellow-300 font-black block text-xs tracking-wider uppercase mb-1">"Form Hamara, Naukri Aapki"</span>
+              <span className="text-yellow-300 font-black block text-xs tracking-wider uppercase mb-1 notranslate" translate="no">"Form Hamara, Naukri Aapki"</span>
               India's most trusted platform for <strong className="text-gray-300">Sarkari Naukri</strong>, 
               Government & Private Job updates. Apply for any job with our exclusive{' '}
-              <Link href="/apply-for-me" className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2">
+              <Link href="/apply-for-me" className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2 notranslate" translate="no">
                 "Apply For Me"
               </Link>{' '}
               service.
