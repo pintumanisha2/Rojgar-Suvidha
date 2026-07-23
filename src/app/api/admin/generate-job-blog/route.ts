@@ -98,8 +98,9 @@ Generate the clean HTML content now:`;
       return NextResponse.json({ error: `AI could not generate content: ${lastError}` }, { status: 500 });
     }
 
-    // Clean up Markdown code blocks if AI still adds them
-    blogHtml = blogHtml.replace(/```html\n?/g, "").replace(/```\n?/g, "").trim();
+    // Clean up Markdown code blocks and convert bold **text** to HTML <strong>text</strong>
+    blogHtml = blogHtml.replace(/```html\n?/gi, "").replace(/```\n?/g, "").trim();
+    blogHtml = blogHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/__(.*?)__/g, "<strong>$1</strong>");
 
     return NextResponse.json({ blog: blogHtml });
   } catch (error: any) {

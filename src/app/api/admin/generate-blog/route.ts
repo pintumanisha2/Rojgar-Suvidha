@@ -94,6 +94,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `AI could not generate content: ${lastError}` }, { status: 500 });
     }
 
+    // Clean up Markdown code blocks and convert bold **text** to HTML <strong>text</strong>
+    blogContent = blogContent.replace(/```html?\n?/gi, "").replace(/```\n?/g, "").trim();
+    blogContent = blogContent.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>").replace(/__(.*?)__/g, "<strong>$1</strong>");
+
     return NextResponse.json({ blog: blogContent });
   } catch (error: any) {
     console.error("AI Writer Error:", error);

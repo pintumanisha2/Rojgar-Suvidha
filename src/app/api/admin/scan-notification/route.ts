@@ -229,6 +229,10 @@ function humanizeHtml(html: string): string {
     return match;
   });
 
+  // Convert any Markdown bold **text** or __text__ to <strong>text</strong> so literal stars never appear in editor
+  out = out.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  out = out.replace(/__(.*?)__/g, "<strong>$1</strong>");
+
   return out;
 }
 
