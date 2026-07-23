@@ -115,10 +115,10 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
     <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-2 sm:py-3">
       <div className="max-w-7xl mx-auto">
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
 
           {/* Main Banner - fully clickable */}
-          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 aspect-[16/7.5] sm:aspect-[2.6/1] w-full bg-slate-950">
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 h-[140px] sm:h-[200px] w-full">
             {/* Wrap entire banner in Link if link_url exists */}
             {main.link_url ? (
               <Link href={main.link_url} className="absolute inset-0 z-10" aria-label={main.title} />
@@ -129,14 +129,14 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
               alt={main.title}
               fill
               sizes="(max-width: 640px) 100vw, 66vw"
-              className="object-contain object-center block transition-transform duration-700 group-hover:scale-[1.02]"
+              className="object-cover object-center block transition-transform duration-700 group-hover:scale-105"
               priority
             />
-            {/* Subtle Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
             {/* Title */}
-            <div className="absolute bottom-0 left-0 right-0 px-3.5 py-2 flex items-end justify-between pointer-events-none z-10 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-end justify-between pointer-events-none z-10">
               <p className="text-white font-bold text-xs sm:text-sm leading-tight drop-shadow line-clamp-1">
                 {main.title}
               </p>
@@ -165,7 +165,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
                 </button>
 
                 {/* Dot indicators */}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-20">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-20">
                   {banners.map((_, i) => (
                     <button
                       key={i}
@@ -183,7 +183,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
           </div>
 
           {/* ── Right Side: 2 Small Banners (hidden on mobile) ── */}
-          <div className="hidden sm:flex flex-col gap-3 h-full">
+          <div className="hidden sm:flex flex-col gap-3 sm:h-[200px]">
             {/* Small Banner 1 */}
             {banners.length >= 2 && (
               <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer">

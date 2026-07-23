@@ -134,7 +134,7 @@ export default function AdminBannersPage() {
             Homepage Banners
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage sliding banners shown on the user frontend. Recommended Size: <strong>1200 x 400 pixels</strong>.
+            Manage sliding banners shown on the user frontend. Recommended Size: <strong>1260 × 300 pixels (Aspect Ratio 4.2:1)</strong>.
           </p>
         </div>
         <button 
