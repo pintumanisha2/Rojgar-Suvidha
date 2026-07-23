@@ -155,6 +155,7 @@ export default function AIWriterPage() {
   const [primaryKeyword, setPrimaryKeyword] = useState("");
   const [secondaryKeywords, setSecondaryKeywords] = useState("");
   const [activeTab, setActiveTab] = useState<"core" | "advanced">("core");
+  const [layoutStyle, setLayoutStyle] = useState("auto");
   const [officialLink, setOfficialLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -253,7 +254,8 @@ export default function AIWriterPage() {
           officialLink,
           primaryKeyword,
           secondaryKeywords: secondaryKeywords || trendingKeywords,
-          trendingKeywords
+          trendingKeywords,
+          layoutStyle
         }),
       });
       const data = await response.json();
@@ -701,6 +703,42 @@ export default function AIWriterPage() {
                   </div>
                 </div>
               )}
+
+              {/* Anti-Footprint Layout Selector */}
+              <div className="bg-white dark:bg-gray-900 rounded-3xl border border-indigo-100 dark:border-indigo-900/40 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-emerald-500" />
+                    Layout Architecture & Theme
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 ml-1">(Google Anti-Penalization Engine)</span>
+                  </h3>
+                </div>
+                <p className="text-[11px] text-gray-400 mb-3">Varies HTML structure, section ordering, and CSS color themes so Google sees every post as unique.</p>
+                
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: "auto", label: "🎲 Auto-Vary (Recommended)", desc: "Randomizes layout & color theme" },
+                    { id: "editorial", label: "📰 Editorial Magazine", desc: "Hero summary & key facts grid" },
+                    { id: "flash", label: "⚡ Data-First Flash", desc: "Action table at top + timeline" },
+                    { id: "checklist", label: "📋 Candidate Checklist", desc: "Urgent alert + exam checklist" },
+                    { id: "newsroom", label: "📊 Deep-Dive Newsroom", desc: "NDTV style lead report & facts" },
+                  ].map((style) => (
+                    <button
+                      key={style.id}
+                      type="button"
+                      onClick={() => setLayoutStyle(style.id)}
+                      className={`text-left p-2.5 rounded-xl border text-xs transition-all ${
+                        layoutStyle === style.id
+                          ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold"
+                          : "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-300"
+                      }`}
+                    >
+                      <span className="block font-black text-[11px] mb-0.5">{style.label}</span>
+                      <span className="block text-[10px] text-gray-400 font-normal line-clamp-1">{style.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* AI Writing Custom Instructions */}
               <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm">

@@ -237,8 +237,51 @@ function humanizeHtml(html: string): string {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Blog Structure Variant Engine
+// Blog Structure Variant & Anti-Footprint Dynamic Engine
 // ══════════════════════════════════════════════════════════════════════════════
+export interface DynamicLayoutConfig {
+  architecture: "editorial" | "flash" | "checklist" | "newsroom";
+  theme: {
+    name: string;
+    primary: string;
+    gradient: string;
+    bgLight: string;
+    border: string;
+    textDark: string;
+  };
+  calloutStyle: "left-border" | "top-accent" | "soft-card" | "solid-banner";
+  tableStyle: "striped" | "card-grid" | "bordered";
+  h2Style: "modern-bar" | "clean-underline" | "pill-badge" | "bold-colored";
+}
+
+const COLOR_THEMES = [
+  { name: "indigo", primary: "#4f46e5", gradient: "linear-gradient(135deg, #4f46e5, #6366f1)", bgLight: "#eff6ff", border: "#c7d2fe", textDark: "#1e1b4b" },
+  { name: "emerald", primary: "#059669", gradient: "linear-gradient(135deg, #059669, #0d9488)", bgLight: "#ecfdf5", border: "#a7f3d0", textDark: "#064e3b" },
+  { name: "amber", primary: "#d97706", gradient: "linear-gradient(135deg, #d97706, #ea580c)", bgLight: "#fffbeb", border: "#fde68a", textDark: "#78350f" },
+  { name: "crimson", primary: "#e11d48", gradient: "linear-gradient(135deg, #e11d48, #be123c)", bgLight: "#fff1f2", border: "#fecdd3", textDark: "#881337" },
+  { name: "violet", primary: "#7c3aed", gradient: "linear-gradient(135deg, #7c3aed, #9333ea)", bgLight: "#f5f3ff", border: "#ddd6fe", textDark: "#4c1d95" },
+];
+
+function getRandomLayoutConfig(userChoiceStyle?: string): DynamicLayoutConfig {
+  const architectures = ["editorial", "flash", "checklist", "newsroom"] as const;
+  const chosenArch = (userChoiceStyle && userChoiceStyle !== "auto" && architectures.includes(userChoiceStyle as any))
+    ? (userChoiceStyle as typeof architectures[number])
+    : architectures[Math.floor(Math.random() * architectures.length)];
+
+  const theme = COLOR_THEMES[Math.floor(Math.random() * COLOR_THEMES.length)];
+  const calloutStyles = ["left-border", "top-accent", "soft-card", "solid-banner"] as const;
+  const tableStyles = ["striped", "card-grid", "bordered"] as const;
+  const h2Styles = ["modern-bar", "clean-underline", "pill-badge", "bold-colored"] as const;
+
+  return {
+    architecture: chosenArch,
+    theme,
+    calloutStyle: calloutStyles[Math.floor(Math.random() * calloutStyles.length)],
+    tableStyle: tableStyles[Math.floor(Math.random() * tableStyles.length)],
+    h2Style: h2Styles[Math.floor(Math.random() * h2Styles.length)],
+  };
+}
+
 type BlogVariant = "standard" | "candidate-first" | "action-first";
 
 function pickBlogVariant(): BlogVariant {
@@ -907,10 +950,12 @@ async function writeSpecialCategoryBlog(
   category: string,
   features: ReturnType<typeof detectContentFeatures>,
   customInstructions?: string,
-  trendingKeywords?: string
+  trendingKeywords?: string,
+  layoutConfig?: DynamicLayoutConfig
 ): Promise<string> {
 
   const normalizedCategory = (category === "admit-card" || category === "admit-cards") ? "admit-card" : category;
+  const cfg = layoutConfig || getRandomLayoutConfig();
 
   const resultToneNote = features.resultType === "selection"
     ? "This is a SELECTION RESULT — thousands of candidates learned if they cleared. Open with emotional awareness. Many will celebrate, some won't. Be warm and real."
@@ -919,12 +964,21 @@ async function writeSpecialCategoryBlog(
     : "This is a GENERAL RESULT announcement.";
 
   const urgencyBox = features.isUrgent
-    ? `<div style='background:#fef2f2;border-left:4px solid #dc2626;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#b91c1c;display:block;margin-bottom:4px;'>CRITICAL WARNING</strong>The deadline for this is approaching fast. Do not delay — take action today.</div>`
+    ? `<div style='background:${cfg.theme.bgLight};border-left:4px solid ${cfg.theme.primary};padding:16px 20px;border-radius:10px;margin:1.5rem 0;color:#1e293b;'><strong style='color:${cfg.theme.primary};display:block;margin-bottom:4px;'>CRITICAL WARNING</strong>The deadline for this is approaching fast. Do not delay — take action today.</div>`
     : "";
 
   const trendingNote = trendingKeywords && trendingKeywords.trim()
     ? `\n=== TRENDING GOOGLE KEYWORDS (MUST WEAVE NATURALLY INTO HEADLINES & TEXT) ===\n${trendingKeywords.trim()}\n`
     : "";
+
+  const layoutInstruction = `\n=== DYNAMIC ANTI-FOOTPRINT LAYOUT & STYLING (FOLLOW STRICTLY) ===
+- ARCHITECTURE STYLE: ${cfg.architecture.toUpperCase()} (Write sections tailored to this layout structure).
+- COLOR THEME: Primary Color ${cfg.theme.primary}, Light BG ${cfg.theme.bgLight}, Border ${cfg.theme.border}.
+- CALLOUT BOXES: Use inline styles with ${cfg.theme.bgLight} background and ${cfg.theme.primary} accents.
+- TABLE STYLING: Wrap tables in a scrollable div and use header background ${cfg.theme.primary} with white text.
+- DO NOT use generic repetitive headings. Generate exam-specific subheadings.
+- INJECT TABLE OF CONTENTS (TOC) right after the H1 title with jump links to major sections.
+`;
 
   const admitCardPrompt = `Write a complete SEO-optimized human blog post about ADMIT CARD in HTML.
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -932,13 +986,14 @@ EXAM: ${meta.examName} | ORG: ${meta.orgName} | EXAM DATE: ${meta.examDate || me
 REPORTING TIME: ${meta.reportingTime || "30 minutes before exam start"}
 CONTENT: ${rawText.substring(0, 3000)}
 ${trendingNote}
+${layoutInstruction}
 
 ${urgencyBox ? `PREPEND THIS URGENT BOX right after the H1 and byline:\n${urgencyBox}` : ""}
 
 STRUCTURE & CRITICAL SECTIONS (Write at least 1,200 words):
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admit Card Download" + 2026]</h1>
+<h1 style='font-size:2rem;font-weight:800;color:${cfg.theme.textDark};margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admit Card Download" + 2026]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Exam Date: <strong>${meta.examDate || meta.lastDate}</strong></p>
-<div style='background:#fff7ed;border-left:4px solid #f97316;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#c2410c;margin:0 0 4px;'>Exam Date: ${meta.examDate || meta.lastDate}</p><p style='color:#374151;margin:0;font-size:0.95rem;'>Download your admit card immediately. Do not wait until the last day — servers get overloaded.</p></div>
+<div style='background:${cfg.theme.bgLight};border-left:4px solid ${cfg.theme.primary};border-radius:10px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:${cfg.theme.primary};margin:0 0 4px;'>Exam Date: ${meta.examDate || meta.lastDate}</p><p style='color:#374151;margin:0;font-size:0.95rem;'>Download your admit card immediately. Do not wait until the last day — servers get overloaded.</p></div>
 
 <h2 id='intro'>The ${meta.examName} Admit Card Is Out — What You Must Do Now</h2>
 [4-5 rich paragraphs. Why urgency matters. "Every exam season, I see candidates show up at centers without a valid ID or with a blurry printout."]
@@ -951,9 +1006,9 @@ STRUCTURE & CRITICAL SECTIONS (Write at least 1,200 words):
 
 <h2 id='carry'>What to Carry on Exam Day — And What to Leave Behind</h2>
 [2 paragraphs intro. Then this EXAM DAY CHECKLIST HTML TABLE:
-<div style='overflow-x:auto;margin-bottom:1.5rem;border-radius:8px;border:1px solid #e5e7eb;'>
+<div style='overflow-x:auto;margin-bottom:1.5rem;border-radius:10px;border:1px solid ${cfg.theme.border};'>
 <table style='width:100%;border-collapse:collapse;min-width:400px;font-size:0.9rem;'>
-<thead><tr style='background:#4f46e5;color:white;'><th style='padding:10px 14px;text-align:left;'>MUST CARRY TO EXAM CENTER</th><th style='padding:10px 14px;text-align:left;'>STRICTLY BANNED (LEAVE AT HOME)</th></tr></thead>
+<thead><tr style='background:${cfg.theme.primary};color:white;'><th style='padding:10px 14px;text-align:left;'>MUST CARRY TO EXAM CENTER</th><th style='padding:10px 14px;text-align:left;'>STRICTLY BANNED (LEAVE AT HOME)</th></tr></thead>
 <tbody>
 <tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Admit Card (Printed Copy)</td><td style='padding:10px 14px;color:#dc2626;'>Mobile Phone & Smart Watch</td></tr>
 <tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 14px;color:#374151;'>Original Photo ID (Aadhaar / Voter ID / Passport)</td><td style='padding:10px 14px;color:#dc2626;'>Bluetooth Devices & Earphones</td></tr>
@@ -971,13 +1026,13 @@ Then 2 paragraphs on consequences of violations.]
 [6-7 rich paragraphs of practical advice — sleep routine, revision strategy, reaching exam hall 45 mins early, managing time.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 detailed FAQs using details/summary tags. 60-80 words per answer. Covers: forgot registration number, ID proof rules, wrong details correction, center changes.]
+[6 detailed FAQs using details/summary tags. 60-80 words per answer.]
 
 <!-- Official Download CTA -->
-<div style='background:linear-gradient(135deg,#f97316,#ea580c);border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
+<div style='background:${cfg.theme.gradient};border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
 <p style='color:white;font-weight:700;font-size:1.1rem;margin:0 0 8px;'>${meta.examName || meta.primaryKeyword} — Official Admit Card Download</p>
-<p style='color:#ffedd5;font-size:0.9rem;margin:0 0 16px;'>Verify your exam center, roll number, and instructions immediately.</p>
-<a href='/admit-card' style='display:inline-block;background:white;color:#ea580c;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Download Official Admit Card →</a>
+<p style='color:${cfg.theme.bgLight};font-size:0.9rem;margin:0 0 16px;'>Verify your exam center, roll number, and instructions immediately.</p>
+<a href='/admit-card' style='display:inline-block;background:white;color:${cfg.theme.primary};font-weight:800;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Download Official Admit Card →</a>
 </div>`;
 
   const resultsPrompt = `Write a complete SEO-optimized human blog post about a RESULT in HTML.
@@ -987,36 +1042,37 @@ NEXT STEP: ${meta.nextStep || "Not specified"}
 CUTOFFS IF KNOWN: General: ${meta.cutoffGen || "Not Announced"} | OBC: ${meta.cutoffOBC || "N/A"} | SC/ST: ${meta.cutoffSCST || "N/A"}
 CONTENT: ${rawText.substring(0, 3000)}
 ${trendingNote}
+${layoutInstruction}
 TONE NOTE: ${resultToneNote}
 
 STRUCTURE (Write at least 1,200 words):
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Result Declared 2026"]</h1>
+<h1 style='font-size:2rem;font-weight:800;color:${cfg.theme.textDark};margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Result Declared 2026"]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Updated: <strong>${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong></p>
-<div style='background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:#15803d;margin:0 0 4px;'>GOOD NEWS — Result Declared!</p><p style='color:#374151;margin:0;font-size:0.95rem;'>${meta.examName} result is officially out. Check your scorecard and merit list using the steps below.</p></div>
+<div style='background:${cfg.theme.bgLight};border-left:4px solid ${cfg.theme.primary};border-radius:10px;padding:16px 20px;margin-bottom:2rem;'><p style='font-weight:700;color:${cfg.theme.primary};margin:0 0 4px;'>GOOD NEWS — Result Declared!</p><p style='color:#374151;margin:0;font-size:0.95rem;'>${meta.examName} result is officially out. Check your scorecard and merit list using the steps below.</p></div>
 
 <h2 id='news'>${meta.primaryKeyword} — What You Need to Know Right Now</h2>
-[4-5 rich paragraphs. Open with the result fact. How many appeared, what stages cleared. Warm human voice. Use <strong> on key numbers.]
+[4-5 rich paragraphs. Open with the result fact. How many appeared, what stages cleared. Warm human voice.]
 
 <h2 id='check'>How to Check ${meta.examName} Result Online — Step by Step</h2>
 [3 paragraphs. Numbered ol steps. Direct download link advice.]
 
 <h2 id='details'>Cutoff Marks, Merit List & Scorecard — Category Wise Breakdown</h2>
-[4-5 paragraphs. Category-wise cutoff HTML table. Explain scorecard details.]
+[4-5 paragraphs. Category-wise cutoff HTML table using header background ${cfg.theme.primary}.]
 
 <h2 id='next'>What Happens Next — Your Action Plan After ${meta.examName} Result</h2>
-[4-5 practical paragraphs about ${meta.nextStep || "document verification, medical test, joining process"}. What documents to collect now.]
+[4-5 practical paragraphs about ${meta.nextStep || "document verification, medical test, joining process"}.]
 
 <h2 id='failed'>Did Not Clear This Time? Read This.</h2>
-[4 honest, warm paragraphs. Acknowledge it hurts — no fake motivation. Re-attempt strategy. Other active job notifications.]
+[4 honest, warm paragraphs. Re-attempt strategy. Other active job notifications.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary. Scorecard download, category cutoffs, DV schedule, re-evaluation.]
+[6 FAQs using details/summary tags.]
 
 <!-- Result CTA -->
-<div style='background:linear-gradient(135deg,#16a34a,#15803d);border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
+<div style='background:${cfg.theme.gradient};border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
 <p style='color:white;font-weight:700;font-size:1.1rem;margin:0 0 8px;'>${meta.examName || meta.primaryKeyword} — Check Result & Merit List</p>
-<p style='color:#dcfce7;font-size:0.9rem;margin:0 0 16px;'>Official scorecards and selection lists are live.</p>
-<a href='/results' style='display:inline-block;background:white;color:#15803d;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Check Official Result & Cutoff →</a>
+<p style='color:${cfg.theme.bgLight};font-size:0.9rem;margin:0 0 16px;'>Official scorecards and selection lists are live.</p>
+<a href='/results' style='display:inline-block;background:white;color:${cfg.theme.primary};font-weight:800;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>Check Official Result & Cutoff →</a>
 </div>`;
 
   const answerKeyPrompt = `Write a complete SEO-optimized human blog post about ANSWER KEY in HTML.
@@ -1026,9 +1082,10 @@ MARKING SCHEME: ${meta.markingScheme || "Check official notification"}
 OBJECTION FEE: ${meta.objectionFee || "As per notification"}
 CONTENT: ${rawText.substring(0, 3000)}
 ${trendingNote}
+${layoutInstruction}
 
 STRUCTURE (Write at least 1,200 words):
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Answer Key Out" + 2026]</h1>
+<h1 style='font-size:2rem;font-weight:800;color:${cfg.theme.textDark};margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Answer Key Out" + 2026]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Objection Deadline: <strong>${meta.objectionDeadline || meta.lastDate}</strong></p>
 
 <h2 id='released'>${meta.examName} Answer Key Is Out — Action Needed in 24 Hours</h2>
@@ -1038,7 +1095,7 @@ STRUCTURE (Write at least 1,200 words):
 [2 paragraphs. Numbered ol download steps.]
 
 <h2 id='calculate'>How to Calculate Your Expected Score — With Worked Examples</h2>
-[4-5 paragraphs. Explain marking scheme. Add a WORKED SCORE CALCULATOR HTML TABLE showing attempted, correct, wrong, and net score calculation.]
+[4-5 paragraphs. Explain marking scheme. Add a WORKED SCORE CALCULATOR HTML TABLE using header background ${cfg.theme.primary}.]
 
 <h2 id='objection'>How to Raise an Objection — Step by Step Guide</h2>
 [5-6 paragraphs. Step-by-step objection process, fee, proof needed.]
@@ -1047,13 +1104,13 @@ STRUCTURE (Write at least 1,200 words):
 [4-5 paragraphs. Category-wise cutoff prediction HTML table.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary. Matching sets, objection fees, final key release, expected result date.]
+[6 FAQs using details/summary tags.]
 
 <!-- Answer Key CTA -->
-<div style='background:linear-gradient(135deg,#9333ea,#7e22ce);border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
+<div style='background:${cfg.theme.gradient};border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
 <p style='color:white;font-weight:700;font-size:1.1rem;margin:0 0 8px;'>${meta.examName || meta.primaryKeyword} — Official Answer Key & Objection Portal</p>
-<p style='color:#f3e8ff;font-size:0.9rem;margin:0 0 16px;'>Check your responses and submit challenges before the deadline.</p>
-<a href='/answer-key' style='display:inline-block;background:white;color:#7e22ce;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>View Official Answer Key →</a>
+<p style='color:${cfg.theme.bgLight};font-size:0.9rem;margin:0 0 16px;'>Check your responses and submit challenges before the deadline.</p>
+<a href='/answer-key' style='display:inline-block;background:white;color:${cfg.theme.primary};font-weight:800;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.95rem;'>View Official Answer Key →</a>
 </div>`;
 
   const prompts: Record<string, string> = {
@@ -1066,9 +1123,10 @@ PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
 TOPIC: ${meta.examName} | ORG: ${meta.orgName}
 CONTENT: ${rawText.substring(0, 3000)}
 ${trendingNote}
+${layoutInstruction}
 
 STRUCTURE:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: specific factual headline, include primary keyword]</h1>
+<h1 style='font-size:2rem;font-weight:800;color:${cfg.theme.textDark};margin-bottom:1rem;line-height:1.3;'>[H1: specific factual headline, include primary keyword]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Published: <strong>${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong></p>
 
 <h2 id='summary'>Breaking: ${meta.examName} — What Happened</h2>
@@ -1091,9 +1149,10 @@ PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
 COURSE: ${meta.examName} | ORG: ${meta.orgName} | LAST DATE: ${meta.lastDate}
 CONTENT: ${rawText.substring(0, 3000)}
 ${trendingNote}
+${layoutInstruction}
 
 STRUCTURE:
-<h1 style='font-size:2rem;font-weight:800;color:#1e1b4b;margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admission 2026"]</h1>
+<h1 style='font-size:2rem;font-weight:800;color:${cfg.theme.textDark};margin-bottom:1rem;line-height:1.3;'>[H1: primary keyword + "Admission 2026"]</h1>
 <p style='font-size:0.85rem;color:#6b7280;margin-bottom:1rem;'>By <strong>Rojgar Suvidha Editorial Team</strong> &nbsp;|&nbsp; Last Date: <strong>${meta.lastDate}</strong></p>
 
 <h2 id='about'>What Is This Course and Why Should You Consider It?</h2>
@@ -1103,7 +1162,7 @@ STRUCTURE:
 [4-5 paragraphs. Educational qualification and age criteria.]
 
 <h2 id='dates'>Important Dates and Application Fee</h2>
-[Dates and fee HTML tables.]
+[Dates and fee HTML tables using header background ${cfg.theme.primary}.]
 
 <h2 id='apply'>How to Apply — Complete Step by Step Guide</h2>
 [Numbered steps + Apply For Me service pitch for form filling.]
@@ -1148,7 +1207,8 @@ export async function POST(req: Request) {
       officialLink = "",
       trendingKeywords = "",
       primaryKeyword = "",
-      secondaryKeywords = ""
+      secondaryKeywords = "",
+      layoutStyle = "auto"
     } = await req.json();
 
     console.log("AI Super Writer Invoked. Env Check:", {
@@ -1162,9 +1222,13 @@ export async function POST(req: Request) {
 
     const effectiveSecondary = secondaryKeywords || trendingKeywords;
 
-    // Combine customInstructions with focus keywords if provided
+    // Generate non-repeating anti-footprint layout config
+    const layoutConfig = getRandomLayoutConfig(layoutStyle);
+
+    // Combine customInstructions with focus keywords & layout rules
     const combinedInstructions = [
       customInstructions,
+      `DYNAMIC ANTI-FOOTPRINT THEME: Primary ${layoutConfig.theme.primary}, Light BG ${layoutConfig.theme.bgLight}, Style ${layoutConfig.architecture}`,
       primaryKeyword && primaryKeyword.trim() ? `MUST USE PRIMARY FOCUS KEYWORD IN TITLE, META DESC, H1, INTRO & H2s: ${primaryKeyword.trim()}` : "",
       effectiveSecondary && effectiveSecondary.trim() ? `TRENDING SECONDARY / LSI KEYWORDS TO WEAVE NATURALLY IN TEXT & H2s: ${effectiveSecondary.trim()}` : ""
     ].filter(Boolean).join("\n\n");
@@ -1249,8 +1313,8 @@ export async function POST(req: Request) {
 
       blogHtml = assembled;
     } else {
-      // B5: Category-specific writer with content intelligence
-      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, category, featuresWithTitle, combinedInstructions, trendingKeywords);
+      // B5: Category-specific writer with content intelligence & dynamic layout config
+      blogHtml = await writeSpecialCategoryBlog(metadata, rawText, category, featuresWithTitle, combinedInstructions, trendingKeywords, layoutConfig);
     }
 
     // Post-process pipeline
