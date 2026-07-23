@@ -560,20 +560,49 @@ async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolea
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) throw new Error("Both GEMINI_API_KEY and GROQ_API_KEY are missing.");
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
-    body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
-      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
-      temperature: jsonMode ? 0.1 : 0.8,
-      max_tokens: jsonMode ? 900 : 3500,
-      response_format: jsonMode ? { type: "json_object" } : undefined,
-    })
-  });
-  const data = await response.json();
-  if (data.error) throw new Error(`Groq API error: ${data.error.message}`);
-  return data.choices?.[0]?.message?.content || "";
+  // Trim prompts for Groq to stay well under TPM limits.
+  // llama-3.3-70b-versatile: 6000 TPM on free tier, so we cap inputs tightly.
+  // Approx: systemPrompt ~800 tokens, trimmed userPrompt ~1200 tokens, output ~1500 tokens → safe.
+  const MAX_USER_CHARS = jsonMode ? 3500 : 4800;
+  const trimmedUserPrompt = userPrompt.length > MAX_USER_CHARS
+    ? userPrompt.substring(0, MAX_USER_CHARS) + "\n\n[Content trimmed for length. Use the above to complete the section.]"
+    : userPrompt;
+
+  // Use llama-3.3-70b-versatile — better quality than 8b-instant, same TPM tier
+  // Fallback chain: 70b-versatile → llama3-70b-8192 (legacy) → gemma2-9b-it (last resort)
+  const groqModels = ["llama-3.3-70b-versatile", "llama3-70b-8192", "gemma2-9b-it"];
+
+  for (const model of groqModels) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqApiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: trimmedUserPrompt }
+          ],
+          temperature: jsonMode ? 0.1 : 0.78,
+          max_tokens: jsonMode ? 700 : 2800,
+          response_format: jsonMode ? { type: "json_object" } : undefined,
+        }),
+        signal: AbortSignal.timeout(45000),
+      });
+      const data = await response.json();
+      if (data.error) {
+        console.warn(`Groq model ${model} error:`, data.error.message);
+        continue; // Try next model
+      }
+      const content = data.choices?.[0]?.message?.content || "";
+      if (content) return content;
+    } catch (e: any) {
+      console.warn(`Groq model ${model} threw:`, e.message);
+      continue;
+    }
+  }
+
+  throw new Error("All Groq fallback models failed. Please check GEMINI_API_KEY or GROQ_API_KEY on Vercel.");
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
