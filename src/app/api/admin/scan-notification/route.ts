@@ -515,7 +515,7 @@ function generateVacancyTable(meta: any): string {
 // Call Gemini API with model fallback
 // ══════════════════════════════════════════════════════════════════════════════
 async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  const geminiApiKey = (process.env.GEMINI_API_KEY || "").trim();
   if (!geminiApiKey) throw new Error("Gemini API Key missing in environment");
 
   const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
@@ -543,7 +543,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
       );
       clearTimeout(timeoutId);
       const data = await response.json();
-      if (data.error) { lastError = data.error.message || "Unknown error"; continue; }
+      if (data.error) { lastError = data.error.message || JSON.stringify(data.error); continue; }
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       if (rawText) return rawText;
     } catch (e: any) { lastError = e.message; continue; }
@@ -552,25 +552,29 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
 }
 
 async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
+  let geminiErrDetail = "";
   if (process.env.GEMINI_API_KEY) {
-    try { return await callGemini(systemPrompt, userPrompt, jsonMode); }
-    catch (geminiError: any) { console.warn("Gemini call failed, falling back to Groq:", geminiError.message); }
+    try {
+      return await callGemini(systemPrompt, userPrompt, jsonMode);
+    } catch (geminiError: any) {
+      geminiErrDetail = geminiError.message || String(geminiError);
+      console.warn("Gemini call failed, falling back to Groq:", geminiErrDetail);
+    }
   }
 
-  const groqApiKey = process.env.GROQ_API_KEY;
-  if (!groqApiKey) throw new Error("Both GEMINI_API_KEY and GROQ_API_KEY are missing.");
+  const groqApiKey = (process.env.GROQ_API_KEY || "").trim();
+  if (!groqApiKey) {
+    throw new Error(`Gemini failed (${geminiErrDetail || "Key missing"}) and GROQ_API_KEY is missing.`);
+  }
 
   // Trim prompts for Groq to stay well under TPM limits.
-  // llama-3.3-70b-versatile: 6000 TPM on free tier, so we cap inputs tightly.
-  // Approx: systemPrompt ~800 tokens, trimmed userPrompt ~1200 tokens, output ~1500 tokens → safe.
   const MAX_USER_CHARS = jsonMode ? 3500 : 4800;
   const trimmedUserPrompt = userPrompt.length > MAX_USER_CHARS
     ? userPrompt.substring(0, MAX_USER_CHARS) + "\n\n[Content trimmed for length. Use the above to complete the section.]"
     : userPrompt;
 
-  // Use llama-3.3-70b-versatile — better quality than 8b-instant, same TPM tier
-  // Fallback chain: 70b-versatile → llama3-70b-8192 (legacy) → gemma2-9b-it (last resort)
   const groqModels = ["llama-3.3-70b-versatile", "llama3-70b-8192", "gemma2-9b-it"];
+  let lastGroqError = "";
 
   for (const model of groqModels) {
     try {
@@ -591,18 +595,20 @@ async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolea
       });
       const data = await response.json();
       if (data.error) {
-        console.warn(`Groq model ${model} error:`, data.error.message);
-        continue; // Try next model
+        lastGroqError = data.error.message || JSON.stringify(data.error);
+        console.warn(`Groq model ${model} error:`, lastGroqError);
+        continue;
       }
       const content = data.choices?.[0]?.message?.content || "";
       if (content) return content;
     } catch (e: any) {
+      lastGroqError = e.message;
       console.warn(`Groq model ${model} threw:`, e.message);
       continue;
     }
   }
 
-  throw new Error("All Groq fallback models failed. Please check GEMINI_API_KEY or GROQ_API_KEY on Vercel.");
+  throw new Error(`All AI models failed. [Gemini Reason: ${geminiErrDetail || "N/A"} | Groq Reason: ${lastGroqError || "N/A"}]`);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
