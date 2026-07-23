@@ -117,31 +117,41 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3 sm:h-[200px]">
 
-          {/* Main Banner - fully clickable */}
-          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 h-[140px] sm:h-[200px] w-full">
+          {/* Main Banner - fully clickable & ZERO cropping */}
+          <div className="sm:col-span-2 relative rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10 group cursor-pointer border border-gray-100 dark:border-zinc-800 h-[150px] sm:h-[200px] w-full bg-zinc-950">
             {/* Wrap entire banner in Link if link_url exists */}
             {main.link_url ? (
-              <Link href={main.link_url} className="absolute inset-0 z-10" aria-label={main.title} />
+              <Link href={main.link_url} className="absolute inset-0 z-20" aria-label={main.title} />
             ) : null}
 
+            {/* Background Ambient Glow Blur */}
+            <Image
+              src={main.image_url}
+              alt=""
+              fill
+              className="object-cover blur-2xl opacity-40 scale-110 pointer-events-none"
+            />
+
+            {/* Sharp Main Banner Graphic — 100% Uncropped */}
             <Image
               src={main.image_url}
               alt={main.title}
               fill
               sizes="(max-width: 640px) 100vw, 66vw"
-              className="object-cover object-center block transition-transform duration-700 group-hover:scale-105"
+              className="object-contain object-center block relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
               priority
             />
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-            {/* Title */}
-            <div className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-end justify-between pointer-events-none z-10">
+            {/* Subtle Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
+
+            {/* Title / Action Badge */}
+            <div className="absolute bottom-0 left-0 right-0 px-3.5 py-1.5 flex items-end justify-between pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
               <p className="text-white font-bold text-xs sm:text-sm leading-tight drop-shadow line-clamp-1">
                 {main.title}
               </p>
               {main.link_url && (
-                <span className="shrink-0 inline-flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-1 rounded-lg font-bold text-[11px] shadow-lg">
+                <span className="shrink-0 inline-flex items-center gap-1.5 bg-indigo-600 text-white px-2.5 py-0.5 rounded-lg font-bold text-[10px] shadow-lg">
                   <MousePointerClick className="w-3 h-3" />
                   View
                 </span>
@@ -153,19 +163,19 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
               <>
                 <button
                   onClick={(e) => { e.preventDefault(); goTo(current - 1); }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm z-20"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm z-30"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={(e) => { e.preventDefault(); goTo(current + 1); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm z-20"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm z-30"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
 
                 {/* Dot indicators */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-20">
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-30">
                   {banners.map((_, i) => (
                     <button
                       key={i}
@@ -186,22 +196,30 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
           <div className="hidden sm:flex flex-col gap-3 sm:h-[200px]">
             {/* Small Banner 1 */}
             {banners.length >= 2 && (
-              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer">
+              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer bg-zinc-950">
                 {/* Full-area clickable link */}
                 {side1.link_url && (
-                  <Link href={side1.link_url} className="absolute inset-0 z-10" aria-label={side1.title} />
+                  <Link href={side1.link_url} className="absolute inset-0 z-20" aria-label={side1.title} />
                 )}
+                {/* Background Ambient Glow */}
+                <Image
+                  src={side1.image_url}
+                  alt=""
+                  fill
+                  className="object-cover blur-xl opacity-40 scale-110 pointer-events-none"
+                />
+                {/* Sharp Graphic */}
                 <Image
                   src={side1.image_url}
                   alt={side1.title}
                   fill
                   sizes="(max-width: 640px) 0vw, 33vw"
-                  className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  className="object-contain object-center relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 pointer-events-none">
-                  <p className="text-white font-bold text-[11px] leading-tight drop-shadow line-clamp-1">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
+                <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="text-white font-bold text-[10px] leading-tight drop-shadow line-clamp-1">
                     {side1.title}
                   </p>
                 </div>
@@ -210,22 +228,30 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
 
             {/* Small Banner 2 */}
             {banners.length >= 3 ? (
-              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer">
+              <div className="flex-1 relative rounded-2xl overflow-hidden shadow-sm group cursor-pointer bg-zinc-950">
                 {/* Full-area clickable link */}
                 {side2.link_url && (
-                  <Link href={side2.link_url} className="absolute inset-0 z-10" aria-label={side2.title} />
+                  <Link href={side2.link_url} className="absolute inset-0 z-20" aria-label={side2.title} />
                 )}
+                {/* Background Ambient Glow */}
+                <Image
+                  src={side2.image_url}
+                  alt=""
+                  fill
+                  className="object-cover blur-xl opacity-40 scale-110 pointer-events-none"
+                />
+                {/* Sharp Graphic */}
                 <Image
                   src={side2.image_url}
                   alt={side2.title}
                   fill
                   sizes="(max-width: 640px) 0vw, 33vw"
-                  className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  className="object-contain object-center relative z-10 transition-transform duration-700 group-hover:scale-[1.02]"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 pointer-events-none">
-                  <p className="text-white font-bold text-[11px] leading-tight drop-shadow line-clamp-1">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
+                <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
+                  <p className="text-white font-bold text-[10px] leading-tight drop-shadow line-clamp-1">
                     {side2.title}
                   </p>
                 </div>
