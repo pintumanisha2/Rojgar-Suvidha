@@ -85,17 +85,20 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ state: string }> }): Promise<Metadata> {
   const { state } = await params;
-  const info = STATE_INFO[state.toLowerCase()];
+  const stateKey = state.toLowerCase();
+  const info = STATE_INFO[stateKey];
   const stateName = info?.name || state.toUpperCase();
   const emoji = info?.emoji || "🏛️";
+  const orgs = STATE_ORGS[stateKey] ? ` Recruitment by ${STATE_ORGS[stateKey]}.` : "";
+
   return {
-    title: `${stateName} Govt Jobs 2025 | Sarkari Naukri ${stateName} – Rojgar Suvidha`,
-    description: `Latest government jobs in ${stateName} 2025. Find all Sarkari Naukri vacancies, results, admit cards and answer keys for ${stateName} on Rojgar Suvidha. ${STATE_ORGS[state.toLowerCase()] || ""}`,
-    alternates: { canonical: `https://www.rojgarsuvidha.com/state/${state.toLowerCase()}` },
+    title: `${stateName} Govt Jobs 2026 | Sarkari Naukri ${stateName} – Rojgar Suvidha`,
+    description: `Latest government jobs in ${stateName} 2026. Find all Sarkari Naukri vacancies, results, admit cards and answer keys for ${stateName} on Rojgar Suvidha.${orgs}`,
+    alternates: { canonical: `https://www.rojgarsuvidha.com/state/${stateKey}` },
     openGraph: {
-      title: `${emoji} ${stateName} Sarkari Naukri 2025 – Rojgar Suvidha`,
-      description: `All latest government job vacancies, results and notifications from ${stateName}. UPPSC, UP Police, UPSSSC and more on Rojgar Suvidha.`,
-      url: `https://www.rojgarsuvidha.com/state/${state.toLowerCase()}`,
+      title: `${emoji} ${stateName} Sarkari Naukri 2026 – Rojgar Suvidha`,
+      description: `All latest government job vacancies, results and notifications from ${stateName}.${orgs} Direct apply links & daily job updates on Rojgar Suvidha.`,
+      url: `https://www.rojgarsuvidha.com/state/${stateKey}`,
     },
   };
 }
@@ -113,8 +116,22 @@ export default async function StateJobsPage({ params }: { params: Promise<{ stat
 
   const stats = await getStateStats(stateKey);
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.rojgarsuvidha.com" },
+      { "@type": "ListItem", position: 2, name: "State Jobs", item: "https://www.rojgarsuvidha.com" },
+      { "@type": "ListItem", position: 3, name: stateName, item: `https://www.rojgarsuvidha.com/state/${stateKey}` },
+    ],
+  };
+
   return (
     <div className="flex-1 bg-gray-50 dark:bg-gray-950 py-4 sm:py-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="max-w-7xl mx-auto px-4">
 
         {/* Breadcrumb */}
@@ -144,7 +161,7 @@ export default async function StateJobsPage({ params }: { params: Promise<{ stat
                   <span className="text-xs font-bold text-white/70 uppercase tracking-widest">State Government Jobs</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black leading-tight">
-                  {stateName} Jobs 2025
+                  {stateName} Jobs 2026
                 </h1>
                 {capital && (
                   <p className="text-white/80 text-sm mt-1 font-medium">Capital: {capital}</p>

@@ -10,23 +10,42 @@ const slugify = (text: string) => text ? text.toLowerCase().replace(/[^a-z0-9]+/
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export async function generateMetadata({ params, searchParams }: any) {
- const id = searchParams.id;
- if (!id) return { title:"Job Not Found"};
+ const id = searchParams?.id;
+ const resolvedParams = await params;
+ const slugParam = resolvedParams?.slug;
+ 
+ let job = null;
+ if (id) {
+   const { data } = await supabase.from("private_jobs").select("*").eq("id", id).single();
+   job = data;
+ } else if (slugParam) {
+   const { data } = await supabase.from("private_jobs").select("*").eq("slug", slugParam).single();
+   job = data;
+ }
 
- const { data: job } = await supabase.from("private_jobs").select("*").eq("id", id).single();
- if (!job) return { title:"Job Not Found"};
+ if (!job) return { title: "Job Not Found | Rojgar Suvidha" };
 
-  return {
-    title: `${job.title} at ${job.company_name} | Apply Now | Rojgar Suvidha`,
-    description: job.description?.slice(0, 160) || `Hiring for ${job.title} at ${job.company_name}. Experience required: ${job.experience_required || 'Not specified'}. Apply now on Rojgar Suvidha.`,
-    openGraph: {
-      title: `${job.title} at ${job.company_name} | Rojgar Suvidha`,
-      description: `Hiring for ${job.title} at ${job.company_name}. Salary: ${job.salary || 'Not disclosed'}. Apply directly.`,
-      url: `https://www.rojgarsuvidha.com/private-jobs/${id}`,
-      type: "website",
-      images: job.company_logo ? [{ url: job.company_logo }] : undefined,
-    }
-  };
+ const canonicalUrl = `https://www.rojgarsuvidha.com/private-jobs/${job.slug || job.id}`;
+ const shareImage = job.company_logo || "https://www.rojgarsuvidha.com/og-image.png";
+
+ return {
+   title: `${job.title} at ${job.company_name} | Apply Now | Rojgar Suvidha`,
+   description: job.description?.slice(0, 160) || `Hiring for ${job.title} at ${job.company_name}. Experience required: ${job.experience_required || 'Not specified'}. Apply now on Rojgar Suvidha.`,
+   alternates: { canonical: canonicalUrl },
+   openGraph: {
+     title: `${job.title} at ${job.company_name} | Rojgar Suvidha`,
+     description: `Hiring for ${job.title} at ${job.company_name}. Salary: ${job.salary || 'Not disclosed'}. Apply directly.`,
+     url: canonicalUrl,
+     type: "website",
+     images: [{ url: shareImage, width: 1200, height: 630, alt: `${job.title} at ${job.company_name}` }],
+   },
+   twitter: {
+     card: "summary_large_image",
+     title: `${job.title} at ${job.company_name}`,
+     description: job.description?.slice(0, 160) || `Apply for ${job.title}`,
+     images: [shareImage],
+   },
+ };
 }
 
 export default async function PrivateJobDetailsPage({ params, searchParams }: any) {

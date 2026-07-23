@@ -24,12 +24,12 @@ const BASE_URL = "https://www.rojgarsuvidha.com";
 
 // ── Homepage-specific SEO metadata (overrides layout defaults) ──
 export const metadata: Metadata = {
-  title: "Rojgar Suvidha – #1 Sarkari Naukri, Government Jobs, Results & Admit Card 2025",
+  title: "Rojgar Suvidha – #1 Sarkari Naukri, Government Jobs, Results & Admit Card 2026",
   description:
-    "Rojgar Suvidha: India's most trusted Sarkari Naukri portal. Get daily updates on Government Jobs 2025, SSC, UPSC, Railway, Bank, Police jobs, Admit Cards, Results & Answer Keys. Apply online with our expert 'Apply For Me' service.",
+    "Rojgar Suvidha: India's most trusted Sarkari Naukri portal. Get daily updates on Government Jobs 2026, SSC, UPSC, Railway, Bank, Police jobs, Admit Cards, Results & Answer Keys. Apply online with our expert 'Apply For Me' service.",
   alternates: { canonical: BASE_URL },
   openGraph: {
-    title: "Rojgar Suvidha – #1 Sarkari Naukri & Government Jobs 2025",
+    title: "Rojgar Suvidha – #1 Sarkari Naukri & Government Jobs 2026",
     description: "Daily Sarkari Naukri, Govt Jobs, Results, Admit Cards & Answer Keys. India's most trusted job portal. Apply for me service available.",
     url: BASE_URL,
     type: "website",
@@ -67,18 +67,18 @@ const homepageFaqSchema = {
     },
     {
       "@type": "Question",
-      name: "Which government jobs are available in 2025?",
+      name: "Which government jobs are available in 2026?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "In 2025, major government job opportunities include SSC CGL, SSC CHSL, SSC MTS, RRB NTPC, RRB Group D, IBPS PO, SBI PO, UPSC Civil Services, NDA, Indian Army Agniveer, UP Police, Bihar Police, and thousands of State PSC vacancies. Visit Rojgar Suvidha's Latest Jobs section for today's updates."
+        text: "In 2026, major government job opportunities include SSC CGL, SSC CHSL, SSC MTS, RRB NTPC, RRB Group D, IBPS PO, SBI PO, UPSC Civil Services, NDA, Indian Army Agniveer, UP Police, Bihar Police, and thousands of State PSC vacancies. Visit Rojgar Suvidha's Latest Jobs section for today's updates."
       }
     },
     {
       "@type": "Question",
-      name: "How to check Sarkari Result 2025?",
+      name: "How to check Sarkari Result 2026?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Visit Rojgar Suvidha's Results section to find direct links to official result PDFs and scorecard login portals. You need your Roll Number or Registration Number and Date of Birth to check your Sarkari Result 2025."
+        text: "Visit Rojgar Suvidha's Results section to find direct links to official result PDFs and scorecard login portals. You need your Roll Number or Registration Number and Date of Birth to check your Sarkari Result 2026."
       }
     },
   ]
@@ -90,11 +90,11 @@ const itemListSchema = {
   name: "Government Job Categories on Rojgar Suvidha",
   description: "Browse Sarkari Naukri by category on India's #1 job portal",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Latest Sarkari Naukri 2025", url: `${BASE_URL}/latest-jobs` },
-    { "@type": "ListItem", position: 2, name: "Sarkari Result 2025", url: `${BASE_URL}/results` },
-    { "@type": "ListItem", position: 3, name: "Admit Card Download 2025", url: `${BASE_URL}/admit-card` },
-    { "@type": "ListItem", position: 4, name: "Answer Key 2025", url: `${BASE_URL}/answer-key` },
-    { "@type": "ListItem", position: 5, name: "University Admission 2025", url: `${BASE_URL}/admission` },
+    { "@type": "ListItem", position: 1, name: "Latest Sarkari Naukri 2026", url: `${BASE_URL}/latest-jobs` },
+    { "@type": "ListItem", position: 2, name: "Sarkari Result 2026", url: `${BASE_URL}/results` },
+    { "@type": "ListItem", position: 3, name: "Admit Card Download 2026", url: `${BASE_URL}/admit-card` },
+    { "@type": "ListItem", position: 4, name: "Answer Key 2026", url: `${BASE_URL}/answer-key` },
+    { "@type": "ListItem", position: 5, name: "University Admission 2026", url: `${BASE_URL}/admission` },
     { "@type": "ListItem", position: 6, name: "Apply For Me Service", url: `${BASE_URL}/apply-for-me` },
   ]
 };

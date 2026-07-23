@@ -57,9 +57,11 @@ const nextConfig = {
   // ── Redirects (Important for SEO - canonical URLs) ──
   async redirects() {
     return [
-      // Redirect www to non-www (or vice versa) - pick ONE canonical domain
-      // Uncomment the one you want:
-      // { source: "/(.*)", has: [{ type: "host", value: "rojgarsuvidha.com" }], destination: "https://www.rojgarsuvidha.com/:path*", permanent: true },
+      {
+        source: "/about",
+        destination: "/about-us",
+        permanent: true,
+      },
     ];
   },
 

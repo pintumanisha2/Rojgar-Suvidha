@@ -95,17 +95,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // ── 5. State-specific pages ──────────────────────────────────
+  const ALL_STATE_CODES = ["up", "mp", "rj", "bh", "hr", "pb", "uk", "jh", "mh", "gu", "ka", "tn", "dl", "wb", "od", "as", "hp", "ch", "cg", "ga"];
   const { data: stateData } = await supabase
     .from('jobs')
     .select('state_code')
     .not('state_code', 'is', null);
 
-  const uniqueStates = Array.from(new Set((stateData || []).map(s => s.state_code)));
-  const stateUrls: MetadataRoute.Sitemap = uniqueStates.map(code => ({
-    url: `${baseUrl}/state/${code?.toLowerCase()}`,
+  const dbStates = (stateData || []).map(s => s.state_code?.toLowerCase()).filter(Boolean);
+  const combinedStates = Array.from(new Set([...ALL_STATE_CODES, ...dbStates]));
+
+  const stateUrls: MetadataRoute.Sitemap = combinedStates.map(code => ({
+    url: `${baseUrl}/state/${code}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
-    priority: 0.6,
+    priority: 0.65,
   }));
 
   // ── 6. e-Suvidha Service Pages ──────────────────────────────

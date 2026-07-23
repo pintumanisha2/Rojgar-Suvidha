@@ -5,12 +5,12 @@ import type { Metadata } from "next";
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
 export const metadata: Metadata = {
-  title: "Answer Key 2025-2026 | SSC, Railway, State PSC OMR & Response Sheets",
-  description: "Download official Answer Keys 2025-2026, Response Sheets & OMR PDFs for SSC, Railway RRB, UPSC, Banking IBPS, Police exams. Raise objections & calculate your score on Rojgar Suvidha.",
+  title: "Answer Key 2026 | SSC, Railway, State PSC OMR & Response Sheets",
+  description: "Download official Answer Keys 2026, Response Sheets & OMR PDFs for SSC, Railway RRB, UPSC, Banking IBPS, Police exams. Raise objections & calculate your score on Rojgar Suvidha.",
   keywords: [
-    "answer key 2025", "answer key 2026", "official answer key",
+    "answer key 2026", "official answer key",
     "response sheet download", "omr sheet pdf",
-    "ssc cgl answer key", "ssc chsl answer key", "ssc answer key 2025",
+    "ssc cgl answer key", "ssc chsl answer key", "ssc answer key 2026",
     "rrb ntpc answer key", "railway answer key",
     "ibps answer key", "upsc answer key",
     "raise objection answer key", "calculate marks answer key",
@@ -18,21 +18,38 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${BASE_URL}/answer-key` },
   openGraph: {
-    title: "Answer Key 2025-2026 | Official OMR & Response Sheets",
+    title: "Answer Key 2026 | Official OMR & Response Sheets",
     description: "Download official Answer Keys for SSC, Railway, Banking & State exams. Calculate your score & raise objections online.",
     url: `${BASE_URL}/answer-key`,
     type: "website",
     siteName: "Rojgar Suvidha",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Answer Key 2025-2026" }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Answer Key 2026" }],
   },
 };
 
 export default function AnswerKeyPage() {
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: "Answer Key", item: `${BASE_URL}/answer-key` },
+    ],
+  };
+
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Sarkari Answer Keys 2026",
+    description: "Official response sheets and answer keys for government exams on Rojgar Suvidha",
+    url: `${BASE_URL}/answer-key`,
+  };
+
   const seoContent = (
     <article className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Download Official Answer Key 2025 for Government Exams</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Download Official Answer Key 2026 for Government Exams</h2>
       <p className="text-gray-700 dark:text-gray-300">
-        The waiting period between the exam day and the final result declaration is often the most stressful time for any aspirant. However, the release of the <strong className="font-semibold text-gray-900 dark:text-gray-100">Official Answer Key</strong> brings massive relief. An answer key, along with your response sheet, allows you to calculate your raw score accurately before the final cut-offs are announced. Here at <strong className="text-indigo-600 dark:text-indigo-400">Rojgar Suvidha</strong>, we instantly provide direct PDF and login links to download the <strong>Latest Answer Key 2025</strong> for all major Sarkari exams.
+        The waiting period between the exam day and the final result declaration is often the most stressful time for any aspirant. However, the release of the <strong className="font-semibold text-gray-900 dark:text-gray-100">Official Answer Key</strong> brings massive relief. An answer key, along with your response sheet, allows you to calculate your raw score accurately before the final cut-offs are announced. Here at <strong className="text-indigo-600 dark:text-indigo-400">Rojgar Suvidha</strong>, we instantly provide direct PDF and login links to download the <strong>Latest Answer Key 2026</strong> for all major Sarkari exams.
       </p>
 
       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mt-8">What is an Answer Key and Why is it Important?</h3>

@@ -3,19 +3,46 @@ import { GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const BASE_URL = "https://www.rojgarsuvidha.com";
+
 export const metadata: Metadata = {
-  title: "Latest Admissions 2025 | University Entrance Exams & Counseling",
-  description: "Get the latest updates on University Admissions 2025, Entrance Exams like CUET, NEET, JEE, and State Counseling processes on Rojgar Suvidha.",
-  keywords: ["university admissions 2025", "entrance exams", "cuet ug", "neet 2025", "jee main", "state counseling", "college admission", "rojgar suvidha admission"],
-  alternates: { canonical: "https://www.rojgarsuvidha.com/admission" }
+  title: "Latest Admissions 2026 | University Entrance Exams & Counseling",
+  description: "Get the latest updates on University Admissions 2026, Entrance Exams like CUET, NEET, JEE, and State Counseling processes on Rojgar Suvidha.",
+  keywords: ["university admissions 2026", "entrance exams", "cuet ug", "neet 2026", "jee main", "state counseling", "college admission", "rojgar suvidha admission"],
+  alternates: { canonical: `${BASE_URL}/admission` },
+  openGraph: {
+    title: "Latest Admissions 2026 | University Entrance Exams & Counseling",
+    description: "Latest updates on University Admissions 2026, Entrance Exams, CUET, NEET, JEE, and State Counseling.",
+    url: `${BASE_URL}/admission`,
+    type: "website",
+    siteName: "Rojgar Suvidha",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "University Admissions 2026" }],
+  },
 };
 
 export default function AdmissionPage() {
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: "Admissions", item: `${BASE_URL}/admission` },
+    ],
+  };
+
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "University Admissions 2026",
+    description: "Latest university admissions, entrance exams, and counseling notifications on Rojgar Suvidha",
+    url: `${BASE_URL}/admission`,
+  };
+
   const seoContent = (
     <article className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest University Admissions & Entrance Exams 2025</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Latest University Admissions & Entrance Exams 2026</h2>
       <p className="text-gray-700 dark:text-gray-300">
-        Transitioning from school to college or pursuing higher education is a significant milestone in any student's life. The path to top-tier universities, prestigious engineering colleges, and renowned medical institutions runs through highly competitive entrance exams. At <strong className="text-indigo-600 dark:text-indigo-400">Rojgar Suvidha</strong>, we simplify your academic journey by providing the most accurate, timely, and organized updates for all major <strong className="font-semibold text-gray-900 dark:text-gray-100">Admissions 2025</strong>, counseling processes, and entrance examinations across India.
+        Transitioning from school to college or pursuing higher education is a significant milestone in any student's life. The path to top-tier universities, prestigious engineering colleges, and renowned medical institutions runs through highly competitive entrance exams. At <strong className="text-indigo-600 dark:text-indigo-400">Rojgar Suvidha</strong>, we simplify your academic journey by providing the most accurate, timely, and organized updates for all major <strong className="font-semibold text-gray-900 dark:text-gray-100">Admissions 2026</strong>, counseling processes, and entrance examinations across India.
       </p>
 
       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mt-8">Major Entrance Examinations in India</h3>
@@ -108,13 +135,17 @@ export default function AdmissionPage() {
   );
 
   return (
-    <CategoryPageTemplate
-      category="admission"
-      title="Admissions"
-      description="Get updates on university admissions, entrance exams, and counseling processes."
-      icon={GraduationCap}
-      colorCls="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-      seoContent={seoContent}
-    />
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+      <CategoryPageTemplate
+        category="admission"
+        title="Admissions"
+        description="Get updates on university admissions, entrance exams, and counseling processes."
+        icon={GraduationCap}
+        colorCls="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+        seoContent={seoContent}
+      />
+    </>
   );
 }

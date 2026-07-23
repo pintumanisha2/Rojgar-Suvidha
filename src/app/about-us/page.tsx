@@ -74,8 +74,26 @@ const timeline = [
 ];
 
 export default function AboutUsPage() {
+  const aboutPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    name: "About Rojgar Suvidha",
+    description: "India's trusted government job portal providing daily Sarkari Naukri updates, results, admit cards, and Apply For Me service.",
+    url: `${BASE_URL}/about-us`,
+    publisher: {
+      "@type": "Organization",
+      name: "Rojgar Suvidha",
+      url: BASE_URL,
+      logo: `${BASE_URL}/logo-blue.png`,
+    },
+  };
+
   return (
     <div className="flex-1 bg-gray-50 dark:bg-gray-950">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutPageSchema) }}
+      />
 
       {/* ── Hero Section ── */}
       <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-700 text-white py-20 px-4">

@@ -17,76 +17,76 @@ const categoryConfig: Record<string, {
   keywords: string[];
 }> = {
   ssc: {
-    title: "SSC Jobs 2025-2026 | SSC CGL, CHSL, MTS, GD Constable",
-    heading: "SSC Government Jobs 2025",
-    description: "Latest Staff Selection Commission (SSC) job notifications – SSC CGL, SSC CHSL, SSC MTS, SSC GD Constable, SSC CPO & more.",
+    title: "SSC Jobs 2026 | SSC CGL, CHSL, MTS, GD Constable",
+    heading: "SSC Government Jobs 2026",
+    description: "Latest Staff Selection Commission (SSC) job notifications 2026 – SSC CGL, SSC CHSL, SSC MTS, SSC GD Constable, SSC CPO & more.",
     emoji: "🏛️",
     searchTerms: ["ssc", "staff selection", "cgl", "chsl", "mts", "gd constable", "cpo"],
     color: "bg-blue-500",
-    keywords: ["ssc jobs 2025", "ssc cgl 2025", "ssc chsl 2025", "ssc mts 2025", "ssc gd constable 2025", "ssc cpo 2025", "staff selection commission jobs"],
+    keywords: ["ssc jobs 2026", "ssc cgl 2026", "ssc chsl 2026", "ssc mts 2026", "ssc gd constable 2026", "ssc cpo 2026", "staff selection commission jobs"],
   },
   railway: {
-    title: "Railway Jobs 2025-2026 | RRB NTPC, Group D, ALP",
-    heading: "Indian Railway Jobs 2025",
-    description: "Latest Railway Recruitment Board (RRB) notifications – RRB NTPC, RRB Group D, RRB ALP, RPF Constable & more.",
+    title: "Railway Jobs 2026 | RRB NTPC, Group D, ALP",
+    heading: "Indian Railway Jobs 2026",
+    description: "Latest Railway Recruitment Board (RRB) notifications 2026 – RRB NTPC, RRB Group D, RRB ALP, RPF Constable & more.",
     emoji: "🚂",
     searchTerms: ["railway", "rrb", "ntpc", "group d", "alp", "rpf", "rrb"],
     color: "bg-red-500",
-    keywords: ["railway jobs 2025", "rrb ntpc 2025", "rrb group d 2025", "rrb alp", "rpf constable", "indian railway recruitment"],
+    keywords: ["railway jobs 2026", "rrb ntpc 2026", "rrb group d 2026", "rrb alp 2026", "rpf constable", "indian railway recruitment"],
   },
   banking: {
-    title: "Bank Jobs 2025-2026 | IBPS PO, SBI PO, RBI Grade B",
-    heading: "Government Bank Jobs 2025",
-    description: "Latest Banking sector job notifications – IBPS PO, IBPS Clerk, SBI PO, SBI Clerk, RBI Grade B & more.",
+    title: "Bank Jobs 2026 | IBPS PO, SBI PO, RBI Grade B",
+    heading: "Government Bank Jobs 2026",
+    description: "Latest Banking sector job notifications 2026 – IBPS PO, IBPS Clerk, SBI PO, SBI Clerk, RBI Grade B & more.",
     emoji: "🏦",
     searchTerms: ["bank", "ibps", "sbi", "rbi", "nabard", "banking"],
     color: "bg-green-500",
-    keywords: ["bank jobs 2025", "ibps po 2025", "ibps clerk 2025", "sbi po 2025", "sbi clerk 2025", "rbi grade b 2025", "banking jobs india"],
+    keywords: ["bank jobs 2026", "ibps po 2026", "ibps clerk 2026", "sbi po 2026", "sbi clerk 2026", "rbi grade b 2026", "banking jobs india"],
   },
   upsc: {
-    title: "UPSC Jobs 2025-2026 | Civil Services, NDA, CDS",
-    heading: "UPSC Government Jobs 2025",
-    description: "Latest UPSC notifications – Civil Services (IAS/IPS), NDA, CDS, CAPF, Engineering Services & more.",
+    title: "UPSC Jobs 2026 | Civil Services, NDA, CDS",
+    heading: "UPSC Government Jobs 2026",
+    description: "Latest UPSC notifications 2026 – Civil Services (IAS/IPS), NDA, CDS, CAPF, Engineering Services & more.",
     emoji: "🎖️",
     searchTerms: ["upsc", "civil services", "ias", "ips", "nda", "cds", "capf"],
     color: "bg-purple-500",
-    keywords: ["upsc jobs 2025", "upsc civil services 2025", "ias ips recruitment", "nda 2025", "cds 2025", "upsc notification"],
+    keywords: ["upsc jobs 2026", "upsc civil services 2026", "ias ips recruitment", "nda 2026", "cds 2026", "upsc notification"],
   },
   police: {
-    title: "Police Jobs 2025-2026 | UP Police, Bihar Police, CISF",
-    heading: "Police & Paramilitary Jobs 2025",
-    description: "Latest Police job notifications – UP Police, Bihar Police, Delhi Police, CISF, CRPF, BSF, SSB & more.",
+    title: "Police Jobs 2026 | UP Police, Bihar Police, CISF",
+    heading: "Police & Paramilitary Jobs 2026",
+    description: "Latest Police job notifications 2026 – UP Police, Bihar Police, Delhi Police, CISF, CRPF, BSF, SSB & more.",
     emoji: "👮",
     searchTerms: ["police", "cisf", "crpf", "bsf", "ssb", "itbp", "constable"],
     color: "bg-indigo-600",
-    keywords: ["police jobs 2025", "up police 2025", "bihar police 2025", "delhi police", "cisf constable", "crpf recruitment 2025"],
+    keywords: ["police jobs 2026", "up police 2026", "bihar police 2026", "delhi police 2026", "cisf constable", "crpf recruitment 2026"],
   },
   defence: {
-    title: "Defence Jobs 2025-2026 | Army, Navy, Airforce, Agniveer",
-    heading: "Indian Defence Jobs 2025",
-    description: "Latest Defence job notifications – Indian Army Agniveer, Indian Navy, Indian Airforce, DRDO & more.",
+    title: "Defence Jobs 2026 | Army, Navy, Airforce, Agniveer",
+    heading: "Indian Defence Jobs 2026",
+    description: "Latest Defence job notifications 2026 – Indian Army Agniveer, Indian Navy, Indian Airforce, DRDO & more.",
     emoji: "🛡️",
     searchTerms: ["army", "navy", "airforce", "agniveer", "drdo", "defence", "military"],
     color: "bg-orange-500",
-    keywords: ["defence jobs 2025", "army agniveer 2025", "indian navy recruitment", "indian airforce jobs", "drdo recruitment 2025"],
+    keywords: ["defence jobs 2026", "army agniveer 2026", "indian navy recruitment", "indian airforce jobs", "drdo recruitment 2026"],
   },
   teaching: {
-    title: "Teaching Jobs 2025-2026 | CTET, UPTET, KVS, NVS",
-    heading: "Government Teaching Jobs 2025",
-    description: "Latest Teaching job notifications – CTET, UPTET, KVS, NVS, TGT, PGT, DSSSB & more.",
+    title: "Teaching Jobs 2026 | CTET, UPTET, KVS, NVS",
+    heading: "Government Teaching Jobs 2026",
+    description: "Latest Teaching job notifications 2026 – CTET, UPTET, KVS, NVS, TGT, PGT, DSSSB & more.",
     emoji: "📚",
     searchTerms: ["ctet", "tet", "teacher", "teaching", "kvs", "nvs", "dsssb", "tgt", "pgt"],
     color: "bg-yellow-500",
-    keywords: ["teaching jobs 2025", "ctet 2025", "uptet 2025", "kvs recruitment", "nvs teacher", "government teacher jobs"],
+    keywords: ["teaching jobs 2026", "ctet 2026", "uptet 2026", "kvs recruitment", "nvs teacher", "government teacher jobs"],
   },
   "state-psc": {
-    title: "State PSC Jobs 2025-2026 | UPPSC, BPSC, MPPSC",
-    heading: "State PSC Jobs 2025",
-    description: "Latest State Public Service Commission notifications – UPPSC, BPSC, MPPSC, RPSC, UKPSC & more.",
+    title: "State PSC Jobs 2026 | UPPSC, BPSC, MPPSC",
+    heading: "State PSC Jobs 2026",
+    description: "Latest State Public Service Commission notifications 2026 – UPPSC, BPSC, MPPSC, RPSC, UKPSC & more.",
     emoji: "🏢",
     searchTerms: ["psc", "uppsc", "bpsc", "mppsc", "rpsc", "ukpsc", "state psc"],
     color: "bg-teal-500",
-    keywords: ["state psc jobs 2025", "uppsc 2025", "bpsc 2025", "mppsc 2025", "rpsc recruitment", "state government jobs"],
+    keywords: ["state psc jobs 2026", "uppsc 2026", "bpsc 2026", "mppsc 2026", "rpsc recruitment", "state government jobs"],
   },
 };
 
@@ -162,9 +162,20 @@ export default async function JobsByTypePage({ params }: { params: Promise<{ typ
     numberOfItems: jobs.length,
   };
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: "Category Jobs", item: `${BASE_URL}/latest-jobs` },
+      { "@type": "ListItem", position: 3, name: config.heading, item: `${BASE_URL}/jobs/${type}` },
+    ],
+  };
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(categorySchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       
       <div className="flex-1 bg-gray-50 dark:bg-gray-950 py-8 px-4 min-h-screen">
         <div className="max-w-5xl mx-auto">

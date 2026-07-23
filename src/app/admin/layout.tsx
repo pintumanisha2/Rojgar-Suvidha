@@ -340,11 +340,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!isAllowedPath && pathname !== "/admin") {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex flex-col items-center justify-center p-6 text-center">
-        <ShieldCheck className="h-16 w-16 text-red-500 mb-4" />
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Access Denied</h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">Your current role ({userRole}) does not have permission to view this page.</p>
-        <Link href="/admin" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold">Go to Dashboard</Link>
+      <div className="flex h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-gray-100 overflow-hidden font-sans transition-colors duration-200">
+        <head>
+          <meta name="robots" content="noindex, nofollow" />
+        </head>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <ShieldCheck className="h-16 w-16 text-red-500 mb-4" />
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Access Denied</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">Your current role ({userRole}) does not have permission to view this page.</p>
+          <Link href="/admin" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold">Go to Dashboard</Link>
+        </div>
       </div>
     );
   }
@@ -399,6 +404,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="h-screen w-full bg-gray-100 dark:bg-[#000000] flex overflow-hidden">
+      <head>
+        <meta name="robots" content="noindex, nofollow" />
+      </head>
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
