@@ -61,9 +61,11 @@ export default async function CategoryPageTemplate({ category, title, descriptio
 
         {/* Category-Smart Banner */}
         {(() => {
+          const isAdmission = category === "admission" || category === "admissions";
           const isAdmit = category === "admit-card" || category === "admit-cards";
           const isResult = category === "results";
           const isKey = category === "answer-key";
+          const isNews = category === "news" || category === "blogs";
 
           let badgeText = "Exclusive Service";
           let heading = "Form Bharne Mein Galti Ka Darr?";
@@ -72,27 +74,41 @@ export default async function CategoryPageTemplate({ category, title, descriptio
           let btnHref = "/apply-for-me";
           let bgGradient = "from-indigo-600 via-violet-600 to-purple-600";
 
-          if (isAdmit) {
+          if (isAdmission) {
+            badgeText = "University & Entrance Counseling";
+            heading = "College & University Admission Form Assistance";
+            desc = "Get expert assistance for CUET UG/PG, NEET, JEE Main, B.Ed, and State Counseling application forms. Zero mistakes, 100% accurate submission.";
+            btnText = "Apply Admission Form 🎓";
+            btnHref = "/apply-for-me";
+            bgGradient = "from-blue-600 via-sky-600 to-indigo-600";
+          } else if (isAdmit) {
             badgeText = "Official Download Alert";
             heading = "Exam Center Jaane Se Pehle Checked?";
             desc = "Download your official e-call letter / hall ticket and verify exam venue address, shift timing, and photo ID instructions immediately.";
-            btnText = "Scroll To Download List";
+            btnText = "Scroll To Download List 📄";
             btnHref = "#job-cards-list";
             bgGradient = "from-orange-600 via-amber-600 to-red-600";
           } else if (isResult) {
             badgeText = "Result Announcement";
             heading = "Result Out! Check Your Scorecard & Cutoff";
             desc = "Find direct download links for selection merit lists, category-wise cutoffs, and official scorecards.";
-            btnText = "View Latest Results";
+            btnText = "View Selection Results 🏆";
             btnHref = "#job-cards-list";
             bgGradient = "from-emerald-600 via-teal-600 to-green-600";
           } else if (isKey) {
             badgeText = "Objection Window";
             heading = "Check Answer Key & Calculate Marks";
             desc = "Verify your responses against official keys and submit question challenges before the objection deadline closes.";
-            btnText = "View Answer Keys";
+            btnText = "View Answer Keys 🔑";
             btnHref = "#job-cards-list";
             bgGradient = "from-purple-600 via-violet-600 to-indigo-600";
+          } else if (isNews) {
+            badgeText = "Educational Trends & Insights";
+            heading = "Latest Exam Trends & Sarkari Yojana Updates";
+            desc = "Read in-depth analysis, exam schedules, syllabus breakdowns, and career guidance written by domain experts.";
+            btnText = "Read Trending News 📰";
+            btnHref = "#job-cards-list";
+            bgGradient = "from-pink-600 via-rose-600 to-red-600";
           }
 
           return (

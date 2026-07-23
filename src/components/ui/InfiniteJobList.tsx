@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Calendar, ChevronRight, Flame, Sparkles, AlertCircle, Clock } from "lucide-react";
 import JobCardSkeleton from "./JobCardSkeleton";
+import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 
 const statusMap: Record<string, { label: string; dot: string; text: string; bg: string }> = {
   out:    { label: "Out",     dot: "bg-green-500",  text: "text-green-700 dark:text-green-400",   bg: "bg-green-50 dark:bg-green-900/20" },
@@ -80,11 +81,32 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
   }, [loadMoreJobs, hasMore]);
 
   if (jobs.length === 0) {
+    const cat = (category || "").toLowerCase();
+    let emptyTitle = "No Notifications Found";
+    let emptyDesc = "There are currently no active updates in this category.";
+
+    if (cat === "admission" || cat === "admissions") {
+      emptyTitle = "No Admissions Found";
+      emptyDesc = "There are currently no active college or university admission forms listed.";
+    } else if (cat === "admit-card" || cat === "admit-cards") {
+      emptyTitle = "No Admit Cards Found";
+      emptyDesc = "There are currently no active hall tickets or e-call letters available.";
+    } else if (cat === "results") {
+      emptyTitle = "No Results Announced Yet";
+      emptyDesc = "There are currently no active result scorecards or selection lists.";
+    } else if (cat === "answer-key") {
+      emptyTitle = "No Answer Keys Released";
+      emptyDesc = "There are currently no active answer keys or objection portals.";
+    } else if (cat === "news" || cat === "blogs") {
+      emptyTitle = "No Educational Articles Found";
+      emptyDesc = "There are currently no active news or analysis posts.";
+    }
+
     return (
       <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800">
         <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Jobs Found</h3>
-        <p className="text-gray-500 dark:text-gray-400">There are currently no active jobs in this category.</p>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{emptyTitle}</h3>
+        <p className="text-gray-500 dark:text-gray-400">{emptyDesc}</p>
       </div>
     );
   }
@@ -99,7 +121,13 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
             if (ldObj) lastDate = ldObj.value;
           }
 
-          const st = statusMap[job.status] || statusMap["active"];
+          const st = getJobStatusBadge({
+            category: job.category || category,
+            lastDate,
+            important_dates: job.important_dates,
+            created_at: job.created_at,
+            status: job.status,
+          });
 
           let applyLink = "";
           if (job.links && Array.isArray(job.links)) {
@@ -134,7 +162,7 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                 {lastDate && (
                   <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
                     <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    Last Date: <span className={job.status === "last" ? "text-red-500 font-extrabold" : ""}>{lastDate}</span>
+                    Last Date: <span className={st.state === "today" || st.state === "urgent" ? "text-red-500 font-extrabold" : ""}>{lastDate}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -145,7 +173,17 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
 
               <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3 relative z-10">
                 {(() => {
-                  const cat = (category || "").toLowerCase();
+                  const cat = (category || job.category || "").toLowerCase();
+                  if (cat === "admission" || cat === "admissions") {
+                    return (
+                      <Link 
+                        href={`/job/${job.slug}`} 
+                        className="w-full text-center py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-blue-500/20"
+                      >
+                        Admission Details & Apply 🎓
+                      </Link>
+                    );
+                  }
                   if (cat === "admit-card" || cat === "admit-cards") {
                     return (
                       <Link 
