@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import SaveJobButton from "@/components/ui/SaveJobButton";
 
+import { getJobStatusBadge } from "@/lib/jobStatusHelper";
+
 type StatusKey = "out" | "active" | "last" | "soon" | "new";
 type TagType = "hot" | "new" | "urgent";
 
@@ -18,6 +20,9 @@ interface JobItem {
   posts?: string;
   eligibility?: string;
   slug: string;
+  category?: string;
+  important_dates?: any[];
+  created_at?: string;
 }
 
 interface Section {
@@ -98,7 +103,10 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
         lastDate,
         slug: job.slug,
         posts: job.total_posts,
-        eligibility: job.short_info
+        eligibility: job.short_info,
+        category: job.category,
+        important_dates: job.important_dates,
+        created_at: job.created_at,
       } as JobItem;
     })
   }));
@@ -167,38 +175,13 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
               {/* List */}
               <ul className="divide-y divide-gray-100/50 dark:divide-zinc-800/40">
                 {section.items.map((item, i) => {
-                  const st = statusMap[item.status];
-                  
-                  // Calculate dynamic last date urgency text
-                  let urgencyText = `Last Date: ${item.lastDate}`;
-                  let isUrgentDate = false;
-                  if (item.lastDate) {
-                    const lower = item.lastDate.toLowerCase();
-                    if (lower.includes("today")) {
-                      urgencyText = "LAST DATE TODAY!";
-                      isUrgentDate = true;
-                    } else {
-                      try {
-                        const parsed = Date.parse(item.lastDate);
-                        if (!isNaN(parsed)) {
-                          const diffMs = parsed - Date.now();
-                          const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                          if (diffDays === 0) {
-                            urgencyText = "Last Date: Today!";
-                            isUrgentDate = true;
-                          } else if (diffDays === 1) {
-                            urgencyText = "Last Date: Tomorrow!";
-                            isUrgentDate = true;
-                          } else if (diffDays > 1 && diffDays <= 4) {
-                            urgencyText = `Only ${diffDays} Days Left!`;
-                            isUrgentDate = true;
-                          } else if (diffDays < 0) {
-                            urgencyText = `Closed`;
-                          }
-                        }
-                      } catch (e) {}
-                    }
-                  }
+                  const st = getJobStatusBadge({
+                    category: item.category || section.id,
+                    lastDate: item.lastDate,
+                    important_dates: item.important_dates,
+                    created_at: item.created_at,
+                    status: item.status,
+                  });
 
                   return (
                     <li key={i} className="relative">
@@ -212,7 +195,7 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                         {/* Row 1: dot + title + tag + status badge + Save button */}
                         <div className="flex items-start justify-between gap-2.5">
                           <div className="flex items-center gap-2 flex-1 mt-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot} ${item.status === "last" ? "animate-pulse" : ""}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
                             <span className="flex-1 text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug group-hover:underline underline-offset-4 decoration-indigo-200 dark:decoration-indigo-850">
                               {item.title}
                             </span>
@@ -232,9 +215,9 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                         {(item.lastDate || item.posts || item.eligibility) && (
                           <div className="flex items-center gap-3 mt-2 ml-3.5 flex-wrap">
                             {item.lastDate && (
-                              <span className={`flex items-center gap-1 text-[11px] font-extrabold ${isUrgentDate ? "text-red-600 dark:text-red-400 animate-pulse bg-red-50 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 px-1.5 py-0.5 rounded-md" : "text-gray-500 dark:text-gray-400"}`}>
+                              <span className={`flex items-center gap-1 text-[11px] font-extrabold ${st.state === "urgent" || st.state === "today" ? "text-red-600 dark:text-red-400 animate-pulse bg-red-50 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 px-1.5 py-0.5 rounded-md" : "text-gray-500 dark:text-gray-400"}`}>
                                 <Calendar className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                                {urgencyText}
+                                {st.detailText || `Last Date: ${item.lastDate}`}
                               </span>
                             )}
                             {item.posts && (

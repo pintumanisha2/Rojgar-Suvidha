@@ -19,6 +19,7 @@ import SocialProofBadges from "@/components/ui/SocialProofBadges";
 import PushSubscribeWidget from "@/components/ui/PushSubscribeWidget";
 import ApplyFomoBar from "@/components/ui/ApplyFomoBar";
 import FloatingApplyBar from "@/components/ui/FloatingApplyBar";
+import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -412,21 +413,54 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           })()}
 
           {/* 1. Header Section */}
-          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="inline-flex items-center gap-2">
-                  <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 uppercase tracking-wider">
-                    {job.status === "out" ? "Out Now" : job.status}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{job.category.replace("-", " ")}</span>
-                </div>
-                <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-zinc-800">
-                  <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
-                </div>
-              </div>
+          {(() => {
+            const pageBadge = getJobStatusBadge(job);
+            return (
+              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
+                
+                <div className="relative z-10">
+                  {/* Real-time Dynamic Status Banner Box */}
+                  <div className={`mb-4 p-3.5 rounded-xl border flex items-center justify-between gap-3 ${pageBadge.bg}`}>
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${pageBadge.dot} shrink-0`} />
+                      <div>
+                        <p className={`text-xs font-black uppercase tracking-wide ${pageBadge.text}`}>
+                          STATUS: {pageBadge.label}
+                        </p>
+                        {pageBadge.detailText && (
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-0.5">
+                            {pageBadge.detailText}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {pageBadge.state === "closed" ? (
+                      <span className="text-[10px] font-extrabold bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2.5 py-1 rounded-lg shrink-0">
+                        Application Closed
+                      </span>
+                    ) : pageBadge.state === "urgent" || pageBadge.state === "today" ? (
+                      <span className="text-[10px] font-extrabold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 px-2.5 py-1 rounded-lg animate-pulse shrink-0">
+                        Hurry Up!
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg shrink-0">
+                        Official Status Live
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <div className="inline-flex items-center gap-2">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider ${pageBadge.text} ${pageBadge.bg}`}>
+                        {pageBadge.label}
+                      </span>
+                      <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{job.category.replace("-", " ")}</span>
+                    </div>
+                    <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-zinc-800">
+                      <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
+                    </div>
+                  </div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-3 leading-tight">
                 {job.title}
               </h1>
@@ -442,6 +476,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               )}
             </div>
           </div>
+        );
+      })()}
 
           <SocialProofBadges slug={job.slug} lastDate={lastDate} category={job.category} />
 
