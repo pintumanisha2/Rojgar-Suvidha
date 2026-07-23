@@ -1,45 +1,50 @@
 "use client";
 // ── ApplyFomoBar ──────────────────────────────────────────────────────────────
-// Shows "X people used Apply For Me for this job" — increases every few minutes
+// Shows "X people used Apply For Me for this job" — increases dynamically
 // Used on: /apply/[id] form page AND /job/[slug] detail page
 
 import { useEffect, useRef, useState } from "react";
 import { Users, Zap, Clock } from "lucide-react";
 
+function hashString(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 33) ^ str.charCodeAt(i);
+  }
+  return Math.abs(hash);
+}
+
 // ── Deterministic base count per form/job ─────────────────────────────────────
 const CATEGORY_SEEDS: Record<string, [number, number]> = {
-  ssc:        [847,  2341],
-  railway:    [623,  1876],
-  banking:    [412,   987],
-  upsc:       [234,   678],
-  police:     [521,  1234],
-  defence:    [387,   876],
-  "state-psc":[198,   543],
-  teaching:   [156,   423],
-  "latest-jobs":[312, 876],
-  results:    [45,    120],
-  "admit-card":[23,    67],
-  default:    [87,    312],
+  ssc:          [680, 2450],
+  railway:      [520, 1980],
+  banking:      [380, 1420],
+  upsc:         [290, 1150],
+  police:       [450, 1680],
+  defence:      [360, 1290],
+  "state-psc":  [210,  890],
+  teaching:     [180,  760],
+  "latest-jobs":[340, 1250],
+  results:      [85,   320],
+  "admit-card": [65,   240],
+  default:      [120,  650],
 };
 
 function getSlugSeed(identifier: string, category = "default"): number {
   const range = CATEGORY_SEEDS[category] ?? CATEGORY_SEEDS.default;
   const [min, max] = range;
-  const hash = identifier
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hash = hashString(identifier);
   const ratio = (hash % 1000) / 1000;
   return Math.floor(min + ratio * (max - min));
 }
 
-// ── Live viewer pseudo-count ───────────────────────────────────────────────────
-function getLiveViewers(identifier: string): number {
-  const hash = identifier.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const base = 15 + (hash % 31); // 15–45
-  // Slightly oscillate with time so it looks "live"
-  const minute = Math.floor(Date.now() / (3 * 60 * 1000)); // changes every 3 min
-  const oscillate = ((minute * 7 + hash) % 11) - 5; // ±5
-  return Math.max(8, base + oscillate);
+// ── Live viewer pseudo-count with smooth real-time oscillation ────────────────
+function getLiveViewers(identifier: string, step = 0): number {
+  const hash = hashString(identifier);
+  const base = 16 + (hash % 34); // 16–50 viewers
+  // Real-time oscillation every few seconds
+  const oscillate = Math.floor(Math.sin((step + (hash % 10)) * 0.5) * 6); // ±6
+  return Math.max(9, base + oscillate);
 }
 
 interface ApplyFomoBarProps {
@@ -59,31 +64,35 @@ export default function ApplyFomoBar({
   lastDate,
   compact = false,
 }: ApplyFomoBarProps) {
-  const baseSeed              = getSlugSeed(identifier, category);
-  const [count, setCount]     = useState(baseSeed);
-  const [viewers, setViewers] = useState(() => getLiveViewers(identifier));
+  const baseSeed                = getSlugSeed(identifier, category);
+  const [count, setCount]       = useState(baseSeed);
+  const [step, setStep]         = useState(0);
+  const [viewers, setViewers]   = useState(() => getLiveViewers(identifier, 0));
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
-  const accRef                = useRef(0); // fractional accumulator
+  const accRef                  = useRef(0);
 
-  // Add 1 apply every ~4-8 minutes (realistic: not too fast)
-  // Rate: ~200-300 per day total across all jobs
-  const RATE_PER_SECOND = 1 / (60 * 5); // 1 per 5 minutes
+  // Add 1 apply every ~3-6 minutes realistically
+  const RATE_PER_SECOND = 1 / (60 * 4);
 
   useEffect(() => {
-    // Live viewers refresh every 3 minutes
+    // Live viewers fluctuate every 5 seconds dynamically
     const viewerTimer = setInterval(() => {
-      setViewers(getLiveViewers(identifier));
-    }, 3 * 60 * 1000);
+      setStep((prev) => {
+        const nextStep = prev + 1;
+        setViewers(getLiveViewers(identifier, nextStep));
+        return nextStep;
+      });
+    }, 5000);
 
-    // Apply count tick every 10 seconds
+    // Apply count tick every 8 seconds
     const countTimer = setInterval(() => {
-      accRef.current += 10 * RATE_PER_SECOND;
+      accRef.current += 8 * RATE_PER_SECOND;
       const whole = Math.floor(accRef.current);
       if (whole > 0) {
         accRef.current -= whole;
         setCount((prev) => prev + whole);
       }
-    }, 10_000);
+    }, 8000);
 
     return () => {
       clearInterval(viewerTimer);
@@ -138,7 +147,7 @@ export default function ApplyFomoBar({
 
   // ── Full version: 2-row card for job detail page ──────────────────────────
   return (
-    <div className={`rounded-2xl border overflow-hidden
+    <div className={`rounded-2xl border overflow-hidden transition-colors duration-300
       ${isUrgent
         ? "border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/10"
         : "border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-950/10"
@@ -152,7 +161,7 @@ export default function ApplyFomoBar({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-black text-gray-400 uppercase tracking-wider leading-none mb-0.5">
-            Apply For Me Users
+            APPLY FOR ME USERS
           </p>
           <p className={`text-sm font-black leading-tight
             ${isUrgent ? "text-red-700 dark:text-red-300" : "text-gray-900 dark:text-white"}`}>
@@ -169,7 +178,7 @@ export default function ApplyFomoBar({
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
-          <span className="font-black text-green-600 dark:text-green-400">{viewers}</span> log abhi dekh rahe hain
+          <span className="font-black text-green-600 dark:text-green-400 transition-all duration-300">{viewers}</span> log abhi dekh rahe hain
         </span>
 
         {isUrgent && daysLeft !== null ? (
