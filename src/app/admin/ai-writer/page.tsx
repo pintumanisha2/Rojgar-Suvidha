@@ -310,6 +310,18 @@ export default function AIWriterPage() {
       setPublishStatus("success");
       localStorage.removeItem(DRAFT_KEY);
 
+      // 🚀 AUTO-INDEXING: Ping IndexNow + Google Sitemap for fast crawling
+      if (publishPostStatus === "active") {
+        fetch("/api/admin/index-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: publishSlug }),
+        })
+          .then(r => r.json())
+          .then(d => console.log("🚀 Auto-Index Result:", d.summary))
+          .catch(e => console.warn("Auto-index ping failed:", e));
+      }
+
       // Auto-trigger category-based push notification
       if (publishPostStatus === "active") {
         fetch("/api/push", {
@@ -416,10 +428,31 @@ export default function AIWriterPage() {
             </div>
 
             {publishStatus === "success" ? (
-              <div className="text-center py-8">
+              <div className="text-center py-6">
                 <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">✅</div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Published Successfully!</h3>
-                <p className="text-sm text-gray-500 mb-5">Your post is now live on the site.</p>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">Published Successfully!</h3>
+                <p className="text-sm text-gray-500 mb-4">Your post is now live on the site.</p>
+                {/* 🚀 Auto-Indexing Status Card */}
+                {publishPostStatus === "active" && (
+                  <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-4 mb-4 text-left">
+                    <p className="text-xs font-black text-indigo-700 dark:text-indigo-400 mb-2">🚀 Auto-Indexing Triggered!</p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse shrink-0" />
+                        <span><strong>Bing/Yandex:</strong> IndexNow pinged — 5 to 30 mins</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse shrink-0" />
+                        <span><strong>Google Sitemap:</strong> Pinged — 30 to 90 mins</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shrink-0" />
+                        <span><strong>Push Notification:</strong> Subscribers ko bhej diya</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Google mein manually index ke liye GSC → URL Inspection → Request Indexing bhi use kar sakte hain</p>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <a href={`/job/${publishSlug}`} target="_blank" rel="noopener noreferrer" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-sm text-center transition-colors">
                     View Live Post →
