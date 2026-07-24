@@ -564,6 +564,35 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
              </div>
           </div>
 
+          {/* ── Important Links (moved up: right after article, before banner) ── */}
+          {job.links && job.links.filter((l: any) => !l.label.toLowerCase().includes('apply for me')).length > 0 && (
+            <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 overflow-hidden shadow-sm mt-6">
+              <div className="bg-indigo-50 dark:bg-zinc-900/50 px-5 py-4 border-b border-gray-200 dark:border-zinc-900 flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h2 className="font-bold text-gray-900 dark:text-white">Important Links</h2>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {job.links.filter((l: any) => !l.label.toLowerCase().includes('apply for me')).map((link: any, idx: number) => (
+                  <div key={idx} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors">
+                    <span className="font-bold text-gray-900 dark:text-gray-200 text-sm">{link.label}</span>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto ${
+                        link.label.toLowerCase().includes('apply') || link.label.toLowerCase().includes('online')
+                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          : 'bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {link.label.toLowerCase().includes('apply') ? 'Click Here' : <LinkIcon className="w-4 h-4" />}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Middle Banner Ad */}
           <AdSensePlaceholder format="leaderboard" />
 
@@ -674,30 +703,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             </div>
           )}
 
-          {/* 5. Important Links */}
-          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 overflow-hidden shadow-sm">
-            <div className="bg-indigo-50 dark:bg-zinc-900/50 px-5 py-4 border-b border-gray-200 dark:border-zinc-900 flex items-center gap-2">
-              <LinkIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="font-bold text-gray-900 dark:text-white">Important Links</h2>
-            </div>
-            
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {job.links && job.links.length > 0 ? job.links.filter((l: any) => !l.label.toLowerCase().includes('apply for me')).map((link: any, idx: number) => (
-                <div key={idx} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors">
-                  <span className="font-bold text-gray-900 dark:text-gray-200 text-sm">{link.label}</span>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto ${
-                    link.label.toLowerCase().includes('apply') || link.label.toLowerCase().includes('online') 
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                      : 'bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}>
-                    {link.label.toLowerCase().includes('apply') ? 'Click Here' : <LinkIcon className="w-4 h-4" />}
-                  </a>
-                </div>
-              )) : (
-                <div className="p-5 text-center text-gray-500 text-sm">No important links available.</div>
-              )}
-            </div>
-          </div>
+          {/* 5. Important Links — moved above (now shows right after article) */}
         </div>
       </div>
     </>
