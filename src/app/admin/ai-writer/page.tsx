@@ -175,6 +175,7 @@ export default function AIWriterPage() {
   const [showPublish, setShowPublish] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishStatus, setPublishStatus] = useState<"idle" | "success" | "error">("idle");
+  const [publishErrorMsg, setPublishErrorMsg] = useState("");
   const [publishSlug, setPublishSlug] = useState("");
   const [publishPostStatus, setPublishPostStatus] = useState("active");
 
@@ -243,6 +244,9 @@ export default function AIWriterPage() {
     setLoading(true);
     setResult(null);
     setPublishStatus("idle");
+    // Client-side 65s hard timeout to prevent infinite spinner
+    const controller = new AbortController();
+    const clientTimeout = setTimeout(() => controller.abort(), 65000);
     try {
       const response = await fetch("/api/admin/scan-notification", {
         method: "POST",
@@ -257,13 +261,19 @@ export default function AIWriterPage() {
           trendingKeywords,
           layoutStyle
         }),
+        signal: controller.signal,
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setResult(data);
     } catch (err: any) {
-      alert(err.message || "Something went wrong.");
+      if (err.name === "AbortError") {
+        alert("⏱️ AI timed out (65s). Gemini server is slow — please retry in a moment.");
+      } else {
+        alert("❌ Error: " + (err.message || "Something went wrong. Please try again."));
+      }
     } finally {
+      clearTimeout(clientTimeout);
       setLoading(false);
     }
   };
@@ -273,26 +283,34 @@ export default function AIWriterPage() {
     if (!result || !publishSlug) return;
     setPublishLoading(true);
     setPublishStatus("idle");
+    // 15-second hard timeout to prevent infinite publish spinner
+    const controller = new AbortController();
+    const publishTimeout = setTimeout(() => controller.abort(), 15000);
     try {
+      // ✅ FIX: Use blog_content column (not content) — matches /job/[slug]/page.tsx
       const { error } = await supabase.from("jobs").insert([{
         title: result.title,
         slug: publishSlug,
-        content: result.blogHtml,
+        blog_content: result.blogHtml,          // ← FIXED: was "content"
         short_description: result.shortInfo || result.metaDesc,
         meta_description: result.metaDesc,
-        category: result.category,
+        tag: result.tag || null,
+        category: result.category || category,
         status: publishPostStatus,
         last_date: result.lastDate || null,
         total_posts: result.totalPosts || null,
         application_fee: result.appFeeGen || null,
         official_link: result.officialLink || null,
+        links: result.links || null,
+        important_dates: result.important_dates || null,
         created_at: new Date().toISOString(),
       }]);
+      clearTimeout(publishTimeout);
       if (error) throw error;
       setPublishStatus("success");
       localStorage.removeItem(DRAFT_KEY);
 
-      // F3-B: Auto-trigger category-based push notification
+      // Auto-trigger category-based push notification
       if (publishPostStatus === "active") {
         fetch("/api/push", {
           method: "POST",
@@ -310,7 +328,9 @@ export default function AIWriterPage() {
         }).catch(e => console.error("Auto push trigger failed:", e));
       }
     } catch (err: any) {
+      clearTimeout(publishTimeout);
       console.error("Publish error:", err);
+      setPublishErrorMsg(err?.message || "Publish failed. Check your internet connection and try again.");
       setPublishStatus("error");
     } finally {
       setPublishLoading(false);
@@ -401,7 +421,7 @@ export default function AIWriterPage() {
                 <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">Published Successfully!</h3>
                 <p className="text-sm text-gray-500 mb-5">Your post is now live on the site.</p>
                 <div className="flex gap-3">
-                  <a href={`/${category}/${publishSlug}`} target="_blank" rel="noopener noreferrer" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-sm text-center transition-colors">
+                  <a href={`/job/${publishSlug}`} target="_blank" rel="noopener noreferrer" className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-sm text-center transition-colors">
                     View Live Post →
                   </a>
                   <button onClick={() => { setShowPublish(false); setPublishStatus("idle"); }} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold rounded-2xl text-sm transition-colors">
@@ -444,7 +464,10 @@ export default function AIWriterPage() {
                   </div>
                 </div>
                 {publishStatus === "error" && (
-                  <p className="text-xs text-red-600 bg-red-50 p-3 rounded-xl">Publish failed. Check Supabase `jobs` table schema and try again.</p>
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                    <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-1">❌ Publish Failed</p>
+                    <p className="text-xs text-red-600 dark:text-red-300">{publishErrorMsg || "Check your internet connection or Supabase schema and try again."}</p>
+                  </div>
                 )}
                 <button
                   onClick={handlePublish}

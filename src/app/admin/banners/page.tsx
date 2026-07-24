@@ -51,37 +51,30 @@ export default function AdminBannersPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !imageFile) {
-      setError("Title and Image File are required.");
+      setError("Title and Image are both required.");
       return;
     }
     setSaving(true);
     setError(null);
 
-    try {
-      // 1. Compress Image (15s timeout built-in)
+    // Hard 25s timeout — prevents infinite spinner on network stall
+    let hardTimeoutId: ReturnType<typeof setTimeout>;
+    const hardTimeoutPromise = new Promise<never>((_, reject) => {
+      hardTimeoutId = setTimeout(() => reject(new Error("Upload timed out (25s). Check your internet and try again.")), 25000);
+    });
+
+    const doUpload = async () => {
+      // 1. Compress Image
       const compressedFile = await compressImage(imageFile, 1200, 0.8);
       const fileExt = compressedFile.name.split('.').pop() || 'jpg';
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-      // 2. Upload with 30-second timeout
-      const uploadPromise = supabase.storage
+      // 2. Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
         .from('banners')
         .upload(fileName, compressedFile, { cacheControl: '3600', upsert: true });
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Upload timed out after 30 seconds. Please try again.")), 30000)
-      );
-
-      const { data: uploadData, error: uploadError } = await Promise.race([
-        uploadPromise,
-        timeoutPromise,
-      ]) as Awaited<typeof uploadPromise>;
-
-      if (uploadError) {
-        setError("Upload failed: " + uploadError.message + ". Make sure 'banners' bucket exists in Supabase Storage.");
-        setSaving(false);
-        return;
-      }
+      if (uploadError) throw new Error("Image upload failed: " + uploadError.message);
 
       // 3. Get Public URL
       const { data: { publicUrl } } = supabase.storage.from('banners').getPublicUrl(fileName);
@@ -90,16 +83,21 @@ export default function AdminBannersPage() {
       const { error: dbError } = await supabase.from("banners").insert([
         { title, image_url: publicUrl, link_url: linkUrl, status }
       ]);
+      if (dbError) throw new Error("Database error: " + dbError.message);
 
-      if (dbError) {
-        setError(dbError.message);
-      } else {
-        setIsModalOpen(false);
-        setTitle(""); setImageFile(null); setPreviewUrl(""); setLinkUrl("");
-        fetchBanners();
-      }
+      return true;
+    };
+
+    try {
+      await Promise.race([doUpload(), hardTimeoutPromise]);
+      clearTimeout(hardTimeoutId!);
+      // Success!
+      setIsModalOpen(false);
+      setTitle(""); setImageFile(null); setPreviewUrl(""); setLinkUrl(""); setStatus("active");
+      fetchBanners();
     } catch (err: any) {
-      setError(err?.message || "Upload failed. Please try again.");
+      clearTimeout(hardTimeoutId!);
+      setError(err?.message || "Upload failed. Please check your connection and try again.");
     } finally {
       setSaving(false);
     }
