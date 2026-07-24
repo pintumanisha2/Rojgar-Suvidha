@@ -550,6 +550,70 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               .blog-content ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.9rem; }
               .blog-content ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.9rem; }
               .blog-content li { margin-bottom: 0.4rem; }
+              /* ── Premium FAQ Accordion (<details>/<summary>) ── */
+              .blog-content details {
+                border: 1.5px solid #e0e7ff;
+                border-radius: 12px;
+                margin-bottom: 10px;
+                overflow: hidden;
+                background: #fafaff;
+                transition: box-shadow 0.2s;
+              }
+              .dark .blog-content details {
+                border-color: #3730a3;
+                background: #0d0d1a;
+              }
+              .blog-content details[open] {
+                box-shadow: 0 4px 20px rgba(79,70,229,0.10);
+                border-color: #6366f1;
+              }
+              .blog-content summary {
+                cursor: pointer;
+                padding: 14px 18px;
+                font-size: 0.9rem;
+                font-weight: 700;
+                color: #1e1b4b;
+                background: linear-gradient(90deg, #eef2ff 0%, #f5f3ff 100%);
+                list-style: none;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                user-select: none;
+                gap: 10px;
+              }
+              .dark .blog-content summary {
+                background: linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%);
+                color: #c7d2fe;
+              }
+              .blog-content summary::-webkit-details-marker { display: none; }
+              .blog-content summary::after {
+                content: '+';
+                font-size: 1.3rem;
+                font-weight: 300;
+                color: #6366f1;
+                flex-shrink: 0;
+                transition: transform 0.25s ease;
+                line-height: 1;
+              }
+              .blog-content details[open] > summary::after {
+                content: '−';
+              }
+              .blog-content details > p,
+              .blog-content details > div {
+                padding: 14px 18px;
+                font-size: 0.875rem;
+                line-height: 1.75;
+                color: #374151;
+                margin: 0;
+                border-top: 1px solid #e0e7ff;
+              }
+              .dark .blog-content details > p,
+              .dark .blog-content details > div {
+                color: #d1d5db;
+                border-top-color: #1e1b4b;
+              }
+              /* Hide JSON-LD script tags from visible output */
+              .blog-content script { display: none !important; }
              `}</style>
              
              <article

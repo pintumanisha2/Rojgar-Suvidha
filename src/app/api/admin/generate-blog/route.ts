@@ -36,7 +36,9 @@ export async function POST(req: Request) {
        - Clean HTML/Markdown Tables for Dates, Fees, and Vacancies.
        - Step-by-step "How to Apply" guide.
        - "Expert's Advice" section (unique, highly practical tips to pass the exam or fill the form correctly).
-       - FAQ Section (Include 3-4 commonly asked candidate questions with simple, accurate answers).
+       - FAQ Section (Include 4 FAQ items using EXACTLY this HTML accordion format — NOT plain h3/p):
+          <details id="faq"><summary><strong>Q: [Question]?</strong></summary><p>[Answer]</p></details>
+          Then add FAQPage JSON-LD schema at the very end: <script type="application/ld+json">{ "@context":"https://schema.org","@type":"FAQPage","mainEntity":[...] }</script>
     9. **FORMAT**: Output in clean Markdown.
     
     SOURCES TO ANALYZE:
