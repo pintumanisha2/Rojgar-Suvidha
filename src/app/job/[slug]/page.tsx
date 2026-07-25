@@ -328,13 +328,15 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
       <JobAbandonTracker jobTitle={job.title} jobSlug={job.slug} />
 
-      {/* Floating 3-Second Delayed Mobile Apply Action Bar */}
-      <FloatingApplyBar
-        applyLink={applyLink}
-        customApplyLink={customApplyLink}
-        jobTitle={job.title}
-        jobSlug={job.slug}
-      />
+      {/* Floating Apply Bar — hidden for news category */}
+      {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
+        <FloatingApplyBar
+          applyLink={applyLink}
+          customApplyLink={customApplyLink}
+          jobTitle={job.title}
+          jobSlug={job.slug}
+        />
+      )}
 
       <div className="bg-gray-50 dark:bg-[#000000] min-h-screen py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -351,9 +353,32 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           {/* Top Level Quick Action CTA Bar */}
           {(() => {
             const cat = (job.category || "").toLowerCase().trim();
+            const isNews = cat.includes("news");
             const isAdmit = cat.includes("admit");
             const isResult = cat.includes("result");
             const isKey = cat.includes("answer") || cat.includes("key");
+
+            // News posts — show a simple source/share bar instead of apply actions
+            if (isNews) {
+              return (
+                <div className="bg-white dark:bg-zinc-950 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">📰 Latest News Update</h2>
+                    <p className="text-xs text-gray-500 font-medium">Sourced from official notifications. Always verify from official website before taking action.</p>
+                  </div>
+                  {job.official_link && (
+                    <a
+                      href={job.official_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 text-center shrink-0"
+                    >
+                      Official Source ↗
+                    </a>
+                  )}
+                </div>
+              );
+            }
 
             let barTitle = "Quick Application Actions";
             let barDesc = "Direct official application link & premium form filling service.";
@@ -427,7 +452,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
                 
                 <div className="relative z-10">
-                  {/* Real-time Dynamic Status Banner Box */}
+                  {/* Real-time Dynamic Status Banner Box — hidden for news */}
+                  {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
                   <div className={`mb-4 p-3.5 rounded-xl border flex items-center justify-between gap-3 ${pageBadge.bg}`}>
                     <div className="flex items-center gap-2.5">
                       <span className={`w-2.5 h-2.5 rounded-full ${pageBadge.dot} shrink-0`} />
@@ -456,6 +482,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                       </span>
                     )}
                   </div>
+                  )} {/* end news status banner hide */}
 
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <div className="inline-flex items-center gap-2">
@@ -500,22 +527,27 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
           <SocialProofBadges slug={job.slug} lastDate={lastDate} category={job.category} />
 
-          {/* 🔥 FOMO Bar — live Apply For Me count + live viewers for this job */}
-          <ApplyFomoBar
-            identifier={job.slug}
-            category={job.category || "default"}
-            lastDate={lastDate}
-          />
+          {/* FOMO Bar — hidden for news category */}
+          {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
+            <ApplyFomoBar
+              identifier={job.slug}
+              category={job.category || "default"}
+              lastDate={lastDate}
+            />
+          )}
           
-          <MatchScoreCard job={{
-            title: job.title,
-            category: job.category,
-            education: job.eligibility || job.education || job.content,
-            ageLimit: job.age_limit || job.age_details || job.content,
-            last_date: lastDate,
-            appFeeGen: job.application_fee || job.fee_detail || job.content,
-            totalPosts: job.total_posts || job.total_vacancy
-          }} />
+          {/* Match Score Card — hidden for news */}
+          {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
+            <MatchScoreCard job={{
+              title: job.title,
+              category: job.category,
+              education: job.eligibility || job.education || job.content,
+              ageLimit: job.age_limit || job.age_details || job.content,
+              last_date: lastDate,
+              appFeeGen: job.application_fee || job.fee_detail || job.content,
+              totalPosts: job.total_posts || job.total_vacancy
+            }} />
+          )}
 
           <PushSubscribeWidget delay={20000} />
 
