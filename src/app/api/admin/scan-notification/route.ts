@@ -964,11 +964,40 @@ Do NOT build these tables yourself.
 [Numbered steps using <ol>. Then genuine warm Apply For Me pitch: "Here's something I always tell people — every year, good candidates get rejected not because they weren't eligible, but because of small mistakes in the form. Wrong photo size. Wrong category code. Signature issues. That's why the Apply For Me service at Rojgar Suvidha exists. You send your documents, our team fills the form correctly, double-checks everything, and submits it."]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword || meta.examName}</h2>
-[Exactly 6 FAQs using details/summary tags. Each answer 50-80 words, direct. Use:
-<details style='margin-bottom:1rem;border:1px solid #e5e7eb;border-radius:8px;padding:16px 20px;background:#f8fafc;'>
-<summary style='font-weight:700;color:#4f46e5;cursor:pointer;font-size:1rem;list-style:none;'>Question here?</summary>
-<p style='margin-top:10px;color:#475569;line-height:1.8;font-size:0.95rem;'>Direct answer. Then explanation. 50-80 words.</p>
-</details>]
+
+CRITICAL INSTRUCTION — FAQ FORMAT IS NON-NEGOTIABLE:
+You MUST output EXACTLY 6 FAQ items using this EXACT HTML structure. Do NOT write questions and answers as plain text paragraphs. Do NOT use <p> tags for questions. Do NOT use <ul> or <li> for FAQ. ONLY use <details> and <summary> tags as shown below:
+
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
+<summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Write the FAQ question here — something a real student would search on Google] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
+<p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[Write a direct, 50-70 word answer here. No fluff. Factual. Based on the official notification.]</p>
+</details>
+
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
+<summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[FAQ question 2] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
+<p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[Answer 2 — 50-70 words]</p>
+</details>
+
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
+<summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[FAQ question 3] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
+<p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[Answer 3 — 50-70 words]</p>
+</details>
+
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
+<summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[FAQ question 4] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
+<p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[Answer 4 — 50-70 words]</p>
+</details>
+
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
+<summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[FAQ question 5] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
+<p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[Answer 5 — 50-70 words]</p>
+</details>
+
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
+<summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[FAQ question 6] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
+<p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[Answer 6 — 50-70 words]</p>
+</details>
+
 
 <!-- Closing CTA -->
 <div style='${ctaStyle}border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
@@ -1069,7 +1098,8 @@ Then 2 paragraphs on consequences of violations.]
 [6-7 rich paragraphs of practical advice — sleep routine, revision strategy, reaching exam hall 45 mins early, managing time.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 detailed FAQs using details/summary tags. 60-80 words per answer.]
+MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>
 
 <!-- Official Download CTA -->
 <div style='background:${cfg.theme.gradient};border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
@@ -1109,7 +1139,8 @@ STRUCTURE (Write at least 1,200 words):
 [4 honest, warm paragraphs. Re-attempt strategy. Other active job notifications.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary tags.]
+MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>
 
 <!-- Result CTA -->
 <div style='background:${cfg.theme.gradient};border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
@@ -1147,7 +1178,8 @@ STRUCTURE (Write at least 1,200 words):
 [4-5 paragraphs. Category-wise cutoff prediction HTML table.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary tags.]
+MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>
 
 <!-- Answer Key CTA -->
 <div style='background:${cfg.theme.gradient};border-radius:12px;padding:24px;margin-top:2rem;text-align:center;'>
@@ -1185,7 +1217,8 @@ STRUCTURE:
 [3-4 paragraphs. What to expect next.]
 
 <h2 id='faq'>Frequently Asked Questions</h2>
-[6 FAQs using details/summary tags.]`,
+MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>`,
 
     admission: `Write a complete SEO-optimized human blog post about ADMISSION in HTML.
 PRIMARY KEYWORD: "${meta.primaryKeyword || meta.title}"
@@ -1214,7 +1247,8 @@ STRUCTURE:
 [4-5 paragraphs detailing selection rounds.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-[6 FAQs using details/summary tags.]`
+MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+<details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>`
   };
 
   const selectedPrompt = prompts[normalizedCategory] || prompts["news"];
