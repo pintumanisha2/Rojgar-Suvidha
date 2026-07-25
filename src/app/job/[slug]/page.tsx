@@ -679,31 +679,78 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
              </div>
           </div>
 
-          {/* ── Important Links (moved up: right after article, before banner) ── */}
+          {/* ── Important Links — Premium Highlighted Section ── */}
           {job.links && job.links.filter((l: any) => !l.label.toLowerCase().includes('apply for me')).length > 0 && (
-            <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 overflow-hidden shadow-sm mt-6">
-              <div className="bg-indigo-50 dark:bg-zinc-900/50 px-5 py-4 border-b border-gray-200 dark:border-zinc-900 flex items-center gap-2">
-                <LinkIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <h2 className="font-bold text-gray-900 dark:text-white">Important Links</h2>
+            <div id="important-links" className="rounded-2xl overflow-hidden shadow-lg border-2 border-indigo-200 dark:border-indigo-900/60 mt-6">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3">
+                <div className="bg-white/20 rounded-lg p-1.5">
+                  <LinkIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-black text-white text-base tracking-wide">Important Links</h2>
+                  <p className="text-indigo-200 text-xs font-medium">Official direct links — verified & updated</p>
+                </div>
+                <span className="ml-auto bg-white/20 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse">
+                  🔴 Live
+                </span>
               </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {job.links.filter((l: any) => !l.label.toLowerCase().includes('apply for me')).map((link: any, idx: number) => (
-                  <div key={idx} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors">
-                    <span className="font-bold text-gray-900 dark:text-gray-200 text-sm">{link.label}</span>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors w-full sm:w-auto ${
-                        link.label.toLowerCase().includes('apply') || link.label.toLowerCase().includes('online')
-                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                          : 'bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {link.label.toLowerCase().includes('apply') ? 'Click Here' : <LinkIcon className="w-4 h-4" />}
-                    </a>
-                  </div>
-                ))}
+
+              {/* Links List */}
+              <div className="bg-white dark:bg-zinc-950 divide-y divide-gray-100 dark:divide-zinc-900">
+                {job.links
+                  .filter((l: any) => !l.label.toLowerCase().includes('apply for me'))
+                  .map((link: any, idx: number) => {
+                    const lbl = (link.label || "").toLowerCase();
+                    
+                    // Color-code based on link type
+                    const isApply = lbl.includes("apply") || lbl.includes("online form") || lbl.includes("registration");
+                    const isDownload = lbl.includes("pdf") || lbl.includes("download") || lbl.includes("notification") || lbl.includes("syllabus");
+                    const isResult = lbl.includes("result") || lbl.includes("merit") || lbl.includes("scorecard");
+                    const isAdmit = lbl.includes("admit") || lbl.includes("hall ticket");
+                    const isAnswer = lbl.includes("answer") || lbl.includes("key") || lbl.includes("objection");
+
+                    const btnClass = isApply
+                      ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 dark:shadow-indigo-900/20"
+                      : isDownload
+                      ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-200 dark:shadow-orange-900/20"
+                      : isResult
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 dark:shadow-emerald-900/20"
+                      : isAdmit
+                      ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200 dark:shadow-amber-900/20"
+                      : isAnswer
+                      ? "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200 dark:shadow-purple-900/20"
+                      : "bg-gray-800 hover:bg-gray-900 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white";
+
+                    const btnIcon = isApply ? "→" : isDownload ? "↓" : isResult ? "✓" : isAdmit ? "↗" : "↗";
+
+                    // Button label: use link.button_text if set, else use link.label as button text
+                    const buttonLabel = link.button_text || link.label;
+
+                    return (
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors group">
+                        {/* Link title */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isApply ? "bg-indigo-500" : isDownload ? "bg-orange-500" : isResult ? "bg-emerald-500" : isAdmit ? "bg-amber-500" : isAnswer ? "bg-purple-500" : "bg-gray-400"}`} />
+                          <span className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-snug">{link.label}</span>
+                        </div>
+                        {/* CTA Button — shows admin label text */}
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl text-xs font-black transition-all hover:-translate-y-0.5 shadow-sm w-full sm:w-auto shrink-0 ${btnClass}`}
+                        >
+                          {buttonLabel} <span>{btnIcon}</span>
+                        </a>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Footer note */}
+              <div className="bg-indigo-50 dark:bg-indigo-950/30 px-5 py-2.5 text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold border-t border-indigo-100 dark:border-indigo-900/40">
+                ⚠️ Always verify links from the official website before applying.
               </div>
             </div>
           )}
