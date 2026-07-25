@@ -288,7 +288,7 @@ export default function AIWriterPage() {
     const publishTimeout = setTimeout(() => controller.abort(), 15000);
     try {
       // ✅ FIX: Use blog_content column (not content) — matches /job/[slug]/page.tsx
-      const { error } = await supabase.from("jobs").insert([{
+      const { data: insertedJob, error } = await supabase.from("jobs").insert([{
         title: result.title,
         slug: publishSlug,
         blog_content: result.blogHtml,          // ← FIXED: was "content"
@@ -304,11 +304,24 @@ export default function AIWriterPage() {
         links: result.links || null,
         important_dates: result.important_dates || null,
         created_at: new Date().toISOString(),
-      }]);
+      }]).select("id").single();
       clearTimeout(publishTimeout);
       if (error) throw error;
       setPublishStatus("success");
       localStorage.removeItem(DRAFT_KEY);
+      const newJobId = insertedJob?.id;
+
+      // 🌐 AUTO-TRANSLATION: Background translate to Hindi, Bengali, Urdu
+      if (publishPostStatus === "active" && newJobId) {
+        fetch("/api/admin/translate-blog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: newJobId }),
+        })
+          .then(r => r.json())
+          .then(d => console.log("🌐 Auto-Translation Result:", d.summary))
+          .catch(e => console.warn("Auto-translation failed:", e));
+      }
 
       // 🚀 AUTO-INDEXING: Ping IndexNow + Google Sitemap for fast crawling
       if (publishPostStatus === "active") {
@@ -448,6 +461,10 @@ export default function AIWriterPage() {
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shrink-0" />
                         <span><strong>Push Notification:</strong> Subscribers ko bhej diya</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                        <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse shrink-0" />
+                        <span><strong>🌐 Hindi / Bengali / Urdu:</strong> Background mein translate ho raha hai (~2-3 min)</span>
                       </div>
                     </div>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Google mein manually index ke liye GSC → URL Inspection → Request Indexing bhi use kar sakte hain</p>

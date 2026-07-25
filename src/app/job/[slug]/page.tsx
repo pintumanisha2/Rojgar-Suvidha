@@ -20,6 +20,8 @@ import PushSubscribeWidget from "@/components/ui/PushSubscribeWidget";
 import ApplyFomoBar from "@/components/ui/ApplyFomoBar";
 import FloatingApplyBar from "@/components/ui/FloatingApplyBar";
 import { getJobStatusBadge } from "@/lib/jobStatusHelper";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
+import { buildHreflangAlternates, SUPPORTED_LANGUAGES, LANGUAGE_CONFIG } from "@/lib/i18n";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -126,11 +128,16 @@ export async function generateMetadata(
     job.category, "rojgar suvidha",
   ];
 
+  const hreflang = buildHreflangAlternates(slug);
+
   return {
     title,
     description,
     keywords,
-    alternates: { canonical: `${BASE_URL}/job/${slug}` },
+    alternates: {
+      canonical: `${BASE_URL}/job/${slug}`,
+      languages: hreflang.languages,
+    },
     openGraph: {
       title,
       description,
@@ -457,8 +464,20 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                       </span>
                       <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{job.category.replace("-", " ")}</span>
                     </div>
-                    <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-zinc-800">
-                      <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
+                    <div className="flex items-center gap-2">
+                      {/* 🌐 Language Switcher */}
+                      <LanguageSwitcher
+                        slug={job.slug}
+                        currentLang="en"
+                        availableTranslations={
+                          SUPPORTED_LANGUAGES.filter(l =>
+                            !!(job as any)[`blog_content_${l}`]
+                          )
+                        }
+                      />
+                      <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-zinc-800">
+                        <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
+                      </div>
                     </div>
                   </div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-3 leading-tight">
