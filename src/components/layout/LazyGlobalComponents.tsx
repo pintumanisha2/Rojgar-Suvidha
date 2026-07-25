@@ -17,11 +17,11 @@ const FloatingInbox = dynamic(() => import("@/components/layout/FloatingInbox"),
 export default function LazyGlobalComponents() {
   const pathname = usePathname() || "";
 
-  // Private job section: private-jobs, employer, job pages
+  // Private job section: ONLY private-jobs and employer pages
+  // NOTE: /job/ is for GOVERNMENT job blogs — do NOT include here
   const isPrivateJobsSection = 
     pathname.startsWith("/private-jobs") || 
-    pathname.startsWith("/employer") ||
-    pathname.startsWith("/job/");
+    pathname.startsWith("/employer");
 
   // Government job section: everything that is NOT private jobs / employer
   const isGovtJobsSection = !isPrivateJobsSection;
