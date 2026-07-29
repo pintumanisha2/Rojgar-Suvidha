@@ -68,10 +68,7 @@ function ApplyContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successTrackingId, setSuccessTrackingId] = useState("");
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [documentFiles, setDocumentFiles] = useState<Record<string, File>>({});
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
-  const [lockerDocs, setLockerDocs] = useState<Record<string, string>>({}); // Digital locker pre-fills
 
   useEffect(() => {
     const fetchForm = async () => {
