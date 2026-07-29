@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, getStoredSession } from "@/lib/supabase";
 import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import dynamic from "next/dynamic";
