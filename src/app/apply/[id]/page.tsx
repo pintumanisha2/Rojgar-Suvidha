@@ -69,6 +69,7 @@ function ApplyContent() {
   const [submitError, setSubmitError] = useState("");
   const [successTrackingId, setSuccessTrackingId] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
   const handleCopy = () => {
