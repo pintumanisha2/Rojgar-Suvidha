@@ -68,3 +68,32 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: "pkce",
   },
 });
+
+/**
+ * Synchronously checks localStorage for a valid Supabase auth token.
+ * Prevents unnecessary page reloads and redirect loops when user is already logged in.
+ */
+export function getStoredSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.access_token && parsed?.user) {
+            // Valid token or within 10-min grace period
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            if (!parsed.expires_at || parsed.expires_at > nowSeconds - 600) {
+              return parsed;
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error reading stored session:", e);
+  }
+  return null;
+}

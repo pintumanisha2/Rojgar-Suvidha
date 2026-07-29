@@ -181,8 +181,7 @@ function LoginContent() {
   const redirectUrl = searchParams.get("redirect") || "/dashboard";
 
   useEffect(() => {
-    // Fast-path: read localStorage synchronously — returning users get redirected
-    // before any Supabase network call, with zero visible flicker.
+    // Fast-path: read localStorage synchronously — returning users get redirected smoothly
     let foundSession = false;
     try {
       for (let i = 0; i < localStorage.length; i++) {
@@ -201,17 +200,17 @@ function LoginContent() {
     } catch {}
 
     if (foundSession) {
-      window.location.href = redirectUrl;
+      router.replace(redirectUrl);
       return;
     }
 
-    // Slow-path: verify with server (for cases where token was revoked remotely)
+    // Slow-path: verify with server
     let active = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (active && session) window.location.href = redirectUrl;
+      if (active && session) router.replace(redirectUrl);
     });
     return () => { active = false; };
-  }, [redirectUrl]);
+  }, [redirectUrl, router]);
 
   const toast = useToast();
 

@@ -68,14 +68,10 @@ function ApplyContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successTrackingId, setSuccessTrackingId] = useState("");
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(successTrackingId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [documentFiles, setDocumentFiles] = useState<Record<string, File>>({});
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [lockerDocs, setLockerDocs] = useState<Record<string, string>>({}); // Digital locker pre-fills
 
   useEffect(() => {
     const fetchForm = async () => {
@@ -84,7 +80,7 @@ function ApplyContent() {
         return;
       }
       try {
-        const { data, error } = await supabase.from("custom_forms").select("*").eq("id", id).single();
+        const { data, error } = await supabase.from("custom_forms").select("*").eq("id", id).maybeSingle();
         if (data) {
           setFormConfig(data);
           
@@ -96,76 +92,78 @@ function ApplyContent() {
           }
         }
         
-        // Check Session & Fetch Locker Documents
-        const { data: { session } } = await supabase.auth.getSession();
+        // Fast-path: Check stored session synchronously from localStorage
+        const stored = getStoredSession();
+        let sessionUser = stored?.user || null;
+        let sessionToken = stored?.access_token || "";
+
+        if (!sessionUser) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            sessionUser = session.user;
+            sessionToken = session.access_token;
+          }
+        }
         
-        if (!session) {
+        if (!sessionUser) {
           // Force login before applying, with exact redirect parameter
           const fullUrl = window.location.pathname + window.location.search;
-          window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
+          router.replace(`/login?redirect=${encodeURIComponent(fullUrl)}`);
           return;
         }
 
-        if (session) {
-          setToken(session.access_token);
-          setUserId(session.user.id);
-          // Auto-fill profile data
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("full_name, mobile_number, father_name, mother_name, date_of_birth, gender, category")
-            .eq("id", session.user.id)
-            .single();
+        setToken(sessionToken);
+        setUserId(sessionUser.id);
 
-          if (profileData) {
-            setFormData(prev => ({
-              ...prev,
-              fullName: profileData.full_name || prev.fullName,
-              fatherName: profileData.father_name || prev.fatherName,
-              motherName: profileData.mother_name || prev.motherName,
-              phone: profileData.mobile_number || prev.phone,
-              email: session.user.email || prev.email,
-              dob: profileData.date_of_birth || prev.dob,
-              gender: profileData.gender || prev.gender,
-              category: profileData.category || prev.category,
-            }));
+        // Fetch profile data & locker docs in parallel (uses maybeSingle)
+        const [profileRes, lockerRes] = await Promise.allSettled([
+          supabase.from("profiles").select("full_name, mobile_number, father_name, mother_name, date_of_birth, gender, category").eq("id", sessionUser.id).maybeSingle(),
+          supabase.from("user_locker").select("documents").eq("user_id", sessionUser.id).maybeSingle()
+        ]);
 
-            // Fetch and prefill Aadhar number securely
-            try {
-              const aadharRes = await fetch("/api/user/aadhar", {
-                headers: { "Authorization": `Bearer ${session.access_token}` }
-              });
-              if (aadharRes.ok) {
-                const aadharData = await aadharRes.json();
-                if (aadharData.aadhar) {
-                  setFormData(prev => ({ ...prev, aadhar: aadharData.aadhar }));
-                }
-              }
-            } catch (e) {
-              console.error("Failed to auto-fill Aadhar:", e);
-            }
-          }
+        if (profileRes.status === "fulfilled" && profileRes.value?.data) {
+          const profileData = profileRes.value.data;
+          setFormData(prev => ({
+            ...prev,
+            fullName: profileData.full_name || prev.fullName,
+            fatherName: profileData.father_name || prev.fatherName,
+            motherName: profileData.mother_name || prev.motherName,
+            phone: profileData.mobile_number || prev.phone,
+            email: sessionUser.email || prev.email,
+            dob: profileData.date_of_birth || prev.dob,
+            gender: profileData.gender || prev.gender,
+            category: profileData.category || prev.category,
+          }));
 
-          // Fetch Locker Documents
-          const { data: lockerData } = await supabase
-            .from("user_locker")
-            .select("documents")
-            .eq("user_id", session.user.id)
-            .single();
-
-          if (lockerData && lockerData.documents) {
-            setLockerDocs(lockerData.documents);
-          }
-
-          // Check for saved draft in sessionStorage
+          // Fetch Aadhar securely
           try {
-            const draft = sessionStorage.getItem(`form_draft_${id}`);
-            if (draft) {
-              const parsedDraft = JSON.parse(draft);
-              setFormData(prev => ({ ...prev, ...parsedDraft }));
+            const aadharRes = await fetch("/api/user/aadhar", {
+              headers: { "Authorization": `Bearer ${sessionToken}` }
+            });
+            if (aadharRes.ok) {
+              const aadharData = await aadharRes.json();
+              if (aadharData.aadhar) {
+                setFormData(prev => ({ ...prev, aadhar: aadharData.aadhar }));
+              }
             }
           } catch (e) {
-            console.error("Failed to parse form draft:", e);
+            console.error("Failed to auto-fill Aadhar:", e);
           }
+        }
+
+        if (lockerRes.status === "fulfilled" && lockerRes.value?.data?.documents) {
+          setLockerDocs(lockerRes.value.data.documents);
+        }
+
+        // Check for saved draft in sessionStorage
+        try {
+          const draft = sessionStorage.getItem(`form_draft_${id}`);
+          if (draft) {
+            const parsedDraft = JSON.parse(draft);
+            setFormData(prev => ({ ...prev, ...parsedDraft }));
+          }
+        } catch (e) {
+          console.error("Failed to parse form draft:", e);
         }
 
       } catch (error) {
@@ -175,7 +173,7 @@ function ApplyContent() {
       }
     };
     fetchForm();
-  }, [id]);
+  }, [id, router]);
 
   // Save form draft to sessionStorage automatically on change
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, getStoredSession } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud, AlertTriangle } from "lucide-react";
 import imageCompression from "browser-image-compression";
@@ -246,42 +246,56 @@ function ESuvidhaApplyContent() {
 
     const fetchUser = async () => {
       try {
-        // ⏱️ Timeout: agar Supabase 8 second mein respond nahi kare → login pe redirect
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Auth check timed out")), 8000)
-        );
+        // Fast-path: Check stored session synchronously from localStorage
+        const stored = getStoredSession();
+        let sessionUser = stored?.user || null;
+        let sessionToken = stored?.access_token || "";
 
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+        // If no stored session in localStorage, verify with Supabase async getSession
+        if (!sessionUser) {
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Auth check timed out")), 5000)
+          );
+          const res = await Promise.race([sessionPromise, timeoutPromise]).catch(() => null) as any;
+          if (res?.data?.session) {
+            sessionUser = res.data.session.user;
+            sessionToken = res.data.session.access_token;
+          }
+        }
 
-        if (!session) {
+        // If user is truly not logged in, redirect smoothly to login
+        if (!sessionUser) {
           setLoading(false);
           const fullUrl = window.location.pathname + window.location.search;
-          window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
+          router.replace(`/login?redirect=${encodeURIComponent(fullUrl)}`);
           return;
         }
-        setUser(session.user);
-        setToken(session.access_token);
-        const { data: profileData } = await supabase
-          .from("profiles").select("*").eq("id", session.user.id).single();
-        setProfile(profileData);
-        if (profileData?.full_name) setApplicantName(profileData.full_name);
-        if (profileData?.mobile_number) setApplicantPhone(profileData.mobile_number);
 
-        // Fetch Digital Locker documents
-        const { data: lockerData } = await supabase
-          .from("user_locker")
-          .select("documents")
-          .eq("user_id", session.user.id)
-          .single();
-        if (lockerData?.documents) setLockerDocs(lockerData.documents);
-      } catch (err) {
-        console.error("Auth error, redirecting to login:", err);
-        // Kisi bhi error par — network, timeout, supabase — login pe bhejo
+        // User is logged in — set active user state immediately so page loads fast!
+        setUser(sessionUser);
+        setToken(sessionToken);
         setLoading(false);
-        const fullUrl = window.location.pathname + window.location.search;
-        window.location.href = `/login?redirect=${encodeURIComponent(fullUrl)}`;
-        return;
+
+        // Parallel fetch for profile & locker documents (uses maybeSingle to prevent single-row error crashes)
+        const [profileRes, lockerRes] = await Promise.allSettled([
+          supabase.from("profiles").select("*").eq("id", sessionUser.id).maybeSingle(),
+          supabase.from("user_locker").select("documents").eq("user_id", sessionUser.id).maybeSingle()
+        ]);
+
+        if (profileRes.status === "fulfilled" && profileRes.value?.data) {
+          const pData = profileRes.value.data;
+          setProfile(pData);
+          if (pData?.full_name) setApplicantName(pData.full_name);
+          if (pData?.mobile_number) setApplicantPhone(pData.mobile_number);
+        }
+
+        if (lockerRes.status === "fulfilled" && lockerRes.value?.data?.documents) {
+          setLockerDocs(lockerRes.value.data.documents);
+        }
+
+      } catch (err) {
+        console.error("Auth fetch error:", err);
       } finally {
         setLoading(false);
       }
