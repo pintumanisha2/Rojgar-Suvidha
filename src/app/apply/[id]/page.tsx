@@ -68,7 +68,16 @@ function ApplyContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [successTrackingId, setSuccessTrackingId] = useState("");
+  const [copied, setCopied] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+
+  const handleCopy = () => {
+    if (successTrackingId) {
+      navigator.clipboard.writeText(successTrackingId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   useEffect(() => {
     const fetchForm = async () => {
