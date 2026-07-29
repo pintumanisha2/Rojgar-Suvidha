@@ -1,96 +1,64 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
+import Razorpay from "razorpay";
+
+// Initialize Razorpay instance
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
 export async function POST(req: Request) {
   try {
-    const { amount, customerName, customerPhone, customerEmail, formId, orderId: clientOrderId, extraParams } = await req.json();
+    const {
+      amount,
+      customerName,
+      customerEmail,
+      customerPhone,
+      formId,
+      orderId: clientOrderId,
+    } = await req.json();
 
-    const merchantId = process.env.PHONEPE_MERCHANT_ID;
-    const saltKey = process.env.PHONEPE_SALT_KEY;
-    const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
-    const environment = process.env.PHONEPE_ENV || "production";
-
-    if (!merchantId || !saltKey) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
       return NextResponse.json(
-        { error: "PhonePe credentials are missing in environment variables." },
+        { error: "Razorpay credentials missing. Please check environment variables." },
         { status: 500 }
       );
     }
 
-    const orderId = clientOrderId || `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    const proto = req.headers.get("x-forwarded-proto") || "https";
-    const host = req.headers.get("host") || "www.rojgarsuvidha.com";
-    
-    let redirectPath = `/apply/${formId}`;
-    if (formId && formId.startsWith("esuvidha-")) {
-      const serviceId = formId.replace("esuvidha-", "");
-      redirectPath = `/e-suvidha/apply/${serviceId}`;
-    } else if (formId === "apply-for-me" || formId === "apply_for_me") {
-      redirectPath = `/apply-for-me`;
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: "Invalid amount." }, { status: 400 });
     }
 
-    let extraQuery = "";
-    if (extraParams) {
-      const queryParts = Object.entries(extraParams)
-        .filter(([_, v]) => v !== undefined && v !== null)
-        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
-      if (queryParts.length > 0) {
-        extraQuery = `&${queryParts.join("&")}`;
-      }
-    }
+    // Generate a unique receipt ID
+    const receiptId = clientOrderId || `rcpt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    const redirectUrl = `${proto}://${host}${redirectPath}?order_id=${orderId}${extraQuery}`;
-    const callbackUrl = `${proto}://${host}/api/payment/phonepe-webhook`;
-
-    const payload = {
-      merchantId,
-      merchantTransactionId: orderId,
-      merchantUserId: `user_${Date.now()}`,
-      amount: Math.round(Number(amount) * 100), // convert Rs to paise
-      redirectUrl,
-      redirectMode: "REDIRECT",
-      callbackUrl,
-      mobileNumber: customerPhone ? customerPhone.replace(/\D/g, "").slice(-10) : "9999999999",
-      paymentInstrument: {
-        type: "PAY_PAGE",
+    // Create Razorpay order (amount is in paise = Rs * 100)
+    const order = await razorpay.orders.create({
+      amount: Math.round(Number(amount) * 100), // Rs → paise
+      currency: "INR",
+      receipt: receiptId.substring(0, 40), // Razorpay receipt max 40 chars
+      notes: {
+        customer_name: customerName || "",
+        customer_email: customerEmail || "",
+        customer_phone: customerPhone || "",
+        form_id: formId || "",
       },
-    };
-
-    const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-    const stringToHash = base64Payload + "/pg/v1/pay" + saltKey;
-    const sha256 = crypto.createHash("sha256").update(stringToHash).digest("hex");
-    const checksum = sha256 + "###" + saltIndex;
-
-    const baseUrl = environment === "production"
-      ? "https://api.phonepe.com/apis/hermes/pg/v1/pay"
-      : "https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay";
-
-    const response = await fetch(baseUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum,
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ request: base64Payload }),
     });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      console.error("PhonePe API Error:", data);
-      return NextResponse.json({ error: data.message || "Failed to create PhonePe payment" }, { status: response.status || 400 });
-    }
 
     return NextResponse.json({
       success: true,
-      payment_session_id: orderId, // compatibility fallback
-      redirectUrl: data.data.instrumentResponse.redirectInfo.url,
-      order_id: orderId
+      order_id: order.id,         // Razorpay order ID (e.g. order_XXXXXXXXX)
+      receipt: receiptId,          // Our internal receipt/tracking ID
+      amount: order.amount,        // In paise
+      currency: order.currency,
+      key_id: process.env.RAZORPAY_KEY_ID,
     });
+
   } catch (error: any) {
-    console.error("PhonePe Order Exception:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Razorpay Order Creation Error:", error);
+    return NextResponse.json(
+      { error: error?.error?.description || error.message || "Failed to create payment order." },
+      { status: 500 }
+    );
   }
 }

@@ -151,63 +151,129 @@ export default function NewJobPage() {
 
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
 
-  // Auto-save to LocalStorage
+  // Comprehensive Auto-save to LocalStorage
   useEffect(() => {
     // 1. Check for AI generated data from Super Writer
     const aiData = localStorage.getItem("ai_generated_job");
     if (aiData && window.location.search.includes("source=ai")) {
       try {
         const data = JSON.parse(aiData);
-        setTitle(data.title || "");
-        setBlogContent(data.blogHtml || "");
-        setCategory(data.category || "latest-jobs");
-        setAppFee(data.appFee || "");
-        setAgeLimit(data.ageLimit || "");
-        setEducation(data.education || "");
-        setTotalPosts(data.totalPosts || "");
-        setLastDate(data.lastDate || "");
-        
-        // SEO fields
+        if (data.title) setTitle(data.title);
+        if (data.blogHtml) setBlogContent(data.blogHtml);
+        if (data.category) setCategory(data.category);
+        if (data.appFee) setAppFee(data.appFee);
+        if (data.ageLimit) setAgeLimit(data.ageLimit);
+        if (data.education) setEducation(data.education);
+        if (data.totalPosts) setTotalPosts(data.totalPosts);
+        if (data.lastDate) setLastDate(data.lastDate);
         if (data.metaDesc) setMetaDesc(data.metaDesc);
         if (data.shortInfo) setShortInfo(data.shortInfo);
-        
-        // Clean up AI data after use
+
+        // Immediately back up AI data to blog_draft so it survives page reloads
+        const initialDraft = {
+          title: data.title || "",
+          category: data.category || "latest-jobs",
+          status: "active",
+          stateCode: "",
+          tag: "",
+          lastDate: data.lastDate || "",
+          shortInfo: data.shortInfo || "",
+          metaDesc: data.metaDesc || "",
+          bannerUrl: "",
+          appFee: data.appFee || "",
+          ageLimit: data.ageLimit || "",
+          education: data.education || "",
+          totalPosts: data.totalPosts || "",
+          blogContent: data.blogHtml || "",
+          applyForMeLink: "",
+          links: [{ label: "Apply Online", url: "" }, { label: "Download Notification", url: "" }],
+          savedAt: Date.now()
+        };
+        localStorage.setItem("blog_draft", JSON.stringify(initialDraft));
         localStorage.removeItem("ai_generated_job");
+        toast.success("AI content loaded into editor & saved to draft!", { id: "ai-draft-loaded" });
         return; 
       } catch (e) {
         console.error("AI Data Parse Error:", e);
       }
     }
 
-    // 2. Existing draft logic
+    // 2. Draft recovery logic for page refresh
     const saved = localStorage.getItem("blog_draft");
     if (saved) {
-      const data = JSON.parse(saved);
-      if (confirm("Draft content found. Restore it?")) {
-        setTitle(data.title || "");
-        setBlogContent(data.blogContent || "");
-        setCategory(data.category || "latest-jobs");
+      try {
+        const data = JSON.parse(saved);
+        if (data.title || data.blogContent || data.metaDesc || data.shortInfo) {
+          if (data.title) setTitle(data.title);
+          if (data.category) setCategory(data.category);
+          if (data.status) setStatus(data.status);
+          if (data.stateCode) setStateCode(data.stateCode);
+          if (data.tag) setTag(data.tag);
+          if (data.lastDate) setLastDate(data.lastDate);
+          if (data.shortInfo) setShortInfo(data.shortInfo);
+          if (data.metaDesc) setMetaDesc(data.metaDesc);
+          if (data.bannerUrl) setBannerUrl(data.bannerUrl);
+          if (data.appFee) setAppFee(data.appFee);
+          if (data.ageLimit) setAgeLimit(data.ageLimit);
+          if (data.education) setEducation(data.education);
+          if (data.totalPosts) setTotalPosts(data.totalPosts);
+          if (data.blogContent) setBlogContent(data.blogContent);
+          if (data.applyForMeLink) setApplyForMeLink(data.applyForMeLink);
+          if (data.links && Array.isArray(data.links)) setLinks(data.links);
+          toast.success("Restored your saved draft & SEO details!", { id: "draft-restored" });
+        }
+      } catch (e) {
+        console.error("Error restoring draft:", e);
       }
     }
   }, []);
 
+  // Auto-save whenever ANY field changes
   useEffect(() => {
+    if (!title && !blogContent && !metaDesc && !shortInfo) return;
     const timeout = setTimeout(() => {
-      localStorage.setItem("blog_draft", JSON.stringify({ title, blogContent, category }));
-    }, 2000);
+      const draftObj = {
+        title, category, status, stateCode, tag, lastDate,
+        shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education,
+        totalPosts, blogContent, applyForMeLink, links, savedAt: Date.now()
+      };
+      localStorage.setItem("blog_draft", JSON.stringify(draftObj));
+    }, 1000);
     return () => clearTimeout(timeout);
-  }, [title, blogContent, category]);
+  }, [title, category, status, stateCode, tag, lastDate, shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education, totalPosts, blogContent, applyForMeLink, links]);
 
   const slugify = (text: string) => text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const handleSave = async (isDraft = false) => {
-    if (!title.trim()) { setError("Title likhna zaroori hai."); return; }
+    if (!title.trim()) {
+      toast.error("Please enter a Post Title.");
+      setError("Title likhna zaroori hai.");
+      return;
+    }
     if (isDraft) setSavingDraft(true); else setSaving(true);
     setError(null);
 
+    let baseSlug = slugify(title);
+    let finalSlug = baseSlug;
+
+    // Check slug uniqueness to prevent duplicate key DB error
+    try {
+      const { data: existing } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("slug", baseSlug)
+        .maybeSingle();
+
+      if (existing) {
+        finalSlug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+      }
+    } catch (err) {
+      console.warn("Slug uniqueness check skipped:", err);
+    }
+
     const payload: any = {
       title: title.trim(),
-      slug: slugify(title),
+      slug: finalSlug,
       category,
       status: isDraft ? "draft" : (userRole === 'content_writer' ? "pending_approval" : status),
       state_code: stateCode || null,
@@ -226,14 +292,19 @@ export default function NewJobPage() {
       
       if (dbErr) {
         console.error("Database Insert Error:", dbErr);
-        setError(`Database Error: ${dbErr.message}. Check if columns 'short_info' and 'meta_description' exist in your Supabase 'jobs' table.`);
+        toast.error(`Save failed: ${dbErr.message}`);
+        setError(`Database Error: ${dbErr.message}`);
       } else {
         localStorage.removeItem("blog_draft");
-        window.location.href = "/admin/jobs"; // Hard redirect to avoid UI freezing
+        toast.success(isDraft ? "Draft saved successfully!" : "Post published successfully!");
+        setTimeout(() => {
+          window.location.href = "/admin/jobs";
+        }, 500);
       }
     } catch (err: any) {
       console.error("Unexpected Save Error:", err);
-      setError("An unexpected error occurred while saving. Please check your internet or database columns.");
+      toast.error("An unexpected error occurred while saving.");
+      setError("An unexpected error occurred while saving. Please check your internet connection.");
     } finally {
       setSaving(false);
       setSavingDraft(false);
@@ -328,10 +399,13 @@ export default function NewJobPage() {
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('blog_images').getPublicUrl(fileName);
       setBannerUrl(publicUrl);
+      toast.success("Banner image uploaded successfully!");
     } catch (err: any) {
+      console.error("Banner upload error:", err);
       toast.error("Banner upload failed: " + err.message);
     } finally {
       setIsUploadingFile(null);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -372,6 +446,7 @@ export default function NewJobPage() {
     } finally {
       setIsUploadingFile(null);
       setUploadingPdfIndex(null);
+      if (e.target) e.target.value = "";
     }
   };
 

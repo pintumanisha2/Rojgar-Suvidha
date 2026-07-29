@@ -192,26 +192,54 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
 
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
 
-  // Auto-save to LocalStorage
-  
-
+  // Auto-save to LocalStorage per job ID
   useEffect(() => {
+    if (!id || loading) return;
+    const draftKey = `job_edit_draft_${id}`;
     const timeout = setTimeout(() => {
-      localStorage.setItem("blog_draft", JSON.stringify({ title, blogContent, category }));
-    }, 2000);
+      const draftObj = {
+        title, category, status, stateCode, tag, lastDate,
+        shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education,
+        totalPosts, blogContent, applyForMeLink, links, savedAt: Date.now()
+      };
+      localStorage.setItem(draftKey, JSON.stringify(draftObj));
+    }, 1000);
     return () => clearTimeout(timeout);
-  }, [title, blogContent, category]);
+  }, [id, loading, title, category, status, stateCode, tag, lastDate, shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education, totalPosts, blogContent, applyForMeLink, links]);
 
   const slugify = (text: string) => text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const handleSave = async (isDraft = false) => {
-    if (!title.trim()) { setError("Title likhna zaroori hai."); return; }
+    if (!title.trim()) {
+      toast.error("Please enter a Title.");
+      setError("Title likhna zaroori hai.");
+      return;
+    }
     if (isDraft) setSavingDraft(true); else setSaving(true);
     setError(null);
 
+    let baseSlug = slugify(title);
+    let finalSlug = baseSlug;
+
+    // Check slug uniqueness excluding current post ID
+    try {
+      const { data: existing } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("slug", baseSlug)
+        .neq("id", id)
+        .maybeSingle();
+
+      if (existing) {
+        finalSlug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+      }
+    } catch (err) {
+      console.warn("Slug check error:", err);
+    }
+
     const payload: any = {
       title: title.trim(),
-      slug: slugify(title),
+      slug: finalSlug,
       category,
       status: isDraft ? "draft" : (userRole === 'content_writer' ? "pending_approval" : status),
       state_code: stateCode || null,
@@ -229,15 +257,20 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       const { error: dbErr } = await supabase.from("jobs").update(payload).eq("id", id);
       
       if (dbErr) {
-        console.error("Database Insert Error:", dbErr);
-        setError(`Database Error: ${dbErr.message}. Check if columns 'short_info' and 'meta_description' exist in your Supabase 'jobs' table.`);
+        console.error("Database Update Error:", dbErr);
+        toast.error(`Update failed: ${dbErr.message}`);
+        setError(`Database Error: ${dbErr.message}`);
       } else {
-        localStorage.removeItem("blog_draft");
-        window.location.href = "/admin/jobs"; // Hard redirect to avoid UI freezing
+        localStorage.removeItem(`job_edit_draft_${id}`);
+        toast.success(isDraft ? "Draft saved successfully!" : "Post updated successfully!");
+        setTimeout(() => {
+          window.location.href = "/admin/jobs";
+        }, 500);
       }
     } catch (err: any) {
       console.error("Unexpected Save Error:", err);
-      setError("An unexpected error occurred while saving. Please check your internet or database columns.");
+      toast.error("An unexpected error occurred while saving.");
+      setError("An unexpected error occurred while saving. Please check your connection.");
     } finally {
       setSaving(false);
       setSavingDraft(false);
@@ -332,10 +365,13 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('blog_images').getPublicUrl(fileName);
       setBannerUrl(publicUrl);
+      toast.success("Banner image uploaded successfully!");
     } catch (err: any) {
+      console.error("Banner upload error:", err);
       toast.error("Banner upload failed: " + err.message);
     } finally {
       setIsUploadingFile(null);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -376,6 +412,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
     } finally {
       setIsUploadingFile(null);
       setUploadingPdfIndex(null);
+      if (e.target) e.target.value = "";
     }
   };
 

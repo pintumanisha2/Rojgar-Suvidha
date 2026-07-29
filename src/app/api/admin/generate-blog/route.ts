@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Gemini API Key missing in .env.local" }, { status: 500 });
     }
 
-    const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+    const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
     let blogContent = "";
     let lastError = "";
 

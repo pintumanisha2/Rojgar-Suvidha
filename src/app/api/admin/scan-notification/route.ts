@@ -608,7 +608,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
   const geminiApiKey = (process.env.GEMINI_API_KEY || "").trim();
   if (!geminiApiKey) throw new Error("Gemini API Key missing in environment");
 
-  const models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
   let lastError = "";
 
   for (const model of models) {
@@ -663,7 +663,7 @@ async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolea
     ? userPrompt.substring(0, MAX_USER_CHARS) + "\n\n[Content trimmed for length. Use the above to complete the section.]"
     : userPrompt;
 
-  const groqModels = ["llama-3.3-70b-versatile", "llama3-70b-8192", "gemma2-9b-it"];
+  const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "mixtral-8x7b-32768"];
   let lastGroqError = "";
 
   for (const model of groqModels) {

@@ -118,7 +118,7 @@ Generate the complete HTML content now:`;
       return NextResponse.json({ error: "Gemini API Key missing in .env.local" }, { status: 500 });
     }
 
-    const models = ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"];
+    const models = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
     let blogHtml = "";
     let lastError = "";
 

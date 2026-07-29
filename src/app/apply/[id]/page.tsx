@@ -5,10 +5,21 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink } from "lucide-react";
-import Script from "next/script";
 import imageCompression from "browser-image-compression";
 import dynamic from "next/dynamic";
 const ApplyFomoBar = dynamic(() => import("@/components/ui/ApplyFomoBar"), { ssr: false });
+
+// Load Razorpay checkout script dynamically
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) { resolve(true); return; }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 function ApplyContent() {
   const { id } = useParams();
@@ -505,22 +516,26 @@ function ApplyContent() {
           // Construct the secure relative view URL
           uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;
         }
-      }      // 2. Cashfree Payment Flow
+      } // 2. Razorpay Payment Flow
       if (finalPayable > 0) {
         const trackingCode = "RS" + Math.random().toString(36).substring(2, 8).toUpperCase();
         const customOrderId = `order_${trackingCode}_${Date.now()}`;
 
-        // Create Order on Backend with custom S3 access order ID
+        // Load Razorpay script
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) throw new Error("Failed to load payment gateway. Please check your internet connection.");
+
+        // Create Razorpay order on server
         const orderRes = await fetch("/api/submit-application", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             amount: finalPayable,
             customerName: formData.fullName,
             customerPhone: formData.phone,
             customerEmail: formData.email,
             formId: id,
-            orderId: customOrderId
+            orderId: customOrderId,
           }),
         });
 
@@ -530,11 +545,11 @@ function ApplyContent() {
           throw new Error(order.error || "Payment system is currently unavailable.");
         }
 
-        const postName = Array.isArray(formConfig.fees_structure) 
-          ? formConfig.fees_structure[selectedPostIndex]?.postName 
+        const postName = Array.isArray(formConfig.fees_structure)
+          ? formConfig.fees_structure[selectedPostIndex]?.postName
           : "Default Post";
 
-        // Save Application to Database as 'pending' to secure user input before payment redirect
+        // Save Application to Database as 'pending' BEFORE opening payment
         const { error: dbError } = await supabase.from("user_applications").insert([{
           tracking_id: trackingCode,
           user_id: userId || null,
@@ -554,21 +569,64 @@ function ApplyContent() {
           documents_urls: uploadedUrls,
           total_paid: finalPayable,
           coupon_applied: appliedCoupon ? appliedCoupon.code : null,
-          payment_status: "pending", // Set as pending initially
+          payment_status: "pending",
           application_status: "Received"
         }]);
 
         if (dbError) throw dbError;
         try { sessionStorage.removeItem(`form_draft_${id}`); } catch (e) {}
 
-        // Redirect to PhonePe Pay Page
-        if (order.redirectUrl) {
-          logCheckoutFunnel("payment_clicked");
-          window.location.href = order.redirectUrl;
-        } else {
-          throw new Error("Unable to obtain checkout URL from PhonePe");
-        }
+        // Open Razorpay Checkout Popup
+        const options = {
+          key: order.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          amount: order.amount,
+          currency: order.currency || "INR",
+          name: "Rojgar Suvidha",
+          description: formConfig?.title || "Form Filling Service",
+          order_id: order.order_id,
+          prefill: {
+            name: formData.fullName,
+            email: formData.email,
+            contact: formData.phone,
+          },
+          theme: { color: "#4f46e5" },
+          handler: async (response: any) => {
+            try {
+              // Verify payment signature on server
+              const verifyRes = await fetch(
+                `/api/track?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&signature=${response.razorpay_signature}`
+              );
+              const verifyData = await verifyRes.json();
+              if (verifyData.order_status === "PAID") {
+                // Update DB payment_status to 'paid'
+                await supabase
+                  .from("user_applications")
+                  .update({ payment_status: "paid" })
+                  .eq("tracking_id", trackingCode);
 
+                logCheckoutFunnel("payment_clicked");
+                setSuccessTrackingId(trackingCode);
+                setIsSubmitting(false);
+              } else {
+                setSubmitError("Payment verification failed. Contact support.");
+                setIsSubmitting(false);
+              }
+            } catch (e: any) {
+              setSubmitError("Payment done but verification failed. Contact support with payment ID: " + response.razorpay_payment_id);
+              setIsSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setSubmitError("Payment cancelled. Click Submit to retry.");
+              setIsSubmitting(false);
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+        // Don't set isSubmitting=false here — wait for handler callback
       } else {
         // Free application (finalPayable == 0)
         const trackingCode = "RS" + Math.random().toString(36).substring(2, 8).toUpperCase();

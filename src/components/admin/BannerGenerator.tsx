@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, ImageIcon, CheckCircle2, RefreshCw, Upload } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface BannerGeneratorProps {
   title: string;
@@ -271,9 +272,10 @@ export default function BannerGenerator({
       const { data: { publicUrl } } = supabase.storage.from("blog_images").getPublicUrl(fileName);
       onBannerGenerated(publicUrl);
       setUploaded(true);
-      setTimeout(() => setOpen(false), 1500);
+      toast.success("Banner generated & set successfully!");
+      setTimeout(() => setOpen(false), 1200);
     } catch (err: any) {
-      alert("Upload failed: " + err.message);
+      toast.error("Upload failed: " + err.message);
     } finally {
       setUploading(false);
     }

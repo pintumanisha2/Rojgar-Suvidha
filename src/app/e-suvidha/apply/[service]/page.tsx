@@ -5,10 +5,21 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud, AlertTriangle } from "lucide-react";
-import Script from "next/script";
 import imageCompression from "browser-image-compression";
 import { SERVICE_INFO_DB } from "@/lib/eSuvidhaContent";
 import { useToast } from "@/components/ui/Toast";
+
+// Load Razorpay checkout script dynamically
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) { resolve(true); return; }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 // Maps raw payment API errors to clear, actionable English messages.
 function mapPaymentError(raw: string): string {
@@ -456,23 +467,27 @@ function ESuvidhaApplyContent() {
       let esuvidhaData = `--- E-SUVIDHA DETAILS ---\n${formattedNotes}\n\n--- UPLOADED DOCUMENTS ---\n`;
       esuvidhaData += Object.entries(uploadedUrls).map(([k, v]) => `${k}: ${v}`).join('\n');
 
-      // 2. Initialize Payment
+      // 2. Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) throw new Error("Failed to load payment gateway. Please check your internet connection.");
+
+      // 3. Create Razorpay order on server
       const res = await fetch("/api/submit-application", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           amount: serviceDetails.price,
           customerName: applicantName,
           customerPhone: applicantPhone,
-          customerEmail: user.email || "test@gmail.com",
-          formId: `esuvidha-${serviceId}`
+          customerEmail: user.email || "",
+          formId: `esuvidha-${serviceId}`,
         }),
       });
 
       const order = await res.json();
       if (!res.ok) throw new Error(order.error || "Payment system unavailable.");
 
-      // Create a pending request in the database first to secure customer data before payment redirect
+      // 4. Insert pending request BEFORE opening payment (save data first)
       const { error: insertError } = await supabase
         .from("apply_for_me_requests")
         .insert({
@@ -490,13 +505,50 @@ function ESuvidhaApplyContent() {
         throw new Error("Failed to initialize your request record in the database.");
       }
 
-      // Redirect to PhonePe Pay Page
-      if (order.redirectUrl) {
-        window.location.href = order.redirectUrl;
-      } else {
-        throw new Error("Unable to obtain checkout URL from PhonePe");
-      }
-      
+      // 5. Open Razorpay Checkout Popup
+      const options = {
+        key: order.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency || "INR",
+        name: "Rojgar Suvidha",
+        description: serviceDetails.title,
+        order_id: order.order_id,
+        prefill: {
+          name: applicantName,
+          email: user.email || "",
+          contact: applicantPhone,
+        },
+        theme: { color: "#4f46e5" },
+        handler: async (response: any) => {
+          // Payment successful — verify with server
+          try {
+            const verifyRes = await fetch(
+              `/api/track?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&signature=${response.razorpay_signature}`
+            );
+            const verifyData = await verifyRes.json();
+            if (verifyData.order_status === "PAID") {
+              setTrackingId(order.order_id);
+              setSubmitted(true);
+            } else {
+              setError("Payment verification failed. Please contact support.");
+              setSubmitting(false);
+            }
+          } catch (e) {
+            setError("Payment done but verification failed. Contact support with your payment ID: " + response.razorpay_payment_id);
+            setSubmitting(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setError("Payment cancelled. Your form data is saved. Click 'Pay & Submit' to retry.");
+            setSubmitting(false);
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
     } catch (err: any) {
       const friendly = mapPaymentError(err.message || "Something went wrong.");
       setError(friendly);
@@ -872,7 +924,7 @@ function ESuvidhaApplyContent() {
                 <ShieldCheck className="w-6 h-6 text-blue-500" />
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white">Service Fees</p>
-                  <p className="text-xs text-gray-500">Secure PhonePe Payment</p>
+                  <p className="text-xs text-gray-500">🔒 Secure Razorpay Payment (UPI / Card / Netbanking)</p>
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-blue-600">₹{serviceDetails.price} INR</p>
