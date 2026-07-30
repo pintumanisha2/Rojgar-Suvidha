@@ -43,6 +43,7 @@ const navSections = [
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { href: "/admin/applications", label: "User Applications", icon: FileText },
+      { href: "/admin/utr-verification", label: "💳 UPI Verification 🔴", icon: CreditCard },
       { href: "/admin/jobs?type=sarkari", label: "Govt Jobs (Sarkari)", icon: BookOpen },
       { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
       { href: "/admin/job-scout", label: "Job Scout (Auto Tracker)", icon: Bell },

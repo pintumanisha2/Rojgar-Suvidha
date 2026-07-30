@@ -4,22 +4,12 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase, getStoredSession } from "@/lib/supabase";
-import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink } from "lucide-react";
+import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink, Smartphone, QrCode, Clock, AlertCircle } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import dynamic from "next/dynamic";
 const ApplyFomoBar = dynamic(() => import("@/components/ui/ApplyFomoBar"), { ssr: false });
 
-// Load Razorpay checkout script dynamically
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if ((window as any).Razorpay) { resolve(true); return; }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
+
 
 function ApplyContent() {
   const { id } = useParams();
@@ -72,6 +62,17 @@ function ApplyContent() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
+  // UPI Manual Payment State
+  const [showUpiScreen, setShowUpiScreen] = useState(false);
+  const [pendingTrackingCode, setPendingTrackingCode] = useState("");
+  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url: string } | null>(null);
+  const [utrInput, setUtrInput] = useState("");
+  const [utrCopied, setUtrCopied] = useState(false);
+  const [submittingUtr, setSubmittingUtr] = useState(false);
+  const [utrError, setUtrError] = useState("");
+  const [uploadedUrlsForUpi, setUploadedUrlsForUpi] = useState<Record<string,string>>({});
+  const [finalAmountForUpi, setFinalAmountForUpi] = useState(0);
+
   const handleCopy = () => {
     if (successTrackingId) {
       navigator.clipboard.writeText(successTrackingId);
@@ -79,6 +80,20 @@ function ApplyContent() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  const copyUpiId = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setUtrCopied(true);
+    setTimeout(() => setUtrCopied(false), 2000);
+  };
+
+  // Fetch UPI settings on mount
+  useEffect(() => {
+    fetch("/api/admin/upi-settings")
+      .then(r => r.json())
+      .then(d => { if (d.settings) setUpiSettings(d.settings); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const fetchForm = async () => {
@@ -521,40 +536,15 @@ function ApplyContent() {
           // Construct the secure relative view URL
           uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;
         }
-      } // 2. Razorpay Payment Flow
+      } // 2. Manual UPI Payment Flow
       if (finalPayable > 0) {
         const trackingCode = "RS" + Math.random().toString(36).substring(2, 8).toUpperCase();
-        const customOrderId = `order_${trackingCode}_${Date.now()}`;
-
-        // Load Razorpay script
-        const scriptLoaded = await loadRazorpayScript();
-        if (!scriptLoaded) throw new Error("Failed to load payment gateway. Please check your internet connection.");
-
-        // Create Razorpay order on server
-        const orderRes = await fetch("/api/submit-application", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: finalPayable,
-            customerName: formData.fullName,
-            customerPhone: formData.phone,
-            customerEmail: formData.email,
-            formId: id,
-            orderId: customOrderId,
-          }),
-        });
-
-        const order = await orderRes.json();
-
-        if (!orderRes.ok) {
-          throw new Error(order.error || "Payment system is currently unavailable.");
-        }
 
         const postName = Array.isArray(formConfig.fees_structure)
           ? formConfig.fees_structure[selectedPostIndex]?.postName
           : "Default Post";
 
-        // Save Application to Database as 'pending' BEFORE opening payment
+        // Save Application to Database as 'pending_verification' BEFORE showing payment screen
         const { error: dbError } = await supabase.from("user_applications").insert([{
           tracking_id: trackingCode,
           user_id: userId || null,
@@ -574,64 +564,22 @@ function ApplyContent() {
           documents_urls: uploadedUrls,
           total_paid: finalPayable,
           coupon_applied: appliedCoupon ? appliedCoupon.code : null,
-          payment_status: "pending",
-          application_status: "Received"
+          payment_method: "upi_manual",
+          payment_status: "pending_verification",
+          application_status: "Payment Pending"
         }]);
 
         if (dbError) throw dbError;
         try { sessionStorage.removeItem(`form_draft_${id}`); } catch (e) {}
 
-        // Open Razorpay Checkout Popup
-        const options = {
-          key: order.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: order.amount,
-          currency: order.currency || "INR",
-          name: "Rojgar Suvidha",
-          description: formConfig?.title || "Form Filling Service",
-          order_id: order.order_id,
-          prefill: {
-            name: formData.fullName,
-            email: formData.email,
-            contact: formData.phone,
-          },
-          theme: { color: "#4f46e5" },
-          handler: async (response: any) => {
-            try {
-              // Verify payment signature on server
-              const verifyRes = await fetch(
-                `/api/track?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&signature=${response.razorpay_signature}`
-              );
-              const verifyData = await verifyRes.json();
-              if (verifyData.order_status === "PAID") {
-                // Update DB payment_status to 'paid'
-                await supabase
-                  .from("user_applications")
-                  .update({ payment_status: "paid" })
-                  .eq("tracking_id", trackingCode);
-
-                logCheckoutFunnel("payment_clicked");
-                setSuccessTrackingId(trackingCode);
-                setIsSubmitting(false);
-              } else {
-                setSubmitError("Payment verification failed. Contact support.");
-                setIsSubmitting(false);
-              }
-            } catch (e: any) {
-              setSubmitError("Payment done but verification failed. Contact support with payment ID: " + response.razorpay_payment_id);
-              setIsSubmitting(false);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setSubmitError("Payment cancelled. Click Submit to retry.");
-              setIsSubmitting(false);
-            },
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-        // Don't set isSubmitting=false here — wait for handler callback
+        // Show UPI Payment Screen
+        setPendingTrackingCode(trackingCode);
+        setFinalAmountForUpi(finalPayable);
+        setUploadedUrlsForUpi(uploadedUrls);
+        setShowUpiScreen(true);
+        setIsSubmitting(false);
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         // Free application (finalPayable == 0)
         const trackingCode = "RS" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -684,7 +632,149 @@ function ApplyContent() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /></div>;
   if (!formConfig) return <div className="min-h-screen flex items-center justify-center text-red-500 font-bold">Form Not Found or Expired.</div>;
 
+  // ── UPI Manual Payment Screen ────────────────────────────────────────────
+  const handleUtrSubmit = async () => {
+    setUtrError("");
+    if (!utrInput.trim()) { setUtrError("UTR number daalna zaroori hai."); return; }
+    if (!/^\d{12}$/.test(utrInput.trim())) { setUtrError("UTR number 12 digit ka hona chahiye (sirf numbers)."); return; }
+    setSubmittingUtr(true);
+    try {
+      const res = await fetch("/api/utr-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tracking_id: pendingTrackingCode, utr_number: utrInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setUtrError(data.error || "UTR submit karne mein dikkat aayi."); return; }
+      // Show success screen
+      setSuccessTrackingId(pendingTrackingCode);
+      setShowUpiScreen(false);
+    } catch (err: any) {
+      setUtrError(err.message || "Unexpected error. Please try again.");
+    } finally {
+      setSubmittingUtr(false);
+    }
+  };
+
+  if (showUpiScreen && upiSettings) {
+    const upiId = upiSettings.upi_id || "";
+    const accountName = upiSettings.account_name || "Rojgar Suvidha";
+    const qrUrl = upiSettings.qr_image_url || "";
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-8 px-4 flex items-start justify-center">
+        <div className="max-w-md w-full space-y-4">
+          {/* Header */}
+          <div className="text-center">
+            <div className="inline-flex w-16 h-16 bg-indigo-600 rounded-2xl items-center justify-center mb-3 shadow-lg shadow-indigo-500/30">
+              <Smartphone className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">UPI Se Pay Karo</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              Payment karo aur UTR number submit karo — 30 min mein verify ho jayega
+            </p>
+          </div>
+
+          {/* Timer Warning */}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+            <div>
+              <p className="text-sm font-black text-amber-700 dark:text-amber-400">30 min mein verify hogi payment</p>
+              <p className="text-xs text-amber-600 dark:text-amber-500">Payment ke baad UTR number neeche submit karo</p>
+            </div>
+          </div>
+
+          {/* Amount Card */}
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-center text-white shadow-2xl shadow-indigo-500/30">
+            <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Total Amount</p>
+            <div className="text-5xl font-black mb-1">₹{finalAmountForUpi}</div>
+            <p className="text-indigo-200 text-sm">{formConfig?.title || "Form Filling Service"}</p>
+          </div>
+
+          {/* QR Code + UPI ID */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            {qrUrl ? (
+              <div className="flex flex-col items-center mb-5">
+                <img
+                  src={qrUrl}
+                  alt="PhonePe QR Code"
+                  className="w-48 h-48 object-contain rounded-2xl border border-gray-200 dark:border-gray-700 mb-3"
+                />
+                <p className="text-xs text-gray-400 font-semibold">Scan karke ₹{finalAmountForUpi} pay karo</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center mb-5">
+                <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-3">
+                  <QrCode className="w-12 h-12 text-gray-300" />
+                </div>
+                <p className="text-xs text-gray-400">QR Code loading...</p>
+              </div>
+            )}
+
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+              <p className="text-xs text-gray-400 font-bold text-center mb-2">YA SEEDHA UPI ID PAR BHEJO</p>
+              <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3">
+                <div>
+                  <p className="text-xs text-gray-400">UPI ID</p>
+                  <p className="font-black text-indigo-700 dark:text-indigo-300 text-sm">{upiId || "Loading..."}</p>
+                </div>
+                <button
+                  onClick={() => copyUpiId(upiId)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all"
+                >
+                  {utrCopied ? <CheckCircle2 className="w-3 h-3 text-green-300" /> : <Copy className="w-3 h-3" />}
+                  {utrCopied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <p className="text-center text-xs text-gray-400 mt-2">Account: <strong className="text-gray-600 dark:text-gray-300">{accountName}</strong></p>
+              <p className="text-center text-xs font-black text-red-500 mt-1">⚠️ EXACT ₹{finalAmountForUpi} hi bhejo</p>
+            </div>
+          </div>
+
+          {/* UTR Input */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <h3 className="font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" /> Payment ke Baad UTR Daalo
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              GPay/PhonePe → Transaction History → 12-digit UTR number copy karo
+            </p>
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={12}
+              value={utrInput}
+              onChange={e => { setUtrInput(e.target.value.replace(/\D/g, "")); setUtrError(""); }}
+              placeholder="123456789012 (12 digits)"
+              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 focus:border-indigo-500 rounded-xl text-center text-xl font-black text-gray-900 dark:text-white bg-white dark:bg-gray-800 outline-none tracking-widest placeholder:text-gray-300 placeholder:font-normal placeholder:text-base placeholder:tracking-normal"
+            />
+            {utrError && (
+              <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-bold">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {utrError}
+              </div>
+            )}
+            <button
+              onClick={handleUtrSubmit}
+              disabled={submittingUtr || utrInput.length !== 12}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-2xl transition-all text-sm shadow-lg shadow-green-500/20"
+            >
+              {submittingUtr ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              {submittingUtr ? "Submit Ho Raha Hai..." : "UTR Submit Karo → Application Confirm"}
+            </button>
+          </div>
+
+          {/* Help Text */}
+          <div className="text-center text-xs text-gray-400 pb-4 space-y-1">
+            <p>Tracking ID: <strong className="text-indigo-600 dark:text-indigo-400">{pendingTrackingCode}</strong></p>
+            <p>Koi dikkat? WhatsApp karo: <a href="https://wa.me/91XXXXXXXXXX" className="text-indigo-500 underline" target="_blank">Help Line</a></p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Premium Confetti Success Screen (W4) ─────────────────────────────────
+
   if (successTrackingId) {
     const jobName = Array.isArray(formConfig?.fees_structure) && formConfig.fees_structure[selectedPostIndex]?.postName
       ? formConfig.fees_structure[selectedPostIndex].postName
@@ -754,14 +844,14 @@ function ApplyContent() {
             {/* Success Hero */}
             <div className="text-center success-pop">
               <div className="inline-flex flex-col items-center gap-3">
-                <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-green-500/30">
-                  <span className="text-5xl">🎉</span>
+                <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-amber-500/30">
+                  <span className="text-5xl">⏳</span>
                 </div>
                 <h1 className="text-3xl font-black text-gray-900 dark:text-white leading-tight">
-                  Application Submitted!
+                  UTR Submitted!
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xs">
-                  Badhai ho! Hamare experts aapka form <strong>24 hours</strong> mein fill kar denge. Email + WhatsApp pe confirmation milega.
+                  Aapka UTR number receive hua! <strong>30 minutes</strong> mein payment verify hogi. Verify hone par WhatsApp notification milegi.
                 </p>
               </div>
             </div>
@@ -796,7 +886,7 @@ function ApplyContent() {
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Receipt</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Invoice No: RS-{successTrackingId}</p>
                 </div>
-                <span className="text-[10px] font-black bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full">✓ PAID</span>
+                <span className="text-[10px] font-black bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full">⏳ Verification Pending</span>
               </div>
               <div className="px-5 py-4 space-y-3">
                 {[
@@ -804,7 +894,8 @@ function ApplyContent() {
                   { label: "Applied For", value: jobName },
                   { label: "Applicant", value: formData.fullName },
                   { label: "Date", value: todayStr },
-                  { label: "Amount Paid", value: `₹${finalPayable || 0}` },
+                  { label: "Amount", value: `₹${finalAmountForUpi || finalPayable || 0}` },
+                  { label: "Payment Status", value: "⏳ Verification Pending (30 min)" },
                 ].map((row) => (
                   <div key={row.label} className="flex items-start justify-between gap-3">
                     <span className="text-xs text-gray-400 font-semibold shrink-0">{row.label}</span>
