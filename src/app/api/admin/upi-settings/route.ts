@@ -17,12 +17,28 @@ export async function GET() {
 
     if (error) throw error;
 
+    // Hardcoded defaults — always fall back to these
+    const defaults = {
+      upi_id: "rojgarsuvidha@ybl",
+      account_name: "Pintu Kumar",
+      qr_image_url: "/phonepay-qr.png"
+    };
+
+    const saved = data?.value || {};
     return NextResponse.json({ 
       success: true, 
-      settings: data?.value || { upi_id: "", account_name: "", qr_image_url: "" } 
+      settings: { ...defaults, ...saved }
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // Even on DB error, return working defaults
+    return NextResponse.json({ 
+      success: true, 
+      settings: { 
+        upi_id: "rojgarsuvidha@ybl", 
+        account_name: "Pintu Kumar", 
+        qr_image_url: "/phonepay-qr.png" 
+      } 
+    });
   }
 }
 

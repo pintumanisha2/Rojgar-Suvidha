@@ -24,13 +24,13 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert default UPI settings (update with your actual details)
+-- Insert actual UPI settings
 INSERT INTO site_settings (key, value) 
 VALUES (
   'upi_payment_settings',
-  '{"upi_id": "", "account_name": "Rojgar Suvidha", "qr_image_url": ""}'
+  '{"upi_id": "rojgarsuvidha@ybl", "account_name": "Pintu Kumar", "qr_image_url": "/phonepay-qr.png"}'
 )
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- 3. RLS Policies for site_settings
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
