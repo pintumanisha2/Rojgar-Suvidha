@@ -452,6 +452,74 @@ function injectFaqSchema(blogHtml: string, pageTitle: string): string {
   return schemaTag + "\n" + blogHtml;
 }
 
+// ── NewsArticle Schema Auto-Injector (Google News + Top Stories) ──────────
+function injectNewsArticleSchema(blogHtml: string, meta: any): string {
+  const now = new Date().toISOString();
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": (meta.title || "").slice(0, 110),
+    "datePublished": now,
+    "dateModified": now,
+    "author": {
+      "@type": "Organization",
+      "name": "Rojgar Suvidha",
+      "url": "https://www.rojgarsuvidha.com"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Rojgar Suvidha",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.rojgarsuvidha.com/logo-blue.png",
+        "width": 200,
+        "height": 60
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://www.rojgarsuvidha.com/job/${meta.slug || ""}`
+    },
+    "image": {
+      "@type": "ImageObject",
+      "url": "https://www.rojgarsuvidha.com/logo-blue.png",
+      "width": 1200,
+      "height": 630
+    },
+    "description": meta.metaDesc || meta.shortInfo || `${meta.title} — Latest Update on Rojgar Suvidha`
+  };
+  const schemaTag = `<script type='application/ld+json'>${JSON.stringify(schema)}</script>`;
+  return schemaTag + "\n" + blogHtml;
+}
+
+// ── WhatsApp Virality Share Box Injector ─────────────────────────────────
+function injectShareBox(blogHtml: string, meta: any): string {
+  // Insert after the first </div> that contains the author byline, or after first <p>
+  const shareBox = `
+<div style='background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:16px 20px;margin:1.5rem 0;'>
+  <p style='font-weight:900;font-size:0.95rem;color:#15803d;margin:0 0 10px;'>📲 Dosto Ko Share Karo — Kisi Ka Form Miss Na Ho!</p>
+  <pre style='background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:12px;font-size:0.82rem;line-height:1.7;font-family:monospace;white-space:pre-wrap;color:#1e293b;margin:0;'>
+🔔 ${meta.title || "Sarkari Naukri"} ${new Date().getFullYear()}
+📋 Vacancies: ${meta.totalPosts || "Check notification"}
+📅 Last Date: ${meta.lastDate || "See notification"}
+💰 Fee: ${meta.appFeeGen || "Check details"}
+✅ Full Details: rojgarsuvidha.com/job/${meta.slug || ""}
+  </pre>
+</div>`;
+
+  // Insert after first closing </div> block (usually after byline/header area)
+  const insertAfter = blogHtml.indexOf("</div>");
+  if (insertAfter !== -1) {
+    return blogHtml.slice(0, insertAfter + 6) + "\n" + shareBox + blogHtml.slice(insertAfter + 6);
+  }
+  // Fallback: insert after first <p> tag
+  const firstP = blogHtml.indexOf("</p>");
+  if (firstP !== -1) {
+    return blogHtml.slice(0, firstP + 4) + "\n" + shareBox + blogHtml.slice(firstP + 4);
+  }
+  return shareBox + "\n" + blogHtml;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Auto Internal Link Injector
 // ══════════════════════════════════════════════════════════════════════════════
@@ -620,7 +688,7 @@ async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: bo
         }],
         generationConfig: {
           temperature: jsonMode ? 0.1 : 0.87,
-          maxOutputTokens: 4000,
+          maxOutputTokens: 5500,
         }
       };
       if (jsonMode) payload.generationConfig.responseMimeType = "application/json";
@@ -920,7 +988,8 @@ ${featureAdditions || "Standard government job — cover all sections with appro
 
 === SEO RULES ===
 1. Each H2 must answer a specific search query someone would Google.
-2. The FAQ section is critical for featured snippets — write direct, concise answers (50-80 words each).
+2. The FAQ section is critical for featured snippets — write direct, concise answers (50-80 words each). Write EXACTLY 10 FAQs.
+3. TARGET WORD COUNT: 1200 to 1500 words for the full article. Do not go below 1200. Do not exceed 1500. Every sentence must add value — no filler.
 3. Minimum 800 words for this half.
 4. Use <strong> on all important terms, numbers, dates. Use <mark> on the most critical single figure.
 5. ALL HTML attributes MUST use single quotes.
@@ -966,7 +1035,15 @@ Do NOT build these tables yourself.
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword || meta.examName}</h2>
 
 CRITICAL INSTRUCTION — FAQ FORMAT IS NON-NEGOTIABLE:
-You MUST output EXACTLY 6 FAQ items using this EXACT HTML structure. Do NOT write questions and answers as plain text paragraphs. Do NOT use <p> tags for questions. Do NOT use <ul> or <li> for FAQ. ONLY use <details> and <summary> tags as shown below:
+You MUST output EXACTLY 10 FAQ items using this EXACT HTML structure. Do NOT write questions and answers as plain text paragraphs. Do NOT use <p> tags for questions. Do NOT use <ul> or <li> for FAQ. ONLY use <details> and <summary> tags as shown below.
+
+FAQ CATEGORY BREAKDOWN (follow this):
+- 4 informational: What is [this job]?, How many vacancies?, What is the salary?, Who can apply?
+- 3 procedural: How to apply online?, What documents are needed?, What is the selection process?
+- 2 urgency: What is the last date?, When will admit card release?
+- 1 comparison or unique: Is [this job] better than [similar job]? OR What is the difference between [Post A] and [Post B]?
+
+Each FAQ answer: EXACTLY 50-80 words. Not more, not less. (Google PAA preferred length)
 
 <details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'>
 <summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Write the FAQ question here — something a real student would search on Google] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary>
@@ -1098,7 +1175,7 @@ Then 2 paragraphs on consequences of violations.]
 [6-7 rich paragraphs of practical advice — sleep routine, revision strategy, reaching exam hall 45 mins early, managing time.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+MANDATORY FAQ FORMAT — Output EXACTLY 10 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
 <details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>
 
 <!-- Official Download CTA -->
@@ -1139,7 +1216,7 @@ STRUCTURE (Write at least 1,200 words):
 [4 honest, warm paragraphs. Re-attempt strategy. Other active job notifications.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+MANDATORY FAQ FORMAT — Output EXACTLY 10 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
 <details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>
 
 <!-- Result CTA -->
@@ -1178,7 +1255,7 @@ STRUCTURE (Write at least 1,200 words):
 [4-5 paragraphs. Category-wise cutoff prediction HTML table.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+MANDATORY FAQ FORMAT — Output EXACTLY 10 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
 <details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>
 
 <!-- Answer Key CTA -->
@@ -1217,7 +1294,7 @@ STRUCTURE:
 [3-4 paragraphs. What to expect next.]
 
 <h2 id='faq'>Frequently Asked Questions</h2>
-MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+MANDATORY FAQ FORMAT — Output EXACTLY 10 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
 <details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>`,
 
     admission: `Write a complete SEO-optimized human blog post about ADMISSION in HTML.
@@ -1247,7 +1324,7 @@ STRUCTURE:
 [4-5 paragraphs detailing selection rounds.]
 
 <h2 id='faq'>Frequently Asked Questions About ${meta.primaryKeyword}</h2>
-MANDATORY FAQ FORMAT — Output EXACTLY 6 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
+MANDATORY FAQ FORMAT — Output EXACTLY 10 <details>/<summary> accordion items. Do NOT use plain text, <p> tags, or <ul> for FAQ questions. Use this exact structure for each:
 <details style='margin-bottom:12px;border:1.5px solid #e0e7ff;border-radius:12px;overflow:hidden;background:#fafaff;'><summary style='cursor:pointer;padding:14px 18px;font-size:0.95rem;font-weight:700;color:#1e1b4b;background:linear-gradient(90deg,#eef2ff,#f5f3ff);list-style:none;display:flex;align-items:center;justify-content:space-between;'>[Question text] <span style='font-size:1.2rem;color:#6366f1;'>+</span></summary><p style='padding:14px 18px;font-size:0.875rem;line-height:1.75;color:#374151;margin:0;border-top:1px solid #e0e7ff;'>[60-80 word answer]</p></details>`
   };
 
@@ -1395,10 +1472,12 @@ export async function POST(req: Request) {
     }
 
     // Post-process pipeline
-    blogHtml = injectJobPostingSchema(blogHtml, metadata); // F1-A: Google Jobs tab schema
-    blogHtml = injectFaqSchema(blogHtml, metadata.title);
-    blogHtml = injectInternalLinks(blogHtml, category);
-    blogHtml = autoHighlightNumbers(blogHtml); // B2: Auto-highlight fees, dates, vacancies
+    blogHtml = injectJobPostingSchema(blogHtml, metadata);        // Google Jobs tab schema
+    blogHtml = injectNewsArticleSchema(blogHtml, metadata);        // Google News + Top Stories schema
+    blogHtml = injectFaqSchema(blogHtml, metadata.title);          // FAQPage rich snippet
+    blogHtml = injectShareBox(blogHtml, metadata);                 // WhatsApp virality share box
+    blogHtml = injectInternalLinks(blogHtml, category);            // Internal link injection
+    blogHtml = autoHighlightNumbers(blogHtml);                     // Auto-highlight fees, dates, vacancies
 
     // Append official notification trust box
     if (officialLink && officialLink.trim()) {

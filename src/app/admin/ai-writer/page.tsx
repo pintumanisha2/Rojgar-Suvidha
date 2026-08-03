@@ -75,7 +75,7 @@ function getSeoScore(result: any, category: string) {
   const primaryKeyword = (result.primaryKeyword || result.title || "").toLowerCase();
 
   const baseChecks = [
-    { label: "Word Count",       ok: wordCount >= 1000,                   detail: `${wordCount.toLocaleString()} words` },
+    { label: "Word Count",       ok: wordCount >= 1200,                  detail: `${wordCount.toLocaleString()} words` },
     { label: "Title Length",     ok: result.title?.length >= 30 && result.title?.length <= 75, detail: `${result.title?.length || 0} chars` },
     { label: "Meta Description", ok: result.metaDesc?.length >= 100 && result.metaDesc?.length <= 170, detail: `${result.metaDesc?.length || 0} chars` },
     { label: "FAQ Section",      ok: html.includes("<details"),           detail: html.includes("<details") ? "Found" : "Missing" },
@@ -173,6 +173,8 @@ export default function AIWriterPage() {
   const [publishErrorMsg, setPublishErrorMsg] = useState("");
   const [publishSlug, setPublishSlug] = useState("");
   const [publishPostStatus, setPublishPostStatus] = useState("active");
+  const [editableTitle, setEditableTitle] = useState("");
+  const [editableMetaDesc, setEditableMetaDesc] = useState("");
 
   // Load draft + Scout data
   useEffect(() => {
@@ -193,7 +195,8 @@ export default function AIWriterPage() {
   useEffect(() => {
     if (result) {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ result, category, rawText, timestamp: Date.now() }));
-      if (result.title) setPublishSlug(generateSlug(result.title));
+      if (result.title) { setPublishSlug(generateSlug(result.title)); setEditableTitle(result.title); }
+      if (result.metaDesc) setEditableMetaDesc(result.metaDesc);
     }
   }, [result]);
 
@@ -284,11 +287,11 @@ export default function AIWriterPage() {
     try {
       // ✅ FIX: Use blog_content column (not content) — matches /job/[slug]/page.tsx
       const { data: insertedJob, error } = await supabase.from("jobs").insert([{
-        title: result.title,
+        title: editableTitle || result.title,
         slug: publishSlug,
-        blog_content: result.blogHtml,          // ← FIXED: was "content"
-        short_description: result.shortInfo || result.metaDesc,
-        meta_description: result.metaDesc,
+        blog_content: result.blogHtml,
+        short_description: result.shortInfo || editableMetaDesc || result.metaDesc,
+        meta_description: editableMetaDesc || result.metaDesc,
         tag: result.tag || null,
         category: result.category || category,
         status: publishPostStatus,
