@@ -13,6 +13,7 @@ import {
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/utr-verification", label: "UPI Verification", icon: CreditCard },
   { href: "/admin/applications", label: "User Applications", icon: FileText },
   { href: "/admin/users", label: "Admin Users", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
@@ -310,8 +311,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (userRole === "admin") return navItems.filter(item => item.href !== "/admin/payments");
     
     // Govt Roles
-    if (userRole === "govt_manager") return navItems.filter(item => ["/admin", "/admin/applications", "/admin/jobs", "/admin/ai-writer", "/admin/banners", "/admin/community", "/admin/notifications", "/admin/job-scout", "/admin/direct-form", "/admin/coupons", "/admin/ticker", "/admin/complaints"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
-    if (userRole === "govt_data_entry") return navItems.filter(item => ["/admin", "/admin/jobs", "/admin/applications", "/admin/ai-writer", "/admin/job-scout"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
+    if (userRole === "govt_manager") return navItems.filter(item => ["/admin", "/admin/utr-verification", "/admin/applications", "/admin/jobs", "/admin/ai-writer", "/admin/banners", "/admin/community", "/admin/notifications", "/admin/job-scout", "/admin/direct-form", "/admin/coupons", "/admin/ticker", "/admin/complaints"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
+    if (userRole === "govt_data_entry") return navItems.filter(item => ["/admin", "/admin/utr-verification", "/admin/jobs", "/admin/applications", "/admin/ai-writer", "/admin/job-scout"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
     
     // Private Roles
     if (userRole === "private_manager") return navItems.filter(item => ["/admin/private-portal", "/admin/private-portal/employers", "/admin/private-portal/jobs", "/admin/private-portal/candidates", "/admin/private-portal/job-scout", "/admin/private-portal/applications", "/admin/private-portal/community"].includes(item.href));
