@@ -47,35 +47,25 @@ export default function UTRVerificationPage() {
     setLoading(true);
     try {
       // 1. Fetch from user_applications
-      let query1 = supabase
+      const query1 = supabase
         .from("user_applications")
         .select("tracking_id,full_name,phone,email,total_paid,utr_number,payment_status,payment_method,form_id,created_at,user_id,payment_screenshot_url")
-        .eq("payment_method", "upi_manual")
-        .order("created_at", { ascending: false });
-
-      if (filter !== "all") {
-        query1 = query1.eq("payment_status", filter);
-      }
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       // 2. Fetch from apply_for_me_requests (e-Suvidha & Apply For Me)
-      let query2 = supabase
+      const query2 = supabase
         .from("apply_for_me_requests")
         .select("tracking_id,applicant_name,phone_number,email,amount_paid,utr_number,payment_status,status,job_title,created_at,user_id,payment_screenshot_url")
-        .order("created_at", { ascending: false });
-
-      if (filter === "pending_verification") {
-        query2 = query2.or("status.eq.pending_verification,payment_status.eq.pending_verification");
-      } else if (filter === "paid") {
-        query2 = query2.or("status.eq.paid,payment_status.eq.paid");
-      } else if (filter === "rejected") {
-        query2 = query2.or("status.eq.rejected,payment_status.eq.rejected");
-      }
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       const [res1, res2] = await Promise.all([query1, query2]);
 
       const list1: PendingPayment[] = (res1.data || []).map((app: any) => ({
         ...app,
         payment_method: app.payment_method || "upi_manual",
+        payment_status: app.payment_status || "pending_verification",
       }));
 
       const list2: PendingPayment[] = (res2.data || []).map((req: any) => ({
@@ -101,7 +91,27 @@ export default function UTRVerificationPage() {
         }
       });
 
-      const sortedList = Array.from(combinedMap.values()).sort(
+      let allItems = Array.from(combinedMap.values());
+
+      // Filter by active tab:
+      if (filter === "pending_verification") {
+        allItems = allItems.filter(p => {
+          const s = (p.payment_status || "").toLowerCase();
+          return s !== "paid" && s !== "completed" && s !== "rejected";
+        });
+      } else if (filter === "paid") {
+        allItems = allItems.filter(p => {
+          const s = (p.payment_status || "").toLowerCase();
+          return s === "paid" || s === "completed";
+        });
+      } else if (filter === "rejected") {
+        allItems = allItems.filter(p => {
+          const s = (p.payment_status || "").toLowerCase();
+          return s === "rejected";
+        });
+      }
+
+      const sortedList = allItems.sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 

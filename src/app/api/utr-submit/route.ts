@@ -40,16 +40,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Yeh order already verify ho chuka hai. Dobara submit mat karo." }, { status: 400 });
       }
 
-      // Expiry check: 20 min
-      const orderAgeMs = Date.now() - new Date(eApp.created_at).getTime();
-      if (orderAgeMs > 20 * 60 * 1000 && eApp.status === "pending_verification") {
-        await supabaseAdmin
-          .from("apply_for_me_requests")
-          .update({ status: "expired" })
-          .eq("tracking_id", tracking_id);
-        return NextResponse.json({ error: "Order expire ho gaya (20 min window). Kripya dobara apply karein." }, { status: 410 });
-      }
-
       // Amount mismatch
       if (declared_amount && eApp.amount_paid && Math.abs(Number(declared_amount) - Number(eApp.amount_paid)) > 1) {
         return NextResponse.json(
