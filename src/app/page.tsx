@@ -7,16 +7,16 @@ import MainContentSkeleton from "@/components/ui/MainContentSkeleton";
 import RecommendedJobs from "@/components/ui/RecommendedJobs";
 
 // Lazy load ALL non-critical components — mobile gets only Banner + Jobs above fold
-const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"), { ssr: false });
-const Highlights = dynamic(() => import("@/components/home/Highlights"), { ssr: false });
-const FeaturedServices = dynamic(() => import("@/components/home/FeaturedServices"), { ssr: false });
-const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"), { ssr: false });
+const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"));
+const Highlights = dynamic(() => import("@/components/home/Highlights"));
+const FeaturedServices = dynamic(() => import("@/components/home/FeaturedServices"));
+const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"));
 const MainContent = dynamic(() => import("@/components/home/MainContent"));
-const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"), { ssr: false });
+const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"));
 import CalendarSelector from "@/components/calendar/CalendarSelector";
-const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"), { ssr: false });
-const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"), { ssr: false });
-const EmailAlertBanner = dynamic(() => import("@/components/home/EmailAlertBanner"), { ssr: false });
+const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
+const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
+const EmailAlertBanner = dynamic(() => import("@/components/home/EmailAlertBanner"));
 import HomeSeoSection from "@/components/home/HomeSeoSection";
 import type { Metadata } from "next";
 
