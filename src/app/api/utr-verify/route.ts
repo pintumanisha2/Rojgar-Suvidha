@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(
 
 // Admin approves or rejects a manual UPI payment for both tables:
 // 1) user_applications
-// 2) apply_for_me_requests (e-Suvidha)
+// 2) apply_for_me_requests (e-Suvidha & Apply For Me)
 export async function POST(req: Request) {
   try {
     const { tracking_id, action, rejection_reason, admin_id } = await req.json();
@@ -56,30 +56,55 @@ export async function POST(req: Request) {
 
     if (action === "approve") {
       if (tableType === "user_applications") {
+        const fullPayload = {
+          payment_status: "paid",
+          application_status: "Received",
+          utr_verified_at: nowIso,
+          utr_verified_by: admin_id || "admin",
+        };
+
         const { error } = await supabaseAdmin
           .from("user_applications")
-          .update({
-            payment_status: "paid",
-            application_status: "Received",
-            utr_verified_at: nowIso,
-            utr_verified_by: admin_id || "admin",
-          })
+          .update(fullPayload)
           .eq("tracking_id", tracking_id);
 
-        if (error) return NextResponse.json({ error: "Failed to approve in user_applications." }, { status: 500 });
+        if (error) {
+          // Fallback if optional columns don't exist
+          const { error: fallbackErr } = await supabaseAdmin
+            .from("user_applications")
+            .update({ payment_status: "paid", application_status: "Received" })
+            .eq("tracking_id", tracking_id);
+
+          if (fallbackErr) {
+            return NextResponse.json({ error: "Failed to approve: " + fallbackErr.message }, { status: 500 });
+          }
+        }
       } else {
         // apply_for_me_requests table
+        const fullPayload = {
+          status: "paid",
+          payment_status: "paid",
+          utr_verified_at: nowIso,
+          utr_verified_by: admin_id || "admin",
+        };
+
         const { error } = await supabaseAdmin
           .from("apply_for_me_requests")
-          .update({
-            status: "paid",
-            payment_status: "paid",
-            utr_verified_at: nowIso,
-            utr_verified_by: admin_id || "admin",
-          })
+          .update(fullPayload)
           .eq("tracking_id", tracking_id);
 
-        if (error) return NextResponse.json({ error: "Failed to approve in apply_for_me_requests." }, { status: 500 });
+        if (error) {
+          // Fallback to updating primary 'status' column if extra columns don't exist
+          console.warn("Retrying apply_for_me_requests approve with core status column:", error.message);
+          const { error: fallbackErr } = await supabaseAdmin
+            .from("apply_for_me_requests")
+            .update({ status: "paid" })
+            .eq("tracking_id", tracking_id);
+
+          if (fallbackErr) {
+            return NextResponse.json({ error: "Failed to approve: " + fallbackErr.message }, { status: 500 });
+          }
+        }
       }
 
       // Send WhatsApp approval notification
@@ -121,30 +146,53 @@ export async function POST(req: Request) {
       const reason = rejection_reason || "Payment UTR verify nahi hua (Bank statement mismatch or invalid UTR).";
 
       if (tableType === "user_applications") {
+        const fullPayload = {
+          payment_status: "rejected",
+          utr_rejection_reason: reason,
+          utr_verified_at: nowIso,
+          utr_verified_by: admin_id || "admin",
+        };
+
         const { error } = await supabaseAdmin
           .from("user_applications")
-          .update({
-            payment_status: "rejected",
-            utr_rejection_reason: reason,
-            utr_verified_at: nowIso,
-            utr_verified_by: admin_id || "admin",
-          })
+          .update(fullPayload)
           .eq("tracking_id", tracking_id);
 
-        if (error) return NextResponse.json({ error: "Failed to reject in user_applications." }, { status: 500 });
+        if (error) {
+          const { error: fallbackErr } = await supabaseAdmin
+            .from("user_applications")
+            .update({ payment_status: "rejected" })
+            .eq("tracking_id", tracking_id);
+
+          if (fallbackErr) {
+            return NextResponse.json({ error: "Failed to reject: " + fallbackErr.message }, { status: 500 });
+          }
+        }
       } else {
+        const fullPayload = {
+          status: "rejected",
+          payment_status: "rejected",
+          utr_rejection_reason: reason,
+          utr_verified_at: nowIso,
+          utr_verified_by: admin_id || "admin",
+        };
+
         const { error } = await supabaseAdmin
           .from("apply_for_me_requests")
-          .update({
-            status: "rejected",
-            payment_status: "rejected",
-            utr_rejection_reason: reason,
-            utr_verified_at: nowIso,
-            utr_verified_by: admin_id || "admin",
-          })
+          .update(fullPayload)
           .eq("tracking_id", tracking_id);
 
-        if (error) return NextResponse.json({ error: "Failed to reject in apply_for_me_requests." }, { status: 500 });
+        if (error) {
+          console.warn("Retrying apply_for_me_requests reject with core status column:", error.message);
+          const { error: fallbackErr } = await supabaseAdmin
+            .from("apply_for_me_requests")
+            .update({ status: "rejected" })
+            .eq("tracking_id", tracking_id);
+
+          if (fallbackErr) {
+            return NextResponse.json({ error: "Failed to reject: " + fallbackErr.message }, { status: 500 });
+          }
+        }
       }
 
       // Send WhatsApp rejection alert
