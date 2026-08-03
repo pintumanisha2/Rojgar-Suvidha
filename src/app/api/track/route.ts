@@ -17,29 +17,47 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "order_id is required" }, { status: 400 });
     }
 
-    // Check DB for payment status (UTR-based manual UPI system)
+    // Check DB for payment status across both tables
+    let status = "PENDING";
+    let rejectionReason = "";
+    let amountPaid = 0;
+
     const { data: request } = await supabaseAdmin
       .from("apply_for_me_requests")
-      .select("status")
+      .select("status, payment_status, utr_rejection_reason, amount_paid")
       .eq("tracking_id", orderId)
       .maybeSingle();
 
-    if (!request) {
-      // Also check user_applications table for Apply For Me orders
+    if (request) {
+      status = (request.payment_status || request.status || "PENDING").toUpperCase();
+      rejectionReason = request.utr_rejection_reason || "";
+      amountPaid = request.amount_paid || 0;
+    } else {
       const { data: app } = await supabaseAdmin
         .from("user_applications")
-        .select("payment_status")
+        .select("payment_status, application_status, utr_rejection_reason, total_paid")
         .eq("tracking_id", orderId)
         .maybeSingle();
 
-      if (app?.payment_status === "paid") return NextResponse.json({ order_status: "PAID", order_id: orderId });
-      return NextResponse.json({ order_status: "PENDING", order_id: orderId });
+      if (app) {
+        status = (app.payment_status || app.application_status || "PENDING").toUpperCase();
+        rejectionReason = app.utr_rejection_reason || "";
+        amountPaid = app.total_paid || 0;
+      }
     }
 
-    if (request.status === "paid") return NextResponse.json({ order_status: "PAID", order_id: orderId });
-    if (request.status === "pending_verification") return NextResponse.json({ order_status: "PENDING_VERIFICATION", order_id: orderId });
-    if (request.status === "expired") return NextResponse.json({ order_status: "EXPIRED", order_id: orderId });
-    return NextResponse.json({ order_status: "PENDING", order_id: orderId });
+    return NextResponse.json({ 
+      order_status: status, 
+      order_id: orderId,
+      rejection_reason: rejectionReason,
+      amount_paid: amountPaid,
+      message: 
+        status === "PAID" ? "Payment verified & approved! Application in progress." :
+        status === "PENDING_VERIFICATION" ? "Payment verification under progress (up to 30 mins)." :
+        status === "REJECTED" ? `Payment rejected: ${rejectionReason || "Invalid UTR / Fake payment"}` :
+        status === "EXPIRED" ? "Payment expired (15-min limit reached)." :
+        "Order received — verification pending."
+    });
 
   } catch (err: any) {
     console.error("Track GET exception:", err);

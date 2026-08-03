@@ -188,6 +188,10 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
   };
 
   const filtered = requests.filter(r => {
+    // Only show applications whose payment has been APPROVED by admin
+    if (r.status === "pending_verification" || r.payment_status === "pending_verification") return false;
+    if (r.status === "rejected" || r.status === "expired") return false;
+
     if (currentUserRole === 'form_filler' && r.assigned_to !== currentUserEmail) return false;
     
     const isESuvidha = r.job_title?.includes("[e-Suvidha]");
@@ -195,7 +199,6 @@ Aap final receipt yahan se download kar sakte hain: ${receiptLink || "Rojgar Suv
     if (serviceType === "esuvidha" && !isESuvidha) return false;
 
     if (filter === "all") return true;
-    // "pending" tab shows both unpaid-pending AND freshly paid requests
     if (filter === "pending") return r.status === "pending" || r.status === "paid";
     return r.status === filter;
   });

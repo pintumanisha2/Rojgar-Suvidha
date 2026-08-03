@@ -45,19 +45,72 @@ export default function UTRVerificationPage() {
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
-    let query = supabase
-      .from("user_applications")
-      .select("tracking_id,full_name,phone,email,total_paid,utr_number,payment_status,payment_method,form_id,created_at,user_id,payment_screenshot_url")
-      .eq("payment_method", "upi_manual")
-      .order("created_at", { ascending: false });
+    try {
+      // 1. Fetch from user_applications
+      let query1 = supabase
+        .from("user_applications")
+        .select("tracking_id,full_name,phone,email,total_paid,utr_number,payment_status,payment_method,form_id,created_at,user_id,payment_screenshot_url")
+        .eq("payment_method", "upi_manual")
+        .order("created_at", { ascending: false });
 
-    if (filter !== "all") {
-      query = query.eq("payment_status", filter);
+      if (filter !== "all") {
+        query1 = query1.eq("payment_status", filter);
+      }
+
+      // 2. Fetch from apply_for_me_requests (e-Suvidha & Apply For Me)
+      let query2 = supabase
+        .from("apply_for_me_requests")
+        .select("tracking_id,applicant_name,phone_number,email,amount_paid,utr_number,payment_status,status,job_title,created_at,user_id,payment_screenshot_url")
+        .order("created_at", { ascending: false });
+
+      if (filter === "pending_verification") {
+        query2 = query2.or("status.eq.pending_verification,payment_status.eq.pending_verification");
+      } else if (filter === "paid") {
+        query2 = query2.or("status.eq.paid,payment_status.eq.paid");
+      } else if (filter === "rejected") {
+        query2 = query2.or("status.eq.rejected,payment_status.eq.rejected");
+      }
+
+      const [res1, res2] = await Promise.all([query1, query2]);
+
+      const list1: PendingPayment[] = (res1.data || []).map((app: any) => ({
+        ...app,
+        payment_method: app.payment_method || "upi_manual",
+      }));
+
+      const list2: PendingPayment[] = (res2.data || []).map((req: any) => ({
+        tracking_id: req.tracking_id,
+        full_name: req.applicant_name || "Applicant",
+        phone: req.phone_number || "",
+        email: req.email || "",
+        total_paid: req.amount_paid || 0,
+        utr_number: req.utr_number || "N/A",
+        payment_status: req.payment_status || req.status || "pending_verification",
+        payment_method: "upi_manual",
+        form_id: req.job_title || "e-Suvidha Service",
+        created_at: req.created_at,
+        user_id: req.user_id,
+        payment_screenshot_url: req.payment_screenshot_url,
+      }));
+
+      // Combine & remove duplicates by tracking_id
+      const combinedMap = new Map<string, PendingPayment>();
+      [...list1, ...list2].forEach((item) => {
+        if (item.tracking_id && !combinedMap.has(item.tracking_id)) {
+          combinedMap.set(item.tracking_id, item);
+        }
+      });
+
+      const sortedList = Array.from(combinedMap.values()).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setPayments(sortedList);
+    } catch (e) {
+      console.error("Failed to fetch payments:", e);
+    } finally {
+      setLoading(false);
     }
-
-    const { data } = await query;
-    setPayments((data as PendingPayment[]) || []);
-    setLoading(false);
   }, [filter]);
 
   const fetchSettings = useCallback(async () => {

@@ -696,18 +696,42 @@ function ESuvidhaApplyContent() {
   }
 
   if (submitted) {
-
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
-          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold mb-2 text-gray-900">Request Successful!</h2>
-          <p className="text-gray-500 mb-6">Aapki {serviceDetails.title} ki request aur documents hamari team ke paas pahuch gaye hain.</p>
-          <div className="bg-indigo-50 p-4 rounded-xl mb-6 text-left border border-indigo-100">
-            <p className="text-xs font-bold text-indigo-500 uppercase">Tracking ID</p>
-            <p className="font-mono text-lg font-bold text-indigo-900">{trackingId}</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-950">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-100 dark:border-gray-800 space-y-4">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/40 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-3xl animate-bounce">
+            ⏳
           </div>
-          <Link href="/dashboard?tab=requests" className="block w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg">Go to Dashboard</Link>
+          <div>
+            <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 dark:bg-amber-950/30 px-3 py-1 rounded-full border border-amber-200">
+              Payment Under Verification
+            </span>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mt-2">Verification in Progress!</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Aapka UTR submit ho gaya hai. Admin team bank statement check karke <strong>30 minute mein approve</strong> kar degi.
+            </p>
+          </div>
+
+          <div className="bg-indigo-50 dark:bg-indigo-950/30 p-4 rounded-2xl text-left border border-indigo-100 dark:border-indigo-800 space-y-1">
+            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Tracking Code</p>
+            <p className="font-mono text-xl font-black text-indigo-900 dark:text-indigo-200">{trackingId || esuvidhaTrackingCode}</p>
+            <p className="text-[10px] text-gray-400 mt-1">Approval hote hi aapko WhatsApp par notification mil jayega.</p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Link 
+              href={`/track?id=${trackingId || esuvidhaTrackingCode}`} 
+              className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-lg transition-colors text-center"
+            >
+              Track Status →
+            </Link>
+            <Link 
+              href="/dashboard?tab=requests" 
+              className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs transition-colors text-center"
+            >
+              Go to Dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );
