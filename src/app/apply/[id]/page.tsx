@@ -67,7 +67,11 @@ function ApplyContent() {
   // UPI Manual Payment State
   const [showUpiScreen, setShowUpiScreen] = useState(false);
   const [pendingTrackingCode, setPendingTrackingCode] = useState("");
-  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url?: string } | null>(null);
+  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url?: string }>({
+    upi_id: "rojgarsuvidha@ybl",
+    account_name: "Pintu Kumar",
+    qr_image_url: "/phonepay-qr.png"
+  });
   const [utrInput, setUtrInput] = useState("");
   const [utrCopied, setUtrCopied] = useState(false);
   const [submittingUtr, setSubmittingUtr] = useState(false);
@@ -743,7 +747,7 @@ function ApplyContent() {
     );
   }
 
-  if (showUpiScreen && upiSettings) {
+  if (showUpiScreen) {
     const upiId = upiSettings.upi_id || "";
     const accountName = upiSettings.account_name || "Rojgar Suvidha";
     const amount = finalAmountForUpi;

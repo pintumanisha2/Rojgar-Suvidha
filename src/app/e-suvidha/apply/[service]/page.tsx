@@ -218,7 +218,11 @@ function ESuvidhaApplyContent() {
 
   // UPI Manual Payment State
   const [showUpiScreen, setShowUpiScreen] = useState(false);
-  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url?: string } | null>(null);
+  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url?: string }>({
+    upi_id: "rojgarsuvidha@ybl",
+    account_name: "Pintu Kumar",
+    qr_image_url: "/phonepay-qr.png"
+  });
   const [utrInput, setUtrInput] = useState("");
   const [utrCopied, setUtrCopied] = useState(false);
   const [submittingUtr, setSubmittingUtr] = useState(false);
@@ -568,7 +572,7 @@ function ESuvidhaApplyContent() {
   }
 
   // ── UPI Payment Screen ──
-  if (showUpiScreen && upiSettings) {
+  if (showUpiScreen) {
     const upiId = upiSettings.upi_id || "";
     const accountName = upiSettings.account_name || "Rojgar Suvidha";
     const amount = serviceDetails.price;
@@ -1080,7 +1084,7 @@ function ESuvidhaApplyContent() {
                 <ShieldCheck className="w-6 h-6 text-blue-500" />
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white">Service Fees</p>
-                  <p className="text-xs text-gray-500">🔒 Secure PhonePe Payment</p>
+                  <p className="text-xs text-gray-500">🔒 Instant UPI &amp; QR Payment</p>
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-blue-600">₹{serviceDetails.price} INR</p>
