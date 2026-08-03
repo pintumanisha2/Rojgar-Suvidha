@@ -46,38 +46,50 @@ export default function UTRVerificationPage() {
   const fetchPayments = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch from user_applications
+      // 1. Fetch from user_applications using select('*') for fail-safe column compatibility
       const query1 = supabase
         .from("user_applications")
-        .select("tracking_id,full_name,phone,email,total_paid,utr_number,payment_status,payment_method,form_id,created_at,user_id,payment_screenshot_url")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
 
-      // 2. Fetch from apply_for_me_requests (e-Suvidha & Apply For Me)
+      // 2. Fetch from apply_for_me_requests using select('*')
       const query2 = supabase
         .from("apply_for_me_requests")
-        .select("tracking_id,applicant_name,phone_number,email,amount_paid,utr_number,payment_status,status,job_title,created_at,user_id,payment_screenshot_url")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
 
       const [res1, res2] = await Promise.all([query1, query2]);
 
+      if (res1.error) console.warn("user_applications query notice:", res1.error.message);
+      if (res2.error) console.warn("apply_for_me_requests query notice:", res2.error.message);
+
       const list1: PendingPayment[] = (res1.data || []).map((app: any) => ({
-        ...app,
+        tracking_id: app.tracking_id,
+        full_name: app.full_name || app.applicant_name || app.name || "Applicant",
+        phone: app.phone || app.phone_number || "",
+        email: app.email || "",
+        total_paid: Number(app.total_paid || app.amount_paid || 0),
+        utr_number: app.utr_number || "N/A",
+        payment_status: app.payment_status || app.status || "pending_verification",
         payment_method: app.payment_method || "upi_manual",
-        payment_status: app.payment_status || "pending_verification",
+        form_id: app.form_id || app.job_title || "Application",
+        created_at: app.created_at,
+        user_id: app.user_id,
+        payment_screenshot_url: app.payment_screenshot_url,
       }));
 
       const list2: PendingPayment[] = (res2.data || []).map((req: any) => ({
         tracking_id: req.tracking_id,
-        full_name: req.applicant_name || "Applicant",
-        phone: req.phone_number || "",
+        full_name: req.applicant_name || req.full_name || "Applicant",
+        phone: req.phone_number || req.phone || "",
         email: req.email || "",
-        total_paid: req.amount_paid || 0,
+        total_paid: Number(req.amount_paid || req.total_paid || 0),
         utr_number: req.utr_number || "N/A",
         payment_status: req.payment_status || req.status || "pending_verification",
         payment_method: "upi_manual",
-        form_id: req.job_title || "e-Suvidha Service",
+        form_id: req.job_title || req.form_id || "e-Suvidha Service",
         created_at: req.created_at,
         user_id: req.user_id,
         payment_screenshot_url: req.payment_screenshot_url,
