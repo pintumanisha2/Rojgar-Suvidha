@@ -40,12 +40,14 @@ export default function AIChatBot() {
       }
     }
 
-    // Show welcome toast after 4 seconds if chat is closed
-    const toastTimer = setTimeout(() => {
-      setShowToast(true);
-    }, 4000);
-    
-    return () => clearTimeout(toastTimer);
+    // Show welcome toast after 4 seconds — ONLY on desktop (md and above)
+    const isMobile = window.innerWidth < 768;
+    if (!isMobile) {
+      const toastTimer = setTimeout(() => {
+        setShowToast(true);
+      }, 4000);
+      return () => clearTimeout(toastTimer);
+    }
   }, []);
 
   const toggleListening = () => {
@@ -234,14 +236,15 @@ export default function AIChatBot() {
         }
       `}</style>
 
-      <div className="fixed bottom-24 md:bottom-5 right-5 z-[999] flex flex-col items-end gap-3">
+      <div className="fixed bottom-20 md:bottom-5 right-4 md:right-5 z-[999] flex flex-col items-end gap-3">
         
         {/* ── Chat Window ── */}
         {isOpen && (
           <div
             className="chat-window-enter flex flex-col glass-panel rounded-3xl overflow-hidden border border-white/50 dark:border-gray-800/80 shadow-2xl w-[calc(100vw-2rem)] sm:w-[350px] max-w-[350px]"
             style={{
-              height: "min(530px, calc(100dvh - 120px))",
+              height: "min(500px, calc(100dvh - 160px))",
+              maxHeight: "calc(100dvh - 160px)",
               boxShadow: "0 25px 50px -12px rgba(99, 102, 241, 0.25), 0 0 0 1px rgba(255,255,255,0.1) inset",
             }}
           >
@@ -428,7 +431,7 @@ export default function AIChatBot() {
             setIsOpen(!isOpen);
             if (!isOpen) setShowToast(false);
           }}
-          className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 ${
+          className={`relative w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 ${
             isOpen
               ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
               : "bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white bot-btn-pulse border border-white/20"

@@ -58,10 +58,15 @@ function InlineTag({ tag }: { tag?: TagType }) {
 }
 
 export default async function MainContent({ stateCode }: { stateCode?: string }) {
-  let query = supabase.from("jobs").select("*").neq("status", "draft").neq("category", "news").order("created_at", { ascending: false });
+  let query = supabase
+    .from("jobs")
+    .select("title, slug, status, tag, category, short_info, important_dates, created_at, total_posts, state_code")
+    .neq("status", "draft")
+    .neq("category", "news")
+    .order("created_at", { ascending: false })
+    .limit(120); // max 120 jobs total (20 per section)
   
   if (stateCode) {
-    // Show jobs for the specific state OR jobs that are All India (null, empty, or 'ALL')
     query = query.or(`state_code.eq.${stateCode},state_code.is.null,state_code.eq.,state_code.ilike.%all%`);
   }
 
@@ -70,11 +75,11 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
   // Fetch latest news/blog articles separately
   const { data: newsArticles } = await supabase
     .from("jobs")
-    .select("title, slug, created_at, short_info")
+    .select("title, slug, created_at")
     .eq("category", "news")
     .neq("status", "draft")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(6); // reduced from 10 for speed
   
   // Group jobs by category
   const jobsByCategory: Record<string, any[]> = {};
@@ -90,7 +95,7 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
   // Map to sections
   const sections = sectionConfig.map(conf => ({
     ...conf,
-    items: (jobsByCategory[conf.id] || []).slice(0, 15).map(job => {
+    items: (jobsByCategory[conf.id] || []).slice(0, 10).map(job => {
       let lastDate = "";
       if (job.important_dates && job.important_dates.length > 0) {
         const ldObj = job.important_dates.find((d: any) => d.label === "Last Date");
@@ -116,13 +121,14 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
 
       {/* ── Jobs by Sector (SEO Internal Linking Hub) ── */}
       {!stateCode && (
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-5 sm:mb-8">
           <div className="flex items-center gap-2 mb-3">
             <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-            <h2 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white">Browse Jobs by Sector</h2>
-            <span className="text-xs text-gray-400 ml-1">• 8 Categories</span>
+            <h2 className="text-sm sm:text-lg font-extrabold text-gray-900 dark:text-white">Browse by Sector</h2>
+            <span className="text-xs text-gray-400 ml-1 hidden sm:inline">• 8 Categories</span>
           </div>
-          <div className="grid grid-cols-2 xs:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-3">
+          {/* Mobile: 4 cols, Desktop: 8 cols */}
+          <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-3">
             {[
               { href: "/jobs/ssc", label: "SSC", emoji: "🏛️", sub: "CGL·CHSL·MTS", color: "from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800/50 hover:border-blue-400" },
               { href: "/jobs/railway", label: "Railway", emoji: "🚂", sub: "NTPC·GroupD", color: "from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800/50 hover:border-red-400" },
@@ -138,9 +144,8 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                 href={cat.href}
                 className={`flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-xl bg-gradient-to-br ${cat.color} border transition-all hover:-translate-y-0.5 hover:shadow-md group`}
               >
-                <span className="text-lg sm:text-2xl mb-0.5 sm:mb-1">{cat.emoji}</span>
-                <span className="text-xs sm:text-xs font-extrabold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight line-clamp-1">{cat.label}</span>
-                <span className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5 hidden sm:block line-clamp-1">{cat.sub}</span>
+                <span className="text-xl sm:text-2xl mb-0.5">{cat.emoji}</span>
+                <span className="text-[10px] sm:text-xs font-extrabold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">{cat.label}</span>
               </Link>
             ))}
           </div>
@@ -211,9 +216,9 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                           </div>
                         </div>
 
-                        {/* Row 2: meta info — last date, posts, eligibility */}
+                        {/* Row 2: meta info — last date, posts (eligibility hidden on mobile) */}
                         {(item.lastDate || item.posts || item.eligibility) && (
-                          <div className="flex items-center gap-3 mt-2 ml-3.5 flex-wrap">
+                          <div className="flex items-center gap-2 mt-1.5 ml-3.5 flex-wrap">
                             {item.lastDate && (
                               <span className={`flex items-center gap-1 text-[11px] font-extrabold ${st.state === "urgent" || st.state === "today" ? "text-red-600 dark:text-red-400 animate-pulse bg-red-50 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 px-1.5 py-0.5 rounded-md" : "text-gray-500 dark:text-gray-400"}`}>
                                 <Calendar className="w-3.5 h-3.5 shrink-0 opacity-80" />
@@ -226,8 +231,9 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                                 {item.posts} Posts
                               </span>
                             )}
+                            {/* Eligibility: hidden on mobile to save vertical space */}
                             {item.eligibility && (
-                              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800 px-1.5 py-0.5 rounded-md line-clamp-1 max-w-[200px]">
+                              <span className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800 px-1.5 py-0.5 rounded-md line-clamp-1 max-w-[200px]">
                                 <GraduationCap className="w-3.5 h-3.5 shrink-0 opacity-80" />
                                 {item.eligibility}
                               </span>

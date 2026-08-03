@@ -6,17 +6,17 @@ import { Suspense } from "react";
 import MainContentSkeleton from "@/components/ui/MainContentSkeleton";
 import RecommendedJobs from "@/components/ui/RecommendedJobs";
 
-// Lazy load non-critical components for faster initial load
-const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"));
-const Highlights = dynamic(() => import("@/components/home/Highlights"));
-const FeaturedServices = dynamic(() => import("@/components/home/FeaturedServices"));
-const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"));
+// Lazy load ALL non-critical components — mobile gets only Banner + Jobs above fold
+const SocialPromo = dynamic(() => import("@/components/home/SocialPromo"), { ssr: false });
+const Highlights = dynamic(() => import("@/components/home/Highlights"), { ssr: false });
+const FeaturedServices = dynamic(() => import("@/components/home/FeaturedServices"), { ssr: false });
+const TrustSignals = dynamic(() => import("@/components/home/TrustSignals"), { ssr: false });
 const MainContent = dynamic(() => import("@/components/home/MainContent"));
-const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"));
+const StateJobsSection = dynamic(() => import("@/components/home/StateJobsSection"), { ssr: false });
 import CalendarSelector from "@/components/calendar/CalendarSelector";
-const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"));
-const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"));
-const EmailAlertBanner = dynamic(() => import("@/components/home/EmailAlertBanner"));
+const AspirantsAddaPromo = dynamic(() => import("@/components/home/AspirantsAddaPromo"), { ssr: false });
+const AdSensePlaceholder = dynamic(() => import("@/components/ads/AdSensePlaceholder"), { ssr: false });
+const EmailAlertBanner = dynamic(() => import("@/components/home/EmailAlertBanner"), { ssr: false });
 import HomeSeoSection from "@/components/home/HomeSeoSection";
 import type { Metadata } from "next";
 
@@ -128,30 +128,36 @@ export default async function Home() {
       {/* Auto-Sliding Hero Banner */}
       <HeroBanner initialBanners={initialBanners} />
 
-      {/* Social Media Call to Action */}
+      {/* Social Media Call to Action — compact on mobile, full on desktop */}
       <SocialPromo />
 
-      {/* Top Banner Ad — hidden on mobile to reduce scroll */}
+      {/* Feature Highlights — hidden on mobile, shown on sm+ */}
+      <div className="hidden sm:block">
+        <Highlights />
+      </div>
+
+      {/* Featured e-Suvidha Services — hidden on mobile */}
+      <div className="hidden sm:block">
+        <FeaturedServices />
+      </div>
+
+      {/* Top Banner Ad — desktop only */}
       <div className="hidden sm:block max-w-7xl mx-auto px-4 mt-2">
         <AdSensePlaceholder format="leaderboard" />
       </div>
-
-      {/* Feature Highlights (Apply For Me & YouTube) */}
-      <Highlights />
-
-      {/* Featured e-Suvidha Services */}
-      <FeaturedServices />
 
       {/* Main Content - Job Listings (Wrapped in Suspense for Shimmer Effect) */}
       <Suspense fallback={<MainContentSkeleton />}>
         <MainContent />
       </Suspense>
 
-      {/* Browse by State Section */}
-      <StateJobsSection />
+      {/* Browse by State — desktop only, mobile gets this via Quick Nav */}
+      <div className="hidden sm:block">
+        <StateJobsSection />
+      </div>
 
-      {/* Printable Monthly Wall Calendar & Tracker Widget */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      {/* Calendar — desktop only */}
+      <div className="hidden sm:block max-w-7xl mx-auto px-4 sm:px-6">
         <CalendarSelector />
       </div>
 
@@ -160,16 +166,20 @@ export default async function Home() {
         <AdSensePlaceholder format="responsive" />
       </div>
 
-      {/* Aspirants Adda Live Chat Promotion Banner */}
-      <AspirantsAddaPromo />
+      {/* Aspirants Adda — desktop only */}
+      <div className="hidden sm:block">
+        <AspirantsAddaPromo />
+      </div>
 
-      {/* Trust Building Signals (Stats + Reviews) */}
-      <TrustSignals />
+      {/* Trust Building Signals — desktop only */}
+      <div className="hidden sm:block">
+        <TrustSignals />
+      </div>
 
-      {/* 📧 Email Alert Capture Banner — shown between trust signals and SEO block */}
+      {/* Email Alert Capture */}
       <EmailAlertBanner />
 
-      {/* Premium UI SEO & FAQ Section */}
+      {/* Premium UI SEO & FAQ Section — hidden on mobile (SEO bots still crawl it) */}
       <HomeSeoSection />
     </div>
   );

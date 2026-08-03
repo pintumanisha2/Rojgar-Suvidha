@@ -145,13 +145,14 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
         setBlogContent(data.blog_content || "");
         
         const fetchedLinks = data.links || [];
-        const applyLink = fetchedLinks.find((l: any) => l.label === "Apply For Me");
-        if (applyLink) {
-          setApplyForMeLink(applyLink.url);
-          setLinks(fetchedLinks.filter((l: any) => l.label !== "Apply For Me"));
-        } else {
-          setLinks(fetchedLinks);
-        }
+        // Extract Apply For Me link
+        const applyForMeL = fetchedLinks.find((l: any) => l.label === "Apply For Me");
+        if (applyForMeL) setApplyForMeLink(applyForMeL.url);
+        // Extract Direct Apply (Official) link
+        const directL = fetchedLinks.find((l: any) => l.label === "Apply Online");
+        if (directL) setDirectApplyLink(directL.url);
+        // Remaining links (notifications, pdf, etc.)
+        setLinks(fetchedLinks.filter((l: any) => l.label !== "Apply For Me" && l.label !== "Apply Online"));
         
         if (data.important_dates && data.important_dates.length > 0) {
           const lastDateObj = data.important_dates.find((d: any) => d.label === "Last Date");
@@ -188,7 +189,8 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
   const [isUploadingFile, setIsUploadingFile] = useState<"banner" | "pdf" | null>(null);
 
   const [applyForMeLink, setApplyForMeLink] = useState("");
-  const [links, setLinks] = useState<any[]>([{ label: "Apply Online", url: "" }, { label: "Download Notification", url: "" }]);
+  const [directApplyLink, setDirectApplyLink] = useState(""); // Official govt site URL
+  const [links, setLinks] = useState<any[]>([{ label: "Download Notification", url: "" }]);
 
   const [isGeneratingBlog, setIsGeneratingBlog] = useState(false);
 
@@ -200,12 +202,12 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       const draftObj = {
         title, category, status, stateCode, tag, lastDate,
         shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education,
-        totalPosts, blogContent, applyForMeLink, links, savedAt: Date.now()
+        totalPosts, blogContent, applyForMeLink, directApplyLink, links, savedAt: Date.now()
       };
       localStorage.setItem(draftKey, JSON.stringify(draftObj));
     }, 1000);
     return () => clearTimeout(timeout);
-  }, [id, loading, title, category, status, stateCode, tag, lastDate, shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education, totalPosts, blogContent, applyForMeLink, links]);
+  }, [id, loading, title, category, status, stateCode, tag, lastDate, shortInfo, metaDesc, bannerUrl, appFee, ageLimit, education, totalPosts, blogContent, applyForMeLink, directApplyLink, links]);
 
   const slugify = (text: string) => text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -248,7 +250,11 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
       meta_description: metaDesc,
       banner_url: bannerUrl || null,
       blog_content: blogContent,
-      links: (applyForMeLink && applyForMeLink.trim()) ? [...links, { label: "Apply For Me", url: applyForMeLink.trim() }] : links,
+      links: [
+        ...(directApplyLink && directApplyLink.trim() ? [{ label: "Apply Online", url: directApplyLink.trim() }] : []),
+        ...(applyForMeLink && applyForMeLink.trim() ? [{ label: "Apply For Me", url: applyForMeLink.trim() }] : []),
+        ...links,
+      ],
       important_dates: lastDate ? [{ label: "Last Date", value: lastDate }] : [],
       created_by: currentUserEmail,
     };
@@ -610,36 +616,70 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
           </SectionCard>
 
           <SectionCard icon={<LinkIcon className="h-5 w-5" />} title="Important Links">
-            <div className="mb-6 p-4 bg-yellow-50 dark:bg-amber-900/10 border border-yellow-200 dark:border-amber-900/30 rounded-2xl">
-              <label className="block text-sm font-bold text-yellow-900 dark:text-amber-500 mb-2">
-                "Apply For Me" Target URL (Optional)
-              </label>
+            
+            {/* ── CARD 1: Direct Apply (Official Govt Link) ── */}
+            <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/40 rounded-2xl">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                <label className="block text-sm font-extrabold text-emerald-900 dark:text-emerald-400">
+                  Direct Apply URL <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-500">(Official Government Portal)</span>
+                </label>
+              </div>
+              <input 
+                type="url" 
+                value={directApplyLink} 
+                onChange={e => setDirectApplyLink(e.target.value)} 
+                placeholder="https://ssc.gov.in/apply-online" 
+                className={`${inputCls} border-emerald-200 focus:border-emerald-500 bg-white dark:bg-zinc-900`} 
+              />
+              <p className="text-xs text-emerald-700 dark:text-emerald-600/80 mt-1.5 font-medium">
+                📱 Mobile popup mein <strong>"Apply Official"</strong> green button dikhega. Khali chhodne par ye button nahi aayega.
+              </p>
+            </div>
+
+            {/* ── CARD 2: Apply For Me Override ── */}
+            <div className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-900/40 rounded-2xl">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shrink-0"></span>
+                <label className="block text-sm font-extrabold text-violet-900 dark:text-violet-400">
+                  Apply For Me URL <span className="text-xs font-semibold text-violet-600 dark:text-violet-500">(Custom Override — Optional)</span>
+                </label>
+              </div>
               <input 
                 type="url" 
                 value={applyForMeLink} 
                 onChange={e => setApplyForMeLink(e.target.value)} 
-                placeholder="https://payment-link.com/..." 
-                className={`${inputCls} border-yellow-200 focus:border-yellow-500 bg-white dark:bg-zinc-900`} 
+                placeholder="https://rojgarsuvidha.com/apply-for-me?job=..." 
+                className={`${inputCls} border-violet-200 focus:border-violet-500 bg-white dark:bg-zinc-900`} 
               />
-              <p className="text-xs text-yellow-700 dark:text-amber-600/70 mt-1.5 font-medium">Overwrites the default service page link for this specific job.</p>
+              <p className="text-xs text-violet-700 dark:text-violet-600/80 mt-1.5 font-medium">
+                ✨ Mobile popup mein <strong>"Apply For Me"</strong> purple button ka link override hoga. Khali chhodne par default /apply-for-me page use hoga.
+              </p>
             </div>
-            
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Application & PDF Links</label>
+
+            {/* ── CARD 3: Other Links (Notification PDF, etc.) ── */}
+            <div className="p-4 bg-gray-50 dark:bg-zinc-900/40 border border-gray-200 dark:border-zinc-800 rounded-2xl">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0"></span>
+                <label className="block text-sm font-extrabold text-gray-700 dark:text-gray-300">
+                  Other Links <span className="text-xs font-semibold text-gray-500">(PDF, Syllabus, Admit Card, etc.)</span>
+                </label>
+              </div>
+              <div className="space-y-3">
               {links.map((l, i) => {
                 const isNotificationRow = l.label.toLowerCase().includes("notification") || l.label.toLowerCase().includes("pdf");
                 const isThisUploading = uploadingPdfIndex === i;
                 return (
                   <div key={i} className="flex gap-3 items-center">
-                    <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="e.g. Apply Online" className={`${inputCls} flex-1 bg-gray-50 dark:bg-zinc-900`} />
+                    <input type="text" value={l.label} onChange={e => { const n = [...links]; n[i].label = e.target.value; setLinks(n); }} placeholder="e.g. Download Notification" className={`${inputCls} flex-1 bg-white dark:bg-zinc-900`} />
                     <div className="relative flex-[1.5] flex items-center">
                       <input 
                         type="url" 
                         value={isThisUploading ? "Uploading PDF..." : l.url} 
                         onChange={e => { const n = [...links]; n[i].url = e.target.value; setLinks(n); }} 
                         disabled={isThisUploading}
-                        placeholder="https://..." 
-                        className={`${inputCls} pr-12 bg-gray-50 dark:bg-zinc-900 ${isThisUploading ? "opacity-70 text-indigo-500" : ""}`} 
+                        placeholder="https://... or upload PDF →" 
+                        className={`${inputCls} pr-12 bg-white dark:bg-zinc-900 ${isThisUploading ? "opacity-70 text-indigo-500" : ""}`} 
                       />
                       {isNotificationRow && !isThisUploading && (
                         <label className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-indigo-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors" title="Upload Official PDF">
@@ -656,6 +696,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
               <button type="button" onClick={() => setLinks([...links, { label: "", url: "" }])} className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center gap-2 mt-4 px-3 py-2 rounded-lg transition-colors w-fit border border-indigo-100 dark:border-indigo-900/50">
                 <PlusCircle className="h-4 w-4" /> Add Link
               </button>
+              </div>
             </div>
           </SectionCard>
         </div>

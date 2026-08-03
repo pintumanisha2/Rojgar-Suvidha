@@ -1,60 +1,44 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import Razorpay from "razorpay";
-import crypto from "crypto";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// GET handler: Verify Razorpay payment status
-// Called by page after payment: GET /api/track?order_id=order_XXXXX&payment_id=pay_XXXXX&signature=XXX
+// GET handler: Check UPI payment status from DB
+// Called by tracking page: GET /api/track?order_id=RS2A3B4C
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const orderId = searchParams.get("order_id");
-    const paymentId = searchParams.get("payment_id");
-    const signature = searchParams.get("signature");
 
     if (!orderId) {
       return NextResponse.json({ error: "order_id is required" }, { status: 400 });
     }
 
-    // ── If payment_id + signature provided, verify Razorpay signature ──────
-    if (paymentId && signature) {
-      const keySecret = process.env.RAZORPAY_KEY_SECRET;
-      if (keySecret) {
-        const generatedSignature = crypto
-          .createHmac("sha256", keySecret)
-          .update(`${orderId}|${paymentId}`)
-          .digest("hex");
-
-        if (generatedSignature === signature) {
-          // ✅ Payment is verified — update DB
-          await supabaseAdmin
-            .from("apply_for_me_requests")
-            .update({ status: "paid" })
-            .eq("tracking_id", orderId);
-
-          return NextResponse.json({ order_status: "PAID", order_id: orderId, payment_id: paymentId });
-        } else {
-          return NextResponse.json({ order_status: "FAILED", error: "Signature mismatch" }, { status: 400 });
-        }
-      }
-    }
-
-    // ── Fallback: Check DB for status (webhook may have already updated it) ─
+    // Check DB for payment status (UTR-based manual UPI system)
     const { data: request } = await supabaseAdmin
       .from("apply_for_me_requests")
       .select("status")
       .eq("tracking_id", orderId)
-      .single();
+      .maybeSingle();
 
-    if (request?.status === "paid") {
-      return NextResponse.json({ order_status: "PAID", order_id: orderId });
+    if (!request) {
+      // Also check user_applications table for Apply For Me orders
+      const { data: app } = await supabaseAdmin
+        .from("user_applications")
+        .select("payment_status")
+        .eq("tracking_id", orderId)
+        .maybeSingle();
+
+      if (app?.payment_status === "paid") return NextResponse.json({ order_status: "PAID", order_id: orderId });
+      return NextResponse.json({ order_status: "PENDING", order_id: orderId });
     }
 
+    if (request.status === "paid") return NextResponse.json({ order_status: "PAID", order_id: orderId });
+    if (request.status === "pending_verification") return NextResponse.json({ order_status: "PENDING_VERIFICATION", order_id: orderId });
+    if (request.status === "expired") return NextResponse.json({ order_status: "EXPIRED", order_id: orderId });
     return NextResponse.json({ order_status: "PENDING", order_id: orderId });
 
   } catch (err: any) {

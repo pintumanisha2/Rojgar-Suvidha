@@ -5,8 +5,10 @@ const nextConfig = {
   
   // ── Image Optimization ──────────────────────────────────
   images: {
-    formats: ["image/avif", "image/webp"], // Use modern formats for faster load
-    minimumCacheTTL: 86400, // Cache images for 24 hours (86400 seconds)
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 604800, // Cache images for 7 days (was 1 day)
+    deviceSizes: [375, 640, 750, 828, 1080, 1200, 1920], // Mobile-first breakpoints
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
     remotePatterns: [
       {
         protocol: "https",
@@ -67,7 +69,7 @@ const nextConfig = {
 
   // ── Experimental features for performance ──
   experimental: {
-    optimizeCss: false, // Keep false to avoid build issues; enable after testing
+    optimizeCss: true, // Inline critical CSS — faster FCP on mobile
   },
 
   outputFileTracingRoot: path.join(__dirname),

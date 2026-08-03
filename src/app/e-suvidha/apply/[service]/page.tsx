@@ -4,40 +4,12 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { supabase, getStoredSession } from "@/lib/supabase";
 import Link from "next/link";
-import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, ShieldCheck, AlertCircle, FileText, UploadCloud, AlertTriangle, Smartphone, Clock, Copy, QrCode, Camera, X, CheckCircle } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { SERVICE_INFO_DB } from "@/lib/eSuvidhaContent";
 import { useToast } from "@/components/ui/Toast";
 
-// Load Razorpay checkout script dynamically
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if ((window as any).Razorpay) { resolve(true); return; }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
-// Maps raw payment API errors to clear, actionable English messages.
-function mapPaymentError(raw: string): string {
-  const r = (raw || "").toLowerCase();
-  if (r.includes("credentials") || r.includes("merchant") || r.includes("missing"))
-    return "Payment service is temporarily unavailable. Please try again in a few minutes or contact support at support@rojgarsuvidha.com";
-  if (r.includes("network") || r.includes("fetch") || r.includes("503") || r.includes("failed to fetch"))
-    return "Network error. Please check your internet connection and try again.";
-  if (r.includes("timeout") || r.includes("timed out"))
-    return "The request timed out. Please try again.";
-  if (r.includes("session") || r.includes("unauthorized") || r.includes("401"))
-    return "Your session has expired. Please refresh the page and log in again.";
-  if (r.includes("checkout url") || r.includes("redirect"))
-    return "Could not connect to the payment gateway. Please try again or use a different browser.";
-  if (r.includes("database") || r.includes("insert"))
-    return "Your application data could not be saved. Please try again. If this persists, contact support.";
-  return raw || "Something went wrong. Please try again.";
-}
 
 // Database of Services
 const SERVICE_DB: Record<string, { title: string; price: number; docsRequired: string[]; docsOptional?: string[]; extraFields: string[] }> = {
@@ -241,6 +213,19 @@ function ESuvidhaApplyContent() {
   const [captchaA, setCaptchaA] = useState("");
   const [agreed, setAgreed] = useState(false);
 
+  // UPI Manual Payment State
+  const [showUpiScreen, setShowUpiScreen] = useState(false);
+  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url?: string } | null>(null);
+  const [utrInput, setUtrInput] = useState("");
+  const [utrCopied, setUtrCopied] = useState(false);
+  const [submittingUtr, setSubmittingUtr] = useState(false);
+  const [utrError, setUtrError] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const [paymentTimeLeft, setPaymentTimeLeft] = useState(15 * 60);
+  const [paymentExpired, setPaymentExpired] = useState(false);
+  const [esuvidhaTrackingCode, setEsuvidhaTrackingCode] = useState("");
+
   useEffect(() => {
     setCaptchaQ({ a: Math.floor(Math.random() * 10) + 1, b: Math.floor(Math.random() * 10) + 1 });
 
@@ -357,6 +342,70 @@ function ESuvidhaApplyContent() {
     }
   }, [user, searchParams]);
 
+  // Fetch UPI settings
+  useEffect(() => {
+    fetch("/api/admin/upi-settings")
+      .then(r => r.json())
+      .then(d => { if (d.settings) setUpiSettings(d.settings); })
+      .catch(() => {});
+  }, []);
+
+  // Payment countdown timer
+  useEffect(() => {
+    if (!showUpiScreen) return;
+    if (paymentTimeLeft <= 0) { setPaymentExpired(true); return; }
+    const t = setTimeout(() => setPaymentTimeLeft(prev => prev - 1), 1000);
+    return () => clearTimeout(t);
+  }, [showUpiScreen, paymentTimeLeft]);
+
+  const copyUpiId = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setUtrCopied(true);
+    setTimeout(() => setUtrCopied(false), 2000);
+  };
+
+  const uploadScreenshot = async (file: File): Promise<string> => {
+    setUploadingScreenshot(true);
+    try {
+      const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true });
+      const ext = file.name.split(".").pop() || "jpg";
+      const fileName = `payment-screenshots/esuvidha-${esuvidhaTrackingCode}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("documents").upload(fileName, compressed, { contentType: file.type, upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(fileName);
+      setScreenshotUrl(publicUrl);
+      return publicUrl;
+    } catch (e) { return ""; }
+    finally { setUploadingScreenshot(false); }
+  };
+
+  const handleUtrSubmit = async () => {
+    setUtrError("");
+    if (paymentExpired) { setUtrError("Order expire ho gaya. Kripya dobara apply karein."); return; }
+    if (!utrInput.trim()) { setUtrError("UTR number daalna zaroori hai."); return; }
+    if (!/^\d{12}$/.test(utrInput.trim())) { setUtrError("UTR number 12 digit ka hona chahiye."); return; }
+    setSubmittingUtr(true);
+    try {
+      const res = await fetch("/api/utr-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tracking_id: esuvidhaTrackingCode,
+          utr_number: utrInput.trim(),
+          screenshot_url: screenshotUrl || null,
+          declared_amount: serviceDetails.price,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setUtrError(data.error || "UTR submit karne mein dikkat aayi."); return; }
+      setTrackingId(esuvidhaTrackingCode);
+      setSubmitted(true);
+      setShowUpiScreen(false);
+    } catch (err: any) {
+      setUtrError(err.message || "Unexpected error.");
+    } finally { setSubmittingUtr(false); }
+  };
+
   const handleFileChange = (docName: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFiles(prev => ({ ...prev, [docName]: e.target.files![0] }));
@@ -428,10 +477,8 @@ function ESuvidhaApplyContent() {
     setError(null);
 
     try {
-      // 1. Upload Files to Backblaze B2 (or use locker match)
+      // 1. Upload Files
       const uploadedUrls: Record<string, string> = {};
-
-      // Pre-fill with fuzzy locker matches
       const allDocs = [...serviceDetails.docsRequired, ...(serviceDetails.docsOptional || [])];
       for (const doc of allDocs) {
         const match = findLockerMatch(doc);
@@ -442,66 +489,30 @@ function ESuvidhaApplyContent() {
         let fileToUpload = file;
         if (file.type.startsWith("image/")) {
           try {
-            const options = {
-              maxSizeMB: 0.2, // 200 KB
-              maxWidthOrHeight: 1200,
-              useWebWorker: true,
-            };
-            fileToUpload = await imageCompression(file, options);
-            console.log(`Compressed ${docName} from ${file.size/1024}KB to ${fileToUpload.size/1024}KB`);
-          } catch (err) {
-            console.error("Compression failed, using original file:", err);
-          }
+            fileToUpload = await imageCompression(file, { maxSizeMB: 0.2, maxWidthOrHeight: 1200, useWebWorker: true });
+          } catch (err) { console.error("Compression failed:", err); }
         }
-
-        // Upload file via proxy backend endpoint to avoid browser CORS issues
         const formData = new FormData();
         formData.append("file", fileToUpload);
-
         const res = await fetch("/api/locker/upload-direct", {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          },
+          headers: { "Authorization": `Bearer ${token}` },
           body: formData
         });
-
         const resData = await res.json();
-        if (!res.ok) {
-          throw new Error(resData.error || `Failed to upload ${docName}`);
-        }
-
-        const { key } = resData;
-
-        // Construct the secure relative view URL
-        uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(key)}`;
+        if (!res.ok) throw new Error(resData.error || `Failed to upload ${docName}`);
+        uploadedUrls[docName] = `/api/locker/view?key=${encodeURIComponent(resData.key)}`;
       }
 
       let formattedNotes = Object.entries(extraData).map(([k, v]) => `${k}: ${v}`).join('\n');
       let esuvidhaData = `--- E-SUVIDHA DETAILS ---\n${formattedNotes}\n\n--- UPLOADED DOCUMENTS ---\n`;
       esuvidhaData += Object.entries(uploadedUrls).map(([k, v]) => `${k}: ${v}`).join('\n');
 
-      // 2. Load Razorpay script
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) throw new Error("Failed to load payment gateway. Please check your internet connection.");
+      // 2. Generate tracking code
+      const trackCode = "ES" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      setEsuvidhaTrackingCode(trackCode);
 
-      // 3. Create Razorpay order on server
-      const res = await fetch("/api/submit-application", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: serviceDetails.price,
-          customerName: applicantName,
-          customerPhone: applicantPhone,
-          customerEmail: user.email || "",
-          formId: `esuvidha-${serviceId}`,
-        }),
-      });
-
-      const order = await res.json();
-      if (!res.ok) throw new Error(order.error || "Payment system unavailable.");
-
-      // 4. Insert pending request BEFORE opening payment (save data first)
+      // 3. Save to DB as pending_verification
       const { error: insertError } = await supabase
         .from("apply_for_me_requests")
         .insert({
@@ -510,70 +521,201 @@ function ESuvidhaApplyContent() {
           phone_number: applicantPhone,
           email: user.email || "",
           job_title: `[e-Suvidha] ${serviceDetails.title}`,
-          status: "pending",
+          status: "pending_verification",
           admin_notes: esuvidhaData,
-          tracking_id: order.order_id,
+          tracking_id: trackCode,
+          amount_paid: serviceDetails.price,
         });
 
-      if (insertError) {
-        throw new Error("Failed to initialize your request record in the database.");
-      }
+      if (insertError) throw new Error("Request save karne mein dikkat aayi. Dobara try karo.");
 
-      // 5. Open Razorpay Checkout Popup
-      const options = {
-        key: order.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency || "INR",
-        name: "Rojgar Suvidha",
-        description: serviceDetails.title,
-        order_id: order.order_id,
-        prefill: {
-          name: applicantName,
-          email: user.email || "",
-          contact: applicantPhone,
-        },
-        theme: { color: "#4f46e5" },
-        handler: async (response: any) => {
-          // Payment successful — verify with server
-          try {
-            const verifyRes = await fetch(
-              `/api/track?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&signature=${response.razorpay_signature}`
-            );
-            const verifyData = await verifyRes.json();
-            if (verifyData.order_status === "PAID") {
-              setTrackingId(order.order_id);
-              setSubmitted(true);
-            } else {
-              setError("Payment verification failed. Please contact support.");
-              setSubmitting(false);
-            }
-          } catch (e) {
-            setError("Payment done but verification failed. Contact support with your payment ID: " + response.razorpay_payment_id);
-            setSubmitting(false);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setError("Payment cancelled. Your form data is saved. Click 'Pay & Submit' to retry.");
-            setSubmitting(false);
-          },
-        },
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
+      // 4. Show UPI payment screen
+      setShowUpiScreen(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
 
     } catch (err: any) {
-      const friendly = mapPaymentError(err.message || "Something went wrong.");
-      setError(friendly);
-      toast.error("Submission Failed", friendly);
+      setError(err.message || "Something went wrong. Please try again.");
+      toast.error("Submission Failed", err.message || "Something went wrong.");
+    } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
 
+  // ── Payment Expired Screen ──
+  if (paymentExpired) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 dark:from-gray-950 dark:to-red-950 flex items-center justify-center px-4">
+        <div className="max-w-sm w-full text-center bg-white dark:bg-gray-900 rounded-3xl border border-red-100 dark:border-red-900/40 p-8 shadow-xl">
+          <div className="text-6xl mb-4">⏰</div>
+          <h2 className="text-xl font-black text-red-600 dark:text-red-400 mb-2">Payment Time Out!</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            15 minute mein payment nahi mili. Kripya dobara apply karein.
+          </p>
+          <button
+            onClick={() => {
+              setPaymentExpired(false); setShowUpiScreen(false);
+              setPaymentTimeLeft(15 * 60); setUtrInput(""); setScreenshotUrl("");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-all"
+          >🔄 Dobara Apply Karo</button>
+          <p className="text-xs text-gray-400 mt-4">Tracking ID: <strong className="text-indigo-500">{esuvidhaTrackingCode}</strong></p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── UPI Payment Screen ──
+  if (showUpiScreen && upiSettings) {
+    const upiId = upiSettings.upi_id || "";
+    const accountName = upiSettings.account_name || "Rojgar Suvidha";
+    const amount = serviceDetails.price;
+    const txnNote = encodeURIComponent(`RojgarSuvidha-${esuvidhaTrackingCode}`);
+    const txnName = encodeURIComponent(accountName);
+    const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+    const dynamicQrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(upiDeepLink)}&choe=UTF-8`;
+    const phonePeLink = `phonepe://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+    const googlePayLink = `tez://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+    const paytmLink = `paytmmp://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+    const mins = Math.floor(paymentTimeLeft / 60).toString().padStart(2, "0");
+    const secs = (paymentTimeLeft % 60).toString().padStart(2, "0");
+    const isUrgent = paymentTimeLeft < 180;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-8 px-4 flex items-start justify-center">
+        <div className="max-w-md w-full space-y-4">
+          <div className="text-center">
+            <div className="inline-flex w-16 h-16 bg-indigo-600 rounded-2xl items-center justify-center mb-3 shadow-lg shadow-indigo-500/30">
+              <Smartphone className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">UPI Se Pay Karo</h1>
+            <p className="text-gray-500 text-sm mt-1">{serviceDetails.title} — Service Fee</p>
+          </div>
+
+          {/* Countdown Timer */}
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border font-bold text-sm ${isUrgent ? "bg-red-50 dark:bg-red-950/30 border-red-200 text-red-600" : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 text-amber-700"}`}>
+            <Clock className={`w-5 h-5 shrink-0 ${isUrgent ? "animate-pulse" : ""}`} />
+            <div className="flex-1">
+              <p className="font-black">⏱️ {mins}:{secs} mein pay karke UTR submit karo</p>
+              <p className="text-xs opacity-70">Time khatam hone ke baad order expire ho jayega</p>
+            </div>
+            <span className="text-lg font-black tabular-nums">{mins}:{secs}</span>
+          </div>
+
+          {/* Amount */}
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-center text-white shadow-2xl shadow-indigo-500/30">
+            <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Total Amount</p>
+            <div className="text-5xl font-black mb-1">₹{amount}</div>
+            <p className="text-indigo-200 text-sm">{serviceDetails.title}</p>
+            <div className="mt-3 bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span className="text-xs font-black text-white/90">Amount Locked — Edit Nahi Ho Sakta</span>
+            </div>
+          </div>
+
+          {/* QR + App Buttons + UPI ID */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <div className="flex flex-col items-center mb-5">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl blur opacity-20" />
+                <img src={dynamicQrUrl} alt={`UPI QR ₹${amount}`} width={200} height={200}
+                  className="relative w-48 h-48 object-contain rounded-2xl border-2 border-indigo-100 bg-white p-2"
+                  onError={(e) => { if (upiSettings.qr_image_url) (e.target as HTMLImageElement).src = upiSettings.qr_image_url; }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 font-semibold mt-3">Scan karke <strong className="text-indigo-600">₹{amount}</strong> pay karo</p>
+              <p className="text-[10px] text-gray-400 mt-1">⚡ Amount auto-fill hoga — change nahi hoga</p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs text-gray-400 font-bold text-center mb-2.5">YA APNI APP SE DIRECT PAY KARO</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { href: phonePeLink, emoji: "📱", label: "PhonePe", color: "purple" },
+                  { href: googlePayLink, emoji: "💙", label: "GPay", color: "blue" },
+                  { href: paytmLink, emoji: "💸", label: "Paytm", color: "sky" },
+                ].map(app => (
+                  <a key={app.label} href={app.href}
+                    className={`flex flex-col items-center gap-1 p-2.5 bg-${app.color}-50 dark:bg-${app.color}-950/20 border border-${app.color}-200 rounded-xl hover:bg-${app.color}-100 active:scale-95 transition-all`}>
+                    <span className="text-xl">{app.emoji}</span>
+                    <span className={`text-[10px] font-black text-${app.color}-700`}>{app.label}</span>
+                    <span className={`text-[9px] text-${app.color}-500 font-bold`}>₹{amount}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+              <p className="text-xs text-gray-400 font-bold text-center mb-2">YA SEEDHA UPI ID PAR BHEJO</p>
+              <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3">
+                <div>
+                  <p className="text-xs text-gray-400">UPI ID</p>
+                  <p className="font-black text-indigo-700 dark:text-indigo-300 text-sm">{upiId}</p>
+                </div>
+                <button onClick={() => copyUpiId(upiId)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all">
+                  {utrCopied ? <CheckCircle2 className="w-3 h-3 text-green-300" /> : <Copy className="w-3 h-3" />}
+                  {utrCopied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <p className="text-center text-xs text-gray-400 mt-2">Account: <strong className="text-gray-600 dark:text-gray-300">{accountName}</strong></p>
+              <p className="text-center text-xs font-black text-red-500 mt-1">⚠️ EXACT ₹{amount} hi bhejo</p>
+            </div>
+          </div>
+
+          {/* UTR + Screenshot */}
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <h3 className="font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" /> Payment ke Baad UTR Daalo
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">GPay/PhonePe → Transaction History → 12-digit UTR number copy karo</p>
+            <input type="tel" inputMode="numeric" maxLength={12} value={utrInput}
+              onChange={e => { setUtrInput(e.target.value.replace(/\D/g, "")); setUtrError(""); }}
+              placeholder="123456789012 (12 digits)"
+              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 focus:border-indigo-500 rounded-xl text-center text-xl font-black text-gray-900 dark:text-white bg-white dark:bg-gray-800 outline-none tracking-widest placeholder:text-gray-300 placeholder:font-normal placeholder:text-base"
+            />
+            {utrError && <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-bold"><AlertCircle className="w-3.5 h-3.5 shrink-0" />{utrError}</div>}
+
+            {/* Screenshot Upload */}
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <label className="text-xs font-black text-gray-600 mb-2 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5" />Payment Screenshot (Optional — Jaldi Verify Hogi)
+                <span className="bg-green-100 text-green-700 text-[9px] font-black px-1.5 py-0.5 rounded-full ml-1">JALDI VERIFY</span>
+              </label>
+              {screenshotUrl ? (
+                <div className="relative">
+                  <img src={screenshotUrl} className="w-full max-h-48 object-contain rounded-xl border border-green-200 bg-gray-50" alt="Payment screenshot" />
+                  <button onClick={() => setScreenshotUrl("")} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"><X className="w-3 h-3" /></button>
+                  <div className="mt-1 text-xs text-green-600 font-black flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Screenshot upload ho gayi!</div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 hover:border-indigo-400 rounded-xl p-5 cursor-pointer transition-all bg-gray-50 dark:bg-gray-800/30">
+                  {uploadingScreenshot ? <Loader2 className="w-7 h-7 animate-spin text-indigo-500" /> : <Camera className="w-7 h-7 text-gray-300" />}
+                  <p className="text-xs font-bold text-gray-500">{uploadingScreenshot ? "Upload ho rahi hai..." : "Tap karke screenshot select karo"}</p>
+                  <input type="file" accept="image/*" capture="environment" className="hidden"
+                    onChange={async (e) => { const f = e.target.files?.[0]; if (f) await uploadScreenshot(f); }} />
+                </label>
+              )}
+            </div>
+
+            <button onClick={handleUtrSubmit} disabled={submittingUtr || utrInput.length !== 12 || paymentExpired}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-black rounded-2xl transition-all text-sm shadow-lg shadow-green-500/20">
+              {submittingUtr ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              {submittingUtr ? "Submit Ho Raha Hai..." : "UTR Submit Karo → Application Confirm"}
+            </button>
+          </div>
+
+          <div className="text-center text-xs text-gray-400 pb-4 space-y-1">
+            <p>Tracking ID: <strong className="text-indigo-600">{esuvidhaTrackingCode}</strong></p>
+            <p>Koi dikkat? <a href="https://wa.me/91XXXXXXXXXX" className="text-indigo-500 underline" target="_blank">WhatsApp Help</a></p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center">
@@ -938,7 +1080,7 @@ function ESuvidhaApplyContent() {
                 <ShieldCheck className="w-6 h-6 text-blue-500" />
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white">Service Fees</p>
-                  <p className="text-xs text-gray-500">🔒 Secure Razorpay Payment (UPI / Card / Netbanking)</p>
+                  <p className="text-xs text-gray-500">🔒 Secure PhonePe Payment</p>
                 </div>
               </div>
               <p className="text-2xl font-extrabold text-blue-600">₹{serviceDetails.price} INR</p>

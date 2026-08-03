@@ -22,6 +22,7 @@ interface PendingPayment {
   form_id: string;
   created_at: string;
   user_id: string;
+  payment_screenshot_url?: string; // NEW
 }
 
 export default function UTRVerificationPage() {
@@ -46,7 +47,7 @@ export default function UTRVerificationPage() {
     setLoading(true);
     let query = supabase
       .from("user_applications")
-      .select("tracking_id,full_name,phone,email,total_paid,utr_number,payment_status,payment_method,form_id,created_at,user_id")
+      .select("tracking_id,full_name,phone,email,total_paid,utr_number,payment_status,payment_method,form_id,created_at,user_id,payment_screenshot_url")
       .eq("payment_method", "upi_manual")
       .order("created_at", { ascending: false });
 
@@ -417,6 +418,34 @@ export default function UTRVerificationPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Payment Screenshot Preview */}
+                {payment.payment_screenshot_url ? (
+                  <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/40 rounded-xl">
+                    <p className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase mb-2 flex items-center gap-1">
+                      📸 Payment Screenshot (User ne upload kiya)
+                    </p>
+                    <a href={payment.payment_screenshot_url} target="_blank" rel="noopener noreferrer"
+                      className="block group relative">
+                      <img
+                        src={payment.payment_screenshot_url}
+                        alt="Payment screenshot"
+                        className="w-full max-h-40 object-contain rounded-lg border border-green-200 bg-white group-hover:opacity-90 transition-opacity cursor-zoom-in"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="bg-black/70 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                          🔍 Full Screen Dekhne Ke Liye Click Karo
+                        </span>
+                      </div>
+                    </a>
+                  </div>
+                ) : (
+                  <div className="mt-3 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                      📷 Screenshot upload nahi ki user ne — PhonePe se manually verify karo
+                    </p>
+                  </div>
+                )}
 
                 {/* Action Buttons — only for pending */}
                 {payment.payment_status === "pending_verification" && (

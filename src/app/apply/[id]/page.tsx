@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase, getStoredSession } from "@/lib/supabase";
-import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink, Smartphone, QrCode, Clock, AlertCircle } from "lucide-react";
+import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink, Smartphone, QrCode, Clock, AlertCircle, Camera } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import dynamic from "next/dynamic";
 const ApplyFomoBar = dynamic(() => import("@/components/ui/ApplyFomoBar"), { ssr: false });
@@ -65,13 +65,22 @@ function ApplyContent() {
   // UPI Manual Payment State
   const [showUpiScreen, setShowUpiScreen] = useState(false);
   const [pendingTrackingCode, setPendingTrackingCode] = useState("");
-  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url: string } | null>(null);
+  const [upiSettings, setUpiSettings] = useState<{ upi_id: string; account_name: string; qr_image_url?: string } | null>(null);
   const [utrInput, setUtrInput] = useState("");
   const [utrCopied, setUtrCopied] = useState(false);
   const [submittingUtr, setSubmittingUtr] = useState(false);
   const [utrError, setUtrError] = useState("");
   const [uploadedUrlsForUpi, setUploadedUrlsForUpi] = useState<Record<string,string>>({});
   const [finalAmountForUpi, setFinalAmountForUpi] = useState(0);
+
+  // Payment Timer State (15 min = 900 seconds)
+  const [paymentTimeLeft, setPaymentTimeLeft] = useState(15 * 60);
+  const [paymentExpired, setPaymentExpired] = useState(false);
+
+  // Screenshot Upload State
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
 
   const handleCopy = () => {
     if (successTrackingId) {
@@ -85,6 +94,39 @@ function ApplyContent() {
     navigator.clipboard.writeText(text);
     setUtrCopied(true);
     setTimeout(() => setUtrCopied(false), 2000);
+  };
+
+  // ── Payment Timer: countdown 15 min, then expire ──
+  useEffect(() => {
+    if (!showUpiScreen) return;
+    if (paymentTimeLeft <= 0) {
+      setPaymentExpired(true);
+      return;
+    }
+    const t = setTimeout(() => setPaymentTimeLeft(prev => prev - 1), 1000);
+    return () => clearTimeout(t);
+  }, [showUpiScreen, paymentTimeLeft]);
+
+  // ── Screenshot Upload via Supabase Storage ──
+  const uploadScreenshot = async (file: File): Promise<string> => {
+    setUploadingScreenshot(true);
+    try {
+      const compressed = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1200, useWebWorker: true });
+      const ext = file.name.split(".").pop() || "jpg";
+      const fileName = `payment-screenshots/${pendingTrackingCode}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("documents")
+        .upload(fileName, compressed, { contentType: file.type, upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("documents").getPublicUrl(fileName);
+      setScreenshotUrl(publicUrl);
+      return publicUrl;
+    } catch (e) {
+      console.error("Screenshot upload error:", e);
+      return "";
+    } finally {
+      setUploadingScreenshot(false);
+    }
   };
 
   // Fetch UPI settings on mount
@@ -635,6 +677,7 @@ function ApplyContent() {
   // ── UPI Manual Payment Screen ────────────────────────────────────────────
   const handleUtrSubmit = async () => {
     setUtrError("");
+    if (paymentExpired) { setUtrError("Order expire ho gaya. Kripya dobara apply karein."); return; }
     if (!utrInput.trim()) { setUtrError("UTR number daalna zaroori hai."); return; }
     if (!/^\d{12}$/.test(utrInput.trim())) { setUtrError("UTR number 12 digit ka hona chahiye (sirf numbers)."); return; }
     setSubmittingUtr(true);
@@ -642,7 +685,12 @@ function ApplyContent() {
       const res = await fetch("/api/utr-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tracking_id: pendingTrackingCode, utr_number: utrInput.trim() }),
+        body: JSON.stringify({
+          tracking_id: pendingTrackingCode,
+          utr_number: utrInput.trim(),
+          screenshot_url: screenshotUrl || null,
+          declared_amount: finalAmountForUpi,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setUtrError(data.error || "UTR submit karne mein dikkat aayi."); return; }
@@ -656,10 +704,56 @@ function ApplyContent() {
     }
   };
 
+  // ── Payment Expired Screen ────────────────────────────────────────────────
+  if (paymentExpired) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 dark:from-gray-950 dark:to-red-950 flex items-center justify-center px-4">
+        <div className="max-w-sm w-full text-center bg-white dark:bg-gray-900 rounded-3xl border border-red-100 dark:border-red-900/40 p-8 shadow-xl">
+          <div className="text-6xl mb-4">⏰</div>
+          <h2 className="text-xl font-black text-red-600 dark:text-red-400 mb-2">Payment Time Out!</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            15 minute mein payment nahi mili. Aapka order expire ho gaya.
+            <br /><span className="font-bold text-gray-700 dark:text-gray-300">Kripya dobara apply karein.</span>
+          </p>
+          <button
+            onClick={() => {
+              setPaymentExpired(false);
+              setShowUpiScreen(false);
+              setPaymentTimeLeft(15 * 60);
+              setUtrInput("");
+              setScreenshotUrl("");
+              setScreenshotFile(null);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-all shadow-lg"
+          >
+            🔄 Dobara Apply Karo
+          </button>
+          <p className="text-xs text-gray-400 mt-4">Tracking ID: <strong className="text-indigo-500">{pendingTrackingCode}</strong></p>
+          <p className="text-xs text-gray-400 mt-1">Agar payment ho gayi thi toh WhatsApp karo — <a href="https://wa.me/91XXXXXXXXXX" target="_blank" className="text-indigo-500 underline">Help Line</a></p>
+        </div>
+      </div>
+    );
+  }
+
   if (showUpiScreen && upiSettings) {
     const upiId = upiSettings.upi_id || "";
     const accountName = upiSettings.account_name || "Rojgar Suvidha";
-    const qrUrl = upiSettings.qr_image_url || "";
+    const amount = finalAmountForUpi;
+    const txnNote = encodeURIComponent(`RojgarSuvidha-${pendingTrackingCode}`);
+    const txnName = encodeURIComponent(accountName);
+
+    // ── Dynamic UPI Deep Link (amount locked, user cannot edit) ──
+    const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+
+    // ── Dynamic QR via Google Charts API (free, no library needed) ──
+    const dynamicQrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(upiDeepLink)}&choe=UTF-8`;
+
+    // ── UPI App Deep Links (amount pre-filled, user cannot change) ──
+    const phonePeLink = `phonepe://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+    const googlePayLink = `tez://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+    const paytmLink = `paytmmp://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-8 px-4 flex items-start justify-center">
         <div className="max-w-md w-full space-y-4">
@@ -674,42 +768,97 @@ function ApplyContent() {
             </p>
           </div>
 
-          {/* Timer Warning */}
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center gap-3">
-            <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-            <div>
-              <p className="text-sm font-black text-amber-700 dark:text-amber-400">30 min mein verify hogi payment</p>
-              <p className="text-xs text-amber-600 dark:text-amber-500">Payment ke baad UTR number neeche submit karo</p>
-            </div>
-          </div>
+          {/* Live Countdown Timer */}
+          {(() => {
+            const mins = Math.floor(paymentTimeLeft / 60).toString().padStart(2, "0");
+            const secs = (paymentTimeLeft % 60).toString().padStart(2, "0");
+            const isUrgent = paymentTimeLeft < 180; // last 3 min = red
+            return (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border font-bold text-sm ${
+                isUrgent
+                  ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400"
+                  : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400"
+              }`}>
+                <Clock className={`w-5 h-5 shrink-0 ${isUrgent ? "animate-pulse" : ""}`} />
+                <div className="flex-1">
+                  <p className="font-black">⏱️ {mins}:{secs} mein pay karke UTR submit karo</p>
+                  <p className="text-xs font-medium opacity-70">Time khatam hone ke baad order expire ho jayega</p>
+                </div>
+                <span className={`text-lg font-black tabular-nums ${isUrgent ? "text-red-600" : "text-amber-700 dark:text-amber-400"}`}>
+                  {mins}:{secs}
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Amount Card */}
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-center text-white shadow-2xl shadow-indigo-500/30">
             <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Total Amount</p>
-            <div className="text-5xl font-black mb-1">₹{finalAmountForUpi}</div>
+            <div className="text-5xl font-black mb-1">₹{amount}</div>
             <p className="text-indigo-200 text-sm">{formConfig?.title || "Form Filling Service"}</p>
+            <div className="mt-3 bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span className="text-xs font-black text-white/90">Amount Locked — Edit Nahi Ho Sakta</span>
+            </div>
           </div>
 
-          {/* QR Code + UPI ID */}
+          {/* Dynamic QR + UPI ID */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
-            {qrUrl ? (
-              <div className="flex flex-col items-center mb-5">
+            {/* Dynamic QR Code */}
+            <div className="flex flex-col items-center mb-5">
+              <div className="relative">
+                {/* QR Border glow */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl blur opacity-20" />
                 <img
-                  src={qrUrl}
-                  alt="PhonePe QR Code"
-                  className="w-48 h-48 object-contain rounded-2xl border border-gray-200 dark:border-gray-700 mb-3"
+                  src={dynamicQrUrl}
+                  alt={`UPI QR - ₹${amount} to ${accountName}`}
+                  width={200}
+                  height={200}
+                  className="relative w-48 h-48 object-contain rounded-2xl border-2 border-indigo-100 dark:border-indigo-900 bg-white p-2"
+                  onError={(e) => {
+                    // Fallback to static QR if dynamic fails
+                    if (upiSettings.qr_image_url) {
+                      (e.target as HTMLImageElement).src = upiSettings.qr_image_url;
+                    }
+                  }}
                 />
-                <p className="text-xs text-gray-400 font-semibold">Scan karke ₹{finalAmountForUpi} pay karo</p>
               </div>
-            ) : (
-              <div className="flex flex-col items-center mb-5">
-                <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-3">
-                  <QrCode className="w-12 h-12 text-gray-300" />
-                </div>
-                <p className="text-xs text-gray-400">QR Code loading...</p>
-              </div>
-            )}
+              <p className="text-xs text-gray-400 font-semibold mt-3">Scan karke <strong className="text-indigo-600 dark:text-indigo-400">₹{amount}</strong> pay karo</p>
+              <p className="text-[10px] text-gray-400 mt-1">⚡ Amount auto-fill hoga — change nahi hoga</p>
+            </div>
 
+            {/* UPI App Buttons */}
+            <div className="mb-4">
+              <p className="text-xs text-gray-400 font-bold text-center mb-2.5">YA APNI APP SE DIRECT PAY KARO</p>
+              <div className="grid grid-cols-3 gap-2">
+                <a
+                  href={phonePeLink}
+                  className="flex flex-col items-center gap-1 p-2.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 rounded-xl hover:bg-purple-100 active:scale-95 transition-all"
+                >
+                  <span className="text-xl">📱</span>
+                  <span className="text-[10px] font-black text-purple-700 dark:text-purple-400">PhonePe</span>
+                  <span className="text-[9px] text-purple-500 font-bold">₹{amount}</span>
+                </a>
+                <a
+                  href={googlePayLink}
+                  className="flex flex-col items-center gap-1 p-2.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-100 active:scale-95 transition-all"
+                >
+                  <span className="text-xl">💙</span>
+                  <span className="text-[10px] font-black text-blue-700 dark:text-blue-400">GPay</span>
+                  <span className="text-[9px] text-blue-500 font-bold">₹{amount}</span>
+                </a>
+                <a
+                  href={paytmLink}
+                  className="flex flex-col items-center gap-1 p-2.5 bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/40 rounded-xl hover:bg-sky-100 active:scale-95 transition-all"
+                >
+                  <span className="text-xl">💸</span>
+                  <span className="text-[10px] font-black text-sky-700 dark:text-sky-400">Paytm</span>
+                  <span className="text-[9px] text-sky-500 font-bold">₹{amount}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* UPI ID Manual Copy */}
             <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
               <p className="text-xs text-gray-400 font-bold text-center mb-2">YA SEEDHA UPI ID PAR BHEJO</p>
               <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3">
@@ -726,7 +875,7 @@ function ApplyContent() {
                 </button>
               </div>
               <p className="text-center text-xs text-gray-400 mt-2">Account: <strong className="text-gray-600 dark:text-gray-300">{accountName}</strong></p>
-              <p className="text-center text-xs font-black text-red-500 mt-1">⚠️ EXACT ₹{finalAmountForUpi} hi bhejo</p>
+              <p className="text-center text-xs font-black text-red-500 mt-1">⚠️ EXACT ₹{amount} hi bhejo — kam/zyada mat karna</p>
             </div>
           </div>
 
@@ -753,9 +902,58 @@ function ApplyContent() {
                 {utrError}
               </div>
             )}
+
+            {/* ── Screenshot Upload (Optional but recommended) ── */}
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <label className="text-xs font-black text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5" />
+                Payment Screenshot Upload Karo
+                <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[9px] font-black px-1.5 py-0.5 rounded-full ml-1">JALDI VERIFY</span>
+              </label>
+              <p className="text-[11px] text-gray-400 mb-2.5">Screenshot se admin ko manually PhonePe check nahi karna padta — faster approval!</p>
+
+              {screenshotUrl ? (
+                <div className="relative">
+                  <img src={screenshotUrl} className="w-full max-h-48 object-contain rounded-xl border border-green-200 dark:border-green-900/40 bg-gray-50" alt="Payment screenshot" />
+                  <button
+                    onClick={() => { setScreenshotUrl(""); setScreenshotFile(null); }}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-lg"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="mt-1.5 text-xs text-green-600 dark:text-green-400 font-black flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Screenshot upload ho gayi — jaldi verify hogi!
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-600 rounded-xl p-5 cursor-pointer transition-all bg-gray-50 dark:bg-gray-800/30">
+                  {uploadingScreenshot
+                    ? <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+                    : <Camera className="w-7 h-7 text-gray-300 dark:text-gray-600" />
+                  }
+                  <div className="text-center">
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                      {uploadingScreenshot ? "Upload ho rahi hai..." : "Tap karke screenshot select karo"}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">JPG / PNG — max 2MB</p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (f) { setScreenshotFile(f); await uploadScreenshot(f); }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
             <button
               onClick={handleUtrSubmit}
-              disabled={submittingUtr || utrInput.length !== 12}
+              disabled={submittingUtr || utrInput.length !== 12 || paymentExpired}
               className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-2xl transition-all text-sm shadow-lg shadow-green-500/20"
             >
               {submittingUtr ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
