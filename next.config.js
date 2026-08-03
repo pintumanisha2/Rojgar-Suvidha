@@ -68,9 +68,7 @@ const nextConfig = {
   },
 
   // ── Experimental features for performance ──
-  experimental: {
-    optimizeCss: true, // Inline critical CSS — faster FCP on mobile
-  },
+  experimental: {},
 
   outputFileTracingRoot: path.join(__dirname),
 
