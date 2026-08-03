@@ -70,30 +70,57 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 /**
- * Synchronously checks localStorage for a valid Supabase auth token.
- * Prevents unnecessary page reloads and redirect loops when user is already logged in.
+ * getStoredSession — Fast synchronous localStorage auth check.
+ *
+ * Supabase stores the session under keys like:
+ *   sb-<project-ref>-auth-token          (standard)
+ *   sb-<project-ref>-auth-token-code-...  (PKCE intermediate)
+ *
+ * We scan ALL localStorage keys to find any valid session token,
+ * regardless of the exact key suffix. This is intentionally broad
+ * so that key format changes in future Supabase versions don't break auth.
  */
 export function getStoredSession() {
   if (typeof window === "undefined") return null;
   try {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    // 15-minute grace period — catches tokens that are about to expire
+    // but will be refreshed by Supabase's autoRefreshToken in background
+    const GRACE_SECONDS = 15 * 60;
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith("sb-") && key.endsWith("-auth-token")) {
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed?.access_token && parsed?.user) {
-            // Valid token or within 10-min grace period
-            const nowSeconds = Math.floor(Date.now() / 1000);
-            if (!parsed.expires_at || parsed.expires_at > nowSeconds - 600) {
-              return parsed;
-            }
+      if (!key?.startsWith("sb-")) continue;
+      // Match all Supabase auth token keys (standard + PKCE variants)
+      if (!key.includes("-auth-token")) continue;
+      // Skip code_verifier and other PKCE-only keys (they don't have user data)
+      if (key.includes("code-verifier") || key.includes("pkce")) continue;
+
+      const stored = localStorage.getItem(key);
+      if (!stored) continue;
+
+      try {
+        const parsed = JSON.parse(stored);
+
+        // Handle both flat format and { currentSession: {...} } format
+        const session = parsed?.currentSession ?? parsed;
+
+        if (session?.access_token && session?.user) {
+          // Check expiry with grace period
+          if (
+            !session.expires_at ||
+            session.expires_at > nowSeconds - GRACE_SECONDS
+          ) {
+            return session;
           }
         }
+      } catch {
+        // Corrupted entry — skip
       }
     }
   } catch (e) {
-    console.error("Error reading stored session:", e);
+    console.error("[getStoredSession] Error:", e);
   }
   return null;
 }
+

@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, getStoredSession } from "@/lib/supabase";
 import Link from "next/link";
 import {
   UserCircle, FileText, Bookmark, ClipboardCheck,
@@ -249,9 +249,22 @@ function DashboardContent() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { setLoading(false); router.push("/login"); return; }
-        setUser(session.user);
+        let stored = getStoredSession();
+        let sessionUser = stored?.user || null;
+
+        if (!sessionUser) {
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Auth check timed out")), 2000)
+          );
+          const res = await Promise.race([sessionPromise, timeoutPromise]).catch(() => null) as any;
+          if (res?.data?.session) {
+            sessionUser = res.data.session.user;
+          }
+        }
+
+        if (!sessionUser) { setLoading(false); router.push("/login"); return; }
+        setUser(sessionUser);
 
         const { data: profileData } = await supabase
           .from("profiles").select("*").eq("id", session.user.id).single();

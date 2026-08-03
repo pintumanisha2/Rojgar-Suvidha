@@ -189,10 +189,13 @@ function ESuvidhaApplyContent() {
     ]
   };
 
-  const [user, setUser] = useState<any>(null);
-  const [token, setToken] = useState("");
+  // Fast synchronous check on initial render — zero delay & zero flash for logged in users
+  const initialSession = typeof window !== "undefined" ? getStoredSession() : null;
+
+  const [user, setUser] = useState<any>(initialSession?.user || null);
+  const [token, setToken] = useState<string>(initialSession?.access_token || "");
   const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(!initialSession?.user);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,16 +234,14 @@ function ESuvidhaApplyContent() {
 
     const fetchUser = async () => {
       try {
-        // Fast-path: Check stored session synchronously from localStorage
-        const stored = getStoredSession();
-        let sessionUser = stored?.user || null;
-        let sessionToken = stored?.access_token || "";
+        let sessionUser = user || getStoredSession()?.user || null;
+        let sessionToken = token || getStoredSession()?.access_token || "";
 
-        // If no stored session in localStorage, verify with Supabase async getSession
+        // If still no session in localStorage, attempt short async fallback check
         if (!sessionUser) {
           const sessionPromise = supabase.auth.getSession();
           const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Auth check timed out")), 5000)
+            setTimeout(() => reject(new Error("Auth check timed out")), 2000)
           );
           const res = await Promise.race([sessionPromise, timeoutPromise]).catch(() => null) as any;
           if (res?.data?.session) {
@@ -257,12 +258,11 @@ function ESuvidhaApplyContent() {
           return;
         }
 
-        // User is logged in — set active user state immediately so page loads fast!
         setUser(sessionUser);
         setToken(sessionToken);
         setLoading(false);
 
-        // Parallel fetch for profile & locker documents (uses maybeSingle to prevent single-row error crashes)
+        // Parallel fetch for profile & locker documents (non-blocking)
         const [profileRes, lockerRes] = await Promise.allSettled([
           supabase.from("profiles").select("*").eq("id", sessionUser.id).maybeSingle(),
           supabase.from("user_locker").select("documents").eq("user_id", sessionUser.id).maybeSingle()

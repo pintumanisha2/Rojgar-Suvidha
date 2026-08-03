@@ -15,8 +15,10 @@ function ApplyContent() {
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialSession = typeof window !== "undefined" ? getStoredSession() : null;
+
   const [formConfig, setFormConfig] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialSession?.user);
   
   // User Inputs
   const [formData, setFormData] = useState({
@@ -24,7 +26,7 @@ function ApplyContent() {
     fatherName: "",
     motherName: "",
     phone: "",
-    email: "",
+    email: initialSession?.user?.email || "",
     altPhone: "",
     aadhar: "",
     dob: "",
@@ -39,8 +41,8 @@ function ApplyContent() {
   const [documentFiles, setDocumentFiles] = useState<{[key: string]: File | null}>({});
   const [lockerDocs, setLockerDocs] = useState<{[key: string]: string}>({}); // URLs from locker
   const [overriddenDocs, setOverriddenDocs] = useState<Set<string>>(new Set()); // User dismissed locker match
-  const [token, setToken] = useState("");
-  const [userId, setUserId] = useState("");
+  const [token, setToken] = useState(initialSession?.access_token || "");
+  const [userId, setUserId] = useState(initialSession?.user?.id || "");
 
 
 
@@ -162,10 +164,14 @@ function ApplyContent() {
         let sessionToken = stored?.access_token || "";
 
         if (!sessionUser) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            sessionUser = session.user;
-            sessionToken = session.access_token;
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Auth check timed out")), 2000)
+          );
+          const res = await Promise.race([sessionPromise, timeoutPromise]).catch(() => null) as any;
+          if (res?.data?.session) {
+            sessionUser = res.data.session.user;
+            sessionToken = res.data.session.access_token;
           }
         }
         
@@ -178,6 +184,7 @@ function ApplyContent() {
 
         setToken(sessionToken);
         setUserId(sessionUser.id);
+        setLoading(false);
 
         // Fetch profile data & locker docs in parallel (uses maybeSingle)
         const [profileRes, lockerRes] = await Promise.allSettled([
