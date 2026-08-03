@@ -267,7 +267,7 @@ function DashboardContent() {
         setUser(sessionUser);
 
         const { data: profileData } = await supabase
-          .from("profiles").select("*").eq("id", session.user.id).single();
+          .from("profiles").select("*").eq("id", sessionUser.id).single();
 
         if (!profileData?.full_name) { setLoading(false); router.push("/profile-setup"); return; }
         setProfile(profileData);
@@ -277,7 +277,7 @@ function DashboardContent() {
         const { data: reqData } = await supabase
           .from("apply_for_me_requests")
           .select("*")
-          .eq("user_id", session.user.id)
+          .eq("user_id", sessionUser.id)
           .order("created_at", { ascending: false });
         setMyRequests(reqData || []);
 
@@ -305,7 +305,7 @@ function DashboardContent() {
         const { data: appData } = await supabase
           .from("user_applications")
           .select("tracking_id, form_id, full_name, selected_post_name, application_status, total_paid, created_at")
-          .or(`user_id.eq.${session.user.id}${phoneFilter}`)
+          .or(`user_id.eq.${sessionUser.id}${phoneFilter}`)
           .order("created_at", { ascending: false });
         setMyApplications(appData || []);
       } catch (err) {
