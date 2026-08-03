@@ -573,146 +573,123 @@ function ESuvidhaApplyContent() {
 
   // ── UPI Payment Screen ──
   if (showUpiScreen) {
-    const upiId = upiSettings.upi_id || "";
+    const upiId = upiSettings.upi_id || "rojgarsuvidha@ybl";
     const accountName = upiSettings.account_name || "Rojgar Suvidha";
     const amount = serviceDetails.price;
     const txnNote = encodeURIComponent(`RojgarSuvidha-${esuvidhaTrackingCode}`);
     const txnName = encodeURIComponent(accountName);
     const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
-    const dynamicQrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(upiDeepLink)}&choe=UTF-8`;
+    
+    // Reliable 100% working QR API (qrserver)
+    const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiDeepLink)}`;
     const phonePeLink = `phonepe://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
     const googlePayLink = `tez://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
     const paytmLink = `paytmmp://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
     const mins = Math.floor(paymentTimeLeft / 60).toString().padStart(2, "0");
     const secs = (paymentTimeLeft % 60).toString().padStart(2, "0");
     const isUrgent = paymentTimeLeft < 180;
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-violet-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 py-8 px-4 flex items-start justify-center">
-        <div className="max-w-md w-full space-y-4">
-          <div className="text-center">
-            <div className="inline-flex w-16 h-16 bg-indigo-600 rounded-2xl items-center justify-center mb-3 shadow-lg shadow-indigo-500/30">
-              <Smartphone className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-4 px-3 flex items-center justify-center">
+        <div className="max-w-sm w-full bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-5 shadow-2xl space-y-4">
+          
+          {/* Header: Title + Timer + Amount in 1 compact bar */}
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider block">Service Payment</span>
+              <h2 className="text-base font-black text-gray-900 dark:text-white leading-tight">{serviceDetails.title}</h2>
             </div>
-            <h1 className="text-2xl font-black text-gray-900 dark:text-white">UPI Se Pay Karo</h1>
-            <p className="text-gray-500 text-sm mt-1">{serviceDetails.title} — Service Fee</p>
-          </div>
-
-          {/* Countdown Timer */}
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border font-bold text-sm ${isUrgent ? "bg-red-50 dark:bg-red-950/30 border-red-200 text-red-600" : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 text-amber-700"}`}>
-            <Clock className={`w-5 h-5 shrink-0 ${isUrgent ? "animate-pulse" : ""}`} />
-            <div className="flex-1">
-              <p className="font-black">⏱️ {mins}:{secs} mein pay karke UTR submit karo</p>
-              <p className="text-xs opacity-70">Time khatam hone ke baad order expire ho jayega</p>
-            </div>
-            <span className="text-lg font-black tabular-nums">{mins}:{secs}</span>
-          </div>
-
-          {/* Amount */}
-          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-center text-white shadow-2xl shadow-indigo-500/30">
-            <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Total Amount</p>
-            <div className="text-5xl font-black mb-1">₹{amount}</div>
-            <p className="text-indigo-200 text-sm">{serviceDetails.title}</p>
-            <div className="mt-3 bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-              <span className="text-xs font-black text-white/90">Amount Locked — Edit Nahi Ho Sakta</span>
+            <div className="text-right">
+              <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">₹{amount}</div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${isUrgent ? "bg-red-100 text-red-700 animate-pulse" : "bg-amber-100 text-amber-800"}`}>
+                ⏱️ {mins}:{secs}
+              </span>
             </div>
           </div>
 
-          {/* QR + App Buttons + UPI ID */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
-            <div className="flex flex-col items-center mb-5">
-              <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl blur opacity-20" />
-                <img src={dynamicQrUrl} alt={`UPI QR ₹${amount}`} width={200} height={200}
-                  className="relative w-48 h-48 object-contain rounded-2xl border-2 border-indigo-100 bg-white p-2"
-                  onError={(e) => { if (upiSettings.qr_image_url) (e.target as HTMLImageElement).src = upiSettings.qr_image_url; }}
-                />
-              </div>
-              <p className="text-xs text-gray-400 font-semibold mt-3">Scan karke <strong className="text-indigo-600">₹{amount}</strong> pay karo</p>
-              <p className="text-[10px] text-gray-400 mt-1">⚡ Amount auto-fill hoga — change nahi hoga</p>
+          {/* QR Code Section — Compact 150px */}
+          <div className="flex flex-col items-center bg-indigo-50/50 dark:bg-gray-800/50 p-4 rounded-2xl border border-indigo-100 dark:border-gray-800">
+            <div className="bg-white p-2 rounded-xl shadow-md border border-gray-200">
+              <img 
+                src={dynamicQrUrl} 
+                alt={`Scan ₹${amount}`} 
+                width={150} 
+                height={150}
+                className="w-36 h-36 object-contain rounded-lg"
+                onError={(e) => {
+                  if (upiSettings.qr_image_url) (e.target as HTMLImageElement).src = upiSettings.qr_image_url;
+                }}
+              />
             </div>
+            <p className="text-[11px] font-extrabold text-indigo-900 dark:text-indigo-300 mt-2">Scan &amp; Pay Exact ₹{amount}</p>
+            <p className="text-[10px] text-gray-500">🔒 Amount is locked — cannot be changed</p>
+          </div>
 
-            <div className="mb-4">
-              <p className="text-xs text-gray-400 font-bold text-center mb-2.5">YA APNI APP SE DIRECT PAY KARO</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { href: phonePeLink, emoji: "📱", label: "PhonePe", color: "purple" },
-                  { href: googlePayLink, emoji: "💙", label: "GPay", color: "blue" },
-                  { href: paytmLink, emoji: "💸", label: "Paytm", color: "sky" },
-                ].map(app => (
-                  <a key={app.label} href={app.href}
-                    className={`flex flex-col items-center gap-1 p-2.5 bg-${app.color}-50 dark:bg-${app.color}-950/20 border border-${app.color}-200 rounded-xl hover:bg-${app.color}-100 active:scale-95 transition-all`}>
-                    <span className="text-xl">{app.emoji}</span>
-                    <span className={`text-[10px] font-black text-${app.color}-700`}>{app.label}</span>
-                    <span className={`text-[9px] text-${app.color}-500 font-bold`}>₹{amount}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-              <p className="text-xs text-gray-400 font-bold text-center mb-2">YA SEEDHA UPI ID PAR BHEJO</p>
-              <div className="flex items-center justify-between bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-3">
-                <div>
-                  <p className="text-xs text-gray-400">UPI ID</p>
-                  <p className="font-black text-indigo-700 dark:text-indigo-300 text-sm">{upiId}</p>
-                </div>
-                <button onClick={() => copyUpiId(upiId)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all">
-                  {utrCopied ? <CheckCircle2 className="w-3 h-3 text-green-300" /> : <Copy className="w-3 h-3" />}
-                  {utrCopied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-              <p className="text-center text-xs text-gray-400 mt-2">Account: <strong className="text-gray-600 dark:text-gray-300">{accountName}</strong></p>
-              <p className="text-center text-xs font-black text-red-500 mt-1">⚠️ EXACT ₹{amount} hi bhejo</p>
+          {/* Direct App Pay Buttons */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center mb-1.5">Direct Pay App</p>
+            <div className="grid grid-cols-3 gap-2">
+              <a href={phonePeLink} className="py-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl text-center font-bold text-xs transition-all active:scale-95">📱 PhonePe</a>
+              <a href={googlePayLink} className="py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-center font-bold text-xs transition-all active:scale-95">💙 GPay</a>
+              <a href={paytmLink} className="py-2 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 rounded-xl text-center font-bold text-xs transition-all active:scale-95">💸 Paytm</a>
             </div>
           </div>
 
-          {/* UTR + Screenshot */}
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
-            <h3 className="font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-500" /> Payment ke Baad UTR Daalo
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">GPay/PhonePe → Transaction History → 12-digit UTR number copy karo</p>
-            <input type="tel" inputMode="numeric" maxLength={12} value={utrInput}
-              onChange={e => { setUtrInput(e.target.value.replace(/\D/g, "")); setUtrError(""); }}
-              placeholder="123456789012 (12 digits)"
-              className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 focus:border-indigo-500 rounded-xl text-center text-xl font-black text-gray-900 dark:text-white bg-white dark:bg-gray-800 outline-none tracking-widest placeholder:text-gray-300 placeholder:font-normal placeholder:text-base"
-            />
-            {utrError && <div className="flex items-center gap-2 mt-2 text-red-500 text-xs font-bold"><AlertCircle className="w-3.5 h-3.5 shrink-0" />{utrError}</div>}
-
-            {/* Screenshot Upload */}
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <label className="text-xs font-black text-gray-600 mb-2 flex items-center gap-1.5">
-                <Camera className="w-3.5 h-3.5" />Payment Screenshot (Optional — Jaldi Verify Hogi)
-                <span className="bg-green-100 text-green-700 text-[9px] font-black px-1.5 py-0.5 rounded-full ml-1">JALDI VERIFY</span>
-              </label>
-              {screenshotUrl ? (
-                <div className="relative">
-                  <img src={screenshotUrl} className="w-full max-h-48 object-contain rounded-xl border border-green-200 bg-gray-50" alt="Payment screenshot" />
-                  <button onClick={() => setScreenshotUrl("")} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"><X className="w-3 h-3" /></button>
-                  <div className="mt-1 text-xs text-green-600 font-black flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Screenshot upload ho gayi!</div>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-200 hover:border-indigo-400 rounded-xl p-5 cursor-pointer transition-all bg-gray-50 dark:bg-gray-800/30">
-                  {uploadingScreenshot ? <Loader2 className="w-7 h-7 animate-spin text-indigo-500" /> : <Camera className="w-7 h-7 text-gray-300" />}
-                  <p className="text-xs font-bold text-gray-500">{uploadingScreenshot ? "Upload ho rahi hai..." : "Tap karke screenshot select karo"}</p>
-                  <input type="file" accept="image/*" capture="environment" className="hidden"
-                    onChange={async (e) => { const f = e.target.files?.[0]; if (f) await uploadScreenshot(f); }} />
-                </label>
-              )}
+          {/* Copyable UPI ID */}
+          <div className="bg-gray-50 dark:bg-gray-800/80 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="truncate pr-2">
+              <span className="text-[9px] font-bold text-gray-400 block uppercase">UPI ID</span>
+              <span className="text-xs font-black text-gray-900 dark:text-white font-mono truncate block">{upiId}</span>
             </div>
-
-            <button onClick={handleUtrSubmit} disabled={submittingUtr || utrInput.length !== 12 || paymentExpired}
-              className="mt-4 w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-black rounded-2xl transition-all text-sm shadow-lg shadow-green-500/20">
-              {submittingUtr ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              {submittingUtr ? "Submit Ho Raha Hai..." : "UTR Submit Karo → Application Confirm"}
+            <button onClick={() => copyUpiId(upiId)} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shrink-0 transition-all flex items-center gap-1">
+              {utrCopied ? <CheckCircle2 className="w-3 h-3 text-green-300" /> : <Copy className="w-3 h-3" />}
+              {utrCopied ? "Copied" : "Copy"}
             </button>
           </div>
 
-          <div className="text-center text-xs text-gray-400 pb-4 space-y-1">
-            <p>Tracking ID: <strong className="text-indigo-600">{esuvidhaTrackingCode}</strong></p>
-            <p>Koi dikkat? <a href="https://wa.me/91XXXXXXXXXX" className="text-indigo-500 underline" target="_blank">WhatsApp Help</a></p>
+          {/* UTR Input + Submit */}
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
+            <div>
+              <label className="text-xs font-black text-gray-800 dark:text-gray-200 block mb-1">
+                Enter 12-Digit UTR / Ref No. <span className="text-red-500">*</span>
+              </label>
+              <input 
+                type="tel" 
+                inputMode="numeric" 
+                maxLength={12} 
+                value={utrInput}
+                onChange={e => { setUtrInput(e.target.value.replace(/\D/g, "")); setUtrError(""); }}
+                placeholder="12-digit UTR number"
+                className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-gray-700 focus:border-indigo-600 rounded-xl text-center text-lg font-black text-gray-900 dark:text-white bg-white dark:bg-gray-800 outline-none tracking-widest"
+              />
+              {utrError && <p className="text-[11px] font-bold text-red-500 mt-1">{utrError}</p>}
+            </div>
+
+            {/* Optional Screenshot Upload */}
+            {!screenshotUrl ? (
+              <label className="flex items-center justify-center gap-2 border border-dashed border-gray-300 dark:border-gray-700 hover:border-indigo-500 rounded-xl py-2 px-3 cursor-pointer bg-gray-50 dark:bg-gray-800/40 text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                {uploadingScreenshot ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" /> : <Camera className="w-3.5 h-3.5 text-indigo-500" />}
+                <span>{uploadingScreenshot ? "Uploading..." : "+ Add Screenshot (Faster Verify)"}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) await uploadScreenshot(f); }} />
+              </label>
+            ) : (
+              <div className="flex items-center justify-between text-xs text-green-600 font-bold bg-green-50 dark:bg-green-950/20 p-2 rounded-xl border border-green-200">
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Screenshot attached</span>
+                <button onClick={() => setScreenshotUrl("")} className="text-red-500 hover:underline text-[10px]">Remove</button>
+              </div>
+            )}
+
+            <button 
+              onClick={handleUtrSubmit} 
+              disabled={submittingUtr || utrInput.length !== 12 || paymentExpired}
+              className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-black rounded-xl text-sm transition-all shadow-md shadow-green-600/20 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {submittingUtr ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              {submittingUtr ? "Verifying..." : "Submit UTR & Confirm Order"}
+            </button>
           </div>
+
+          <p className="text-[10px] text-gray-400 text-center">Tracking ID: <strong className="text-indigo-600 font-mono">{esuvidhaTrackingCode}</strong></p>
         </div>
       </div>
     );

@@ -748,7 +748,7 @@ function ApplyContent() {
   }
 
   if (showUpiScreen) {
-    const upiId = upiSettings.upi_id || "";
+    const upiId = upiSettings.upi_id || "rojgarsuvidha@ybl";
     const accountName = upiSettings.account_name || "Rojgar Suvidha";
     const amount = finalAmountForUpi;
     const txnNote = encodeURIComponent(`RojgarSuvidha-${pendingTrackingCode}`);
@@ -757,8 +757,8 @@ function ApplyContent() {
     // ── Dynamic UPI Deep Link (amount locked, user cannot edit) ──
     const upiDeepLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
 
-    // ── Dynamic QR via Google Charts API (free, no library needed) ──
-    const dynamicQrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(upiDeepLink)}&choe=UTF-8`;
+    // ── Reliable 100% working QR API (qrserver) ──
+    const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiDeepLink)}`;
 
     // ── UPI App Deep Links (amount pre-filled, user cannot change) ──
     const phonePeLink = `phonepe://pay?pa=${encodeURIComponent(upiId)}&pn=${txnName}&am=${amount}&cu=INR&tn=${txnNote}`;
