@@ -6,18 +6,18 @@ import { supabase } from "@/lib/supabase";
 import {
   Briefcase, FileText, BookOpen, Users,
   PlusCircle, TrendingUp, Clock, CheckCircle2,
-  ArrowRight, AlertCircle, BellRing
+  ArrowRight, AlertCircle, BellRing, CreditCard
 } from "lucide-react";
 
 
 // FIX: Removed hardcoded stats array (was always showing 0). Now using dynamic statCounts state fetched from Supabase.
 
 const quickActions = [
-  { label: "Job Scout (Auto Tracker)", icon: BellRing, href: "/admin/job-scout", color: "bg-purple-600 hover:bg-purple-700 text-white" },
+  { label: "💳 UPI Verification", icon: CreditCard, href: "/admin/utr-verification", color: "bg-red-600 hover:bg-red-700 text-white" },
+  { label: "Job Scout", icon: BellRing, href: "/admin/job-scout", color: "bg-purple-600 hover:bg-purple-700 text-white" },
   { label: "Create New Post", icon: PlusCircle, href: "/admin/jobs/new", color: "bg-indigo-600 hover:bg-indigo-700 text-white" },
   { label: "Send Job Alerts", icon: BellRing, href: "/admin/notifications", color: "bg-blue-600 hover:bg-blue-700 text-white" },
   { label: "Manage Banners", icon: FileText, href: "/admin/banners", color: "bg-green-600 hover:bg-green-700 text-white" },
-  { label: "View Complaints", icon: AlertCircle, href: "/admin/complaints", color: "bg-orange-500 hover:bg-orange-600 text-white" },
   { label: "View Applications", icon: Users, href: "/admin/applications", color: "bg-gray-800 hover:bg-gray-900 text-white" },
 ];
 
@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
   const [allWritersStats, setAllWritersStats] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   // FIX: Dynamic stat counts instead of hardcoded 0
-  const [statCounts, setStatCounts] = useState({ activeJobs: 0, admitCards: 0, results: 0, applyRequests: 0 });
+  const [statCounts, setStatCounts] = useState({ activeJobs: 0, admitCards: 0, results: 0, applyRequests: 0, pendingPayments: 0 });
 
   // Live Clock
   useEffect(() => {
@@ -97,17 +97,19 @@ export default function AdminDashboardPage() {
         }
 
         // FIX: Fetch real stats from Supabase using proper statuses (active, out, last, soon)
-        const [activeJobsRes, admitCardsRes, resultsRes, applyReqRes] = await Promise.all([
+        const [activeJobsRes, admitCardsRes, resultsRes, applyReqRes, pendingPaymentsRes] = await Promise.all([
           supabase.from("jobs").select("*", { count: "exact", head: true }).in("status", ["active", "out", "last", "soon"]),
           supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "admit-card").eq("status", "out"),
           supabase.from("jobs").select("*", { count: "exact", head: true }).eq("category", "result").eq("status", "out"),
           supabase.from("apply_for_me_requests").select("*", { count: "exact", head: true }).in("status", ["pending", "paid"]),
+          supabase.from("apply_for_me_requests").select("*", { count: "exact", head: true }).eq("status", "pending_verification"),
         ]);
         setStatCounts({
           activeJobs: activeJobsRes.count || 0,
           admitCards: admitCardsRes.count || 0,
           results: resultsRes.count || 0,
           applyRequests: applyReqRes.count || 0,
+          pendingPayments: pendingPaymentsRes.count || 0,
         });
 
         // Fetch pending apply requests (for alert banner)
