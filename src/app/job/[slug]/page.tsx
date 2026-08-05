@@ -106,10 +106,10 @@ export async function generateMetadata(
   const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
   const title = `${baseTitle} (Sarkari Result Update) – Direct Apply Online, Eligibility & Fee | Rojgar Suvidha`;
   
-  // Custom pSEO description with competitor search intent alignment
-  const rawDescription = job.meta_description || job.short_info || "";
-  const description = rawDescription.trim().length > 10 
-    ? (rawDescription.length > 150 ? `${rawDescription.slice(0, 145)}... [Sarkari Result & Direct Apply]` : rawDescription)
+  // Custom SEO description written by AI Super Writer / Admin, fallback to short_info or template
+  const rawDescription = (job.meta_description || job.short_info || "").trim();
+  const description = rawDescription.length > 10 
+    ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
     : `Looking for ${job.title} Sarkari Result update? Check official notification, eligibility, syllabus, admit card & 1-Click Apply For Me service at Rojgar Suvidha.`;
 
   // Custom social share image (use banner URL if generated, fallback to logo)
