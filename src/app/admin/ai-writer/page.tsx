@@ -154,6 +154,7 @@ export default function AIWriterPage() {
   const [officialLink, setOfficialLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedWhatsapp, setCopiedWhatsapp] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -1000,6 +1001,52 @@ export default function AIWriterPage() {
                       {Object.values(result.contentFeatures).filter(Boolean).filter(v => typeof v === "boolean").length === 0 && (
                         <span className="text-[10px] text-violet-500">Standard government job post detected</span>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 📱 WhatsApp Group Share Caption Card */}
+                {result.whatsappCaption && (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-widest flex items-center gap-1.5">
+                        📱 WhatsApp Group Share Caption (1-Click Copy)
+                      </p>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(result.whatsappCaption);
+                          setCopiedWhatsapp(true);
+                          setTimeout(() => setCopiedWhatsapp(false), 2000);
+                        }}
+                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        {copiedWhatsapp ? "Copied! ✓" : "Copy Caption"}
+                      </button>
+                    </div>
+                    <pre className="text-xs bg-white dark:bg-gray-900 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900 text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-sans leading-relaxed">
+                      {result.whatsappCaption}
+                    </pre>
+                  </div>
+                )}
+
+                {/* 🔑 SarkariLekhan AI Live SEO Checklist Widget */}
+                {result.seoChecklist && (
+                  <div className="bg-gradient-to-b from-indigo-50 to-white dark:from-indigo-950/20 dark:to-gray-900 rounded-2xl p-4 border border-indigo-100 dark:border-indigo-900/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                        🔑 SarkariLekhan AI — Live SEO Checklist
+                      </p>
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 dark:bg-indigo-900/50 px-2.5 py-0.5 rounded-full">
+                        Schema: {result.recommendedSchema || "JobPosting"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {result.seoChecklist.map((chk: any) => (
+                        <div key={chk.item} className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold ${chk.passed ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-800" : "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800"}`}>
+                          <span>{chk.passed ? "✅" : "⚠️"}</span>
+                          <span className="truncate">{chk.item}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

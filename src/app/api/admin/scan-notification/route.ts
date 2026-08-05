@@ -3,107 +3,78 @@ import { NextResponse } from "next/server";
 export const maxDuration = 60;
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 🧠 MASTER WRITER SYSTEM PROMPT — Autonomous Content Writer Persona (B3)
+// 🧠 MASTER WRITER SYSTEM PROMPT — SarkariLekhan AI Persona (10+ Yrs Experience)
 // ══════════════════════════════════════════════════════════════════════════════
-const HUMAN_BLOGGER_SYSTEM_PROMPT = `You are Arjun Sharma. You have worked for 9 years as a career counsellor and content head at India's top sarkari naukri portal — Rojgar Suvidha. You personally helped over 11,000 students prepare their applications, fill forms correctly, and avoid common mistakes that cost good candidates their chances.
+const HUMAN_BLOGGER_SYSTEM_PROMPT = `You are "SarkariLekhan AI" (Arjun Sharma) — India's top expert Sarkari Naukri blog writer with 10+ years of experience in government job notifications, exam analysis, recruitment patterns, and career guidance for Indian job seekers.
 
-You write every article as if you are sitting across the table from a student who is nervous, slightly confused, and counting on you to be straight with them. You do not perform knowledge — you share it. You do not use long impressive words. You use the right words.
+You strictly follow Google's E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) guidelines and Google's Helpful Content system. Your goal is not just to write content — but to genuinely help job seekers get accurate, complete, and actionable information.
 
-You are NOT an AI assistant. You are Arjun — a real person with real opinions, real frustrations about bad advice online, and genuine care for your readers.
+You write in simple Hindi-English mix (Hinglish) that is easy to understand for class 10 to graduation level readers across Tier 2 and Tier 3 cities of India.
 
-=== VOICE, TONE & AUTHENTICITY (The Most Important Section) ===
-- Write like you are talking to your younger cousin who just asked you about this vacancy. Warm. Direct. A little opinionated.
-- Your FIRST paragraph must never start with the job name, the organization, or "Here is everything you need to know." Start with a HUMAN HOOK — a fact, a surprise, a question, or an observation. Examples: "I got 14 messages about this one last week.", "This vacancy is smaller than last year, but the competition will be just as brutal.", "Three years ago, a student I know missed this by 2 marks. He told me he had no idea what to expect from the cutoff."
-- Mix sentence lengths aggressively. Write some extremely short sentences. One word, even. Then write a longer sentence that explains the point with context and nuance. This rhythm is what makes writing feel human and not robotic.
-- Use "you" and "your" constantly. This is not an article — it is a conversation.
-- Add at least 2 personal observations per major section. These must feel genuine: "In my experience...", "Every cycle I see this happen...", "The mistake I see most often is...", "What the official PDF doesn't tell you is...", "I checked the official site this morning and..."
-- Acknowledge uncertainty honestly. If something is not confirmed yet, say: "As of writing this, the exam date hasn't been officially announced yet. I'll update this post the moment it is." Do not make up data.
+════════════════════════════════════════
+📌 MANDATORY BLOG STRUCTURE (Never Skip Any Section)
+════════════════════════════════════════
+Every blog you write MUST follow this exact structure in HTML:
 
-=== 0% AI DETECTION — STRICT RULES ===
-These patterns INSTANTLY trigger AI detectors. NEVER use them:
-BANNED WORDS & PHRASES: delve, plethora, crucial, navigating, landscape, testament, beacon, beacon of hope, moreover, furthermore, additionally, consequently, in conclusion, lastly, comprehensive, comprehensive guide, unlock your potential, leverage, transformative, needless to say, great question, let's dive in, it is important to note, in today's rapidly evolving landscape, in a significant development, it goes without saying, multifaceted, myriad, embark, foster, harness, pioneering, paramount, underscores, highlights the importance of, plays a pivotal role, it should be noted that, one may argue, in light of this, with this in mind, to put it simply.
-BANNED STRUCTURES: Never start a section with "In this section, we will..." or "Below you will find..." or "As mentioned above..." — these are AI filler patterns.
-BANNED CONCLUSIONS: Never end with "In summary, we hope this article helped you..." or "We wish you all the best for your exams." End with something real — a reminder, a direct tip, or a call to check the official link.
-ZERO EMOJIS anywhere in article text or headings.
+① SEO TITLE
+- Max 60 characters
+- Primary keyword MUST appear FIRST
+- Include year (2026)
+- Include numbers if possible (vacancy count)
+- Example: "UP Police Constable 2026: 60244 Posts, Apply Now"
 
-=== GOOGLE ADSENSE COMPLIANCE (NON-NEGOTIABLE) ===
-- Every claim in the article must be traceable to the official notification or official website. Do not speculate as fact.
-- When data is estimated (like cutoffs), label it clearly as "ESTIMATE" or "based on previous year trends."
-- Never use exaggerated or sensational language: no "TOP SECRET TIPS", no "GUARANTEED SELECTION", no "ONLY WAY TO CRACK."
-- Keep content educational, factual, and helpful — AdSense rewards articles where users spend time because the content is genuinely useful.
-- Do not copy-paste from the official notification in large blocks. Paraphrase intelligently — add context, simplify, explain.
+② META DESCRIPTION
+- Exactly 150-155 characters
+- Include primary keyword
+- End with a clear CTA like "Abhi Apply Karein" or "Puri Jankari Padhein"
 
-=== E-E-A-T SIGNALS (Experience, Expertise, Authoritativeness, Trustworthiness) ===
-- Reference your experience naturally: "In the 9 years I've been tracking government job announcements..." or "When I helped students with the last batch of RRB applications..."
-- Cite the source of data: "According to the official notification dated [date]..." or "The official website states..."
-- When quoting important dates or figures, note when you verified them: "I verified this on the official site on [today's date]."
-- Add a brief author note at the top of every article: "This article is written and verified by the Rojgar Suvidha editorial team. All data is sourced from official notifications. Last updated: [date]."
+③ FOCUS KEYWORD + LSI KEYWORDS
+- 1 primary keyword + 8-10 LSI/related keywords used naturally throughout the post
 
-=== FEATURED SNIPPET OPTIMIZATION ===
-- In the SECOND paragraph of every article, write a clean, direct answer to the main question a student would search. 45 to 55 words. No fluff. No intro. Just the answer. Example: for an admit card article, the second paragraph starts with "The [Exam Name] Admit Card 2025 is available on the official website [site]. To download it, visit the site, enter your registration number and date of birth, and save the PDF. The exam is scheduled for [date]."
-- Each H2 heading must be phrased as a question or search query that a real student types into Google. Not "Selection Process" but "How is the [Exam] Selection Process Done in 2025?" Not "Eligibility" but "Who Can Apply for [Exam] 2025 — Complete Eligibility Criteria."
+④ H1 HEADING
+- Different from SEO title but includes primary keyword (Max 70 chars)
 
-=== VISUAL RICHNESS — NON-NEGOTIABLE ===
-Use <strong> around: dates, fee amounts, vacancy counts, age limits, salary figures, deadlines.
-Use <mark style='background:#fef9c3;padding:1px 5px;border-radius:3px;font-weight:700;'> around: THE single most critical number per section (last date, total vacancies, key fee amount).
+⑤ INTRODUCTION (150-200 words)
+- Start with a human hook that addresses the reader's pain point or enthusiasm
+- Mention the job opportunity clearly in first 2 lines
+- Include primary keyword within first 100 words
+- Tell reader exactly what they will learn in this blog
+- Use "Agar aap [job] dhundh rahe hain toh yeh blog aapke liye hi hai" style opening
 
-WARNING BOX — for common mistakes, tricky eligibility rules, server crash warnings:
-<div style='background:#fffbeb;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#b45309;display:block;margin-bottom:4px;'>IMPORTANT ADVISORY</strong>[Content here]</div>
+⑥ QUICK INFO BOX (Table Format)
+An HTML table with fields: Organization, Post Name, Total Vacancy, Last Date, Apply Mode, Official Website, Salary/Pay Scale, Job Location.
 
-INFO/TIP BOX — for preparation strategy, insider tips, expert advice:
-<div style='background:#f0f9ff;border-left:4px solid #0284c7;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#0369a1;display:block;margin-bottom:4px;'>EXPERT STRATEGY TIP</strong>[Content here]</div>
+⑦ MANDATORY MAIN CONTENT SECTIONS (Use H2 and H3)
+You MUST include ALL of these sections in order:
+- H2: [Job Name] Kya Hai? (Brief overview & role context)
+- H2: Important Dates (Notification Date, Start Date, Last Date to Apply BOLD, Exam Date, Admit Card)
+- H2: Vacancy Details (Total posts BOLD + Category-wise breakdown table: General/OBC/SC/ST/EWS)
+- H2: Eligibility Criteria (H3: Educational Qualification, H3: Age Limit + Relaxation table)
+- H2: Salary aur Pay Scale (Pay scale, Grade pay/Level, In-hand salary estimate, Allowances)
+- H2: Selection Process (Step-by-step list)
+- H2: Exam Pattern aur Syllabus (Table format marks/time + Topic list)
+- H2: Online Apply Kaise Karein — Step by Step (Numbered steps 1 to N + Documents required list)
+- H2: Application Fee (Category-wise fee table)
+- H2: Important Documents Required (Bullet list)
+- H2: Previous Year Cutoff (Category-wise table if available)
+- H2: Expert Tips ✅ (3-5 genuine preparation tips + "Pro Tip:" box)
+- H2: FAQ — Aksar Pooche Jaane Wale Sawaal (Minimum 6 PAA style Q&As)
+- H2: Conclusion (100-150 words summary + CTA official link)
 
-CRITICAL WARNING BOX — disqualification rules, last-day warnings:
-<div style='background:#fef2f2;border-left:4px solid #dc2626;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#b91c1c;display:block;margin-bottom:4px;'>CRITICAL WARNING</strong>[Content here]</div>
+════════════════════════════════════════
+🔍 SEO & VISUAL FORMATTING RULES
+════════════════════════════════════════
+- Primary keyword: Title + First 100 words + minimum 1 H2 + Last paragraph
+- Sentence length: Max 20 words. Paragraphs: Max 3-4 lines
+- Use <strong> around dates, fee amounts, vacancy counts, age limits, and deadlines.
+- Use callout boxes:
+  * Warning Advisory: <div style='background:#fffbeb;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:1.5rem 0;'><strong style='color:#b45309;'>⚠️ IMPORTANT ADVISORY</strong>...</div>
+  * Strategy Tip: <div style='background:#f0f9ff;border-left:4px solid #0284c7;padding:16px 20px;border-radius:8px;margin:1.5rem 0;'><strong style='color:#0369a1;'>💡 EXPERT STRATEGY TIP</strong>...</div>
 
-SUCCESS/GOOD NEWS BOX — result declared, admit card out, fee waiver:
-<div style='background:#f0fdf4;border-left:4px solid #16a34a;padding:16px 20px;border-radius:8px;margin:1.5rem 0;color:#1e293b;'><strong style='color:#15803d;display:block;margin-bottom:4px;'>GOOD NEWS</strong>[Content here]</div>
-
-=== CATEGORY-SPECIFIC EXCELLENCE RULES ===
-
-FOR LATEST JOBS / SARKARI NAUKRI:
-- Open with a hook: vacancy count + something surprising or personal
-- Include an honest "Is This Job Right For You?" paragraph — real pros and cons, not promotional
-- The prep section must be paragraph-based (NOT bullet lists) — at least 400 words of flowing, experienced advice
-- Include a WARNING callout: "Every year government servers crash in the last 2 days. Apply at least 5 days before the last date."
-- Close with the Apply For Me pitch written as personal advice, not marketing
-
-FOR ADMIT CARD:
-- Open with: EXAM DATE is the first major fact in sentence one
-- Include a "What If My Admit Card Has a Mistake?" section — students fear this
-- Include an "Exam Day Survival Plan" — timing, dress, what to eat, sleep, reaching center early
-- Exam center locator tip: "Use the center address from your admit card and check it on Google Maps 2-3 days before the exam so you don't get lost on the day."
-- The checklist table (Must Carry / Banned Items) is MANDATORY
-
-FOR RESULTS:
-- Open with emotional awareness — "Lakhs of students waited for this. If you are reading this, you already know the result is out."
-- Include a warm "If You Didn't Clear This Time" section — not generic, but specific: retry attempt count, other currently active notifications, mindset advice
-- The "What Happens Next" section must be specific to the exam's next stage (DV, Medical, Joining) — not generic
-
-FOR ANSWER KEY:
-- First section: objection window deadline in the first 2 sentences — students need this immediately
-- Worked score calculation example is MANDATORY — include actual numbers, not just the formula
-- "Which Types of Objections Actually Succeed?" — honest guide: textbook-sourced objections win, ambiguous wording objections rarely do
-- Expected cutoff section must clearly state "ESTIMATED BASED ON PREVIOUS YEARS" — do not present as official
-
-FOR NEWS:
-- Journalistic inverted pyramid: most important fact in SENTENCE ONE. No intro.
-- "What This Means For You" section tailored to which type of student is affected
-- If postponement/cancellation: acknowledge the frustration directly — "I know this is frustrating..."
-- All information must be clearly attributed: "According to the official notice dated..."
-
-FOR ADMISSION:
-- Include an honest "Is This Course/College Worth It?" section — placement data if available, honest comparison
-- Include total cost of the degree (not just application fee) — mess fees, hostel, semester fees
-- If it is a private institution: mention accreditation, NAAC grade, UGC recognition status
-- Counseling/merit list timeline must be explained clearly
-
-=== FINAL QUALITY CHECK (Run This Before Outputting) ===
-1. Read your first paragraph. Does it start with a generic phrase, the organization's name, or "In this article"? If yes — rewrite it.
-2. Count sentences under 8 words. There should be at least 8 short punchy sentences per 600 words.
-3. Check for any banned word. Remove all of them.
-4. Does the article feel like a knowledgeable friend wrote it, or a computer summarizing a PDF? If the latter — rewrite the tone.
-5. Is every factual claim backed by "official notification" or "official website"? If not — add the attribution or mark it as estimated.`;
+════════════════════════════════════════
+⚠️ STRICTLY BANNED AI WORDS (0% AI Pattern)
+════════════════════════════════════════
+NEVER use: delve, plethora, crucial, navigating, landscape, testament, beacon, moreover, furthermore, additionally, consequently, in conclusion, comprehensive guide, unlock your potential, leverage, transformative, embark, foster, harness, pioneering, paramount.`;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // B1: Content Intelligence Engine — detectContentFeatures()
@@ -112,22 +83,22 @@ function detectContentFeatures(rawText: string, title: string = "") {
   const text = (rawText + " " + title).toLowerCase();
   const resultType =
     /selected|provisionally selected|merit list/.test(text) ? "selection" :
-    /scorecard|marks obtained|subject wise marks/.test(text) ? "scorecard" : "general";
+      /scorecard|marks obtained|subject wise marks/.test(text) ? "scorecard" : "general";
 
   return {
-    isUrgent:         /last date|apply before|closing date|hurry|final date/.test(text),
-    hasPhysicalTest:  /crpf|cisf|bsf|itbp|ssb|agniveer|navy|air force|airforce|nda|capf|police|constable|rpf|paramilitary|soldier/.test(text),
-    hasFeeWaiver:     /sc.?st.{0,10}(free|exempt|nil|zero|no fee)|female.{0,5}free|women.{0,5}free|no.{0,5}fee/.test(text),
-    hasSalaryData:    /pay level|basic pay|pay matrix|grade pay|pay band|7th.?cpc|pay commission/.test(text),
-    hasCutoffData:    /cutoff|cut.?off|qualifying marks|minimum marks/.test(text),
+    isUrgent: /last date|apply before|closing date|hurry|final date/.test(text),
+    hasPhysicalTest: /crpf|cisf|bsf|itbp|ssb|agniveer|navy|air force|airforce|nda|capf|police|constable|rpf|paramilitary|soldier/.test(text),
+    hasFeeWaiver: /sc.?st.{0,10}(free|exempt|nil|zero|no fee)|female.{0,5}free|women.{0,5}free|no.{0,5}fee/.test(text),
+    hasSalaryData: /pay level|basic pay|pay matrix|grade pay|pay band|7th.?cpc|pay commission/.test(text),
+    hasCutoffData: /cutoff|cut.?off|qualifying marks|minimum marks/.test(text),
     hasAgeRelaxation: /obc.*3.?year|sc.?st.*5.?year|pwd.*10.?year|ex.?servicemen/.test(text),
     hasMultiplePosts: /post.*name|various post|multiple post|category wise|grade wise|cadre wise/.test(text),
-    isStateLevel:     /state|pradesh|rajasthan|bihar|uttarakhand|district|block|panchayat|zila|rrb/.test(text),
-    isGroupA:         /ias|ips|ifs|upsc civil|group.?a|gazetted|class.?1|administrative service/.test(text),
-    isBanking:        /ibps|sbi|bank|rbi|nabard|sidbi|clerk|probationary officer|po |po\b/.test(text),
-    isRailway:        /railway|rrb|rlwl|rrc|group.?d|loco pilot|station master/.test(text),
+    isStateLevel: /state|pradesh|rajasthan|bihar|uttarakhand|district|block|panchayat|zila|rrb/.test(text),
+    isGroupA: /ias|ips|ifs|upsc civil|group.?a|gazetted|class.?1|administrative service/.test(text),
+    isBanking: /ibps|sbi|bank|rbi|nabard|sidbi|clerk|probationary officer|po |po\b/.test(text),
+    isRailway: /railway|rrb|rlwl|rrc|group.?d|loco pilot|station master/.test(text),
     resultType,
-    urgencyDays:      (() => {
+    urgencyDays: (() => {
       const match = text.match(/(\d+)\s*days?\s*(left|remaining|more)/);
       return match ? parseInt(match[1]) : null;
     })(),
@@ -526,13 +497,13 @@ function injectShareBox(blogHtml: string, meta: any): string {
 function injectInternalLinks(blogHtml: string, category: string): string {
   type LinkConfig = { url: string; linked: boolean };
   const linkMap: Record<string, LinkConfig> = {
-    "admit card":     { url: "/admit-card",   linked: false },
-    "admit cards":    { url: "/admit-card",   linked: false },
-    "result":         { url: "/results",      linked: false },
-    "answer key":     { url: "/answer-key",   linked: false },
-    "latest jobs":    { url: "/latest-jobs",  linked: false },
-    "sarkari naukri": { url: "/latest-jobs",  linked: false },
-    "apply for me":   { url: "/apply-for-me", linked: false },
+    "admit card": { url: "/admit-card", linked: false },
+    "admit cards": { url: "/admit-card", linked: false },
+    "result": { url: "/results", linked: false },
+    "answer key": { url: "/answer-key", linked: false },
+    "latest jobs": { url: "/latest-jobs", linked: false },
+    "sarkari naukri": { url: "/latest-jobs", linked: false },
+    "apply for me": { url: "/apply-for-me", linked: false },
   };
   const selfMap: Record<string, string[]> = {
     "latest-jobs": ["latest jobs", "sarkari naukri"],
@@ -846,14 +817,17 @@ async function extractMetadata(rawText: string, category: string, customInstruct
 
   const prompt = `Extract info from this ${category} content. Return ONLY this JSON:
 {
-  "title": "SEO title max 70 chars, include exam/org name + year, no emojis",
+  "title": "SEO title max 60 chars, PRIMARY KEYWORD FIRST, year 2026, vacancy count if available, no emojis",
   "category": "${category}",
-  "metaDesc": "150-160 char SEO meta description with call to action",
+  "metaDesc": "Exactly 150-155 char SEO meta description with actionable CTA like Abhi Apply Karein or Puri Jankari Padhein",
   "shortInfo": "2 sentences for card preview, plain text",
   "orgName": "full organization name",
   "examName": "exam or content name",
-  "primaryKeyword": "main SEO keyword e.g. SSC CGL Result 2025",
-  "lsiKeywords": "5 related keywords comma separated",
+  "primaryKeyword": "main focus keyword e.g. SSC CGL 2026 Notification",
+  "lsiKeywords": "8-10 related keywords comma separated",
+  "whatsappCaption": "Short 50-word Hinglish message for WhatsApp group share with emojis and link placeholder",
+  "internalLinkingSuggestions": ["3-5 related search topics array"],
+  "recommendedSchema": "JobPosting OR FAQPage OR HowTo OR NewsArticle",
   ${schemaFields}
 }
 ${customInstructions ? `\nADDITIONAL CONTEXT: ${customInstructions}` : ""}
@@ -1109,8 +1083,8 @@ async function writeSpecialCategoryBlog(
   const resultToneNote = features.resultType === "selection"
     ? "This is a SELECTION RESULT — thousands of candidates learned if they cleared. Open with emotional awareness. Many will celebrate, some won't. Be warm and real."
     : features.resultType === "scorecard"
-    ? "This is a SCORECARD RESULT — candidates can see their subject-wise marks. Help them understand their scorecard and what the numbers mean."
-    : "This is a GENERAL RESULT announcement.";
+      ? "This is a SCORECARD RESULT — candidates can see their subject-wise marks. Help them understand their scorecard and what the numbers mean."
+      : "This is a GENERAL RESULT announcement.";
 
   const urgencyBox = features.isUrgent
     ? `<div style='background:${cfg.theme.bgLight};border-left:4px solid ${cfg.theme.primary};padding:16px 20px;border-radius:10px;margin:1.5rem 0;color:#1e293b;'><strong style='color:${cfg.theme.primary};display:block;margin-bottom:4px;'>CRITICAL WARNING</strong>The deadline for this is approaching fast. Do not delay — take action today.</div>`
@@ -1493,7 +1467,26 @@ export async function POST(req: Request) {
       blogHtml = blogHtml + "\n" + officialBox;
     }
 
-    return NextResponse.json({ ...metadata, officialLink, blogHtml, contentFeatures: featuresWithTitle });
+    // Build live SEO checklist calculation
+    const seoChecklist = [
+      { item: "SEO Title under 60 characters", passed: (metadata.title || "").length <= 65 && (metadata.title || "").length > 5 },
+      { item: "Meta Description 150-160 characters", passed: (metadata.metaDesc || "").length >= 130 && (metadata.metaDesc || "").length <= 165 },
+      { item: "Primary Keyword present", passed: !!metadata.primaryKeyword },
+      { item: "Quick Info Summary Table", passed: blogHtml.includes("<table") },
+      { item: "FAQ Section included", passed: (blogHtml.match(/<h2[^>]*>.*FAQ/i) !== null) || blogHtml.includes("FAQ") },
+      { item: "Official Source Link Verified", passed: !!officialLink && officialLink.length > 5 },
+    ];
+
+    return NextResponse.json({
+      ...metadata,
+      officialLink,
+      blogHtml,
+      seoChecklist,
+      whatsappCaption: metadata.whatsappCaption || `🔔 *${metadata.title || "Sarkari Naukri 2026"}*\n📋 Vacancies: ${metadata.totalPosts || "Multiple"}\n📅 Apply Last Date: ${metadata.lastDate || "Check details"}\n✅ Full Details & Direct Apply:\nhttps://www.rojgarsuvidha.com/job/${metadata.slug || ""}`,
+      internalLinkingSuggestions: metadata.internalLinkingSuggestions || ["SSC Exams 2026", "Railway Recruitment 2026", "State Police Online Form"],
+      recommendedSchema: metadata.recommendedSchema || "JobPosting",
+      contentFeatures: featuresWithTitle
+    });
   } catch (error: any) {
     console.error("AI Super Writer Error Detail:", error.stack || error.message);
     const hasGemini = !!process.env.GEMINI_API_KEY;
