@@ -19,6 +19,7 @@ import SocialProofBadges from "@/components/ui/SocialProofBadges";
 import PushSubscribeWidget from "@/components/ui/PushSubscribeWidget";
 import ApplyFomoBar from "@/components/ui/ApplyFomoBar";
 import FloatingApplyBar from "@/components/ui/FloatingApplyBar";
+import CompetitorTrustBanner from "@/components/ui/CompetitorTrustBanner";
 import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import { buildHreflangAlternates, SUPPORTED_LANGUAGES, LANGUAGE_CONFIG } from "@/lib/i18n";
@@ -99,17 +100,17 @@ export async function generateMetadata(
 
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
   
-  // Smart dynamic title with year (avoid clashing if year is already in title)
+  // Dynamic pSEO title incorporating competitor search intent terms (Sarkari Result, etc.)
   const currentYear = new Date().getFullYear().toString();
   const hasYear = job.title.includes("2024") || job.title.includes("2025") || job.title.includes("2026") || job.title.includes("2027");
   const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
-  const title = `${baseTitle} – Apply Online, Eligibility, Vacancy, Last Date`;
+  const title = `${baseTitle} (Sarkari Result Update) – Direct Apply Online, Eligibility & Fee | Rojgar Suvidha`;
   
-  // Custom SEO description if written, fallback to short info or template
+  // Custom pSEO description with competitor search intent alignment
   const rawDescription = job.meta_description || job.short_info || "";
   const description = rawDescription.trim().length > 10 
-    ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
-    : `${job.title} Notification Out. Check eligibility criteria, important dates, vacancy details, age limit, application fee & apply online at Rojgar Suvidha.`;
+    ? (rawDescription.length > 150 ? `${rawDescription.slice(0, 145)}... [Sarkari Result & Direct Apply]` : rawDescription)
+    : `Looking for ${job.title} Sarkari Result update? Check official notification, eligibility, syllabus, admit card & 1-Click Apply For Me service at Rojgar Suvidha.`;
 
   // Custom social share image (use banner URL if generated, fallback to logo)
   const shareImage = job.banner_url || `${BASE_URL}/og-image.png`;
@@ -117,6 +118,8 @@ export async function generateMetadata(
   const keywords = [
     job.title,
     `${job.title} ${currentYear}`,
+    `${job.title} sarkari result`,
+    `${job.title} sarkari result ${currentYear}`,
     `${job.title} apply online`, `${job.title} online form`,
     `${job.title} notification`, `${job.title} notification pdf`,
     `${job.title} eligibility`, `${job.title} age limit`,
@@ -124,8 +127,8 @@ export async function generateMetadata(
     `${job.title} vacancy`, `${job.title} salary`,
     `${job.title} syllabus`, `${job.title} admit card`,
     `${job.title} result`, `${job.title} answer key`,
-    "sarkari naukri", "government jobs", "sarkari result",
-    job.category, "rojgar suvidha",
+    "sarkari result alternative", "sarkari naukri form filling app",
+    "sarkari result", job.category, "rojgar suvidha",
   ];
 
   const hreflang = buildHreflangAlternates(slug);
@@ -349,6 +352,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             <span className="text-gray-300">/</span>
             <span className="text-gray-700 dark:text-gray-300 font-semibold truncate max-w-[200px]">{job.title}</span>
           </nav>
+
+          {/* High-CTR Competitor Intent Hijacking Banner */}
+          <CompetitorTrustBanner jobTitle={job.title} applyUrl={customApplyLink || "/e-suvidha"} />
 
           {/* Top Level Quick Action CTA Bar */}
           {(() => {

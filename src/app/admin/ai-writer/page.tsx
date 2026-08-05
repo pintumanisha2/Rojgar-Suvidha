@@ -321,16 +321,16 @@ export default function AIWriterPage() {
           .catch(e => console.warn("Auto-translation failed:", e));
       }
 
-      // 🚀 AUTO-INDEXING: Ping IndexNow + Google Sitemap for fast crawling
+      // 🚀 INSTANT INDEXING: Ping IndexNow + Google Sitemap for 2-minute crawling
       if (publishPostStatus === "active") {
-        fetch("/api/admin/index-url", {
+        fetch("/api/admin/index-now", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: publishSlug }),
+          body: JSON.stringify({ url: `/job/${publishSlug}` }),
         })
           .then(r => r.json())
-          .then(d => console.log("🚀 Auto-Index Result:", d.summary))
-          .catch(e => console.warn("Auto-index ping failed:", e));
+          .then(d => console.log("🚀 Instant Indexing Result:", d.message))
+          .catch(e => console.warn("Instant indexing ping failed:", e));
       }
 
       // Auto-trigger category-based push notification
