@@ -60,7 +60,7 @@ function InlineTag({ tag }: { tag?: TagType }) {
 export default async function MainContent({ stateCode }: { stateCode?: string }) {
   let query = supabase
     .from("jobs")
-    .select("title, slug, status, tag, category, short_info, important_dates, created_at, total_posts, state_code")
+    .select("title, slug, status, tag, category, short_info, important_dates, created_at, state_code")
     .neq("status", "draft")
     .neq("category", "news")
     .order("created_at", { ascending: false })
@@ -107,7 +107,7 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
         tag: job.tag as TagType,
         lastDate,
         slug: job.slug,
-        posts: job.total_posts,
+        posts: undefined, // total_posts column not in jobs table
         eligibility: job.short_info,
         category: job.category,
         important_dates: job.important_dates,

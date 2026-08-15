@@ -99,7 +99,7 @@ const itemListSchema = {
   ]
 };
 
-export const revalidate = 60; // Revalidate the page every 60 seconds for lightning-fast speeds
+export const revalidate = 30; // Revalidate every 30 seconds for fresh job data
 
 async function getBanners() {
   try {
