@@ -10,6 +10,7 @@ const inter = Inter({
   display: "swap",
   variable: "--font-inter",
   weight: ["300", "400", "500", "600", "700", "800", "900"],
+  preload: false, // Fix: Vercel build server can't fetch from fonts.gstatic.com
 });
 import { ThemeProvider } from "@/components/ThemeProvider";
 import dynamic from "next/dynamic";
