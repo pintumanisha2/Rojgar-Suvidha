@@ -1,0 +1,758 @@
+/**
+ * Auto Blog Scraper Library — v2 (Improved)
+ * FreeJobAlert → Full Page Deep Read → Gemini AI (SarkariLekhan) → Supabase → Telegram
+ *
+ * FIXES in v2:
+ * 1. RSS URL corrected to freejobales.com (verified WordPress feed pattern)
+ * 2. Better apply link detection — handles FreeJobAlert table structure
+ * 3. Stronger data extraction — more patterns for dates/fees/vacancies
+ * 4. HTML content cap increased to 12000 chars (more context for AI)
+ * 5. Gemini prompt now includes mandatory id= anchors for SEO scorecard
+ * 6. Slug duplicate check before saving to Supabase
+ * 7. Delay between items to avoid rate limiting
+ * 8. Content validation — skip if AI generated <500 words
+ * 9. Better Coming Soon detection (FreeJobAlert specific patterns)
+ */
+
+import { createClient } from "@supabase/supabase-js";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
+type BlogCategory = "latest-jobs" | "results" | "admit-card" | "answer-key" | "admission" | "news";
+
+interface ScraperResult {
+  processed: number;
+  skipped: number;
+  errors: string[];
+}
+
+// ── Config ────────────────────────────────────────────────────────────────────
+// FreeJobAlert.com is the correct URL — WordPress blog so /feed/ works
+const RSS_URLS = [
+  "https://www.freejobales.com/feed/",
+  "https://freejobales.com/feed/",
+];
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+// ── Sleep helper (avoid rate limiting) ───────────────────────────────────────
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// ── Category Detection (improved with more patterns) ─────────────────────────
+function detectCategory(title: string, content: string): BlogCategory {
+  const text = (title + " " + content).toLowerCase();
+
+  // Results first — most specific
+  if (/\bresult\b|merit list|cut.?off|scorecard|marks obtained|selected candidates|final result/.test(text))
+    return "results";
+
+  // Admit card
+  if (/admit card|hall ticket|call letter|e-admit|e admit/.test(text))
+    return "admit-card";
+
+  // Answer key
+  if (/answer key|answer sheet|objection window|provisional answer/.test(text))
+    return "answer-key";
+
+  // Admission
+  if (/\badmission\b|counseling|counselling|\bcuet\b|\bneet\b|\bjee\b|university|college admission|diploma admission/.test(text))
+    return "admission";
+
+  // News-type posts
+  if (/age limit|syllabus change|exam postpone|exam cancel|new notification|official notice/.test(text) &&
+    !/vacancy|recruitment|post/.test(text))
+    return "news";
+
+  return "latest-jobs";
+}
+
+// ── Apply Link Detection (FreeJobAlert-specific patterns) ─────────────────────
+function detectApplyStatus(
+  pageText: string,
+  links: { href: string; text: string }[]
+): { status: ApplyStatus; link: string | null } {
+  const text = pageText.toLowerCase();
+
+  // ── Coming Soon detection (FreeJobAlert specific) ──
+  // They often write "Apply Online : Coming Soon" in tables
+  if (/apply\s*online\s*[:\-–]\s*coming\s*soon/.test(text)) {
+    return { status: "coming_soon", link: null };
+  }
+  if (/coming\s*soon|will\s*be\s*available\s*soon|link\s*will\s*be\s*activated|not\s*yet\s*active|to\s*be\s*announced/.test(text)) {
+    return { status: "coming_soon", link: null };
+  }
+
+  // ── Closed detection ──
+  if (/application\s*closed|last\s*date\s*over|form\s*closed|apply\s*last\s*date\s*passed/.test(text)) {
+    return { status: "closed", link: null };
+  }
+
+  // ── Find real apply link ──
+  // Priority order: most specific patterns first
+  const applyPatterns = [
+    // Direct apply link text patterns
+    (l: { href: string; text: string }) => /^apply\s*(online|now)?$/i.test(l.text.trim()),
+    (l: { href: string; text: string }) => /apply\s*online/i.test(l.text) && l.href.startsWith("http"),
+    (l: { href: string; text: string }) => /click\s*here\s*to\s*apply/i.test(l.text),
+    // URL patterns
+    (l: { href: string; text: string }) => /\/(apply|register|application|form)\//i.test(l.href) && l.href.startsWith("http"),
+  ];
+
+  for (const pattern of applyPatterns) {
+    const found = links.find(pattern);
+    if (found?.href?.startsWith("http")) {
+      // Exclude internal/navigation links
+      const isInternal = found.href.includes("freejobales") || found.href.includes("rojgarsuvidha");
+      if (!isInternal) {
+        return { status: "open", link: found.href };
+      }
+    }
+  }
+
+  // ── Fallback: "Apply Online" text present but no link → Coming Soon ──
+  if (/apply\s*online/i.test(text)) {
+    return { status: "coming_soon", link: null };
+  }
+
+  return { status: "unknown", link: null };
+}
+
+// ── Deep Data Extraction (FreeJobAlert table structure) ───────────────────────
+function extractPageData(pageText: string) {
+  const text = pageText;
+
+  // Last date — multiple patterns covering FreeJobAlert's table format
+  const lastDatePatterns = [
+    /last\s*date(?:\s*to\s*apply|\s*of\s*application|\s*for\s*online\s*application)?[:\s]+([^\n\r|]{5,60})/i,
+    /apply\s*before[:\s]+([^\n\r|]{5,60})/i,
+    /closing\s*date[:\s]+([^\n\r|]{5,60})/i,
+    /end\s*date[:\s]+([^\n\r|]{5,60})/i,
+    /(?:application|form)\s*(?:last\s*)?date[:\s]+([^\n\r|]{5,60})/i,
+  ];
+  let lastDate: string | null = null;
+  for (const pattern of lastDatePatterns) {
+    const m = text.match(pattern);
+    if (m?.[1]) { lastDate = m[1].trim().slice(0, 60).replace(/[|]/g, "").trim(); break; }
+  }
+
+  // Total posts — FreeJobAlert often writes "Total Vacancy : 1000"
+  const postsPatterns = [
+    /total\s*(?:vacancy|vacancies|post|posts?)[:\s–\-]+(\d[\d,]+)/i,
+    /(?:no\.?\s*of\s*)?(?:vacancy|vacancies|post)[:\s–\-]+(\d[\d,]+)/i,
+    /(\d[\d,]+)\s*(?:post|vacancy|vacancies|seat)/i,
+  ];
+  let totalPosts: string | null = null;
+  for (const pattern of postsPatterns) {
+    const m = text.match(pattern);
+    if (m?.[1]) { totalPosts = m[1].replace(/,/g, ""); break; }
+  }
+
+  // Application fee — FreeJobAlert shows "General/OBC : 500", "SC/ST : Free"
+  const feeGenPatterns = [
+    /(?:general|gen|ur|obc|ews)[\/,\s]+(?:obc[\/,\s]+)?(?:ews[\/,\s]+)?(?:[:\-–]\s*)₹?\s*(\d+)/i,
+    /application\s*fee[:\s–\-]*(?:general|gen|ur)?[:\s]*₹?\s*(\d+)/i,
+    /fee[:\s–\-]+₹?\s*(\d+)/i,
+  ];
+  let appFeeGen: string | null = null;
+  for (const pattern of feeGenPatterns) {
+    const m = text.match(pattern);
+    if (m?.[1]) { appFeeGen = `₹${m[1]}`; break; }
+  }
+
+  // SC/ST fee
+  const feeResPatterns = [
+    /(?:sc|st|ph|pwd|divyang)[\/,\s]+(?:female[\/,\s]+)?[:\-–]\s*₹?\s*(\d+)/i,
+    /(?:sc|st)[:\s–\-]+(?:free|nil|₹?\s*0|\₹?\s*\d+)/i,
+  ];
+  let appFeeRes: string | null = null;
+  for (const pattern of feeResPatterns) {
+    const m = text.match(pattern);
+    if (m) { appFeeRes = m[0].slice(0, 40).trim(); break; }
+  }
+
+  // Official website
+  const officialPatterns = [
+    /official\s*(?:website|site|portal|link)[:\s]+([^\s\n|]{5,80})/i,
+    /(?:www\.[a-z0-9\-\.]+\.(?:gov|nic|org|in|com))/i,
+  ];
+  let officialLink: string | null = null;
+  for (const pattern of officialPatterns) {
+    const m = text.match(pattern);
+    if (m?.[1]) { officialLink = m[1].trim(); break; }
+    if (m?.[0]?.includes("www.")) { officialLink = "https://" + m[0].trim(); break; }
+  }
+
+  // Age limit extraction (bonus)
+  const ageMatch = text.match(/age\s*limit[:\s]+([^\n\r|]{3,40})/i);
+  const ageLimit = ageMatch ? ageMatch[1].trim().slice(0, 40) : null;
+
+  // Education qualification
+  const eduMatch = text.match(/(?:education|qualification|educational)[:\s]+([^\n\r|]{5,80})/i);
+  const education = eduMatch ? eduMatch[1].trim().slice(0, 80) : null;
+
+  return { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, ageLimit, education };
+}
+
+// ── Parse RSS Feed (with fallback URLs) ──────────────────────────────────────
+async function fetchRSSItems() {
+  let lastErr = "";
+  for (const rssUrl of RSS_URLS) {
+    try {
+      const res = await fetch(rssUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+          "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+      const xml = await res.text();
+      if (!xml.includes("<item>")) { lastErr = "No <item> tags found"; continue; }
+
+      const items: { title: string; link: string; pubDate: string; description: string }[] = [];
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+      let match: RegExpExecArray | null;
+
+      while ((match = itemRegex.exec(xml)) !== null) {
+        const item = match[1];
+        const title =
+          item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+          item.match(/<title>(.*?)<\/title>/)?.[1] || "";
+        const link =
+          item.match(/<link>(.*?)<\/link>/)?.[1] ||
+          item.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+        const description =
+          item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
+          item.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+
+        if (title && link) {
+          items.push({ title: title.trim(), link: link.trim(), pubDate: pubDate.trim(), description: description.trim() });
+        }
+      }
+      console.log(`📡 RSS from ${rssUrl}: ${items.length} items`);
+      return items;
+    } catch (e: any) {
+      lastErr = e.message;
+    }
+  }
+  throw new Error(`All RSS URLs failed: ${lastErr}`);
+}
+
+// ── Fetch Full Page (deep content extraction) ─────────────────────────────────
+async function fetchFullPage(url: string): Promise<{
+  text: string;
+  links: { href: string; text: string }[];
+  rawHtml: string;
+}> {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cache-Control": "no-cache",
+      "Referer": "https://www.google.com/",
+    },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`Page fetch failed: ${res.status} ${res.statusText}`);
+  const html = await res.text();
+
+  // FreeJobAlert uses .entry-content div for main content
+  // Try to extract just the main content area to reduce noise
+  const mainContentMatch =
+    html.match(/<div[^>]*class="[^"]*(?:entry-content|post-content|article-content|td-post-content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+    html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+
+  let workingHtml = mainContentMatch ? mainContentMatch[1] : html;
+
+  // Remove noise
+  workingHtml = workingHtml
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<header[\s\S]*?<\/header>/gi, " ")
+    .replace(/<aside[\s\S]*?<\/aside>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<div[^>]*(?:sidebar|widget|ad-|advertisement|comment)[^>]*>[\s\S]*?<\/div>/gi, " ");
+
+  // Extract all links (important for finding Apply Online button)
+  const links: { href: string; text: string }[] = [];
+  const linkRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let linkMatch: RegExpExecArray | null;
+  const linkRegexCopy = new RegExp(linkRegex.source, linkRegex.flags);
+  while ((linkMatch = linkRegexCopy.exec(workingHtml)) !== null) {
+    const href = linkMatch[1].trim();
+    const text = linkMatch[2].replace(/<[^>]+>/g, "").trim();
+    if (href && text && text.length < 100) links.push({ href, text });
+  }
+
+  // Strip HTML and decode entities
+  const text = workingHtml
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|tr|li|h[1-6])\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&#8211;/g, "–")
+    .replace(/&#8212;/g, "—").replace(/&#8217;/g, "'").replace(/&#8220;/g, '"')
+    .replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+
+  // Increased to 12000 chars — more context = better AI output
+  return { text: text.slice(0, 12000), links, rawHtml: workingHtml.slice(0, 2000) };
+}
+
+// ── Slug duplicate check ──────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getUniqueSlug(baseSlug: string, supabase: any): Promise<string> {
+  let slug = baseSlug;
+  let counter = 1;
+  while (true) {
+    // Check in jobs table
+    const { data } = await supabase.from("jobs").select("id").eq("slug", slug).maybeSingle();
+    if (!data) return slug; // Slug is unique
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+    if (counter > 10) return `${baseSlug}-${Date.now()}`; // failsafe
+  }
+}
+
+// ── Generate Blog via Gemini AI (Full SarkariLekhan Persona) ─────────────────
+async function generateBlogDraft(opts: {
+  rawText: string;
+  category: BlogCategory;
+  applyStatus: ApplyStatus;
+  applyLink: string | null;
+  officialLink: string | null;
+  lastDate: string | null;
+  totalPosts: string | null;
+  appFeeGen: string | null;
+  appFeeRes: string | null;
+  ageLimit: string | null;
+  education: string | null;
+  sourceTitle: string;
+}) {
+  const {
+    rawText, category, applyStatus, applyLink, officialLink,
+    lastDate, totalPosts, appFeeGen, appFeeRes, ageLimit, education, sourceTitle,
+  } = opts;
+
+  // Build apply section instruction based on status
+  let applyInstruction = "";
+  if (applyStatus === "coming_soon") {
+    applyInstruction = `
+⚠️ CRITICAL — APPLY STATUS IS "COMING SOON":
+The apply link is NOT yet active. In the blog's How to Apply section (id='apply'), write:
+<div style='background:#fef9c3;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:1.5rem 0;'>
+  <strong style='color:#b45309;'>⏳ Apply Online Link — Coming Soon!</strong>
+  <p style='margin:8px 0 0;color:#1e293b;'>Online apply link abhi activate nahi hua hai. Jaise hi link active ho, hum is page ko turant update kar denge. Tab tak:</p>
+  <ul><li>Official notification PDF download karo (link neeche diya hai)</li><li>Eligibility check karo</li><li>Documents ready rakho</li><li>Hamari website pe nazar rakho — hum instantly update karenge</li></ul>
+</div>
+DO NOT add any fake apply button.`;
+  } else if (applyStatus === "open" && applyLink) {
+    applyInstruction = `
+✅ APPLY LINK IS LIVE: ${applyLink}
+In the blog, add this as a prominent green button after the How to Apply steps:
+<div style='text-align:center;margin:2rem 0;'>
+  <a href='${applyLink}' target='_blank' rel='noopener noreferrer' style='display:inline-block;background:linear-gradient(135deg,#15803d,#16a34a);color:white;padding:16px 36px;border-radius:12px;font-size:1.1rem;font-weight:800;text-decoration:none;box-shadow:0 4px 15px rgba(21,128,61,0.3);'>
+    🔗 Apply Online — Official Link
+  </a>
+  <p style='color:#64748b;font-size:0.85rem;margin-top:8px;'>Official website link hai — Safe aur Secure</p>
+</div>`;
+  } else if (applyStatus === "closed") {
+    applyInstruction = `NOTE: Application window is closed. Mention this clearly and suggest to watch for re-notification.`;
+  }
+
+  const todayDate = new Date().toLocaleDateString("en-IN", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+  });
+
+  const enrichedContext = `
+SOURCE: FreeJobAlert.com
+SOURCE TITLE: ${sourceTitle}
+CATEGORY: ${category}
+TODAY: ${todayDate}
+LAST DATE: ${lastDate || "Check official notification"}
+TOTAL VACANCIES: ${totalPosts || "Check official notification"}
+FEE (Gen/OBC): ${appFeeGen || "Check notification"}
+FEE (SC/ST): ${appFeeRes || "Check notification (may be free)"}
+AGE LIMIT: ${ageLimit || "As per notification"}
+EDUCATION: ${education || "As per notification"}
+OFFICIAL WEBSITE: ${officialLink || "Refer to notification links below"}
+${applyInstruction}
+
+===== FULL PAGE CONTENT FROM FREEJOBALES.COM =====
+${rawText}
+=================================================`;
+
+  // This is the same SarkariLekhan AI persona from scan-notification/route.ts
+  const SYSTEM_PROMPT = `You are "SarkariLekhan AI" (Arjun Sharma) — India's top expert Sarkari Naukri blog writer with 10+ years of experience in government job notifications, exam analysis, recruitment patterns, and career guidance for Indian job seekers.
+
+You strictly follow Google's E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) guidelines. Your goal: genuinely help job seekers with accurate, complete, actionable information.
+
+Write in natural Hinglish (Hindi-English mix) accessible to class 10 to graduation level readers in Tier 2/3 cities.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preamble.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "title": "SEO title ≤60 chars — primary keyword FIRST + year + vacancy count",
+  "metaDesc": "Exactly 150-160 chars — primary keyword + CTA like 'Abhi Apply Karein' or 'Puri Jankari Padhein'",
+  "primaryKeyword": "main focus keyword phrase (e.g. 'SSC GD Constable 2026')",
+  "tag": "short display tag (e.g. 'Railway Jobs', 'SSC Result', 'Admit Card')",
+  "category": "${category}",
+  "lastDate": "extracted last date string or null",
+  "totalPosts": "extracted vacancy number (digits only) or null",
+  "appFeeGen": "fee for General/OBC e.g. '₹100' or null",
+  "appFeeRes": "fee for SC/ST e.g. 'Free' or '₹0' or null",
+  "officialLink": "official .gov/.nic website URL or null",
+  "links": "${applyStatus === "open" && applyLink ? applyLink : "null"}",
+  "shortInfo": "2-sentence card summary — engaging, includes key facts",
+  "important_dates": "stringified JSON of {key: date} pairs or null",
+  "blogHtml": "COMPLETE HTML blog MINIMUM 1800 words"
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY BLOG HTML STRUCTURE (Never skip any section)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+① HERO HEADER: Title h1 + byline (Rojgar Suvidha Editorial Team | Today's date | Category)
+
+② QUICK INFO TABLE: Full table with Organization, Post Name, Total Vacancy, Apply Mode, Last Date, Salary, Age Limit, Official Website
+
+③ id="intro" INTRODUCTION (150-200 words):
+   - Start: "Agar aap [job name] ke liye form bharna chahte hain, toh yeh blog aapke liye hi hai."
+   - Mention: vacancy count, last date, key benefit
+   - End with: "Neeche poori jankari step-by-step di gayi hai."
+
+④ WhatsApp Share Box (copy-paste text for sharing with friends)
+
+⑤ id="dates" IMPORTANT DATES table: Notification | Application Start | Last Date to Apply (BOLD RED) | Exam Date | Admit Card Date
+
+⑥ id="vacancies" VACANCY DETAILS: Total + category-wise breakdown table (Gen/OBC/SC/ST/EWS)
+
+⑦ id="eligibility" ELIGIBILITY:
+   - h3 Educational Qualification
+   - h3 Age Limit + relaxation table (OBC 3yr, SC/ST 5yr, PwD 10yr)
+
+⑧ id="salary" SALARY & PAY SCALE: Pay Level, Grade Pay, In-hand estimate, Allowances
+
+⑨ id="selection" SELECTION PROCESS: Numbered step-by-step list
+
+⑩ id="exam" EXAM PATTERN & SYLLABUS: Table with Subject | Marks | Questions | Time
+
+⑪ id="apply" HOW TO APPLY — Step-by-step (use numbered list 1 to N):
+   ${applyInstruction ? "Include the Coming Soon / Apply button as instructed above" : ""}
+   End with: Documents required checklist
+
+⑫ id="fee" APPLICATION FEE: Category-wise table + payment modes
+
+⑬ id="prep" EXPERT PREPARATION TIPS: 3-5 genuine tips + Pro Tip callout box
+
+⑭ id="cutoff" EXPECTED/PREVIOUS CUTOFF: Category-wise table if data available
+
+⑮ id="faq" FAQ SECTION — Minimum 7 Q&As in <details><summary> format:
+   Cover: eligibility, last date, fee, how to apply, result timeline, salary, exam pattern
+
+⑯ CONCLUSION (100-150 words): Summary + one final CTA
+   ${applyLink ? `+ Apply button: <a href='${applyLink}' target='_blank'>Apply Online Now</a>` : ""}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMATTING RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Use <strong> for: dates, fee amounts, vacancy counts, age limits, deadlines
+• Use <mark style='background:#fef9c3;padding:1px 5px;border-radius:3px;font-weight:700;'> for fee amounts
+• Use <strong style='color:#e11d48;'> for vacancy count
+• Warning callout: <div style='background:#fffbeb;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:1.5rem 0;'><strong style='color:#b45309;'>⚠️ IMPORTANT</strong>...</div>
+• Tips callout: <div style='background:#f0f9ff;border-left:4px solid #0284c7;padding:16px 20px;border-radius:8px;margin:1.5rem 0;'><strong style='color:#0369a1;'>💡 EXPERT TIP</strong>...</div>
+• Internal links: href='/latest-jobs', href='/results', href='/admit-card', href='/admission', href='/answer-key'
+• Sentence length: max 20 words. Paragraphs: max 3-4 lines.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STRICTLY BANNED WORDS (0% AI pattern)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEVER use: delve, plethora, crucial, navigating, landscape, testament, beacon, moreover, furthermore, additionally, consequently, in conclusion, comprehensive guide, unlock your potential, leverage, transformative, embark, foster, harness, pioneering, paramount`;
+
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) throw new Error("GEMINI_API_KEY missing");
+
+  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  let lastError = "";
+
+  for (const model of models) {
+    try {
+      const payload = {
+        contents: [{
+          role: "user",
+          parts: [{ text: `${SYSTEM_PROMPT}\n\n===== SOURCE CONTENT TO PROCESS =====\n${enrichedContext}` }],
+        }],
+        generationConfig: {
+          temperature: 0.82,
+          maxOutputTokens: 7000, // Increased for longer, richer blogs
+          responseMimeType: "application/json",
+        },
+      };
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 55000);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
+      );
+      clearTimeout(timeout);
+
+      const data = await response.json();
+      if (data.error) { lastError = `${model}: ${data.error.message || JSON.stringify(data.error)}`; continue; }
+      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (!rawJson) { lastError = `${model}: empty response`; continue; }
+
+      const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
+      const parsed = JSON.parse(cleanedJson);
+
+      // ── Content validation ──
+      const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+      if (wordCount < 500) {
+        lastError = `${model}: Blog too short (${wordCount} words)`; continue;
+      }
+      if (!parsed.title) { lastError = `${model}: No title generated`; continue; }
+
+      console.log(`   🤖 Generated via ${model}: ${wordCount} words, title="${parsed.title}"`);
+      return parsed;
+
+    } catch (e: any) {
+      lastError = `${model}: ${e.message}`;
+      continue;
+    }
+  }
+  throw new Error(`All Gemini models failed. Last error: ${lastError}`);
+}
+
+// ── Telegram Notification ─────────────────────────────────────────────────────
+async function sendTelegramNotification(draft: {
+  source_title: string;
+  category: string;
+  apply_status: string;
+  last_date: string | null;
+  total_posts: string | null;
+  apply_link?: string | null;
+}, draftId: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId || token.includes("REPLACE") || chatId.includes("REPLACE")) {
+    console.warn("⚠️ Telegram not configured — skipping notification");
+    return;
+  }
+
+  const statusEmoji =
+    draft.apply_status === "open" ? "🟢 Apply LIVE" :
+    draft.apply_status === "coming_soon" ? "🟡 Coming Soon" :
+    draft.apply_status === "closed" ? "🔴 Closed" : "⚪ Unknown";
+
+  const reviewUrl = `${BASE_URL}/admin/auto-drafts/${draftId}`;
+  const categoryLabel = {
+    "latest-jobs": "💼 Latest Jobs",
+    "results": "🏆 Result",
+    "admit-card": "🪪 Admit Card",
+    "answer-key": "📋 Answer Key",
+    "admission": "🎓 Admission",
+    "news": "📰 News",
+  }[draft.category] || draft.category;
+
+  const lines = [
+    `🆕 *New Blog Draft Ready!*`,
+    ``,
+    `📌 *${(draft.source_title || "New Post").slice(0, 80)}*`,
+    ``,
+    `${categoryLabel}`,
+    `🔗 ${statusEmoji}`,
+    draft.total_posts ? `👥 Vacancies: *${draft.total_posts}*` : "",
+    draft.last_date ? `📅 Last Date: *${draft.last_date}*` : "",
+    ``,
+    `✏️ Review & Publish:`,
+    reviewUrl,
+    ``,
+    `_Auto-scraped from FreeJobAlert.com — Please review before publishing_`,
+  ].filter((l) => l !== undefined && l !== null);
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: lines.join("\n"),
+        parse_mode: "Markdown",
+        disable_web_page_preview: true,
+      }),
+    });
+    console.log("   📱 Telegram notification sent");
+  } catch (e: any) {
+    console.warn("   ⚠️ Telegram send failed:", e.message);
+  }
+}
+
+// ── Slug Generator ────────────────────────────────────────────────────────────
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim()
+    .slice(0, 80);
+}
+
+// ── MAIN RUNNER ───────────────────────────────────────────────────────────────
+export async function runAutoBlogScraper(): Promise<ScraperResult> {
+  console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
+  const supabase = getSupabaseAdmin();
+  const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
+
+  // 1. Fetch RSS
+  let rssItems: Awaited<ReturnType<typeof fetchRSSItems>>;
+  try {
+    rssItems = await fetchRSSItems();
+  } catch (err: any) {
+    console.error("❌ RSS Error:", err.message);
+    return { ...results, errors: [`RSS: ${err.message}`] };
+  }
+
+  // 2. Get already-scraped URLs
+  const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
+  const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
+
+  // 3. Process max 1 new item per run
+  // WHY 1: RSS fetch(15s) + Page fetch(20s) + Gemini AI(55s) + DB(5s) = ~95s per item
+  // External cron (cron-job.org) calls every 30min = up to 48 posts/day — more than enough
+  const newItems = rssItems.filter((i) => !scrapedUrls.has(i.link)).slice(0, 1);
+  console.log(`🆕 New items to process: ${newItems.length} (of ${rssItems.length} total)`);
+
+  if (newItems.length === 0) {
+    results.skipped = rssItems.length;
+    console.log("✨ All caught up — no new posts");
+    return results;
+  }
+
+  for (const item of newItems) {
+    console.log(`\n📰 [${newItems.indexOf(item) + 1}/${newItems.length}] Processing: ${item.title}`);
+
+    try {
+      // 4. Full page deep read
+      const { text: pageText, links } = await fetchFullPage(item.link);
+      console.log(`   📄 Page extracted: ${pageText.split(" ").length} words, ${links.length} links`);
+
+      // 5. Smart analysis
+      const category = detectCategory(item.title, pageText);
+      const { status: applyStatus, link: applyLink } = detectApplyStatus(pageText, links);
+      const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, ageLimit, education } =
+        extractPageData(pageText);
+
+      console.log(`   📊 Category: ${category} | Apply: ${applyStatus} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
+
+      // 6. Generate blog with Gemini
+      console.log(`   🤖 Calling Gemini AI...`);
+      const aiResult = await generateBlogDraft({
+        rawText: pageText,
+        category,
+        applyStatus,
+        applyLink,
+        officialLink,
+        lastDate,
+        totalPosts,
+        appFeeGen,
+        appFeeRes,
+        ageLimit,
+        education,
+        sourceTitle: item.title,
+      });
+
+      // 7. Generate unique slug
+      const baseSlug = generateSlug(aiResult.title || item.title);
+      const slug = await getUniqueSlug(baseSlug, supabase);
+
+      // 8. Save draft to Supabase
+      const { data: inserted, error: insertError } = await supabase
+        .from("auto_blog_drafts")
+        .insert([{
+          source_url: item.link,
+          source_title: item.title,
+          source_site: "freejobales",
+          apply_link: applyLink,
+          apply_status: applyStatus,
+          official_link: aiResult.officialLink || officialLink,
+          last_date: aiResult.lastDate || lastDate,
+          total_posts: aiResult.totalPosts || totalPosts,
+          app_fee_gen: aiResult.appFeeGen || appFeeGen,
+          app_fee_res: aiResult.appFeeRes || appFeeRes,
+          extracted_text: pageText.slice(0, 3000),
+          category: aiResult.category || category,
+          generated_title: aiResult.title,
+          generated_meta: aiResult.metaDesc,
+          generated_slug: slug,
+          generated_html: aiResult.blogHtml,
+          generated_tags: aiResult.tag ? [aiResult.tag] : [],
+          primary_keyword: aiResult.primaryKeyword,
+          short_description: aiResult.shortInfo,
+          important_dates: aiResult.important_dates || null,
+          status: "pending_review",
+        }])
+        .select("id")
+        .single();
+
+      if (insertError) throw new Error(`Supabase insert: ${insertError.message}`);
+      console.log(`   ✅ Draft saved: ID = ${inserted.id}`);
+
+      // 9. Log scraped URL (prevent duplicate)
+      try {
+        await supabase.from("scraped_urls_log").upsert([{ url: item.link }], { onConflict: "url" });
+      } catch (_) { /* silent */ }
+
+      // 10. Telegram notification
+      await sendTelegramNotification({
+        source_title: item.title,
+        category: aiResult.category || category,
+        apply_status: applyStatus,
+        last_date: aiResult.lastDate || lastDate,
+        total_posts: aiResult.totalPosts || totalPosts,
+        apply_link: applyLink,
+      }, inserted.id);
+
+      results.processed++;
+
+      // ⏱️ Delay between items (avoid rate limiting on FreeJobAlert)
+      if (newItems.indexOf(item) < newItems.length - 1) {
+        await sleep(3000);
+      }
+
+    } catch (err: any) {
+      console.error(`   ❌ Failed: ${err.message}`);
+      results.errors.push(`${item.title.slice(0, 60)}: ${err.message}`);
+
+      // Mark as scraped to avoid infinite loop
+      try {
+        await supabase.from("scraped_urls_log").upsert([{ url: item.link }], { onConflict: "url" });
+      } catch (_) { /* silent */ }
+
+      // Save error record for admin visibility
+      try {
+        await supabase.from("auto_blog_drafts").insert([{
+          source_url: item.link,
+          source_title: item.title,
+          status: "error",
+          error_message: err.message.slice(0, 500),
+        }]);
+      } catch (_) { /* silent */ }
+    }
+  }
+
+  console.log(`\n📊 Scraper complete: ${results.processed} processed | ${results.skipped} skipped | ${results.errors.length} errors\n`);
+  return results;
+}

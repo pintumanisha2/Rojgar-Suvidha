@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard, FileText, Users, CreditCard, BookOpen, Briefcase,
   Image as ImageIcon, BarChart2, Ticket, MessageSquareWarning,
-  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles, Activity, Radar, Inbox
+  ChevronRight, LogOut, Bell, Menu, X, ShieldCheck, Zap, Loader2, Sparkles, Activity, Radar, Inbox, Bot
 } from "lucide-react";
 
 const navItems = [
@@ -47,6 +47,7 @@ const navSections = [
       { href: "/admin/utr-verification", label: "💳 UPI Verification 🔴", icon: CreditCard },
       { href: "/admin/jobs?type=sarkari", label: "Govt Jobs (Sarkari)", icon: BookOpen },
       { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
+      { href: "/admin/auto-drafts", label: "🤖 Auto Blog Drafts", icon: Bot },
       { href: "/admin/job-scout", label: "Job Scout (Auto Tracker)", icon: Bell },
     ]
   },
