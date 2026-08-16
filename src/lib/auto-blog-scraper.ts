@@ -72,6 +72,37 @@ function detectCategory(title: string, content: string): BlogCategory {
   return "latest-jobs";
 }
 
+// ── State Code Detection (Auto-detect State vs All India) ─────────────────
+function detectStateCode(title: string, content: string): string | null {
+  const text = (title + " " + content).toLowerCase();
+
+  // Central / All India indicators
+  if (/\b(?:ssc|upsc|rrb|railway|ibps|sbi|rbi|lic|isro|drdo|cisf|bsf|crpf|itbp|ssb|ignou|iit|nit|aiims|central|all india)\b/i.test(text)) {
+    if (!/up police|bihar police|mp police|rajasthan police|delhi police/i.test(text)) {
+      return null; // All India / Central
+    }
+  }
+
+  if (/uttar pradesh|\buppsc\b|\bupsssc\b|\bup police\b|\bup teacher\b|\bup bed\b|\bup\b/i.test(text)) return "UP";
+  if (/bihar|\bbpsc\b|\bbssc\b|\bbihar police\b|\bbtsc\b|\bbihar/i.test(text)) return "BH";
+  if (/madhya pradesh|\bmppeb\b|\bmppsc\b|\bmp police\b|\bvyapam\b|\bmp\b/i.test(text)) return "MP";
+  if (/rajasthan|\brpsc\b|\brsmssb\b|\brajasthan police\b|\breet\b|\brj\b/i.test(text)) return "RJ";
+  if (/haryana|\bhssc\b|\bhpsc\b|\bharyana police\b|\bhtet\b|\bhr\b/i.test(text)) return "HR";
+  if (/delhi|\bdsssb\b|\bdelhi police\b|\bddu\b|\bdl\b/i.test(text)) return "DL";
+  if (/maharashtra|\bmpsc\b|\bmaha\b|\bmaharashtra police\b|\bmh\b/i.test(text)) return "MH";
+  if (/west bengal|\bwbpsc\b|\bwbprb\b|\bwb\b/i.test(text)) return "WB";
+  if (/uttarakhand|\bukpsc\b|\buksssc\b|\buk\b/i.test(text)) return "UK";
+  if (/jharkhand|\bjpsc\b|\bjssc\b|\bjharkhand police\b|\bjh\b/i.test(text)) return "JH";
+  if (/punjab|\bppsc\b|\bpsssb\b|\bpunjab police\b|\bpb\b/i.test(text)) return "PB";
+  if (/odisha|\bopsc\b|\bosssc\b|\bodisha police\b|\bod\b/i.test(text)) return "OD";
+  if (/chhattisgarh|\bcgpsc\b|\bcg/i.test(text)) return "CG";
+  if (/karnataka|\bkpsc\b|\bka\b/i.test(text)) return "KA";
+  if (/gujarat|\bgpsc\b|\bgujarat police\b|\bgu\b/i.test(text)) return "GU";
+  if (/assam|\bapsc\b|\bas\b/i.test(text)) return "AS";
+
+  return null; // Default to Central / All India
+}
+
 // ── Apply Link Detection (FreeJobAlert-specific patterns) ─────────────────────
 function detectApplyStatus(
   pageText: string,
@@ -670,11 +701,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // 5. Smart analysis
       const category = detectCategory(item.title, pageText);
+      const stateCode = detectStateCode(item.title, pageText);
       const { status: applyStatus, link: applyLink } = detectApplyStatus(pageText, links);
-      const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, ageLimit, education } =
-        extractPageData(pageText);
+      const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education } =
+        extractPageData(pageText, links);
 
-      console.log(`   📊 Category: ${category} | Apply: ${applyStatus} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
+      console.log(`   📊 Category: ${category} | State: ${stateCode || "ALL (Central)"} | Apply: ${applyStatus} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
 
       // 6. Generate blog with Gemini
       console.log(`   🤖 Calling Gemini AI...`);
@@ -705,6 +737,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         apply_link: applyLink,
         apply_status: applyStatus,
         official_link: aiResult.officialLink || officialLink,
+        notification_link: notificationLink || null,
+        state_code: stateCode || null,
         last_date: aiResult.lastDate || lastDate,
         total_posts: aiResult.totalPosts || totalPosts,
         app_fee_gen: aiResult.appFeeGen || appFeeGen,
@@ -729,9 +763,11 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         .select("id")
         .single();
 
-      if (insertError && insertError.message?.includes("important_dates")) {
-        // Fallback if column not created yet in Supabase
+      if (insertError) {
+        // Fallback if optional column not created yet in Supabase
         delete draftPayload.important_dates;
+        delete draftPayload.notification_link;
+        delete draftPayload.state_code;
         const retry = await supabase
           .from("auto_blog_drafts")
           .insert([draftPayload])

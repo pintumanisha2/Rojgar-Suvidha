@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS auto_blog_drafts (
   apply_link        TEXT,           -- Actual apply URL or NULL if coming soon
   apply_status      TEXT DEFAULT 'unknown',  -- 'open' | 'coming_soon' | 'closed' | 'unknown'
   official_link     TEXT,           -- Official organization website
+  notification_link TEXT,           -- Official PDF notification link
+  state_code        TEXT,           -- State code ('UP', 'BH', 'MP', 'RJ', etc.) or NULL for All India
   last_date         TEXT,           -- Last date to apply
   total_posts       TEXT,           -- Total vacancies
   app_fee_gen       TEXT,           -- Fee for General/OBC
@@ -43,8 +45,10 @@ CREATE TABLE IF NOT EXISTS auto_blog_drafts (
   published_post_id UUID            -- Reference to jobs table row
 );
 
--- Migration query if table already created:
+-- Migration queries if table already created:
 ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS important_dates TEXT;
+ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS notification_link TEXT;
+ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS state_code TEXT;
 
 -- Table 2: Prevent duplicate scraping
 CREATE TABLE IF NOT EXISTS scraped_urls_log (

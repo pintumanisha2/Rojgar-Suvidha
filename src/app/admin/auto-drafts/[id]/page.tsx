@@ -43,9 +43,11 @@ export default function AutoDraftDetailPage() {
   const [editMeta, setEditMeta] = useState("");
   const [editHtml, setEditHtml] = useState("");
   const [editCategory, setEditCategory] = useState("latest-jobs");
+  const [editStateCode, setEditStateCode] = useState("ALL");
   const [editApplyStatus, setEditApplyStatus] = useState("unknown"); // open | coming_soon | closed | unknown
   const [editApplyLink, setEditApplyLink] = useState("");
   const [editOfficialLink, setEditOfficialLink] = useState("");
+  const [editNotificationLink, setEditNotificationLink] = useState("");
   const [editLastDate, setEditLastDate] = useState("");
   const [editTotalPosts, setEditTotalPosts] = useState("");
   const [editAppFeeGen, setEditAppFeeGen] = useState("");
@@ -75,9 +77,11 @@ export default function AutoDraftDetailPage() {
         setEditMeta(data.generated_meta || "");
         setEditHtml(data.generated_html || "");
         setEditCategory(data.category || "latest-jobs");
+        setEditStateCode(data.state_code || "ALL");
         setEditApplyStatus(data.apply_status || "unknown");
         setEditApplyLink(data.apply_link || "");
         setEditOfficialLink(data.official_link || "");
+        setEditNotificationLink(data.notification_link || "");
         setEditLastDate(data.last_date || "");
         setEditTotalPosts(data.total_posts || "");
         setEditAppFeeGen(data.app_fee_gen || "");
@@ -138,8 +142,10 @@ export default function AutoDraftDetailPage() {
       generated_meta: editMeta,
       generated_html: editHtml,
       category: editCategory,
+      state_code: editStateCode === "ALL" ? null : editStateCode,
       apply_link: editApplyLink,
       official_link: editOfficialLink,
+      notification_link: editNotificationLink,
       apply_status: editApplyStatus,
       last_date: editLastDate,
       total_posts: editTotalPosts,
@@ -171,8 +177,10 @@ export default function AutoDraftDetailPage() {
       generated_meta: editMeta,
       generated_html: editHtml,
       category: editCategory,
+      state_code: editStateCode === "ALL" ? null : editStateCode,
       apply_link: editApplyLink,
       official_link: editOfficialLink,
+      notification_link: editNotificationLink,
       apply_status: editApplyStatus,
       last_date: editLastDate,
       total_posts: editTotalPosts,
@@ -189,8 +197,10 @@ export default function AutoDraftDetailPage() {
         metaDesc: editMeta,
         html: editHtml,
         category: editCategory,
+        stateCode: editStateCode === "ALL" ? null : editStateCode,
         applyLink: editApplyLink,
         officialLink: editOfficialLink,
+        notificationLink: editNotificationLink,
         lastDate: editLastDate,
         totalPosts: editTotalPosts,
         appFeeGen: editAppFeeGen,
@@ -423,6 +433,25 @@ export default function AutoDraftDetailPage() {
               />
             </div>
 
+            {/* Notification PDF URL */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Notification PDF URL</label>
+                {editNotificationLink && (
+                  <a href={editNotificationLink} target="_blank" rel="noopener noreferrer" className="text-[11px] text-indigo-500 hover:underline">
+                    Test ↗
+                  </a>
+                )}
+              </div>
+              <input
+                type="url"
+                value={editNotificationLink}
+                onChange={(e) => setEditNotificationLink(e.target.value)}
+                placeholder="https://official-pdf-link.com/advt.pdf"
+                className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-gray-50 dark:bg-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+            </div>
+
             {/* Sync Button */}
             <button
               onClick={handleSyncLinksToHtml}
@@ -437,6 +466,34 @@ export default function AutoDraftDetailPage() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
               <Edit2 className="w-3.5 h-3.5" /> Edit Details & Category
             </h3>
+
+            {/* State / Jurisdiction Select */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1">State / Jurisdiction</label>
+              <select
+                value={editStateCode || "ALL"}
+                onChange={(e) => setEditStateCode(e.target.value)}
+                className="w-full text-xs sm:text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 font-medium text-indigo-600 dark:text-indigo-400"
+              >
+                <option value="ALL">🌐 All India (Central / All India Jobs)</option>
+                <option value="UP">🏛️ UP - Uttar Pradesh</option>
+                <option value="BH">📖 BH - Bihar</option>
+                <option value="MP">🌿 MP - Madhya Pradesh</option>
+                <option value="RJ">🏜️ RJ - Rajasthan</option>
+                <option value="HR">🌾 HR - Haryana</option>
+                <option value="DL">🏙️ DL - Delhi</option>
+                <option value="MH">🏭 MH - Maharashtra</option>
+                <option value="WB">🐟 WB - West Bengal</option>
+                <option value="UK">🏔️ UK - Uttarakhand</option>
+                <option value="JH">⛏️ JH - Jharkhand</option>
+                <option value="PB">🌾 PB - Punjab</option>
+                <option value="OD">🌊 OD - Odisha</option>
+                <option value="CG">🌳 CG - Chhattisgarh</option>
+                <option value="KA">💻 KA - Karnataka</option>
+                <option value="GU">🏭 GU - Gujarat</option>
+                <option value="AS">🍵 AS - Assam</option>
+              </select>
+            </div>
 
             {/* Title */}
             <div>

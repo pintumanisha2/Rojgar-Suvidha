@@ -175,9 +175,31 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     notFound();
   }
 
-  const customApplyLink = job.links?.find((l: any) => l.label.toLowerCase().includes('apply for me'))?.url;
-  const applyLinkObj = job.links?.find((l: any) => l.label && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
-  const applyLink = applyLinkObj ? applyLinkObj.url : null;
+  let applyLink: string | null = null;
+  let customApplyLink: string | null = null;
+
+  if (Array.isArray(job.links)) {
+    const customObj = job.links.find((l: any) => l.label && typeof l.label === "string" && l.label.toLowerCase().includes("apply for me"));
+    if (customObj?.url) customApplyLink = customObj.url;
+
+    const applyObj = job.links.find((l: any) => l.label && typeof l.label === "string" && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
+    if (applyObj?.url) applyLink = applyObj.url;
+  } else if (typeof job.links === "string" && job.links.startsWith("http")) {
+    applyLink = job.links;
+  } else if (typeof job.links === "string" && (job.links.startsWith("[") || job.links.startsWith("{"))) {
+    try {
+      const parsed = JSON.parse(job.links);
+      if (Array.isArray(parsed)) {
+        const applyObj = parsed.find((l: any) => l.label && typeof l.label === "string" && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
+        if (applyObj?.url) applyLink = applyObj.url;
+      }
+    } catch (_) { /* silent */ }
+  }
+
+  // Fallback to official_link if applyLink not set
+  if (!applyLink && job.official_link && typeof job.official_link === "string" && job.official_link.startsWith("http")) {
+    applyLink = job.official_link;
+  }
 
   // Fetch similar jobs (same category)
   const { data: similarJobs } = await supabase

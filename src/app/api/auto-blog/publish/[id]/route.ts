@@ -47,13 +47,27 @@ export async function POST(
       metaDesc = draft.generated_meta,
       html = draft.generated_html,
       category = draft.category,
+      stateCode = draft.state_code,
       applyLink = draft.apply_link,
       officialLink = draft.official_link,
+      notificationLink = draft.notification_link,
       lastDate = draft.last_date,
       totalPosts = draft.total_posts,
       appFeeGen = draft.app_fee_gen,
       postStatus = "active",
     } = body;
+
+    // Construct structured links JSON array expected by /job/[slug] frontend
+    const linksArray: any[] = [];
+    if (applyLink) {
+      linksArray.push({ label: "Apply Online", url: applyLink });
+    }
+    if (notificationLink) {
+      linksArray.push({ label: "Download Official Notification", url: notificationLink });
+    }
+    if (officialLink) {
+      linksArray.push({ label: "Official Website", url: officialLink });
+    }
 
     // 3. Insert into jobs table (same schema as AI Writer uses)
     const { data: insertedJob, error: insertError } = await supabase
@@ -67,12 +81,13 @@ export async function POST(
           meta_description: metaDesc,
           tag: draft.generated_tags?.[0] || null,
           category,
+          state_code: stateCode || null,
           status: postStatus,
           last_date: lastDate || null,
           total_posts: totalPosts || null,
           application_fee: appFeeGen || null,
           official_link: officialLink || null,
-          links: applyLink || null,
+          links: linksArray.length > 0 ? linksArray : (applyLink ? applyLink : null),
           created_at: new Date().toISOString(),
         },
       ])
