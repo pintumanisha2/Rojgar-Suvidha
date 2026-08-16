@@ -19,6 +19,7 @@ const navItems = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/jobs", label: "Govt Jobs (Sarkari)", icon: BookOpen },
   { href: "/admin/ai-writer", label: "AI Super Writer", icon: Sparkles },
+  { href: "/admin/auto-drafts", label: "Auto Blog Drafts", icon: Bot },
   { href: "/admin/banners", label: "Banner", icon: ImageIcon },
   { href: "/admin/community", label: "Community Chat", icon: Users },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
@@ -312,8 +313,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (userRole === "admin") return navItems.filter(item => item.href !== "/admin/payments");
     
     // Govt Roles
-    if (userRole === "govt_manager") return navItems.filter(item => ["/admin", "/admin/utr-verification", "/admin/applications", "/admin/jobs", "/admin/ai-writer", "/admin/banners", "/admin/community", "/admin/notifications", "/admin/job-scout", "/admin/direct-form", "/admin/coupons", "/admin/ticker", "/admin/complaints"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
-    if (userRole === "govt_data_entry") return navItems.filter(item => ["/admin", "/admin/utr-verification", "/admin/jobs", "/admin/applications", "/admin/ai-writer", "/admin/job-scout"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
+    if (userRole === "govt_manager") return navItems.filter(item => ["/admin", "/admin/utr-verification", "/admin/applications", "/admin/jobs", "/admin/ai-writer", "/admin/auto-drafts", "/admin/banners", "/admin/community", "/admin/notifications", "/admin/job-scout", "/admin/direct-form", "/admin/coupons", "/admin/ticker", "/admin/complaints"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
+    if (userRole === "govt_data_entry") return navItems.filter(item => ["/admin", "/admin/utr-verification", "/admin/jobs", "/admin/applications", "/admin/ai-writer", "/admin/auto-drafts", "/admin/job-scout"].includes(item.href) || (item.href.startsWith("/admin/jobs") && !item.href.includes("private")));
     
     // Private Roles
     if (userRole === "private_manager") return navItems.filter(item => ["/admin/private-portal", "/admin/private-portal/employers", "/admin/private-portal/jobs", "/admin/private-portal/candidates", "/admin/private-portal/job-scout", "/admin/private-portal/applications", "/admin/private-portal/community"].includes(item.href));
