@@ -29,8 +29,8 @@ interface ScraperResult {
 // ── Config ────────────────────────────────────────────────────────────────────
 // FreeJobAlert.com is the correct URL — WordPress blog so /feed/ works
 const RSS_URLS = [
-  "https://www.freejobales.com/feed/",
-  "https://freejobales.com/feed/",
+  "https://www.freejobalert.com/feed/",
+  "https://freejobalert.com/feed/",
 ];
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 
@@ -108,7 +108,7 @@ function detectApplyStatus(
     const found = links.find(pattern);
     if (found?.href?.startsWith("http")) {
       // Exclude internal/navigation links
-      const isInternal = found.href.includes("freejobales") || found.href.includes("rojgarsuvidha");
+      const isInternal = found.href.includes("freejobalert") || found.href.includes("rojgarsuvidha");
       if (!isInternal) {
         return { status: "open", link: found.href };
       }
@@ -484,7 +484,7 @@ NEVER use: delve, plethora, crucial, navigating, landscape, testament, beacon, m
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) throw new Error("GEMINI_API_KEY missing");
 
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const models = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-pro"];
   let lastError = "";
 
   for (const model of models) {
@@ -679,35 +679,51 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const slug = await getUniqueSlug(baseSlug, supabase);
 
       // 8. Save draft to Supabase
-      const { data: inserted, error: insertError } = await supabase
+      const draftPayload: any = {
+        source_url: item.link,
+        source_title: item.title,
+        source_site: "freejobalert",
+        apply_link: applyLink,
+        apply_status: applyStatus,
+        official_link: aiResult.officialLink || officialLink,
+        last_date: aiResult.lastDate || lastDate,
+        total_posts: aiResult.totalPosts || totalPosts,
+        app_fee_gen: aiResult.appFeeGen || appFeeGen,
+        app_fee_res: aiResult.appFeeRes || appFeeRes,
+        extracted_text: pageText.slice(0, 3000),
+        category: aiResult.category || category,
+        generated_title: aiResult.title,
+        generated_meta: aiResult.metaDesc,
+        generated_slug: slug,
+        generated_html: aiResult.blogHtml,
+        generated_tags: aiResult.tag ? [aiResult.tag] : [],
+        primary_keyword: aiResult.primaryKeyword,
+        short_description: aiResult.shortInfo,
+        important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
+        status: "pending_review",
+      };
+
+      let inserted: any = null;
+      let { data, error: insertError } = await supabase
         .from("auto_blog_drafts")
-        .insert([{
-          source_url: item.link,
-          source_title: item.title,
-          source_site: "freejobales",
-          apply_link: applyLink,
-          apply_status: applyStatus,
-          official_link: aiResult.officialLink || officialLink,
-          last_date: aiResult.lastDate || lastDate,
-          total_posts: aiResult.totalPosts || totalPosts,
-          app_fee_gen: aiResult.appFeeGen || appFeeGen,
-          app_fee_res: aiResult.appFeeRes || appFeeRes,
-          extracted_text: pageText.slice(0, 3000),
-          category: aiResult.category || category,
-          generated_title: aiResult.title,
-          generated_meta: aiResult.metaDesc,
-          generated_slug: slug,
-          generated_html: aiResult.blogHtml,
-          generated_tags: aiResult.tag ? [aiResult.tag] : [],
-          primary_keyword: aiResult.primaryKeyword,
-          short_description: aiResult.shortInfo,
-          important_dates: aiResult.important_dates || null,
-          status: "pending_review",
-        }])
+        .insert([draftPayload])
         .select("id")
         .single();
 
+      if (insertError && insertError.message?.includes("important_dates")) {
+        // Fallback if column not created yet in Supabase
+        delete draftPayload.important_dates;
+        const retry = await supabase
+          .from("auto_blog_drafts")
+          .insert([draftPayload])
+          .select("id")
+          .single();
+        data = retry.data;
+        insertError = retry.error;
+      }
+
       if (insertError) throw new Error(`Supabase insert: ${insertError.message}`);
+      inserted = data;
       console.log(`   ✅ Draft saved: ID = ${inserted.id}`);
 
       // 9. Log scraped URL (prevent duplicate)
