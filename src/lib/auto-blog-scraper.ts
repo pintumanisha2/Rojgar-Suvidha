@@ -124,7 +124,7 @@ function detectApplyStatus(
 }
 
 // ── Deep Data Extraction (FreeJobAlert table structure) ───────────────────────
-function extractPageData(pageText: string) {
+function extractPageData(pageText: string, links: { href: string; text: string }[] = []) {
   const text = pageText;
 
   // Last date — multiple patterns covering FreeJobAlert's table format
@@ -176,19 +176,38 @@ function extractPageData(pageText: string) {
     if (m) { appFeeRes = m[0].slice(0, 40).trim(); break; }
   }
 
-  // Official website
-  const officialPatterns = [
-    /official\s*(?:website|site|portal|link)[:\s]+([^\s\n|]{5,80})/i,
-    /(?:www\.[a-z0-9\-\.]+\.(?:gov|nic|org|in|com))/i,
-  ];
+  // Official website extraction from text + links
   let officialLink: string | null = null;
-  for (const pattern of officialPatterns) {
-    const m = text.match(pattern);
-    if (m?.[1]) { officialLink = m[1].trim(); break; }
-    if (m?.[0]?.includes("www.")) { officialLink = "https://" + m[0].trim(); break; }
+  const officialLinkObj = links.find(l => 
+    /official\s*(website|site|portal)/i.test(l.text) || 
+    (/\.(gov|nic|org)\.in/i.test(l.href) && !l.href.includes("freejobalert"))
+  );
+  if (officialLinkObj?.href) {
+    officialLink = officialLinkObj.href;
+  } else {
+    const officialPatterns = [
+      /official\s*(?:website|site|portal|link)[:\s]+([^\s\n|]{5,80})/i,
+      /(?:www\.[a-z0-9\-\.]+\.(?:gov|nic|org|in|com))/i,
+    ];
+    for (const pattern of officialPatterns) {
+      const m = text.match(pattern);
+      if (m?.[1]) { officialLink = m[1].trim(); break; }
+      if (m?.[0]?.includes("www.")) { officialLink = "https://" + m[0].trim(); break; }
+    }
   }
 
-  // Age limit extraction (bonus)
+  // Notification PDF extraction from links
+  let notificationLink: string | null = null;
+  const notifLinkObj = links.find(l => 
+    /notification|advt|detailed notification|pdf/i.test(l.text) && 
+    !l.href.includes("freejobalert") && 
+    l.href.startsWith("http")
+  );
+  if (notifLinkObj?.href) {
+    notificationLink = notifLinkObj.href;
+  }
+
+  // Age limit extraction
   const ageMatch = text.match(/age\s*limit[:\s]+([^\n\r|]{3,40})/i);
   const ageLimit = ageMatch ? ageMatch[1].trim().slice(0, 40) : null;
 
@@ -196,7 +215,7 @@ function extractPageData(pageText: string) {
   const eduMatch = text.match(/(?:education|qualification|educational)[:\s]+([^\n\r|]{5,80})/i);
   const education = eduMatch ? eduMatch[1].trim().slice(0, 80) : null;
 
-  return { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, ageLimit, education };
+  return { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education };
 }
 
 // ── Parse RSS Feed (with fallback URLs) ──────────────────────────────────────
