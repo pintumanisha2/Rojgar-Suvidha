@@ -82,10 +82,11 @@ export async function POST(request: Request) {
         }
 
         // 2. Prepare slug and metadata
-        const slug = draft.slug || draft.generated_title
+        const rawSlug = draft.generated_slug || draft.slug || draft.generated_title || "job-update";
+        const slug = rawSlug
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "");
+          .replace(/^-|-$/g, "") || `job-${Date.now()}`;
 
         let linksArray: any[] = [];
         try {
