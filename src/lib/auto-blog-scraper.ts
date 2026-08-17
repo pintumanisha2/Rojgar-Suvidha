@@ -347,7 +347,7 @@ async function fetchFullPage(url: string): Promise<{
   }
 
   // Strip HTML and decode entities
-  const text = workingHtml
+  const rawText = workingHtml
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(?:p|div|tr|li|h[1-6])\s*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
@@ -356,8 +356,32 @@ async function fetchFullPage(url: string): Promise<{
     .replace(/&#8212;/g, "—").replace(/&#8217;/g, "'").replace(/&#8220;/g, '"')
     .replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 
-  // Increased to 12000 chars — more context = better AI output
-  return { text: text.slice(0, 12000), links, rawHtml: workingHtml.slice(0, 2000) };
+  // Clean source text from competitor brand names beforehand
+  const cleanedText = sanitizeSourceText(rawText.slice(0, 12000));
+  return { text: cleanedText, links, rawHtml: workingHtml.slice(0, 2000) };
+}
+
+// ── Competitor Brand Scrubbing Helpers ────────────────────────────────────────
+function sanitizeSourceText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/free\s*job\s*alert(?:\.com)?/gi, "")
+    .replace(/freejobalert(?:\.com)?/gi, "")
+    .replace(/freejobales(?:\.com)?/gi, "")
+    .replace(/fja(?:\.com)?/gi, "")
+    .replace(/copyright\s*©?\s*freejobalert[^\n]*/gi, "")
+    .replace(/all\s*rights\s*reserved\s*by\s*freejobalert[^\n]*/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function cleanCompetitorBrands(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/free\s*job\s*alert(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/freejobalert(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/freejobales(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/fja(?:\.com)?/gi, "Rojgar Suvidha");
 }
 
 // ── Slug duplicate check ──────────────────────────────────────────────────────
@@ -404,7 +428,7 @@ The apply link is NOT yet active. In the blog's How to Apply section (id='apply'
 <div style='background:#fef9c3;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:1.5rem 0;'>
   <strong style='color:#b45309;'>⏳ Apply Online Link — Coming Soon!</strong>
   <p style='margin:8px 0 0;color:#1e293b;'>Online apply link abhi activate nahi hua hai. Jaise hi link active ho, hum is page ko turant update kar denge. Tab tak:</p>
-  <ul><li>Official notification PDF download karo (link neeche diya hai)</li><li>Eligibility check karo</li><li>Documents ready rakho</li><li>Hamari website pe nazar rakho — hum instantly update karenge</li></ul>
+  <ul><li>Official notification PDF download karo (link neeche diya hai)</li><li>Eligibility check karo</li><li>Documents ready rakho</li><li>Hamari website <strong>Rojgar Suvidha</strong> pe nazar rakho — hum instantly update karenge</li></ul>
 </div>
 DO NOT add any fake apply button.`;
   } else if (applyStatus === "open" && applyLink) {
@@ -415,7 +439,7 @@ In the blog, add this as a prominent green button after the How to Apply steps:
   <a href='${applyLink}' target='_blank' rel='noopener noreferrer' style='display:inline-block;background:linear-gradient(135deg,#15803d,#16a34a);color:white;padding:16px 36px;border-radius:12px;font-size:1.1rem;font-weight:800;text-decoration:none;box-shadow:0 4px 15px rgba(21,128,61,0.3);'>
     🔗 Apply Online — Official Link
   </a>
-  <p style='color:#64748b;font-size:0.85rem;margin-top:8px;'>Official website link hai — Safe aur Secure</p>
+  <p style='color:#64748b;font-size:0.85rem;margin-top:8px;'>Official portal link via Rojgar Suvidha — Safe & Verified</p>
 </div>`;
   } else if (applyStatus === "closed") {
     applyInstruction = `NOTE: Application window is closed. Mention this clearly and suggest to watch for re-notification.`;
@@ -425,9 +449,10 @@ In the blog, add this as a prominent green button after the How to Apply steps:
     weekday: "long", day: "numeric", month: "long", year: "numeric"
   });
 
+  const cleanedRawText = sanitizeSourceText(rawText);
+
   const enrichedContext = `
-SOURCE: FreeJobAlert.com
-SOURCE TITLE: ${sourceTitle}
+SOURCE TITLE: ${cleanCompetitorBrands(sourceTitle)}
 CATEGORY: ${category}
 TODAY: ${todayDate}
 LAST DATE: ${lastDate || "Check official notification"}
@@ -439,16 +464,35 @@ EDUCATION: ${education || "As per notification"}
 OFFICIAL WEBSITE: ${officialLink || "Refer to notification links below"}
 ${applyInstruction}
 
-===== FULL PAGE CONTENT FROM FREEJOBALES.COM =====
-${rawText}
+===== SANITIZED NOTIFICATION SOURCE CONTENT =====
+${cleanedRawText}
 =================================================`;
 
   // This is the same SarkariLekhan AI persona from scan-notification/route.ts
-  const SYSTEM_PROMPT = `You are "SarkariLekhan AI" (Arjun Sharma) — India's top expert Sarkari Naukri blog writer with 10+ years of experience in government job notifications, exam analysis, recruitment patterns, and career guidance for Indian job seekers.
+  const SYSTEM_PROMPT = `You are "SarkariLekhan AI" (Arjun Sharma) — India's top expert Sarkari Naukri blog writer for "Rojgar Suvidha" with 10+ years of experience in government job notifications, exam analysis, recruitment patterns, and career guidance for Indian job seekers.
 
 You strictly follow Google's E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) guidelines. Your goal: genuinely help job seekers with accurate, complete, actionable information.
 
 Write in natural Hinglish (Hindi-English mix) accessible to class 10 to graduation level readers in Tier 2/3 cities.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 STRICT BRAND PROTECTION & COMPETITOR SCRUBBING RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. NEVER mention "FreeJobAlert", "freejobalert.com", "Free Job Alert", or any competitor website anywhere in the title, meta description, short info, or HTML content.
+2. ALWAYS use "Rojgar Suvidha" as the sole official publisher and portal brand name.
+3. In the Hero Header byline, write: "By Rojgar Suvidha Editorial Team | ${todayDate} | ${category}"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 HIGH RANKING SEO & AEO KEYWORD INJECTION RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Naturally weave high search-volume intent keywords across the blog without keyword stuffing:
+- Primary Brand Name: "Rojgar Suvidha" (mention 3-5 times naturally in intro, table callouts, and FAQs).
+- High Search Intent Terms: "Sarkari Result", "Rojgar Result", "Sarkari Naukri 2026", "Latest Government Jobs", "Official Notification PDF".
+- Insert an Expert Trust Callout Box right after the Quick Info Table:
+<div style="background:#eef2ff;border-left:4px solid #4f46e5;padding:14px 18px;border-radius:8px;margin:1.5rem 0;">
+  <strong style="color:#3730a3;font-size:1.05rem;">💡 Rojgar Suvidha Expert Advisory:</strong>
+  <p style="margin:6px 0 0;color:#1e293b;font-size:0.95rem;">Sarkari Result va Government Jobs ki sabse fast aur 100% verified updates sabse pehle <strong>Rojgar Suvidha</strong> portal par milti hain. Agar aapko form bharne mein koi dikkat aaye ya galti ka darr ho, toh hamari exclusive <strong>'Apply For Me'</strong> service ka upyog karein — hamare experts aapka form 100% galti-mukt bharenge.</p>
+</div>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preamble.
@@ -534,7 +578,7 @@ NEVER use: delve, plethora, crucial, navigating, landscape, testament, beacon, m
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) throw new Error("GEMINI_API_KEY missing");
 
-  const models = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-pro"];
+  const models = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
   let lastError = "";
 
   for (const model of models) {
@@ -745,13 +789,13 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         app_fee_res: aiResult.appFeeRes || appFeeRes,
         extracted_text: pageText.slice(0, 3000),
         category: aiResult.category || category,
-        generated_title: aiResult.title,
-        generated_meta: aiResult.metaDesc,
+        generated_title: cleanCompetitorBrands(aiResult.title || item.title),
+        generated_meta: cleanCompetitorBrands(aiResult.metaDesc || ""),
         generated_slug: slug,
-        generated_html: aiResult.blogHtml,
-        generated_tags: aiResult.tag ? [aiResult.tag] : [],
-        primary_keyword: aiResult.primaryKeyword,
-        short_description: aiResult.shortInfo,
+        generated_html: cleanCompetitorBrands(aiResult.blogHtml || ""),
+        generated_tags: aiResult.tag ? [cleanCompetitorBrands(aiResult.tag)] : [],
+        primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
+        short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
         important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
         status: "pending_review",
       };
