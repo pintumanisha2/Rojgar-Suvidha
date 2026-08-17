@@ -140,6 +140,8 @@ export async function sendWhatsAppPost(job: BroadcastJobPayload): Promise<boolea
   const lastDateText = job.lastDate ? `▫️ Last Date: *${job.lastDate}*` : null;
   const stateText = job.stateCode && job.stateCode !== "ALL" ? `▫️ State: *${job.stateCode}*` : `▫️ Jurisdiction: *All India*`;
 
+  const whatsappChannelUrl = process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL || "https://whatsapp.com/channel/0029Vb7gNWP4Crfj2Jq5gz01";
+
   const lines = [
     `${categoryBadge}`,
     "",
@@ -153,6 +155,9 @@ export async function sendWhatsAppPost(job: BroadcastJobPayload): Promise<boolea
     "✅ *Direct Apply Link & Official Notification:*",
     "👇 Click Here 👇",
     jobUrl,
+    "",
+    `🟢 *Join Official WhatsApp Channel:*`,
+    whatsappChannelUrl,
     "",
     "📲 Shared via *Rojgar Suvidha Portal* — Aapke Sapno Ki Naukri",
   ];
