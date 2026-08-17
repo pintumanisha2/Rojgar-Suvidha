@@ -54,6 +54,7 @@ export async function POST(
       lastDate = draft.last_date,
       totalPosts = draft.total_posts,
       appFeeGen = draft.app_fee_gen,
+      bannerUrl = draft.banner_url,
       postStatus = "active",
     } = body;
 
@@ -82,6 +83,7 @@ export async function POST(
           tag: draft.generated_tags?.[0] || null,
           category,
           state_code: stateCode || null,
+          banner_url: bannerUrl || null,
           status: postStatus,
           last_date: lastDate || null,
           total_posts: totalPosts || null,

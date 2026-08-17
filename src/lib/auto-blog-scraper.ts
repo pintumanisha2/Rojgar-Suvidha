@@ -769,9 +769,11 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         sourceTitle: item.title,
       });
 
-      // 7. Generate unique slug
+      // 7. Generate unique slug & dynamic banner URL
       const baseSlug = generateSlug(aiResult.title || item.title);
       const slug = await getUniqueSlug(baseSlug, supabase);
+      const bannerTitle = cleanCompetitorBrands(aiResult.title || item.title);
+      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(bannerTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(aiResult.lastDate || lastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
 
       // 8. Save draft to Supabase
       const draftPayload: any = {
@@ -783,6 +785,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         official_link: aiResult.officialLink || officialLink,
         notification_link: notificationLink || null,
         state_code: stateCode || null,
+        banner_url: autoBannerUrl,
         last_date: aiResult.lastDate || lastDate,
         total_posts: aiResult.totalPosts || totalPosts,
         app_fee_gen: aiResult.appFeeGen || appFeeGen,
@@ -812,6 +815,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         delete draftPayload.important_dates;
         delete draftPayload.notification_link;
         delete draftPayload.state_code;
+        delete draftPayload.banner_url;
         const retry = await supabase
           .from("auto_blog_drafts")
           .insert([draftPayload])

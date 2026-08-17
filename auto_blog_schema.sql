@@ -45,10 +45,11 @@ CREATE TABLE IF NOT EXISTS auto_blog_drafts (
   published_post_id UUID            -- Reference to jobs table row
 );
 
--- Migration queries if table already created:
+  -- Migration queries if table already created:
 ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS important_dates TEXT;
 ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS notification_link TEXT;
 ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS state_code TEXT;
+ALTER TABLE auto_blog_drafts ADD COLUMN IF NOT EXISTS banner_url TEXT;
 
 -- Table 2: Prevent duplicate scraping
 CREATE TABLE IF NOT EXISTS scraped_urls_log (

@@ -48,6 +48,7 @@ export default function AutoDraftDetailPage() {
   const [editApplyLink, setEditApplyLink] = useState("");
   const [editOfficialLink, setEditOfficialLink] = useState("");
   const [editNotificationLink, setEditNotificationLink] = useState("");
+  const [editBannerUrl, setEditBannerUrl] = useState("");
   const [editLastDate, setEditLastDate] = useState("");
   const [editTotalPosts, setEditTotalPosts] = useState("");
   const [editAppFeeGen, setEditAppFeeGen] = useState("");
@@ -82,6 +83,7 @@ export default function AutoDraftDetailPage() {
         setEditApplyLink(data.apply_link || "");
         setEditOfficialLink(data.official_link || "");
         setEditNotificationLink(data.notification_link || "");
+        setEditBannerUrl(data.banner_url || "");
         setEditLastDate(data.last_date || "");
         setEditTotalPosts(data.total_posts || "");
         setEditAppFeeGen(data.app_fee_gen || "");
@@ -146,6 +148,7 @@ export default function AutoDraftDetailPage() {
       apply_link: editApplyLink,
       official_link: editOfficialLink,
       notification_link: editNotificationLink,
+      banner_url: editBannerUrl,
       apply_status: editApplyStatus,
       last_date: editLastDate,
       total_posts: editTotalPosts,
@@ -181,6 +184,7 @@ export default function AutoDraftDetailPage() {
       apply_link: editApplyLink,
       official_link: editOfficialLink,
       notification_link: editNotificationLink,
+      banner_url: editBannerUrl,
       apply_status: editApplyStatus,
       last_date: editLastDate,
       total_posts: editTotalPosts,
@@ -201,6 +205,7 @@ export default function AutoDraftDetailPage() {
         applyLink: editApplyLink,
         officialLink: editOfficialLink,
         notificationLink: editNotificationLink,
+        bannerUrl: editBannerUrl,
         lastDate: editLastDate,
         totalPosts: editTotalPosts,
         appFeeGen: editAppFeeGen,
@@ -357,8 +362,8 @@ export default function AutoDraftDetailPage() {
         {/* Left Form Column — EDIT METADATA & LINKS */}
         <div className="space-y-4">
           
-          {/* Source Link Reference */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+          {/* Source Link & Banner Preview Card */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${catCfg.badge}`}>
                 {catCfg.label}
@@ -371,6 +376,44 @@ export default function AutoDraftDetailPage() {
               >
                 <ExternalLink className="w-3 h-3" /> Source Page ↗
               </a>
+            </div>
+
+            {/* Banner Preview */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">🖼️ Auto-Generated Banner Preview</label>
+              {editBannerUrl ? (
+                <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-950 aspect-[16/9] shadow-inner">
+                  <img
+                    src={editBannerUrl}
+                    alt="Banner Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <a
+                    href={editBannerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded font-mono hover:bg-black"
+                  >
+                    Open Image ↗
+                  </a>
+                </div>
+              ) : (
+                <div className="p-4 text-center rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-xs text-gray-400">
+                  No Banner URL generated
+                </div>
+              )}
+            </div>
+
+            {/* Editable Banner URL */}
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 block mb-1">Banner Image URL</label>
+              <input
+                type="url"
+                value={editBannerUrl}
+                onChange={(e) => setEditBannerUrl(e.target.value)}
+                placeholder="Auto-generated /api/og/banner URL or paste custom image"
+                className="w-full text-[11px] border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800 font-mono text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
             </div>
           </div>
 
