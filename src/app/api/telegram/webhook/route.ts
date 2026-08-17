@@ -100,28 +100,25 @@ export async function POST(request: Request) {
         }
 
         // 3. Insert into jobs table
+        const jobPayload: any = {
+          title: draft.generated_title,
+          slug,
+          blog_content: draft.generated_html,
+          short_info: draft.short_description || draft.generated_meta,
+          meta_description: draft.generated_meta,
+          tag: draft.generated_tags?.[0] || null,
+          category: draft.category || "latest-jobs",
+          state_code: draft.state_code || null,
+          banner_url: draft.banner_url || null,
+          status: "active",
+          links: linksArray.length > 0 ? linksArray : (draft.links || null),
+          important_dates: draft.important_dates || null,
+          created_at: new Date().toISOString(),
+        };
+
         const { data: insertedJob, error: insertErr } = await supabase
           .from("jobs")
-          .insert([
-            {
-              title: draft.generated_title,
-              slug,
-              blog_content: draft.generated_html,
-              short_description: draft.short_description || draft.meta_description,
-              meta_description: draft.meta_description,
-              tag: draft.generated_tags?.[0] || null,
-              category: draft.category || "latest-jobs",
-              state_code: draft.state_code || null,
-              banner_url: draft.banner_url || null,
-              status: "active",
-              last_date: draft.last_date || null,
-              total_posts: draft.total_posts || null,
-              application_fee: draft.app_fee_gen || null,
-              official_link: draft.official_link || null,
-              links: linksArray.length > 0 ? linksArray : (draft.links || null),
-              created_at: new Date().toISOString(),
-            },
-          ])
+          .insert([jobPayload])
           .select("id")
           .single();
 

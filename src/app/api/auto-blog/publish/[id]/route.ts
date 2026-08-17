@@ -72,28 +72,25 @@ export async function POST(
     }
 
     // 3. Insert into jobs table (same schema as AI Writer uses)
+    const jobPayload: any = {
+      title,
+      slug,
+      blog_content: html,
+      short_info: draft.short_description || metaDesc,
+      meta_description: metaDesc,
+      tag: draft.generated_tags?.[0] || null,
+      category,
+      state_code: stateCode || null,
+      banner_url: bannerUrl || null,
+      status: postStatus,
+      links: linksArray.length > 0 ? linksArray : (applyLink ? applyLink : null),
+      important_dates: draft.important_dates || null,
+      created_at: new Date().toISOString(),
+    };
+
     const { data: insertedJob, error: insertError } = await supabase
       .from("jobs")
-      .insert([
-        {
-          title,
-          slug,
-          blog_content: html,
-          short_description: draft.short_description || metaDesc,
-          meta_description: metaDesc,
-          tag: draft.generated_tags?.[0] || null,
-          category,
-          state_code: stateCode || null,
-          banner_url: bannerUrl || null,
-          status: postStatus,
-          last_date: lastDate || null,
-          total_posts: totalPosts || null,
-          application_fee: appFeeGen || null,
-          official_link: officialLink || null,
-          links: linksArray.length > 0 ? linksArray : (applyLink ? applyLink : null),
-          created_at: new Date().toISOString(),
-        },
-      ])
+      .insert([jobPayload])
       .select("id")
       .single();
 
