@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { broadcastJobAlert } from "@/lib/social-publisher";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -144,6 +145,20 @@ export async function POST(
           },
         }),
       }).catch((e) => console.error("Push notification failed:", e));
+    }
+
+    // 8. Social Channel Broadcasting (Telegram Channel & WhatsApp Group Auto-Poster)
+    // Rule: EXCLUDE category 'news' from auto-posting to social groups/channels
+    if (postStatus === "active") {
+      broadcastJobAlert({
+        title,
+        slug,
+        category,
+        totalPosts: totalPosts || draft.total_posts || null,
+        lastDate: lastDate || draft.last_date || null,
+        stateCode: stateCode || draft.state_code || null,
+        bannerUrl: bannerUrl || draft.banner_url || null,
+      }).catch((e) => console.warn("Social broadcasting error:", e));
     }
 
     return NextResponse.json({
