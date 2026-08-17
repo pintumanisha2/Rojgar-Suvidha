@@ -361,6 +361,46 @@ async function fetchFullPage(url: string): Promise<{
   return { text: cleanedText, links, rawHtml: workingHtml.slice(0, 2000) };
 }
 
+// ── Fetch NDTV Education News Articles ───────────────────────────────────────
+async function fetchNDTVEducationNews(): Promise<{ title: string; link: string; pubDate: string; description: string }[]> {
+  try {
+    const res = await fetch("https://www.ndtv.com/education", {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) throw new Error(`NDTV fetch failed: ${res.status}`);
+    const html = await res.text();
+
+    const linkRegex = /<a\s+[^>]*href=["'](https:\/\/www\.ndtv\.com\/education\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const items: { title: string; link: string; pubDate: string; description: string }[] = [];
+    const seen = new Set<string>();
+
+    let match: RegExpExecArray | null;
+    while ((match = linkRegex.exec(html)) !== null) {
+      const url = match[1];
+      const rawText = match[2].replace(/<[^>]+>/g, "").replace(/&#039;/g, "'").replace(/&amp;/g, "&").trim();
+      if (rawText && rawText.length > 20 && !seen.has(url) && !url.includes("/page-") && !url.endsWith("/education") && !url.endsWith("/results")) {
+        seen.add(url);
+        items.push({
+          title: cleanCompetitorBrands(rawText),
+          link: url,
+          pubDate: new Date().toISOString(),
+          description: rawText,
+        });
+      }
+    }
+    console.log(`📡 NDTV Education Scraper: ${items.length} news items found`);
+    return items;
+  } catch (err: any) {
+    console.warn("⚠️ NDTV Education fetch error:", err.message);
+    return [];
+  }
+}
+
 // ── Competitor Brand Scrubbing Helpers ────────────────────────────────────────
 function sanitizeSourceText(text: string): string {
   if (!text) return "";
@@ -371,6 +411,9 @@ function sanitizeSourceText(text: string): string {
     .replace(/fja(?:\.com)?/gi, "")
     .replace(/copyright\s*©?\s*freejobalert[^\n]*/gi, "")
     .replace(/all\s*rights\s*reserved\s*by\s*freejobalert[^\n]*/gi, "")
+    .replace(/ndtv\s*education/gi, "Rojgar Suvidha News Desk")
+    .replace(/ndtv\s*network/gi, "Rojgar Suvidha Network")
+    .replace(/ndtv(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
@@ -381,7 +424,10 @@ function cleanCompetitorBrands(str: string): string {
     .replace(/free\s*job\s*alert(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/freejobalert(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/freejobales(?:\.com)?/gi, "Rojgar Suvidha")
-    .replace(/fja(?:\.com)?/gi, "Rojgar Suvidha");
+    .replace(/fja(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/ndtv\s*education/gi, "Rojgar Suvidha News Desk")
+    .replace(/ndtv\s*network/gi, "Rojgar Suvidha Network")
+    .replace(/ndtv(?:\.com)?/gi, "Rojgar Suvidha");
 }
 
 // ── Slug duplicate check ──────────────────────────────────────────────────────
@@ -478,21 +524,27 @@ Write in natural Hinglish (Hindi-English mix) accessible to class 10 to graduati
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚨 STRICT BRAND PROTECTION & COMPETITOR SCRUBBING RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. NEVER mention "FreeJobAlert", "freejobalert.com", "Free Job Alert", or any competitor website anywhere in the title, meta description, short info, or HTML content.
-2. ALWAYS use "Rojgar Suvidha" as the sole official publisher and portal brand name.
-3. In the Hero Header byline, write: "By Rojgar Suvidha Editorial Team | ${todayDate} | ${category}"
+1. NEVER mention "FreeJobAlert", "Free Job Alert", "NDTV", "NDTV Education", or any competitor brand anywhere in the title, meta description, short info, or HTML content.
+2. ALWAYS use "Rojgar Suvidha" or "Rojgar Suvidha News Desk" as the official publisher and portal brand name.
+3. In the Hero Header byline, write: "By Rojgar Suvidha News Desk | ${todayDate} | ${category}"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 HIGH RANKING SEO & AEO KEYWORD INJECTION RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Naturally weave high search-volume intent keywords across the blog without keyword stuffing:
-- Primary Brand Name: "Rojgar Suvidha" (mention 3-5 times naturally in intro, table callouts, and FAQs).
-- High Search Intent Terms: "Sarkari Result", "Rojgar Result", "Sarkari Naukri 2026", "Latest Government Jobs", "Official Notification PDF".
-- Insert an Expert Trust Callout Box right after the Quick Info Table:
-<div style="background:#eef2ff;border-left:4px solid #4f46e5;padding:14px 18px;border-radius:8px;margin:1.5rem 0;">
-  <strong style="color:#3730a3;font-size:1.05rem;">💡 Rojgar Suvidha Expert Advisory:</strong>
-  <p style="margin:6px 0 0;color:#1e293b;font-size:0.95rem;">Sarkari Result va Government Jobs ki sabse fast aur 100% verified updates sabse pehle <strong>Rojgar Suvidha</strong> portal par milti hain. Agar aapko form bharne mein koi dikkat aaye ya galti ka darr ho, toh hamari exclusive <strong>'Apply For Me'</strong> service ka upyog karein — hamare experts aapka form 100% galti-mukt bharenge.</p>
-</div>
+Naturally weave high search-volume intent keywords across the post without keyword stuffing:
+- Primary Brand Name: "Rojgar Suvidha" (mention 3-5 times naturally in intro, highlights, and FAQs).
+- High Search Intent Terms: "Sarkari Result", "Rojgar Result", "Sarkari Exam Update", "Education News 2026".
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📰 SPECIAL INSTRUCTION FOR CATEGORY "news":
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If category is "news", construct a structured, engaging news report with the following HTML sections:
+① HERO HEADER: Title + Byline ("By Rojgar Suvidha News Desk | ${todayDate} | Education News Update")
+② 📌 MUKHYA BINDU (KEY HIGHLIGHTS BOX): Injects a green highlight box (<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:16px 20px;border-radius:10px;margin-bottom:1.5rem;"><strong style="color:#15803d;">📌 Key Takeaways / Mukhya Bindu:</strong><ul style="margin:8px 0 0;padding-left:20px;color:#1e293b;">...</ul></div>) with 3-4 bullet points summarizing the news.
+③ 📰 POORI KHABAR (FULL STORY): Detailed reporting on official press releases, board decisions, or re-exam announcements.
+④ 🎓 CHHATRO & CANDIDATES PAR KYA ASAR PADEGA (IMPACT ANALYSIS): Practical explanation of how this news affects exam dates, cutoff scores, counseling, or preparation strategy.
+⑤ 💡 ROJGAR SUVIDHA NEWS ADVISORY BOX: Injects a blue trust box linking candidates to verified Rojgar Suvidha updates.
+⑥ ❓ FREQUENTLY ASKED QUESTIONS (FAQs): 2-3 schema-friendly Q&As addressing common candidate doubts.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preamble.
@@ -578,7 +630,7 @@ NEVER use: delve, plethora, crucial, navigating, landscape, testament, beacon, m
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) throw new Error("GEMINI_API_KEY missing");
 
-  const models = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
+  const models = ["gemini-3.5-flash", "gemini-3.6-flash"];
   let lastError = "";
 
   for (const model of models) {
@@ -604,7 +656,12 @@ NEVER use: delve, plethora, crucial, navigating, landscape, testament, beacon, m
       clearTimeout(timeout);
 
       const data = await response.json();
-      if (data.error) { lastError = `${model}: ${data.error.message || JSON.stringify(data.error)}`; continue; }
+      if (data.error) {
+        lastError = `${model}: ${data.error.message || JSON.stringify(data.error)}`;
+        console.warn(`   ⚠️ Model ${model} returned error, retrying next model in 3s...`);
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
       const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       if (!rawJson) { lastError = `${model}: empty response`; continue; }
 
@@ -710,13 +767,23 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const supabase = getSupabaseAdmin();
   const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
 
-  // 1. Fetch RSS
-  let rssItems: Awaited<ReturnType<typeof fetchRSSItems>>;
+  // 1. Fetch RSS & NDTV Education News
+  let rssItems: Awaited<ReturnType<typeof fetchRSSItems>> = [];
   try {
     rssItems = await fetchRSSItems();
   } catch (err: any) {
-    console.error("❌ RSS Error:", err.message);
-    return { ...results, errors: [`RSS: ${err.message}`] };
+    console.warn("⚠️ RSS Error:", err.message);
+  }
+
+  const ndtvItems = await fetchNDTVEducationNews();
+
+  const allCandidateItems: { title: string; link: string; pubDate: string; description: string; source: string }[] = [
+    ...rssItems.map((i) => ({ ...i, source: "freejobalert" })),
+    ...ndtvItems.map((i) => ({ ...i, source: "ndtv" })),
+  ];
+
+  if (allCandidateItems.length === 0) {
+    return { ...results, errors: ["No candidate items fetched from any source"] };
   }
 
   // 2. Get already-scraped URLs
@@ -724,19 +791,17 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
   // 3. Process max 1 new item per run
-  // WHY 1: RSS fetch(15s) + Page fetch(20s) + Gemini AI(55s) + DB(5s) = ~95s per item
-  // External cron (cron-job.org) calls every 30min = up to 48 posts/day — more than enough
-  const newItems = rssItems.filter((i) => !scrapedUrls.has(i.link)).slice(0, 1);
-  console.log(`🆕 New items to process: ${newItems.length} (of ${rssItems.length} total)`);
+  const newItems = allCandidateItems.filter((i) => !scrapedUrls.has(i.link)).slice(0, 1);
+  console.log(`🆕 New items to process: ${newItems.length} (of ${allCandidateItems.length} candidate items)`);
 
   if (newItems.length === 0) {
-    results.skipped = rssItems.length;
+    results.skipped = allCandidateItems.length;
     console.log("✨ All caught up — no new posts");
     return results;
   }
 
   for (const item of newItems) {
-    console.log(`\n📰 [${newItems.indexOf(item) + 1}/${newItems.length}] Processing: ${item.title}`);
+    console.log(`\n📰 [${newItems.indexOf(item) + 1}/${newItems.length}] Processing (${item.source}): ${item.title}`);
 
     try {
       // 4. Full page deep read
@@ -744,11 +809,13 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       console.log(`   📄 Page extracted: ${pageText.split(" ").length} words, ${links.length} links`);
 
       // 5. Smart analysis
-      const category = detectCategory(item.title, pageText);
-      const stateCode = detectStateCode(item.title, pageText);
-      const { status: applyStatus, link: applyLink } = detectApplyStatus(pageText, links);
+      const category: BlogCategory = item.source === "ndtv" ? "news" : detectCategory(item.title, pageText);
+      const stateCode = item.source === "ndtv" ? null : detectStateCode(item.title, pageText);
+      const { status: applyStatus, link: applyLink } = item.source === "ndtv" ? { status: "unknown" as ApplyStatus, link: null } : detectApplyStatus(pageText, links);
       const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education } =
-        extractPageData(pageText, links);
+        item.source === "ndtv"
+          ? { lastDate: null, totalPosts: null, appFeeGen: null, appFeeRes: null, officialLink: item.link, notificationLink: null, ageLimit: null, education: null }
+          : extractPageData(pageText, links);
 
       console.log(`   📊 Category: ${category} | State: ${stateCode || "ALL (Central)"} | Apply: ${applyStatus} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
 
@@ -779,7 +846,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const draftPayload: any = {
         source_url: item.link,
         source_title: item.title,
-        source_site: "freejobalert",
+        source_site: item.source,
         apply_link: applyLink,
         apply_status: applyStatus,
         official_link: aiResult.officialLink || officialLink,
