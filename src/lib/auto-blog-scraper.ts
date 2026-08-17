@@ -15,6 +15,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { sendAdminDraftApprovalAlert } from "./social-publisher";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
@@ -941,15 +942,18 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         await supabase.from("scraped_urls_log").upsert([{ url: item.link }], { onConflict: "url" });
       } catch (_) { /* silent */ }
 
-      // 10. Telegram notification
-      await sendTelegramNotification({
-        source_title: item.title,
-        category: aiResult.category || category,
-        apply_status: applyStatus,
-        last_date: aiResult.lastDate || lastDate,
-        total_posts: aiResult.totalPosts || totalPosts,
-        apply_link: applyLink,
-      }, inserted.id);
+      // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
+      if (inserted?.id) {
+        sendAdminDraftApprovalAlert({
+          id: inserted.id,
+          title: cleanCompetitorBrands(aiResult.title || item.title),
+          category: aiResult.category || category,
+          stateCode: stateCode || null,
+          totalPosts: aiResult.totalPosts || totalPosts || null,
+          lastDate: aiResult.lastDate || lastDate || null,
+          bannerUrl: autoBannerUrl,
+        }).catch((e) => console.warn("Admin draft approval alert failed:", e));
+      }
 
       results.processed++;
 

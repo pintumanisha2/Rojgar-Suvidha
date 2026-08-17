@@ -235,3 +235,80 @@ export async function broadcastJobAlert(job: BroadcastJobPayload): Promise<{ tel
 
   return { telegram, whatsapp, skipped: false };
 }
+
+export interface DraftNotificationPayload {
+  id: string;
+  title: string;
+  category: string;
+  stateCode?: string | null;
+  totalPosts?: string | null;
+  lastDate?: string | null;
+  bannerUrl?: string | null;
+}
+
+/**
+ * Send private draft approval alert to Admin via Telegram with inline keyboard
+ */
+export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayload): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const adminChatId = process.env.ADMIN_TELEGRAM_ID || "6681095051";
+
+  if (!botToken) {
+    console.log("ℹ️ [Admin Alert] TELEGRAM_BOT_TOKEN missing — skipping admin approval alert");
+    return false;
+  }
+
+  const reviewUrl = `${BASE_URL}/admin/auto-drafts/${draft.id}`;
+  const postsText = draft.totalPosts ? `👥 *Vacancies:* ${draft.totalPosts}` : null;
+  const lastDateText = draft.lastDate ? `📅 *Last Date:* ${draft.lastDate}` : null;
+
+  const lines = [
+    `📄 *NEW AUTO-BLOG DRAFT GENERATED*`,
+    "",
+    `📌 *Title:* ${draft.title.trim()}`,
+    `📊 *Category:* \`${draft.category}\` | *State:* \`${draft.stateCode || "ALL"}\``,
+    ...(postsText ? [postsText] : []),
+    ...(lastDateText ? [lastDateText] : []),
+    "",
+    `⚡ *Review or Approve in 1-Click below:*`,
+  ];
+
+  const text = lines.join("\n");
+
+  const inlineKeyboard = {
+    inline_keyboard: [
+      [
+        { text: "✅ Approve & Publish Live", callback_data: `pub_${draft.id}` },
+      ],
+      [
+        { text: "👁️ Review in Admin UI", url: reviewUrl },
+        { text: "❌ Reject Draft", callback_data: `rej_${draft.id}` },
+      ]
+    ]
+  };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: adminChatId,
+        text,
+        parse_mode: "Markdown",
+        reply_markup: inlineKeyboard,
+      }),
+    });
+
+    if (res.ok) {
+      console.log(`✅ [Admin Alert] Sent private draft approval notification for draft ${draft.id} to Admin ${adminChatId}`);
+      return true;
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      console.warn("⚠️ [Admin Alert] Failed to send Telegram admin alert:", errData);
+      return false;
+    }
+  } catch (err: any) {
+    console.warn("⚠️ [Admin Alert] Exception sending admin alert:", err.message);
+    return false;
+  }
+}
