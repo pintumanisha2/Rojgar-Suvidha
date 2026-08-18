@@ -127,6 +127,49 @@ export async function POST(request: Request) {
           return NextResponse.json({ ok: true });
         }
 
+        // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")
+        if ((draft.category || "latest-jobs") === "latest-jobs" && insertedJob?.id) {
+          try {
+            let docsList = draft.form_documents || [
+              "10th Marksheet / Birth Certificate",
+              "Educational Qualification Certificate",
+              "Aadhaar Card / Photo ID Proof",
+              "Recent Passport Size Photo",
+              "Candidate Signature",
+              "Caste / Category Certificate (if applicable)",
+              "Domicile Certificate (if applicable)"
+            ];
+
+            let feesStruct = draft.form_fees_structure;
+            if (!feesStruct) {
+              feesStruct = [
+                {
+                  postName: `${draft.generated_title} (General / OBC / EWS)`,
+                  fees: { genFee: draft.app_fee_gen || "100", scFee: "0", serviceCharge: "99" }
+                },
+                {
+                  postName: `${draft.generated_title} (SC / ST / Female)`,
+                  fees: { genFee: "0", scFee: draft.app_fee_res || "0", serviceCharge: "99" }
+                }
+              ];
+            } else if (typeof feesStruct === "string") {
+              try { feesStruct = JSON.parse(feesStruct); } catch (_) {}
+            }
+
+            await supabase.from("custom_forms").insert([{
+              title: `${draft.generated_title} Application Form 2026`,
+              documents: docsList,
+              fees_structure: feesStruct,
+              status: "active",
+              job_id: insertedJob.id,
+              job_slug: slug,
+            }]);
+            console.log(`✅ [Telegram Webhook] Created custom_forms entry for latest-jobs '${draft.generated_title}'`);
+          } catch (formErr: any) {
+            console.warn("⚠️ [Telegram Webhook] Failed to auto-create custom_forms entry:", formErr.message);
+          }
+        }
+
         // 4. Mark draft as published
         await supabase
           .from("auto_blog_drafts")

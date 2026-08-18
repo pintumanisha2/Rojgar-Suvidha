@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase, getStoredSession } from "@/lib/supabase";
-import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink, Smartphone, QrCode, Clock, AlertCircle, Camera } from "lucide-react";
+import { Loader2, UploadCloud, CheckCircle2, ShieldCheck, Briefcase, Ticket, X, CheckCircle, ArrowLeft, Copy, ExternalLink, Smartphone, QrCode, Clock, AlertCircle, Camera, FileText } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import dynamic from "next/dynamic";
 const ApplyFomoBar = dynamic(() => import("@/components/ui/ApplyFomoBar"), { ssr: false });
@@ -55,6 +55,11 @@ function ApplyContent() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState("");
+
+  // Special Notes & Optional Document State
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [optionalDocFile, setOptionalDocFile] = useState<File | null>(null);
+  const [optionalDocName, setOptionalDocName] = useState("");
 
   // Submit State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1403,6 +1408,53 @@ function ApplyContent() {
               </div>
             </div>
           )}
+
+          {/* Candidate Special Instructions & Optional Document Upload Section */}
+          <div className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-800 space-y-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-4">
+              <FileText className="h-6 w-6 text-indigo-500" /> Special Instructions & Additional Documents
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                  💬 Special Notes / Preference Request for Form Filler (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  placeholder="e.g. Post Preference: 1. Sub-Inspector, 2. Constable. Photo recent without glasses. Selected exam center Patna."
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">Form filling team will follow your custom instructions while submitting the application.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                  📄 Upload Additional / Optional Document (Optional)
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={optionalDocName}
+                    onChange={(e) => setOptionalDocName(e.target.value)}
+                    placeholder="Document Name (e.g. NCC Certificate / Sports Cert / Driving License)"
+                    className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                  <label className="px-5 py-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl border border-indigo-200 dark:border-indigo-900 cursor-pointer text-center text-sm hover:bg-indigo-100 transition-colors">
+                    {optionalDocFile ? `✅ ${optionalDocFile.name}` : "📁 Upload Extra File"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => setOptionalDocFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Payment & Coupon Section */}
           <div className="bg-white dark:bg-gray-900 p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-800 space-y-6">

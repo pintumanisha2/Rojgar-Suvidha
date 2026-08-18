@@ -665,6 +665,17 @@ OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preambl
   "links": "${applyStatus === "open" && applyLink ? applyLink : "null"}",
   "shortInfo": "2-sentence card summary — engaging, includes key facts",
   "important_dates": "stringified JSON of {key: date} pairs or null",
+  "form_documents": ["10th Marksheet / DOB Proof", "Qualification Certificate", "Aadhaar Card", "Passport Size Photo", "Candidate Signature", "Caste Certificate (if applicable)", "Domicile Certificate (if applicable)", "Driving License / Typing / ITI Cert (if post-specific)"],
+  "form_fees_structure": [
+    {
+      "postName": "General / OBC / EWS Candidates",
+      "fees": { "genFee": "100", "scFee": "0", "serviceCharge": "99" }
+    },
+    {
+      "postName": "SC / ST / PwD / Female Candidates",
+      "fees": { "genFee": "0", "scFee": "0", "serviceCharge": "99" }
+    }
+  ],
   "blogHtml": "COMPLETE HTML blog MINIMUM 1800 words following category blueprint"
 }`;
 
@@ -908,6 +919,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
         important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
+        form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
+        form_fees_structure: typeof aiResult.form_fees_structure === "string" ? aiResult.form_fees_structure : JSON.stringify(aiResult.form_fees_structure || null),
         status: "pending_review",
       };
 

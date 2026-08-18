@@ -98,6 +98,49 @@ export async function POST(
 
     const newJobId = insertedJob.id;
 
+    // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")
+    if (category === "latest-jobs" && newJobId) {
+      try {
+        let docsList = draft.form_documents || [
+          "10th Marksheet / Birth Certificate",
+          "Educational Qualification Certificate",
+          "Aadhaar Card / Photo ID Proof",
+          "Recent Passport Size Photo",
+          "Candidate Signature",
+          "Caste / Category Certificate (if applicable)",
+          "Domicile Certificate (if applicable)"
+        ];
+
+        let feesStruct = draft.form_fees_structure;
+        if (!feesStruct) {
+          feesStruct = [
+            {
+              postName: `${title} (General / OBC / EWS)`,
+              fees: { genFee: draft.app_fee_gen || "100", scFee: "0", serviceCharge: "99" }
+            },
+            {
+              postName: `${title} (SC / ST / Female)`,
+              fees: { genFee: "0", scFee: draft.app_fee_res || "0", serviceCharge: "99" }
+            }
+          ];
+        } else if (typeof feesStruct === "string") {
+          try { feesStruct = JSON.parse(feesStruct); } catch (_) {}
+        }
+
+        await supabase.from("custom_forms").insert([{
+          title: `${title} Application Form 2026`,
+          documents: docsList,
+          fees_structure: feesStruct,
+          status: "active",
+          job_id: newJobId,
+          job_slug: slug,
+        }]);
+        console.log(`✅ [Auto Form Generator] Created custom_forms entry for latest-jobs '${title}'`);
+      } catch (formErr: any) {
+        console.warn("⚠️ [Auto Form Generator] Failed to auto-create custom_forms entry:", formErr.message);
+      }
+    }
+
     // 4. Update draft status to published
     await supabase
       .from("auto_blog_drafts")

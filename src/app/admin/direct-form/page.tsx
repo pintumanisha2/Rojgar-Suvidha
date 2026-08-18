@@ -206,6 +206,13 @@ export default function AdminDirectFormPage() {
                   <Copy className="h-3.5 w-3.5" /> Copy Public Link
                 </button>
                 <Link
+                  href={`/admin/direct-form/${row.id}/edit`}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-xl border border-amber-200 dark:border-amber-900/50 transition-all"
+                  title="Edit Form & Fees"
+                >
+                  ✏️ Edit
+                </Link>
+                <Link
                   href={`/admin/direct-form/${row.id}/submissions`}
                   className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-900/50 transition-all"
                 >
