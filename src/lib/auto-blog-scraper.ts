@@ -859,9 +859,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Process max 1 new item per run
-  const newItems = allCandidateItems.filter((i) => !scrapedUrls.has(i.link)).slice(0, 1);
-  console.log(`🆕 New items to process: ${newItems.length} (of ${allCandidateItems.length} candidate items)`);
+  // 3. Process up to 2 recruitment posts (FreeJobAlert) AND up to 2 news stories (NDTV Education) per run
+  const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 2);
+  const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 2);
+
+  const newItems = [...freeJobAlertNew, ...ndtvNew];
+  console.log(`🆕 New items to process: ${newItems.length} (${freeJobAlertNew.length} jobs, ${ndtvNew.length} news) of ${allCandidateItems.length} candidate items`);
 
   if (newItems.length === 0) {
     results.skipped = allCandidateItems.length;
@@ -954,6 +957,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         delete draftPayload.notification_link;
         delete draftPayload.state_code;
         delete draftPayload.banner_url;
+        delete draftPayload.form_documents;
+        delete draftPayload.form_fees_structure;
         const retry = await supabase
           .from("auto_blog_drafts")
           .insert([draftPayload])
