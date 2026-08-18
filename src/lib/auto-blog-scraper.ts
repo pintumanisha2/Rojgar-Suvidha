@@ -1,5 +1,5 @@
 /**
- * Auto Blog Scraper Library — v2.2 (Bulletproof Automated Engine)
+ * Auto Blog Scraper Library — v2.3 (Multi-Key Rotation Enabled)
  * FreeJobAlert → Full Page Deep Read → Gemini AI (SarkariLekhan) → Supabase → Telegram
  *
  * FIXES in v2:
