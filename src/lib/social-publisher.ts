@@ -349,3 +349,29 @@ export async function sendTelegramAdminErrorAlert(errorMessage: string, itemTitl
     return false;
   }
 }
+
+/**
+ * Send Cron Summary Digest directly to Admin's private Telegram chat
+ */
+export async function sendTelegramAdminSummaryDigest(text: string): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
+
+  if (!botToken) return false;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: adminChatId,
+        text,
+        parse_mode: "HTML",
+      }),
+    });
+    return res.ok;
+  } catch (e: any) {
+    console.error("Failed to send Telegram admin summary digest:", e.message);
+    return false;
+  }
+}

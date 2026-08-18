@@ -15,7 +15,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { sendAdminDraftApprovalAlert, sendTelegramAdminErrorAlert } from "./social-publisher";
+import { sendAdminDraftApprovalAlert, sendTelegramAdminErrorAlert, sendTelegramAdminSummaryDigest } from "./social-publisher";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
@@ -862,9 +862,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Process up to 2 recruitment posts (FreeJobAlert) AND up to 2 news stories (NDTV Education) per run
-  const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 2);
-  const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 2);
+  // 3. Process up to 5 recruitment posts (FreeJobAlert) AND up to 5 news stories (NDTV Education) per run
+  const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 5);
+  const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 5);
 
   const newItems = [...freeJobAlertNew, ...ndtvNew];
   console.log(`🆕 New items to process: ${newItems.length} (${freeJobAlertNew.length} jobs, ${ndtvNew.length} news) of ${allCandidateItems.length} candidate items`);
@@ -1027,5 +1027,20 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   }
 
   console.log(`\n📊 Scraper complete: ${results.processed} processed | ${results.skipped} skipped | ${results.errors.length} errors\n`);
+
+  // Send Admin Summary Digest on Telegram
+  try {
+    const summaryText = `⏰ <b>ROJGAR SUVIDHA AUTO-SCRAPER RUN COMPLETE</b> ⏰\n\n` +
+      `<b>📊 Total Candidates Scanned:</b> ${allCandidateItems.length}\n` +
+      `<b>🆕 New Items Found & Processed:</b> ${newItems.length} (${freeJobAlertNew.length} Jobs, ${ndtvNew.length} News)\n` +
+      `<b>✅ Drafts Generated Successfully:</b> ${results.processed}\n` +
+      `<b>❌ Errors:</b> ${results.errors.length}\n\n` +
+      `<i>All new draft approval buttons have been sent above to your Telegram. Tap Approve on any post to publish live instantly!</i>`;
+
+    await sendTelegramAdminSummaryDigest(summaryText);
+  } catch (e: any) {
+    console.warn("⚠️ Summary digest notification failed:", e.message);
+  }
+
   return results;
 }
