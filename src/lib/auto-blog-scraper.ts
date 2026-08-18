@@ -694,7 +694,7 @@ OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preambl
         }],
         generationConfig: {
           temperature: 0.82,
-          maxOutputTokens: 7000, // Increased for longer, richer blogs
+          maxOutputTokens: 16000, // Increased to 16k to prevent JSON truncation
           responseMimeType: "application/json",
         },
       };
@@ -717,8 +717,25 @@ OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preambl
       const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       if (!rawJson) { lastError = `${model}: empty response`; continue; }
 
-      const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-      const parsed = JSON.parse(cleanedJson);
+      let parsed: any;
+      try {
+        const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
+        parsed = JSON.parse(cleanedJson);
+      } catch (parseErr: any) {
+        console.warn(`   ⚠️ JSON parse error on ${model}, attempting auto-repair:`, parseErr.message);
+        let repaired = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
+        const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
+        if (quoteCount % 2 !== 0) repaired += '"';
+        const openBraces = (repaired.match(/\{/g) || []).length;
+        const closeBraces = (repaired.match(/\}/g) || []).length;
+        for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
+        try {
+          parsed = JSON.parse(repaired);
+        } catch (e2: any) {
+          lastError = `${model}: JSON parse failed: ${parseErr.message}`;
+          continue;
+        }
+      }
 
       // ── Content validation ──
       const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
