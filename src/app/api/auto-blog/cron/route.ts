@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { runAutoBlogScraper } from "@/lib/auto-blog-scraper";
 
-export const maxDuration = 300; // 5 minutes for Vercel Pro / 60s for hobby
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 /**
  * GET /api/auto-blog/cron
