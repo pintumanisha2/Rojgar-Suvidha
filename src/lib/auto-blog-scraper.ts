@@ -363,7 +363,10 @@ async function fetchFullPage(url: string): Promise<{
 }
 
 // ── Fetch NDTV Education News Articles ───────────────────────────────────────
-async function fetchNDTVEducationNews(): Promise<{ title: string; link: string; pubDate: string; description: string }[]> {
+/**
+ * Fetch NDTV Education News RSS / HTML feed
+ */
+export async function fetchNDTVEducationNews(): Promise<{ title: string; link: string; pubDate: string; description: string }[]> {
   try {
     const res = await fetch("https://www.ndtv.com/education", {
       headers: {
