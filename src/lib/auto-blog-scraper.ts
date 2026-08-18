@@ -685,7 +685,7 @@ OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preambl
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (!geminiApiKey) throw new Error("GEMINI_API_KEY missing");
 
-  const models = ["gemini-3.5-flash", "gemini-3.6-flash"];
+  const models = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-flash-latest"];
   let lastError = "";
 
   for (const model of models) {
@@ -862,9 +862,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Process up to 5 recruitment posts (FreeJobAlert) AND up to 5 news stories (NDTV Education) per run
-  const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 5);
-  const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 5);
+  // 3. Process 1 recruitment post (FreeJobAlert) AND 1 news story (NDTV Education) per cron execution (Quota & Rate Limit Safe)
+  const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 1);
+  const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 1);
 
   const newItems = [...freeJobAlertNew, ...ndtvNew];
   console.log(`🆕 New items to process: ${newItems.length} (${freeJobAlertNew.length} jobs, ${ndtvNew.length} news) of ${allCandidateItems.length} candidate items`);
