@@ -716,8 +716,8 @@ ${categoryBlueprint}
       const data = await response.json();
       if (data.error) {
         lastError = `${model}: ${data.error.message || JSON.stringify(data.error)}`;
-        console.warn(`   ⚠️ Model ${model} returned error, retrying next model in 3s...`);
-        await new Promise((r) => setTimeout(r, 3000));
+        console.warn(`   ⚠️ Model ${model} returned error (${lastError.slice(0, 80)}), retrying next model in 4s...`);
+        await new Promise((r) => setTimeout(r, 4000));
         continue;
       }
       const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
