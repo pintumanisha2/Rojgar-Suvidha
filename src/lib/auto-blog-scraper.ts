@@ -652,7 +652,10 @@ Naturally weave high search-volume intent keywords across the post without keywo
 ${categoryBlueprint}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preamble.
+🚨 CRITICAL JSON SYNTAX RULE FOR HTML
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Inside the "blogHtml" string value, ALWAYS use single quotes (') for ALL HTML attributes (e.g. <div class='my-box'> or <a href='https://...'>). NEVER use unescaped double quotes (") inside the HTML text.
+2. Respond ONLY with valid JSON — no markdown, no code blocks, no preamble.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {
   "title": "SEO title ≤60 chars — primary keyword FIRST + year + vacancy/update count",
