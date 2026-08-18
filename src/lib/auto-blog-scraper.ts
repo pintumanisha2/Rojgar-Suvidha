@@ -880,8 +880,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const { text: pageText, links } = await fetchFullPage(item.link);
       console.log(`   📄 Page extracted: ${pageText.split(" ").length} words, ${links.length} links`);
 
-      // 5. Smart analysis
-      const category: BlogCategory = item.source === "ndtv" ? "news" : detectCategory(item.title, pageText);
+      // 5. Smart analysis (FreeJobAlert is NEVER news; NDTV is ALWAYS news)
+      let detectedCat = detectCategory(item.title, pageText);
+      if (detectedCat === "news") detectedCat = "latest-jobs";
+      const category: BlogCategory = item.source === "ndtv" ? "news" : detectedCat;
       const stateCode = item.source === "ndtv" ? null : detectStateCode(item.title, pageText);
       const { status: applyStatus, link: applyLink } = item.source === "ndtv" ? { status: "unknown" as ApplyStatus, link: null } : detectApplyStatus(pageText, links);
       const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education } =
