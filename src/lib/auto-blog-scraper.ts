@@ -685,8 +685,9 @@ ${categoryBlueprint}
   "blogHtml": "COMPLETE HTML blog MINIMUM 1800 words following category blueprint"
 }`;
 
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) throw new Error("GEMINI_API_KEY missing");
+  const rawKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+  const apiKeys = rawKeys.split(",").map((k) => k.trim()).filter(Boolean);
+  if (apiKeys.length === 0) throw new Error("GEMINI_API_KEY missing");
 
   const models = [
     "gemini-3.5-flash",
@@ -697,8 +698,9 @@ ${categoryBlueprint}
   ];
   let lastError = "";
 
-  for (const model of models) {
-    try {
+  for (const apiKey of apiKeys) {
+    for (const model of models) {
+      try {
       const payload = {
         contents: [{
           role: "user",
@@ -714,7 +716,7 @@ ${categoryBlueprint}
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 55000);
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
         { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
       );
       clearTimeout(timeout);
@@ -785,6 +787,7 @@ ${categoryBlueprint}
     } catch (e: any) {
       lastError = `${model}: ${e.message}`;
       continue;
+    }
     }
   }
   throw new Error(`All Gemini models failed. Last error: ${lastError}`);
