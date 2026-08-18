@@ -312,3 +312,40 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
     return false;
   }
 }
+
+/**
+ * Send Error Alert Notification directly to Admin's private Telegram chat
+ */
+export async function sendTelegramAdminErrorAlert(errorMessage: string, itemTitle?: string, sourceUrl?: string): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
+
+  if (!botToken) {
+    console.log("ℹ️ [Telegram Error Alert] TELEGRAM_BOT_TOKEN missing — skipping alert");
+    return false;
+  }
+
+  const caption = `⚠️ <b>ROJGAR SUVIDHA SCRAPER ERROR ALERT</b> ⚠️\n\n` +
+    (itemTitle ? `<b>📌 Title:</b> ${itemTitle}\n` : "") +
+    (sourceUrl ? `<b>🔗 Source:</b> ${sourceUrl}\n` : "") +
+    `<b>❌ Error Details:</b> <code>${errorMessage.slice(0, 500)}</code>\n\n` +
+    `<i>Time: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST</i>`;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: adminChatId,
+        text: caption,
+        parse_mode: "HTML",
+      }),
+    });
+    const data = await res.json();
+    console.log(`⚠️ [Admin Error Alert] Sent alert to Admin (${adminChatId}):`, data.ok);
+    return res.ok;
+  } catch (e: any) {
+    console.error("Failed to send Telegram admin error alert:", e.message);
+    return false;
+  }
+}

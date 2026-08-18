@@ -15,7 +15,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { sendAdminDraftApprovalAlert } from "./social-publisher";
+import { sendAdminDraftApprovalAlert, sendTelegramAdminErrorAlert } from "./social-publisher";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
@@ -1000,6 +1000,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
     } catch (err: any) {
       console.error(`   ❌ Failed: ${err.message}`);
       results.errors.push(`${item.title.slice(0, 60)}: ${err.message}`);
+
+      // Send instant Telegram error alert to Admin's phone
+      sendTelegramAdminErrorAlert(err.message, item.title, item.link).catch(() => {});
 
       // Mark as scraped to avoid infinite loop
       try {
