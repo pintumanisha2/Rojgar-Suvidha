@@ -9,11 +9,15 @@ export const maxDuration = 300; // 5 minutes for Vercel Pro / 60s for hobby
  * Also callable manually for testing
  */
 export async function GET(request: Request) {
-  // Verify cron secret (prevents unauthorized calls)
+  // Verify cron secret (allows Vercel Cron, Bearer header, or ?key= parameter)
   const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
+  const url = new URL(request.url);
+  const keyParam = url.searchParams.get("key");
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const cronSecret = process.env.CRON_SECRET || "rojgarsuvidha_auto_blog_2026";
+
+  if (!isVercelCron && authHeader !== `Bearer ${cronSecret}` && keyParam !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
