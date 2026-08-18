@@ -726,17 +726,40 @@ OUTPUT: Respond ONLY with valid JSON — no markdown, no code blocks, no preambl
         parsed = JSON.parse(cleanedJson);
       } catch (parseErr: any) {
         console.warn(`   ⚠️ JSON parse error on ${model}, attempting auto-repair:`, parseErr.message);
-        let repaired = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-        const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
-        if (quoteCount % 2 !== 0) repaired += '"';
-        const openBraces = (repaired.match(/\{/g) || []).length;
-        const closeBraces = (repaired.match(/\}/g) || []).length;
-        for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
         try {
+          // Escape unescaped newlines/tabs inside raw JSON string
+          let repaired = rawJson
+            .replace(/^```json?\s*/i, "")
+            .replace(/```\s*$/i, "")
+            .replace(/\r\n/g, "\\n")
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t")
+            .trim();
+
+          const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
+          if (quoteCount % 2 !== 0) repaired += '"';
+          const openBraces = (repaired.match(/\{/g) || []).length;
+          const closeBraces = (repaired.match(/\}/g) || []).length;
+          for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
           parsed = JSON.parse(repaired);
         } catch (e2: any) {
-          lastError = `${model}: JSON parse failed: ${parseErr.message}`;
-          continue;
+          console.warn(`   ⚠️ Advanced JSON repair failed on ${model}, using regex field extractor...`);
+          const titleMatch = rawJson.match(/"title"\s*:\s*"([^"]+)"/);
+          const metaMatch = rawText.match(/"metaDesc"\s*:\s*"([^"]+)"/);
+          const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]+)"\s*\}\s*$/);
+
+          if (titleMatch?.[1]) {
+            parsed = {
+              title: titleMatch[1],
+              metaDesc: metaMatch ? metaMatch[1] : "",
+              blogHtml: htmlMatch ? htmlMatch[1] : rawJson,
+              category,
+            };
+          } else {
+            lastError = `${model}: JSON parse failed: ${parseErr.message}`;
+            continue;
+          }
         }
       }
 
