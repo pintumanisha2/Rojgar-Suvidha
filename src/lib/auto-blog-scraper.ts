@@ -966,7 +966,6 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         total_posts: aiResult.totalPosts || totalPosts,
         app_fee_gen: aiResult.appFeeGen || appFeeGen,
         app_fee_res: aiResult.appFeeRes || appFeeRes,
-        extracted_text: pageText.slice(0, 3000),
         category: aiResult.category || category,
         generated_title: cleanCompetitorBrands(aiResult.title || item.title),
         generated_meta: cleanCompetitorBrands(aiResult.metaDesc || ""),
@@ -976,8 +975,11 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
         important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
-        form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
-        form_fees_structure: typeof aiResult.form_fees_structure === "string" ? aiResult.form_fees_structure : JSON.stringify(aiResult.form_fees_structure || null),
+        extracted_text: JSON.stringify({
+          form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
+          form_fees_structure: aiResult.form_fees_structure || null,
+          raw_text: pageText.slice(0, 2000),
+        }),
         status: "pending_review",
       };
 

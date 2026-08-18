@@ -101,7 +101,12 @@ export async function POST(
     // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")
     if (category === "latest-jobs" && newJobId) {
       try {
-        let docsList = draft.form_documents || [
+        let extractedMeta: any = {};
+        if (draft.extracted_text) {
+          try { extractedMeta = JSON.parse(draft.extracted_text); } catch (_) {}
+        }
+
+        let docsList = draft.form_documents || extractedMeta.form_documents || [
           "10th Marksheet / Birth Certificate",
           "Educational Qualification Certificate",
           "Aadhaar Card / Photo ID Proof",
@@ -111,7 +116,7 @@ export async function POST(
           "Domicile Certificate (if applicable)"
         ];
 
-        let feesStruct = draft.form_fees_structure;
+        let feesStruct = draft.form_fees_structure || extractedMeta.form_fees_structure;
         if (!feesStruct) {
           feesStruct = [
             {
