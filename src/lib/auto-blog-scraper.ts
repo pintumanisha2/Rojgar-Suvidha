@@ -348,7 +348,7 @@ async function fetchFullPage(url: string): Promise<{
   }
 
   // Strip HTML and decode entities
-  const rawText = workingHtml
+  let rawText = workingHtml
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(?:p|div|tr|li|h[1-6])\s*>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
@@ -356,6 +356,24 @@ async function fetchFullPage(url: string): Promise<{
     .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&#8211;/g, "–")
     .replace(/&#8212;/g, "—").replace(/&#8217;/g, "'").replace(/&#8220;/g, '"')
     .replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+
+  // Fallback: If container extraction yielded less than 200 words, extract from full HTML page
+  if (rawText.split(/\s+/).length < 200) {
+    let fullHtml = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+      .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+      .replace(/<!--[\s\S]*?-->/g, " ");
+
+    rawText = fullHtml
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(?:p|div|tr|li|h[1-6])\s*>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"')
+      .replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  }
 
   // Clean source text from competitor brand names beforehand
   const cleanedText = sanitizeSourceText(rawText.slice(0, 12000));
