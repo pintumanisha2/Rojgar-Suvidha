@@ -718,8 +718,17 @@ ${categoryBlueprint}
 
   let lastError = "";
 
+  // Track globally unavailable models (deprecated/not-found) — skip across ALL keys
+  const permanentlyFailedModels = new Set<string>();
+
   for (const apiKey of apiKeys) {
     for (const model of models) {
+      // Skip models that are permanently unavailable (checked on a previous key)
+      if (permanentlyFailedModels.has(model)) {
+        console.warn(`   ⏭️ Skipping ${model} — permanently unavailable`);
+        continue;
+      }
+
       try {
       const payload = {
         contents: [{
@@ -746,9 +755,17 @@ ${categoryBlueprint}
         const errMsg = data.error.message || JSON.stringify(data.error);
         lastError = `${model}: ${errMsg}`;
 
+        // ── Permanently unavailable model (deprecated, removed, not available) ──
+        // Skip this model for ALL remaining API keys — no point trying them
+        if (/no longer available|not available|deprecated|model.*not.*found|does not exist/i.test(errMsg)) {
+          console.warn(`   🚫 Model ${model} is permanently unavailable — skipping for all keys`);
+          permanentlyFailedModels.add(model);
+          continue; // try next model in list
+        }
+
         // ── Quota / Rate-limit error: break inner model loop for this key ──
         // All models on the same key share the same quota — no point trying them
-        if (/quota|rate.?limit|429|resource.?exhausted|you exceeded/i.test(errMsg)) {
+        if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(errMsg)) {
           console.warn(`   ⛔ Quota exceeded on key ...${apiKey.slice(-4)} — switching to next API key`);
           break; // break inner model loop → outer key loop will try next key
         }
