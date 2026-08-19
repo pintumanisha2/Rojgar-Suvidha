@@ -100,6 +100,10 @@ export async function POST(request: Request) {
         }
 
         // 3. Insert into jobs table
+        // NOTE: important_dates from auto-blog is stored as JSON string (e.g. '{"Key":"Val"}')
+        // but the job page expects either null or an array [{label,value}].
+        // Storing a raw JSON string causes production server crashes.
+        // So we always set it to null — blog_content already includes the dates in HTML.
         const jobPayload: any = {
           title: draft.generated_title,
           slug,
@@ -112,7 +116,8 @@ export async function POST(request: Request) {
           banner_url: draft.banner_url || null,
           status: "active",
           links: linksArray.length > 0 ? linksArray : (draft.links || null),
-          important_dates: draft.important_dates || null,
+          important_dates: null,  // Auto-blog stores as JSON string which crashes page; always null here
+          created_by: "auto-blog-pipeline",  // Required for RLS policy — anon users can only read jobs with created_by set
           created_at: new Date().toISOString(),
         };
 
