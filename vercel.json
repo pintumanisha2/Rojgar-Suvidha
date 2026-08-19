@@ -7,10 +7,6 @@
     {
       "path": "/api/admin/send-weekly-digest",
       "schedule": "0 3 * * 0"
-    },
-    {
-      "path": "/api/auto-blog/cron",
-      "schedule": "*/30 * * * *"
     }
   ]
 }
