@@ -1,9 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-// ssr:false must live inside a Client Component in Next.js 15
-const TrackJobView = dynamic(() => import("./TrackJobView"), { ssr: false });
+// Direct import is safe — TrackJobView renders null and only uses useEffect(browser APIs)
+// Previously used dynamic({ssr:false}) which caused "Bail out to client-side rendering" crash in Next.js 15 production
+import TrackJobView from "./TrackJobView";
 
 interface Props {
   slug: string;
