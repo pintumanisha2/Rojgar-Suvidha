@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
+import { notifySearchEngines } from "@/lib/instant-indexing";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -231,6 +232,10 @@ export async function POST(request: Request) {
           stateCode: draft.state_code,
           bannerUrl: draft.banner_url,
         }).catch((e) => console.warn("Broadcasting error:", e));
+
+        // 8. Instantly notify Google, Bing, Yandex to crawl the new page
+        // Non-blocking — runs in background, never delays the response
+        notifySearchEngines(slug).catch((e) => console.warn("[Indexing] Error:", e));
 
         return NextResponse.json({ ok: true });
       }
