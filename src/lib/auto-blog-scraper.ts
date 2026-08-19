@@ -708,11 +708,11 @@ ${categoryBlueprint}
   if (apiKeys.length === 0) throw new Error("GEMINI_API_KEY missing");
 
   const models = [
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
-    "gemini-flash-lite-latest",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-2.5-flash",
   ];
   let lastError = "";
 
@@ -741,9 +741,18 @@ ${categoryBlueprint}
 
       const data = await response.json();
       if (data.error) {
-        lastError = `${model}: ${data.error.message || JSON.stringify(data.error)}`;
-        console.warn(`   ⚠️ Model ${model} returned error (${lastError.slice(0, 80)}), retrying next model in 4s...`);
-        await new Promise((r) => setTimeout(r, 4000));
+        const errMsg = data.error.message || JSON.stringify(data.error);
+        lastError = `${model}: ${errMsg}`;
+
+        // ── Quota / Rate-limit error: break inner model loop for this key ──
+        // All models on the same key share the same quota — no point trying them
+        if (/quota|rate.?limit|429|resource.?exhausted|you exceeded/i.test(errMsg)) {
+          console.warn(`   ⛔ Quota exceeded on key ...${apiKey.slice(-4)} — switching to next API key`);
+          break; // break inner model loop → outer key loop will try next key
+        }
+
+        console.warn(`   ⚠️ Model ${model} returned error (${errMsg.slice(0, 80)}), retrying next model in 3s...`);
+        await new Promise((r) => setTimeout(r, 3000));
         continue;
       }
       const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
@@ -996,11 +1005,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
         important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
-        extracted_text: JSON.stringify({
-          form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
-          form_fees_structure: aiResult.form_fees_structure || null,
-          raw_text: pageText.slice(0, 2000),
-        }),
+        // ✅ FIX: form_documents ab apne top-level columns mein store hoga (extracted_text JSON mein nahi)
+        form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
+        form_fees_structure: aiResult.form_fees_structure ? JSON.stringify(aiResult.form_fees_structure) : null,
+        extracted_text: pageText.slice(0, 2000), // Sirf raw source text
         status: "pending_review",
       };
 
@@ -1012,16 +1020,18 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         .single();
 
       if (insertError) {
-        // Fallback if optional column not created yet in Supabase
-        delete draftPayload.important_dates;
-        delete draftPayload.notification_link;
-        delete draftPayload.state_code;
-        delete draftPayload.banner_url;
-        delete draftPayload.form_documents;
-        delete draftPayload.form_fees_structure;
+        // ✅ FIX: Graceful fallback — optional/new columns hata ke retry karo
+        console.warn(`   ⚠️ Insert error: ${insertError.message} — retrying without optional columns...`);
+        const fallbackPayload = { ...draftPayload };
+        delete fallbackPayload.important_dates;
+        delete fallbackPayload.notification_link;
+        delete fallbackPayload.state_code;
+        delete fallbackPayload.banner_url;
+        delete fallbackPayload.form_documents;       // ✅ Sahi column name
+        delete fallbackPayload.form_fees_structure;  // ✅ Sahi column name
         const retry = await supabase
           .from("auto_blog_drafts")
-          .insert([draftPayload])
+          .insert([fallbackPayload])
           .select("id")
           .single();
         data = retry.data;
@@ -1064,10 +1074,26 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       // Send instant Telegram error alert to Admin's phone
       sendTelegramAdminErrorAlert(err.message, item.title, item.link).catch(() => {});
 
-      // Mark as scraped to avoid infinite loop
+      // ✅ FIX: Smart URL skip logic — same URL kitni baar fail ho chuki hai check karo
       try {
-        await supabase.from("scraped_urls_log").upsert([{ url: item.link }], { onConflict: "url" });
-      } catch (_) { /* silent */ }
+        const { count: priorErrors } = await supabase
+          .from("auto_blog_drafts")
+          .select("*", { count: "exact", head: true })
+          .eq("source_url", item.link)
+          .eq("status", "error");
+
+        const isPageFetchError = /fetch failed|HTTP 4[0-9]{2}|timeout|blocked/i.test(err.message);
+        const shouldPermanentlySkip = isPageFetchError || (priorErrors !== null && priorErrors >= 2);
+
+        if (shouldPermanentlySkip) {
+          // 3rd failure ya page fetch error → permanently skip
+          await supabase.from("scraped_urls_log").upsert([{ url: item.link }], { onConflict: "url" });
+          console.log(`   ⛔ URL permanently skipped (${isPageFetchError ? "page fetch error" : `${(priorErrors ?? 0) + 1} failures`}): ${item.link.slice(0, 80)}`);
+        } else {
+          // 1st/2nd Gemini error → retry allowed on next cron run
+          console.log(`   🔁 URL retry allowed (failure ${(priorErrors ?? 0) + 1}/3): ${item.link.slice(0, 80)}`);
+        }
+      } catch (_) { /* silent — log failure nahi rokna chahiye main flow ko */ }
 
       // Save error record for admin visibility
       try {
