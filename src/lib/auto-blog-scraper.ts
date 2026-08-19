@@ -707,13 +707,15 @@ ${categoryBlueprint}
   const apiKeys = rawKeys.split(",").map((k) => k.trim()).filter(Boolean);
   if (apiKeys.length === 0) throw new Error("GEMINI_API_KEY missing");
 
+
   const models = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-2.5-flash",
+    "gemini-3.6-flash",       // ✅ Latest — recommended replacement for gemini-2.5-flash
+    "gemini-2.0-flash",       // ✅ Stable
+    "gemini-2.0-flash-lite",  // ✅ Faster/lighter
+    "gemini-1.5-flash",       // ✅ Fallback
+    "gemini-1.5-flash-8b",    // ✅ Last resort
   ];
+
   let lastError = "";
 
   for (const apiKey of apiKeys) {
