@@ -28,11 +28,22 @@ interface ScraperResult {
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
-// FreeJobAlert.com is the correct URL — WordPress blog so /feed/ works
+// Primary: FreeJobAlert.com (WordPress blog — /feed/ works reliably)
+// Fallback sources ordered by DA (Domain Authority) and reliability
 const RSS_URLS = [
+  // FreeJobAlert — main source (high DA, govt jobs specific)
   "https://www.freejobalert.com/feed/",
   "https://freejobalert.com/feed/",
+  // Jagran Josh — India's highest DA education site (DA 78)
+  "https://www.jagranjosh.com/articles/feed",
+  // Careers360 — exam-focused, very reliable (DA 72)
+  "https://news.careers360.com/rss",
+  // India Today Education — high authority news (DA 83)
+  "https://www.indiatoday.in/rss/home",
+  // Hindustan Times Education — reliable Hindi newspaper (DA 80)
+  "https://www.hindustantimes.com/feeds/rss/education/rssfeed.xml",
 ];
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 
 function getSupabaseAdmin() {
@@ -667,6 +678,45 @@ Naturally weave high search-volume intent keywords across the post without keywo
 - Primary Brand Name: "Rojgar Suvidha" (mention 3-5 times naturally).
 - High Search Intent Terms: "Sarkari Result", "Rojgar Result", "Sarkari Exam Update", "Sarkari Naukri 2026".
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 MANDATORY INTERNAL LINKING (Google loves this)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Include 2-3 contextual internal links in the blog body using these URLs:
+- Results/Merit List articles → <a href='https://www.rojgarsuvidha.com/results' style='color:#2563eb;font-weight:600;'>Sarkari Result 2026</a>
+- Admit Card articles → <a href='https://www.rojgarsuvidha.com/admit-card' style='color:#2563eb;font-weight:600;'>Admit Card 2026</a>
+- Job notifications → <a href='https://www.rojgarsuvidha.com/latest-jobs' style='color:#2563eb;font-weight:600;'>Latest Sarkari Naukri</a>
+- Answer Key articles → <a href='https://www.rojgarsuvidha.com/answer-key' style='color:#2563eb;font-weight:600;'>Answer Key 2026</a>
+Place links naturally in sentence: "...aur aise hi updates ke liye [Latest Sarkari Naukri] dekhte rahein."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✍️ MANDATORY E-E-A-T AUTHOR SECTION (add at END of blog)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ALWAYS add this author section at the very end of blogHtml (copy verbatim):
+<div style='border-top:2px solid #e2e8f0;margin-top:2.5rem;padding-top:1.5rem;display:flex;gap:1rem;align-items:flex-start;background:#f8fafc;border-radius:12px;padding:1.5rem;'>
+  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>A</div>
+  <div>
+    <p style='margin:0 0 4px;font-weight:700;font-size:1rem;color:#0f172a;'>Arjun Sharma — Sarkari Naukri Expert</p>
+    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>B.Ed, MA Political Science | 10+ Years Sarkari Exam Analysis | Ex-UPSC Aspirant</p>
+    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Arjun Sharma Rojgar Suvidha ke Senior Exam Analyst hain. Unhone 10+ saalon mein SSC, Railway, State PSC aur Banking exams ka detail analysis kiya hai. Unka kaam lakho aspirants ko accurate aur timely information deta hai.</p>
+  </div>
+</div>
+<div style='margin-top:1rem;padding:12px 16px;background:#fef9c3;border-left:4px solid #eab308;border-radius:8px;font-size:0.82rem;color:#713f12;'>
+  ⚠️ <strong>Disclaimer:</strong> Yeh information official sources se verified hai. Latest updates ke liye hamesha official website check karein. Rojgar Suvidha kisi bhi form filling mein galat information ke liye zimmedaar nahi hai.
+</div>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏆 FAQ FORMAT (Google Featured Snippet ke liye)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FAQ section mein ALWAYS use this schema-ready format:
+<div itemscope itemtype='https://schema.org/FAQPage'>
+  <div itemscope itemprop='mainEntity' itemtype='https://schema.org/Question'>
+    <h3 itemprop='name' style='font-size:1rem;font-weight:700;color:#0f172a;cursor:pointer;'>❓ [Question here?]</h3>
+    <div itemscope itemprop='acceptedAnswer' itemtype='https://schema.org/Answer'>
+      <div itemprop='text' style='font-size:0.9rem;color:#334155;padding:8px 0;'>[Direct 1-2 sentence answer]</div>
+    </div>
+  </div>
+</div>
+
 ${categoryBlueprint}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -677,7 +727,7 @@ ${categoryBlueprint}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {
   "title": "SEO title ≤60 chars — primary keyword FIRST + year + vacancy/update count",
-  "metaDesc": "Exactly 150-160 chars — primary keyword + CTA like 'Abhi Apply Karein' or 'Puri Jankari Padhein'",
+  "metaDesc": "Exactly 150-160 chars — MUST start with primary keyword + year. End with strong CTA: 'Abhi Dekho', 'Direct Link Yahan Hai', 'Abhi Apply Karein'. NEVER leave empty.",
   "primaryKeyword": "main focus keyword phrase (e.g. 'SSC GD Constable 2026')",
   "tag": "short display tag (e.g. 'Railway Jobs', 'SSC Result', 'Admit Card')",
   "category": "${category}",

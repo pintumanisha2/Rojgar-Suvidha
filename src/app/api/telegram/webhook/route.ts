@@ -104,12 +104,24 @@ export async function POST(request: Request) {
         // but the job page expects either null or an array [{label,value}].
         // Storing a raw JSON string causes production server crashes.
         // So we always set it to null — blog_content already includes the dates in HTML.
+
+        // Smart meta_description fallback — NEVER leave empty (hurts Google CTR)
+        const categoryLabel: Record<string, string> = {
+          "results": "Result", "admit-card": "Admit Card", "answer-key": "Answer Key",
+          "latest-jobs": "Sarkari Naukri", "admission": "Admission", "news": "Update",
+        };
+        const catWord = categoryLabel[draft.category || "latest-jobs"] || "Update";
+        const metaFallback = `${draft.generated_title || "Sarkari"} ${catWord} 2026 — Puri Jankari aur Direct Link Yahan Hai. Abhi Dekho aur Apni Taiyari Shuru Karein.`.slice(0, 158);
+        const metaDescription = (draft.generated_meta && draft.generated_meta.trim().length > 30)
+          ? draft.generated_meta
+          : metaFallback;
+
         const jobPayload: any = {
           title: draft.generated_title,
           slug,
           blog_content: draft.generated_html,
-          short_info: draft.short_description || draft.generated_meta,
-          meta_description: draft.generated_meta,
+          short_info: draft.short_description || metaDescription,
+          meta_description: metaDescription,
           tag: draft.generated_tags?.[0] || null,
           category: draft.category || "latest-jobs",
           state_code: draft.state_code || null,
@@ -120,6 +132,7 @@ export async function POST(request: Request) {
           created_by: "auto-blog-pipeline",  // Required for RLS policy — anon users can only read jobs with created_by set
           created_at: new Date().toISOString(),
         };
+
 
         const { data: insertedJob, error: insertErr } = await supabase
           .from("jobs")
