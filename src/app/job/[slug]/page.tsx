@@ -248,8 +248,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
   // 3. JobPosting Schema (SEO - Google Jobs integration)
   let lastDate = "";
   let lastDateIso = "";
-  if (job.important_dates && job.important_dates.length > 0) {
-    const ldObj = job.important_dates.find((d: any) => d.label === "Last Date");
+  if (Array.isArray(job.important_dates)) {
+    const ldObj = job.important_dates.find((d: any) => d?.label === "Last Date");
     if (ldObj && ldObj.value) {
       lastDate = ldObj.value;
       if (!lastDate.toLowerCase().includes("soon")) {
@@ -786,9 +786,10 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           {/* Middle Banner Ad */}
           <AdSensePlaceholder format="leaderboard" />
 
-          {/* 4. Promo Banner ("Apply For Me" service callout) */}
           {(() => {
-            const customApplyLink = job.links?.find((l: any) => l.label.toLowerCase().includes('apply for me'))?.url;
+            const customApplyLink = Array.isArray(job.links) 
+              ? job.links.find((l: any) => l?.label && typeof l.label === "string" && l.label.toLowerCase().includes('apply for me'))?.url 
+              : null;
             return (
               <div className="relative rounded-2xl overflow-hidden mt-8 shadow-2xl shadow-orange-500/10 border border-orange-200/50 dark:border-orange-900/50">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-rose-600 dark:from-orange-600 dark:to-rose-800 opacity-95"></div>
