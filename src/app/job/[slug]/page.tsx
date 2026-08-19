@@ -709,27 +709,36 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           </div>
 
           {/* ── Important Links — Premium Highlighted Section ── */}
-          {job.links && job.links.filter((l: any) => !l.label.toLowerCase().includes('apply for me')).length > 0 && (
-            <div id="important-links" className="rounded-2xl overflow-hidden shadow-lg border-2 border-indigo-200 dark:border-indigo-900/60 mt-6">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3">
-                <div className="bg-white/20 rounded-lg p-1.5">
-                  <LinkIcon className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-black text-white text-base tracking-wide">Important Links</h2>
-                  <p className="text-indigo-200 text-xs font-medium">Official direct links — verified & updated</p>
-                </div>
-                <span className="ml-auto bg-white/20 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse">
-                  🔴 Live
-                </span>
-              </div>
+          {(() => {
+            const validLinks = Array.isArray(job.links)
+              ? job.links.filter((l: any) => l && l.label && typeof l.label === "string" && !l.label.toLowerCase().includes("apply for me"))
+              : typeof job.links === "string" && job.links.startsWith("http")
+              ? [{ label: "Official Notification / Website Link", url: job.links }]
+              : job.official_link && typeof job.official_link === "string" && job.official_link.startsWith("http")
+              ? [{ label: "Official Direct Link", url: job.official_link }]
+              : [];
 
-              {/* Links List */}
-              <div className="bg-white dark:bg-zinc-950 divide-y divide-gray-100 dark:divide-zinc-900">
-                {job.links
-                  .filter((l: any) => !l.label.toLowerCase().includes('apply for me'))
-                  .map((link: any, idx: number) => {
+            if (validLinks.length === 0) return null;
+
+            return (
+              <div id="important-links" className="rounded-2xl overflow-hidden shadow-lg border-2 border-indigo-200 dark:border-indigo-900/60 mt-6">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3">
+                  <div className="bg-white/20 rounded-lg p-1.5">
+                    <LinkIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-black text-white text-base tracking-wide">Important Links</h2>
+                    <p className="text-indigo-200 text-xs font-medium">Official direct links — verified & updated</p>
+                  </div>
+                  <span className="ml-auto bg-white/20 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse">
+                    🔴 Live
+                  </span>
+                </div>
+
+                {/* Links List */}
+                <div className="bg-white dark:bg-zinc-950 divide-y divide-gray-100 dark:divide-zinc-900">
+                  {validLinks.map((link: any, idx: number) => {
                     const lbl = (link.label || "").toLowerCase();
                     
                     // Color-code based on link type
@@ -782,7 +791,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 ⚠️ Always verify links from the official website before applying.
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Middle Banner Ad */}
           <AdSensePlaceholder format="leaderboard" />
