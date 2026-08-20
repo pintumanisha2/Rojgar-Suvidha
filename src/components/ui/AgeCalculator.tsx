@@ -3,10 +3,14 @@
 import { useState, useEffect } from "react";
 import { Calculator, Calendar, ChevronDown, CheckCircle2 } from "lucide-react";
 
-export default function AgeCalculator() {
+interface AgeCalculatorProps {
+  defaultOpen?: boolean;
+}
+
+export default function AgeCalculator({ defaultOpen = false }: AgeCalculatorProps = {}) {
   const [dob, setDob] = useState("");
   const [targetDate, setTargetDate] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {

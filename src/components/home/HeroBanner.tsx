@@ -16,6 +16,7 @@ const QUICK_CATS = [
   { label: "📋 Admit Card",   id: "section-admit-card",   href: "/admit-card"  },
   { label: "🔑 Answer Key",   id: "section-answer-key",   href: "/answer-key"  },
   { label: "🎓 Admission",    id: "section-admission",    href: "/admission"   },
+  { label: "🧮 Age Calc",     id: "section-age-calc",     href: "/age-calculator" },
   { label: "📰 News",         id: "section-news",         href: "/news"        },
 ];
 
@@ -114,6 +115,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
     <>
     <div className="w-full bg-white dark:bg-[#000000] border-b border-gray-100 dark:border-zinc-900 px-3 sm:px-4 py-2 sm:py-3">
       <div className="max-w-7xl mx-auto">
+        <h1 className="sr-only">Rojgar Suvidha – #1 Sarkari Naukri, Government Jobs, Results & Admit Card 2026</h1>
         {/* Mobile/Tab: single full-width banner | Desktop: 3-card grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 sm:gap-3">
 

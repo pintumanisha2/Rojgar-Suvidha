@@ -42,7 +42,7 @@ function getCategoryBadge(category: string): string {
  */
 export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID || "@rojgarsuvidha";
+  const chatId = process.env.TELEGRAM_CHAT_ID || "@govermentform";
 
   if (!botToken) {
     console.log("ℹ️ [Telegram Auto-Poster] TELEGRAM_BOT_TOKEN missing — skipping Telegram post");
@@ -251,7 +251,7 @@ export interface DraftNotificationPayload {
  */
 export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayload): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const adminChatId = process.env.ADMIN_TELEGRAM_ID || "6681095051";
+  const adminChatId = process.env.ADMIN_TELEGRAM_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
 
   if (!botToken) {
     console.log("ℹ️ [Admin Alert] TELEGRAM_BOT_TOKEN missing — skipping admin approval alert");
@@ -318,7 +318,7 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
  */
 export async function sendTelegramAdminErrorAlert(errorMessage: string, itemTitle?: string, sourceUrl?: string): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
+  const adminChatId = process.env.ADMIN_TELEGRAM_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
 
   if (!botToken) {
     console.log("ℹ️ [Telegram Error Alert] TELEGRAM_BOT_TOKEN missing — skipping alert");
@@ -355,7 +355,7 @@ export async function sendTelegramAdminErrorAlert(errorMessage: string, itemTitl
  */
 export async function sendTelegramAdminSummaryDigest(text: string): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
+  const adminChatId = process.env.ADMIN_TELEGRAM_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
 
   if (!botToken) return false;
 

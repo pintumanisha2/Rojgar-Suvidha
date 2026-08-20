@@ -61,6 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { route: '/admission',          priority: 0.85, freq: 'daily'  },
     { route: '/news',               priority: 0.85, freq: 'hourly' },
     { route: '/exam-calendar',      priority: 0.9,  freq: 'daily'  },
+    { route: '/age-calculator',     priority: 0.85, freq: 'weekly' },
     { route: '/apply-for-me',       priority: 0.85, freq: 'weekly' },
     { route: '/track-application',  priority: 0.7,  freq: 'weekly' },
     { route: '/saved-jobs',         priority: 0.6,  freq: 'weekly' },

@@ -33,6 +33,20 @@ export const metadata: Metadata = {
     description: "Daily Sarkari Naukri, Govt Jobs, Results, Admit Cards & Answer Keys. India's most trusted job portal. Apply for me service available.",
     url: BASE_URL,
     type: "website",
+    images: [
+      {
+        url: `${BASE_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: "Rojgar Suvidha – Sarkari Naukri & Government Jobs 2026",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rojgar Suvidha – #1 Sarkari Naukri & Government Jobs 2026",
+    description: "Daily Sarkari Naukri, Govt Jobs, Results, Admit Cards & Answer Keys. India's most trusted job portal.",
+    images: [`${BASE_URL}/og-image.png`],
   },
 };
 
