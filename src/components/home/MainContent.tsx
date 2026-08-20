@@ -30,15 +30,18 @@ interface Section {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   headerBg: string;
+  bulletBg: string;
+  titleColor: string;
+  footerColor: string;
   items: JobItem[];
 }
 
 const sectionConfig = [
-  { id: "results", title: "Results", icon: FileText, headerBg: "from-green-600 to-emerald-500" },
-  { id: "admit-card", title: "Admit Cards", icon: BookOpen, headerBg: "from-orange-500 to-amber-500" },
-  { id: "latest-jobs", title: "Latest Jobs", icon: Briefcase, headerBg: "from-red-500 to-rose-500" },
-  { id: "answer-key", title: "Answer Key", icon: Key, headerBg: "from-purple-600 to-violet-500" },
-  { id: "admission", title: "Admission", icon: GraduationCap, headerBg: "from-blue-600 to-sky-500" },
+  { id: "results", title: "Results", icon: FileText, headerBg: "from-emerald-600 to-green-500", bulletBg: "bg-emerald-500", titleColor: "text-emerald-700 dark:text-emerald-400", footerColor: "text-emerald-600 dark:text-emerald-400" },
+  { id: "admit-card", title: "Admit Cards", icon: BookOpen, headerBg: "from-orange-600 to-amber-500", bulletBg: "bg-orange-500", titleColor: "text-orange-700 dark:text-orange-400", footerColor: "text-orange-600 dark:text-orange-400" },
+  { id: "latest-jobs", title: "Latest Jobs", icon: Briefcase, headerBg: "from-red-600 to-rose-500", bulletBg: "bg-red-500", titleColor: "text-red-700 dark:text-red-400", footerColor: "text-red-600 dark:text-red-400" },
+  { id: "answer-key", title: "Answer Key", icon: Key, headerBg: "from-purple-600 to-violet-500", bulletBg: "bg-purple-500", titleColor: "text-purple-700 dark:text-purple-400", footerColor: "text-purple-600 dark:text-purple-400" },
+  { id: "admission", title: "Admission", icon: GraduationCap, headerBg: "from-blue-600 to-sky-500", bulletBg: "bg-blue-500", titleColor: "text-blue-700 dark:text-blue-400", footerColor: "text-blue-600 dark:text-blue-400" },
 ];
 
 const statusMap: Record<StatusKey, { label: string; dot: string; text: string; bg: string }> = {
@@ -64,7 +67,7 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
     .neq("status", "draft")
     .neq("category", "news")
     .order("created_at", { ascending: false })
-    .limit(120); // max 120 jobs total (20 per section)
+    .limit(120); 
   
   if (stateCode) {
     query = query.or(`state_code.eq.${stateCode},state_code.is.null,state_code.eq.,state_code.ilike.%all%`);
@@ -72,16 +75,14 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
 
   const { data: dbJobs } = await query;
 
-  // Fetch latest news/blog articles separately
   const { data: newsArticles } = await supabase
     .from("jobs")
     .select("title, slug, created_at")
     .eq("category", "news")
     .neq("status", "draft")
     .order("created_at", { ascending: false })
-    .limit(6); // reduced from 10 for speed
+    .limit(6); 
   
-  // Group jobs by category
   const jobsByCategory: Record<string, any[]> = {};
   if (dbJobs) {
     dbJobs.forEach((job: any) => {
@@ -92,7 +93,6 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
     });
   }
 
-  // Map to sections
   const sections = sectionConfig.map(conf => ({
     ...conf,
     items: (jobsByCategory[conf.id] || []).slice(0, 10).map(job => {
@@ -107,8 +107,6 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
         tag: job.tag as TagType,
         lastDate,
         slug: job.slug,
-        posts: undefined, // total_posts column not in jobs table
-        eligibility: job.short_info,
         category: job.category,
         important_dates: job.important_dates,
         created_at: job.created_at,
@@ -119,7 +117,6 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
   return (
     <section className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-5">
 
-      {/* ── Jobs by Sector (SEO Internal Linking Hub) ── */}
       {!stateCode && (
         <div className="mb-5 sm:mb-8">
           <div className="flex items-center gap-2 mb-3">
@@ -127,17 +124,16 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
             <h2 className="text-sm sm:text-lg font-extrabold text-gray-900 dark:text-white">Browse by Sector</h2>
             <span className="text-xs text-gray-400 ml-1 hidden sm:inline">• 8 Categories</span>
           </div>
-          {/* Mobile: 4 cols, Desktop: 8 cols */}
           <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 sm:gap-3">
             {[
-              { href: "/jobs/ssc", label: "SSC", emoji: "🏛️", sub: "CGL·CHSL·MTS", color: "from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800/50 hover:border-blue-400" },
-              { href: "/jobs/railway", label: "Railway", emoji: "🚂", sub: "NTPC·GroupD", color: "from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800/50 hover:border-red-400" },
-              { href: "/jobs/banking", label: "Banking", emoji: "🏦", sub: "IBPS·SBI·RBI", color: "from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/10 border-green-200 dark:border-green-800/50 hover:border-green-400" },
-              { href: "/jobs/upsc", label: "UPSC", emoji: "🎖️", sub: "IAS·NDA·CDS", color: "from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 border-purple-200 dark:border-purple-800/50 hover:border-purple-400" },
-              { href: "/jobs/police", label: "Police", emoji: "👮", sub: "UP·Delhi·CISF", color: "from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/10 border-indigo-200 dark:border-indigo-800/50 hover:border-indigo-400" },
-              { href: "/jobs/defence", label: "Defence", emoji: "🛡️", sub: "Army·Navy·AF", color: "from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-900/10 border-orange-200 dark:border-orange-800/50 hover:border-orange-400" },
-              { href: "/jobs/teaching", label: "Teaching", emoji: "📚", sub: "CTET·KVS·NVS", color: "from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-900/10 border-yellow-200 dark:border-yellow-800/50 hover:border-yellow-400" },
-              { href: "/jobs/state-psc", label: "State PSC", emoji: "🏢", sub: "UPPSC·BPSC", color: "from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/10 border-teal-200 dark:border-teal-800/50 hover:border-teal-400" },
+              { href: "/jobs/ssc", label: "SSC", emoji: "🏛️", color: "from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800/50 hover:border-blue-400" },
+              { href: "/jobs/railway", label: "Railway", emoji: "🚂", color: "from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800/50 hover:border-red-400" },
+              { href: "/jobs/banking", label: "Banking", emoji: "🏦", color: "from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/10 border-green-200 dark:border-green-800/50 hover:border-green-400" },
+              { href: "/jobs/upsc", label: "UPSC", emoji: "🎖️", color: "from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 border-purple-200 dark:border-purple-800/50 hover:border-purple-400" },
+              { href: "/jobs/police", label: "Police", emoji: "👮", color: "from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/10 border-indigo-200 dark:border-indigo-800/50 hover:border-indigo-400" },
+              { href: "/jobs/defence", label: "Defence", emoji: "🛡️", color: "from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-900/10 border-orange-200 dark:border-orange-800/50 hover:border-orange-400" },
+              { href: "/jobs/teaching", label: "Teaching", emoji: "📚", color: "from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-900/10 border-yellow-200 dark:border-yellow-800/50 hover:border-yellow-400" },
+              { href: "/jobs/state-psc", label: "State PSC", emoji: "🏢", color: "from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/10 border-teal-200 dark:border-teal-800/50 hover:border-teal-400" },
             ].map((cat) => (
               <Link
                 key={cat.href}
@@ -164,21 +160,19 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <div key={section.id} id={`section-${section.id}`} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+            <div key={section.id} id={`section-${section.id}`} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col">
 
-              {/* Header */}
-              <div className={`bg-gradient-to-r ${section.headerBg} px-3 py-2.5 flex items-center justify-between`}>
-                <div className="flex items-center gap-1.5">
+              <div className={`bg-gradient-to-r ${section.headerBg} px-3.5 py-2.5 flex items-center justify-between`}>
+                <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-white" />
-                  <h3 className="text-white font-bold text-sm">{section.title}</h3>
+                  <h3 className="text-white font-bold text-sm sm:text-base tracking-tight">{section.title}</h3>
                 </div>
-                <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+                <span className="bg-white/20 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
                   {section.items.length} posts
                 </span>
               </div>
 
-              {/* List */}
-              <ul className="divide-y divide-gray-100/50 dark:divide-zinc-800/40">
+              <ul className="divide-y divide-gray-100 dark:divide-zinc-800/60 flex-1">
                 {section.items.map((item, i) => {
                   const st = getJobStatusBadge({
                     category: item.category || section.id,
@@ -188,94 +182,73 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                     status: item.status,
                   });
 
+                  const formattedDate = item.lastDate
+                    ? `Last Date: ${item.lastDate}`
+                    : item.created_at
+                      ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : "";
+
                   return (
                     <li key={i} className="relative">
                       <Link
                         href={`/job/${item.slug}`}
-                        className="flex flex-col px-4.5 py-3 hover:bg-slate-50 dark:hover:bg-zinc-850/50 transition-all group"
+                        className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-850/50 transition-all group"
                       >
-                        {/* Left accent bar on hover */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-top rounded-r-md" />
+                        <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${section.bulletBg}`} />
 
-                        {/* Row 1: dot + title + tag + status badge + Save button */}
-                        <div className="flex items-start justify-between gap-2.5">
-                          <div className="flex items-center gap-2 flex-1 mt-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st.dot}`} />
-                            <span className="flex-1 text-sm font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug group-hover:underline underline-offset-4 decoration-indigo-200 dark:decoration-indigo-850">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className={`text-[13px] sm:text-[14px] font-bold ${section.titleColor} group-hover:underline leading-snug line-clamp-2`}>
                               {item.title}
-                            </span>
-                            <InlineTag tag={item.tag} />
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 ${st.text} ${st.bg}`}>
-                              {st.label}
-                            </span>
+                            </h4>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <InlineTag tag={item.tag} />
+                              {st.label && (
+                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md shrink-0 ${st.text} ${st.bg}`}>
+                                  {st.label}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          
-                          {/* Save for later button */}
-                          <div className="shrink-0 z-10 relative">
-                            <SaveJobButton jobSlug={item.slug} jobTitle={item.title} />
-                          </div>
-                        </div>
 
-                        {/* Row 2: meta info — last date, posts (eligibility hidden on mobile) */}
-                        {(item.lastDate || item.posts || item.eligibility) && (
-                          <div className="flex items-center gap-2 mt-1.5 ml-3.5 flex-wrap">
-                            {item.lastDate && (
-                              <span className={`flex items-center gap-1 text-[11px] font-extrabold ${st.state === "urgent" || st.state === "today" ? "text-red-600 dark:text-red-400 animate-pulse bg-red-50 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 px-1.5 py-0.5 rounded-md" : "text-gray-500 dark:text-gray-400"}`}>
-                                <Calendar className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                                {st.detailText || `Last Date: ${item.lastDate}`}
-                              </span>
-                            )}
-                            {item.posts && (
-                              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800 px-1.5 py-0.5 rounded-md">
-                                <Users className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                                {item.posts} Posts
-                              </span>
-                            )}
-                            {/* Eligibility: hidden on mobile to save vertical space */}
-                            {item.eligibility && (
-                              <span className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800/40 border border-gray-150 dark:border-zinc-800 px-1.5 py-0.5 rounded-md line-clamp-1 max-w-[200px]">
-                                <GraduationCap className="w-3.5 h-3.5 shrink-0 opacity-80" />
-                                {item.eligibility}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                          {formattedDate && (
+                            <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mt-0.5">
+                              {formattedDate}
+                            </p>
+                          )}
+                        </div>
                       </Link>
                     </li>
                   );
                 })}
               </ul>
 
-              {/* Footer */}
-              <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2">
+              <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2 bg-slate-50/50 dark:bg-zinc-900/50">
                 <Link
                   href={`/${section.id}`}
-                  className="flex items-center justify-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className={`flex items-center justify-center gap-1 text-xs font-bold ${section.footerColor} hover:underline`}
                 >
-                  View More <ArrowRight className="w-3.5 h-3.5" />
+                  View All {section.title} <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>
           );
         })}
 
-        {/* ── Employment News Card (6th) ── */}
         {!stateCode && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col">
 
-            {/* Header */}
-            <div className="bg-gradient-to-r from-rose-600 to-pink-500 px-3 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+            <div className="bg-gradient-to-r from-rose-600 to-pink-500 px-3.5 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <Newspaper className="w-4 h-4 text-white" />
-                <h3 className="text-white font-bold text-sm">Employment News</h3>
+                <h3 className="text-white font-bold text-sm sm:text-base tracking-tight">Employment News</h3>
               </div>
-              <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+              <span className="bg-white/20 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
                 {(newsArticles || []).length} articles
               </span>
             </div>
 
-            {/* News List */}
-            <ul className="divide-y divide-gray-50 dark:divide-gray-800/60">
+            <ul className="divide-y divide-gray-100 dark:divide-zinc-800/60 flex-1">
               {(newsArticles || []).length === 0 ? (
                 <li className="px-4 py-6 text-center text-sm text-gray-400">
                   <Newspaper className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -286,19 +259,15 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                   <li key={i} className="relative">
                     <Link
                       href={`/job/${article.slug}`}
-                      className="flex items-start gap-2 px-4 py-2.5 hover:bg-rose-50/50 dark:hover:bg-rose-900/10 transition-all group"
+                      className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-rose-50/50 dark:hover:bg-rose-900/10 transition-all group"
                     >
-                      {/* Left accent bar */}
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500 scale-y-0 group-hover:scale-y-100 transition-transform origin-top rounded-r-md" />
-
-                      {/* Rose dot */}
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0 mt-1.5" />
+                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-1.5" />
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-rose-700 dark:text-rose-400 group-hover:text-rose-800 dark:group-hover:text-rose-300 transition-colors line-clamp-2 leading-snug group-hover:underline underline-offset-4 decoration-rose-200">
+                        <h4 className="text-[13px] sm:text-[14px] font-bold text-rose-700 dark:text-rose-400 group-hover:underline leading-snug line-clamp-2">
                           {article.title}
-                        </p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
+                        </h4>
+                        <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mt-0.5">
                           {new Date(article.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
@@ -310,18 +279,16 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
               )}
             </ul>
 
-            {/* Footer */}
-            <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2">
+            <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2 bg-slate-50/50 dark:bg-zinc-900/50">
               <Link
                 href="/news"
-                className="flex items-center justify-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline"
+                className="flex items-center justify-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline"
               >
                 View All News <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
         )}
-
       </div>
     </section>
   );
