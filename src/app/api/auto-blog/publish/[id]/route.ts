@@ -192,13 +192,16 @@ export async function POST(
       }).catch((e) => console.warn("Auto-translation failed:", e));
     }
 
-    // 6. IndexNow ping (background)
+    // 6. Full instant indexing — all 5 methods (IndexNow + Google Indexing API + Sitemap + PubSub)
+    // Fires in background — does NOT block publish response
     if (postStatus === "active") {
-      fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/index-now`, {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
+      fetch(`${baseUrl}/api/admin/index-now`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: `/job/${slug}` }),
-      }).catch((e) => console.warn("IndexNow ping failed:", e));
+        // Pass slug + category so all 5 indexing methods fire correctly
+        body: JSON.stringify({ slug, category }),
+      }).catch((e) => console.warn("Instant indexing fire failed:", e));
     }
 
     // 7. Push notification (background)

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { runAutoBlogScraper } from "@/lib/auto-blog-scraper";
 
-export const maxDuration = 300;
+// 2 blogs × ~5min AI generation + 5min gap between = ~15min total
+// Vercel Pro allows up to 800s max duration
+export const maxDuration = 800;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
