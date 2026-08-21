@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         const jobPayload: any = {
           title: draft.generated_title,
           slug,
-          blog_content: draft.generated_html,
+          blog_content: (draft.generated_html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
           short_info: draft.short_description || metaDescription,
           meta_description: metaDescription,
           tag: draft.generated_tags?.[0] || null,

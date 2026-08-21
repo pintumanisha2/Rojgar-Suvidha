@@ -75,7 +75,7 @@ export async function POST(
     const jobPayload: any = {
       title,
       slug,
-      blog_content: html,
+      blog_content: (html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
       short_info: draft.short_description || metaDesc,
       meta_description: metaDesc,
       tag: draft.generated_tags?.[0] || null,

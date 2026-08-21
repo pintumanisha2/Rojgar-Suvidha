@@ -171,9 +171,13 @@ export async function generateMetadata(
   const currentYear = new Date().getFullYear().toString();
   const hasYear = job.title.includes("2024") || job.title.includes("2025") || job.title.includes("2026") || job.title.includes("2027");
   const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
-  const title = baseTitle.length <= 50
-    ? `${baseTitle} — Official Notification & Direct Link | Rojgar Suvidha`
-    : `${baseTitle} | Rojgar Suvidha`;
+  // Use absolute title to bypass layout template (prevents double brand name)
+  // Max 65 chars for SERP — keep it clean
+  const cleanBase = baseTitle.slice(0, 55); // trim if very long
+  const titleStr = cleanBase.length <= 42
+    ? `${cleanBase} — Notification, Eligibility & Apply | Rojgar Suvidha`
+    : `${cleanBase} | Rojgar Suvidha`;
+  const title = { absolute: titleStr };
 
   const rawDescription = (job.meta_description || job.short_info || "").trim();
   const categoryFallbacks: Record<string, string> = {
@@ -211,7 +215,7 @@ export async function generateMetadata(
       languages: hreflang.languages,
     },
     openGraph: {
-      title, description,
+      title: titleStr, description,
       url: `${BASE_URL}/job/${slug}`,
       type: "article",
       publishedTime: job.created_at,

@@ -463,6 +463,16 @@ function cleanCompetitorBrands(str: string): string {
     .replace(/ndtv(?:\.com)?/gi, "Rojgar Suvidha");
 }
 
+// ── Strip H1 from blog HTML (SEO: page already has H1 in <h1> tag; AI content must not add another) ──
+// Converts any <h1> in blogHtml to <h2> to prevent double H1 penalty from Google
+function stripH1FromBlog(html: string): string {
+  if (!html) return "";
+  // Convert <h1 ...> to <h2 ...> and </h1> to </h2>
+  return html
+    .replace(/<h1(\s[^>]*)?>/gi, (_, attrs) => `<h2${attrs || ""}>`)  
+    .replace(/<\/h1>/gi, "</h2>");
+}
+
 // ── Slug duplicate check ──────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getUniqueSlug(baseSlug: string, supabase: any): Promise<string> {
@@ -1443,7 +1453,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         generated_title: cleanCompetitorBrands(aiResult.title || item.title),
         generated_meta: cleanCompetitorBrands(aiResult.metaDesc || ""),
         generated_slug: slug,
-        generated_html: cleanCompetitorBrands(aiResult.blogHtml || ""),
+        generated_html: stripH1FromBlog(cleanCompetitorBrands(aiResult.blogHtml || "")),
         generated_tags: aiResult.tag ? [cleanCompetitorBrands(aiResult.tag)] : [],
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
