@@ -1,8 +1,7 @@
 import { 
-  Calendar, CreditCard, Users, GraduationCap, 
-  Link as LinkIcon, Download, Globe, ArrowLeft, 
-  Share2, UploadCloud, CheckCircle2, ChevronRight,
-  MessageCircle, Send
+  Link as LinkIcon, Share2, 
+  MessageCircle, Send, ChevronRight, 
+  BookOpen, Clock, CalendarDays, List
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,17 +11,10 @@ import SaveJobButton from "@/components/ui/SaveJobButton";
 import ShareJobButton from "@/components/ui/ShareJobButton";
 import TrackJobViewWrapper from "@/components/ui/TrackJobViewWrapper";
 import JobAbandonTracker from "@/components/ui/JobAbandonTracker";
-import AgeCalculator from "@/components/ui/AgeCalculator";
 import type { Metadata } from "next";
-import MatchScoreCard from "@/components/ui/MatchScoreCard";
-import SocialProofBadges from "@/components/ui/SocialProofBadges";
-import PushSubscribeWidget from "@/components/ui/PushSubscribeWidget";
-import ApplyFomoBar from "@/components/ui/ApplyFomoBar";
-import FloatingApplyBar from "@/components/ui/FloatingApplyBar";
-import CompetitorTrustBanner from "@/components/ui/CompetitorTrustBanner";
 import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
-import { buildHreflangAlternates, SUPPORTED_LANGUAGES, LANGUAGE_CONFIG } from "@/lib/i18n";
+import { buildHreflangAlternates, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -83,8 +75,30 @@ const DEMO_BLOG_CONTENT = `
 </ol>
 `;
 
+// ── Helper: Extract Table of Contents from blog HTML ──────────────────────────
+function extractTOC(html: string): { text: string; id: string }[] {
+  const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  const headings: { text: string; id: string }[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = h2Regex.exec(html)) !== null) {
+    const text = match[1].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+    if (text.length > 2) {
+      const id = text.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "-").slice(0, 50);
+      headings.push({ text, id });
+    }
+  }
+  return headings.slice(0, 12);
+}
+
+// ── Helper: Estimate reading time ────────────────────────────────────────────
+function estimateReadingTime(html: string): number {
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const words = text.split(" ").filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200)); // 200 wpm average
+}
+
 // ══════════════════════════════════════════════════════════
-// 🔥 DYNAMIC SEO + AEO METADATA FOR EACH JOB
+// DYNAMIC SEO + AEO METADATA
 // ══════════════════════════════════════════════════════════
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -100,16 +114,13 @@ export async function generateMetadata(
 
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
   
-  // Clean SEO title — primary keyword first, ≤70 chars for SERP display
   const currentYear = new Date().getFullYear().toString();
   const hasYear = job.title.includes("2024") || job.title.includes("2025") || job.title.includes("2026") || job.title.includes("2027");
   const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
-  // Keep title concise — add site brand at end only if short enough
   const title = baseTitle.length <= 50
     ? `${baseTitle} — Official Notification & Direct Link | Rojgar Suvidha`
     : `${baseTitle} | Rojgar Suvidha`;
 
-  // Category-aware fallback description — never starts with 'Looking for'
   const rawDescription = (job.meta_description || job.short_info || "").trim();
   const categoryFallbacks: Record<string, string> = {
     "results": `${baseTitle} result released. Check merit list, cutoff marks & direct download link at Rojgar Suvidha. Instant update for all candidates.`,
@@ -124,22 +135,14 @@ export async function generateMetadata(
     ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
     : (fallbackDesc.length > 160 ? `${fallbackDesc.slice(0, 157)}...` : fallbackDesc);
 
-  // Custom social share image (use banner URL if generated, fallback to logo)
   const shareImage = job.banner_url || `${BASE_URL}/og-image.png`;
 
   const keywords = [
-    job.title,
-    `${job.title} ${currentYear}`,
-    `${job.title} sarkari result`,
-    `${job.title} sarkari result ${currentYear}`,
-    `${job.title} apply online`, `${job.title} online form`,
-    `${job.title} notification`, `${job.title} notification pdf`,
-    `${job.title} eligibility`, `${job.title} age limit`,
-    `${job.title} last date`, `${job.title} exam date`,
-    `${job.title} vacancy`, `${job.title} salary`,
-    `${job.title} syllabus`, `${job.title} admit card`,
-    `${job.title} result`, `${job.title} answer key`,
-    "sarkari result alternative", "sarkari naukri form filling app",
+    job.title, `${job.title} ${currentYear}`,
+    `${job.title} sarkari result`, `${job.title} apply online`,
+    `${job.title} notification`, `${job.title} eligibility`,
+    `${job.title} last date`, `${job.title} vacancy`,
+    `${job.title} admit card`, `${job.title} result`,
     "sarkari result", job.category, "rojgar suvidha",
   ];
 
@@ -154,8 +157,7 @@ export async function generateMetadata(
       languages: hreflang.languages,
     },
     openGraph: {
-      title,
-      description,
+      title, description,
       url: `${BASE_URL}/job/${slug}`,
       type: "article",
       publishedTime: job.created_at,
@@ -188,13 +190,13 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     notFound();
   }
 
+  // ── Parse links ──
   let applyLink: string | null = null;
   let customApplyLink: string | null = null;
 
   if (Array.isArray(job.links)) {
     const customObj = job.links.find((l: any) => l.label && typeof l.label === "string" && l.label.toLowerCase().includes("apply for me"));
     if (customObj?.url) customApplyLink = customObj.url;
-
     const applyObj = job.links.find((l: any) => l.label && typeof l.label === "string" && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
     if (applyObj?.url) applyLink = applyObj.url;
   } else if (typeof job.links === "string" && job.links.startsWith("http")) {
@@ -206,27 +208,24 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
         const applyObj = parsed.find((l: any) => l.label && typeof l.label === "string" && (l.label.toLowerCase().includes("apply") || l.label.toLowerCase().includes("online")));
         if (applyObj?.url) applyLink = applyObj.url;
       }
-    } catch (_) { /* silent */ }
+    } catch (_) {}
   }
-
-  // Fallback to official_link if applyLink not set
   if (!applyLink && job.official_link && typeof job.official_link === "string" && job.official_link.startsWith("http")) {
     applyLink = job.official_link;
   }
 
-  // Fetch similar jobs (same category)
+  // ── Fetch similar jobs ──
   const { data: similarJobs } = await supabase
     .from("jobs")
     .select("title, slug, status, category, created_at")
     .eq("category", job.category)
     .neq("id", job.id)
     .order("created_at", { ascending: false })
-    .limit(3);
+    .limit(4);
 
-  // ── Build JSON-LD Structured Data ──
+  // ── Structured Data ──
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
 
-  // 1. BreadcrumbList Schema (SEO - better search appearance)
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -237,15 +236,14 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     ],
   };
 
-  // 2. Article Schema (SEO + GEO - AI engines love this)
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: job.title,
-    description: job.meta_description || job.short_info || `Latest notification for ${job.title}. Apply online now.`,
+    description: job.meta_description || job.short_info || `Latest notification for ${job.title}.`,
     datePublished: job.created_at,
     dateModified: job.updated_at || job.created_at,
-    author: { "@type": "Organization", name: "Rojgar Suvidha", url: BASE_URL },
+    author: { "@type": "Person", name: "Arjun Sharma", url: `${BASE_URL}/about` },
     publisher: {
       "@type": "Organization",
       name: "Rojgar Suvidha",
@@ -258,15 +256,13 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     image: job.banner_url || `${BASE_URL}/og-image.png`,
   };
 
-  // 3. JobPosting Schema (SEO - Google Jobs integration)
   let lastDate = "";
   let lastDateIso = "";
   if (Array.isArray(job.important_dates)) {
     const ldObj = job.important_dates.find((d: any) => d?.label === "Last Date");
-    if (ldObj && ldObj.value) {
+    if (ldObj?.value) {
       lastDate = ldObj.value;
       if (!lastDate.toLowerCase().includes("soon")) {
-        // Try to parse standard dates, fallback to string if invalid
         try {
           const d = new Date(lastDate);
           if (!isNaN(d.getTime())) lastDateIso = d.toISOString();
@@ -275,16 +271,11 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     }
   }
 
-  // Ensure description is HTML or clean text for Google Jobs
-  const jobDescriptionHTML = job.content 
-    ? job.content 
-    : `<p>${job.meta_description || job.short_info || `Apply for ${job.title}`}</p>`;
-  
   const jobPostingSchema = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
-    description: jobDescriptionHTML,
+    description: job.meta_description || job.short_info || `Apply for ${job.title}`,
     datePosted: new Date(job.created_at).toISOString(),
     ...(lastDateIso && { validThrough: lastDateIso }),
     employmentType: job.employment_type || "FULL_TIME",
@@ -292,35 +283,16 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       "@type": "Organization",
       name: job.organization_name || "Government of India",
       sameAs: job.organization_url || BASE_URL,
-      logo: `${BASE_URL}/logo-blue.png`
+      logo: `${BASE_URL}/logo-blue.png`,
     },
     jobLocation: {
       "@type": "Place",
-      address: {
-        "@type": "PostalAddress",
-        addressCountry: "IN",
-        addressRegion: job.state_code || "India",
-      },
+      address: { "@type": "PostalAddress", addressCountry: "IN", addressRegion: job.state_code || "India" },
     },
-    ...(job.salary && {
-      baseSalary: {
-        "@type": "MonetaryAmount",
-        currency: "INR",
-        value: {
-          "@type": "QuantitativeValue",
-          value: job.salary,
-          unitText: "MONTH"
-        }
-      }
-    }),
-    applicantLocationRequirements: {
-      "@type": "Country",
-      name: "India",
-    },
+    applicantLocationRequirements: { "@type": "Country", name: "India" },
     directApply: false,
   };
 
-  // 4. FAQPage Schema for AEO (auto-generate from job data)
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -330,7 +302,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
         name: `How to apply for ${job.title}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `You can apply for ${job.title} through the official website or use Rojgar Suvidha's 'Apply For Me' service. Visit ${BASE_URL}/job/${slug} for direct apply links, step-by-step instructions, and eligibility details.`,
+          text: `You can apply for ${job.title} through the official website. Visit ${BASE_URL}/job/${slug} for direct apply links and step-by-step instructions.`,
         },
       },
       {
@@ -343,16 +315,32 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             : `Please check the official notification for the exact last date. Visit Rojgar Suvidha for real-time updates.`,
         },
       },
-      {
-        "@type": "Question",
-        name: `What is the eligibility for ${job.title}?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `The eligibility criteria for ${job.title} includes educational qualification, age limit, and nationality requirements. Check the full details on Rojgar Suvidha's official job page.`,
-        },
-      },
     ],
   };
+
+  // ── Blog processing ──
+  const blogContent = job.blog_content || DEMO_BLOG_CONTENT;
+  const tocItems = extractTOC(blogContent);
+  const readingTime = estimateReadingTime(blogContent);
+  const formattedDate = new Date(job.created_at).toLocaleDateString("en-IN", {
+    day: "numeric", month: "long", year: "numeric"
+  });
+
+  const isNews = ["news", "news-updates"].includes((job.category || "").toLowerCase());
+  const isResult = (job.category || "").includes("result");
+  const isAdmit = (job.category || "").includes("admit");
+  const isKey = (job.category || "").includes("answer");
+
+  const pageBadge = getJobStatusBadge(job);
+
+  // ── Valid links list ──
+  const validLinks = Array.isArray(job.links)
+    ? job.links.filter((l: any) => l && l.label && typeof l.label === "string" && !l.label.toLowerCase().includes("apply for me"))
+    : typeof job.links === "string" && job.links.startsWith("http")
+    ? [{ label: "Official Notification / Website Link", url: job.links }]
+    : job.official_link && typeof job.official_link === "string" && job.official_link.startsWith("http")
+    ? [{ label: "Official Direct Link", url: job.official_link }]
+    : [];
 
   return (
     <>
@@ -362,562 +350,468 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
 
-      {/* Track this job visit for Recently Viewed feature (client-side) */}
+      {/* Analytics trackers — invisible */}
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
       <JobAbandonTracker jobTitle={job.title} jobSlug={job.slug} />
 
-      {/* Floating Apply Bar — hidden for news category */}
-      {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
-        <FloatingApplyBar
-          applyLink={applyLink}
-          customApplyLink={customApplyLink}
-          jobTitle={job.title}
-          jobSlug={job.slug}
-        />
-      )}
+      <div className="bg-gray-50 dark:bg-[#0a0a0a] min-h-screen">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
 
-      <div className="bg-gray-50 dark:bg-[#000000] min-h-screen py-8 px-4">
-        <div className="max-w-4xl mx-auto space-y-6">
-          
-          {/* Semantic Breadcrumb (SEO + accessibility) */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+          {/* ── Breadcrumb ── */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-5 flex-wrap">
             <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium">Home</Link>
-            <span className="text-gray-300">/</span>
+            <ChevronRight className="w-3 h-3 text-gray-300 shrink-0" />
             <Link href={`/${job.category}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium capitalize">{categoryLabel}</Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-gray-700 dark:text-gray-300 font-semibold truncate max-w-[200px]">{job.title}</span>
+            <ChevronRight className="w-3 h-3 text-gray-300 shrink-0" />
+            <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[220px]">{job.title}</span>
           </nav>
 
-          {/* High-CTR Competitor Intent Hijacking Banner */}
-          <CompetitorTrustBanner jobTitle={job.title} applyUrl={customApplyLink || "/e-suvidha"} />
+          {/* ── MAIN LAYOUT: Content + Sidebar ── */}
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
-          {/* Top Level Quick Action CTA Bar */}
-          {(() => {
-            const cat = (job.category || "").toLowerCase().trim();
-            const isNews = cat.includes("news");
-            const isAdmit = cat.includes("admit");
-            const isResult = cat.includes("result");
-            const isKey = cat.includes("answer") || cat.includes("key");
+            {/* ── LEFT: Main Content Column ── */}
+            <div className="flex-1 min-w-0 space-y-5">
 
-            // News posts — show a simple source/share bar instead of apply actions
-            if (isNews) {
-              return (
-                <div className="bg-white dark:bg-zinc-950 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">📰 Latest News Update</h2>
-                    <p className="text-xs text-gray-500 font-medium">Sourced from official notifications. Always verify from official website before taking action.</p>
-                  </div>
-                  {job.official_link && (
-                    <a
-                      href={job.official_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 text-center shrink-0"
-                    >
-                      Official Source ↗
-                    </a>
-                  )}
-                </div>
-              );
-            }
-
-            let barTitle = "Quick Application Actions";
-            let barDesc = "Direct official application link & premium form filling service.";
-            let primaryBtnLabel = "Apply Official ↗";
-            let secondaryBtnLabel = "Apply For Me ✨";
-            let primaryBg = "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20";
-
-            if (isAdmit) {
-              barTitle = "Official Admit Card Download";
-              barDesc = "Verify your exam center, shift timing & photo ID requirements.";
-              primaryBtnLabel = "Download Admit Card ↗";
-              secondaryBtnLabel = "View Exam Instructions";
-              primaryBg = "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20";
-            } else if (isResult) {
-              barTitle = "Official Result & Selection List";
-              barDesc = "Check selection scorecard and category-wise cutoffs.";
-              primaryBtnLabel = "Check Result ↗";
-              secondaryBtnLabel = "View Scorecard";
-              primaryBg = "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20";
-            } else if (isKey) {
-              barTitle = "Official Answer Key & Objection Portal";
-              barDesc = "Calculate expected score and submit question challenges.";
-              primaryBtnLabel = "View Answer Key ↗";
-              secondaryBtnLabel = "Score Calculator";
-              primaryBg = "bg-purple-600 hover:bg-purple-700 shadow-purple-500/20";
-            }
-
-            return (
-              <div className="bg-white dark:bg-zinc-950 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">{barTitle}</h2>
-                  <p className="text-xs text-gray-500 font-medium">{barDesc}</p>
-                </div>
-                <div className="flex gap-2.5 shrink-0">
-                  {applyLink ? (
-                    <a 
-                      href={applyLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className={`px-5 py-2.5 ${primaryBg} text-white text-xs font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none`}
-                    >
-                      {primaryBtnLabel}
-                    </a>
-                  ) : isAdmit || isResult || isKey ? (
-                    <a 
-                      href="#important-links" 
-                      className={`px-5 py-2.5 ${primaryBg} text-white text-xs font-black rounded-xl shadow-md transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none`}
-                    >
-                      {primaryBtnLabel}
-                    </a>
-                  ) : null}
-
-                  {!isAdmit && !isResult && !isKey && (
-                    <Link 
-                      href={customApplyLink || "/apply-for-me"} 
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 text-center flex-1 sm:flex-none"
-                    >
-                      {secondaryBtnLabel}
-                    </Link>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* 1. Header Section */}
-          {(() => {
-            const pageBadge = getJobStatusBadge(job);
-            return (
-              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-6 md:p-8 shadow-sm relative overflow-hidden mb-6">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -mt-20 -mr-20 pointer-events-none" />
+              {/* ── POST HEADER ── */}
+              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-5 sm:p-7 shadow-sm">
                 
-                <div className="relative z-10">
-                  {/* Real-time Dynamic Status Banner Box — hidden for news */}
-                  {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
-                  <div className={`mb-4 p-3.5 rounded-xl border flex items-center justify-between gap-3 ${pageBadge.bg}`}>
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-2.5 h-2.5 rounded-full ${pageBadge.dot} shrink-0`} />
-                      <div>
-                        <p className={`text-xs font-black uppercase tracking-wide ${pageBadge.text}`}>
-                          STATUS: {pageBadge.label}
-                        </p>
-                        {pageBadge.detailText && (
-                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-0.5">
-                            {pageBadge.detailText}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {pageBadge.state === "closed" ? (
-                      <span className="text-[10px] font-extrabold bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2.5 py-1 rounded-lg shrink-0">
-                        Application Closed
-                      </span>
-                    ) : pageBadge.state === "urgent" || pageBadge.state === "today" ? (
-                      <span className="text-[10px] font-extrabold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 px-2.5 py-1 rounded-lg animate-pulse shrink-0">
-                        Hurry Up!
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-extrabold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg shrink-0">
-                        Official Status Live
-                      </span>
-                    )}
+                {/* Category + Status row */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider ${pageBadge.text} ${pageBadge.bg}`}>
+                    {categoryLabel}
+                  </span>
+                  {!isNews && (
+                    <span className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md ${pageBadge.bg}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${pageBadge.dot} ${pageBadge.state === "urgent" || pageBadge.state === "today" ? "animate-pulse" : ""}`} />
+                      <span className={pageBadge.text}>{pageBadge.label}</span>
+                    </span>
+                  )}
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <LanguageSwitcher
+                      slug={job.slug}
+                      currentLang="en"
+                      availableTranslations={
+                        SUPPORTED_LANGUAGES.filter(l =>
+                          !!(job as any)[`blog_content_${l}`]
+                        )
+                      }
+                    />
+                    <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
                   </div>
-                  )} {/* end news status banner hide */}
+                </div>
 
-                  <div className="flex items-center justify-between gap-2 mb-4">
-                    <div className="inline-flex items-center gap-2">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider ${pageBadge.text} ${pageBadge.bg}`}>
-                        {pageBadge.label}
-                      </span>
-                      <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{job.category.replace("-", " ")}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {/* 🌐 Language Switcher */}
-                      <LanguageSwitcher
-                        slug={job.slug}
-                        currentLang="en"
-                        availableTranslations={
-                          SUPPORTED_LANGUAGES.filter(l =>
-                            !!(job as any)[`blog_content_${l}`]
-                          )
-                        }
-                      />
-                      <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200 dark:border-zinc-800">
-                        <SaveJobButton jobSlug={job.slug} jobTitle={job.title} />
-                      </div>
-                    </div>
-                  </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-3 leading-tight">
-                {job.title}
-              </h1>
-              {job.short_info && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
-                  <span className="font-semibold text-gray-900 dark:text-gray-200">Short Information:</span> {job.short_info}
-                </p>
-              )}
-              {job.important_dates && job.important_dates.length > 0 && (
-                 <p className="text-xs text-gray-500 font-bold bg-gray-50 dark:bg-zinc-900 inline-block px-3 py-1 rounded-full border border-gray-200 dark:border-zinc-800">
-                    Last Updated: {new Date(job.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {/* H1 Title */}
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight mb-3">
+                  {job.title}
+                </h1>
+
+                {/* Short Info (subtitle) */}
+                {job.short_info && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 border-l-4 border-indigo-400 pl-3">
+                    {job.short_info}
                   </p>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+                )}
 
-          <SocialProofBadges slug={job.slug} lastDate={lastDate} category={job.category} />
-
-          {/* FOMO Bar — hidden for news category */}
-          {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
-            <ApplyFomoBar
-              identifier={job.slug}
-              category={job.category || "default"}
-              lastDate={lastDate}
-            />
-          )}
-          
-          {/* Match Score Card — hidden for news */}
-          {!['news', 'news-updates'].includes((job.category || '').toLowerCase()) && (
-            <MatchScoreCard job={{
-              title: job.title,
-              category: job.category,
-              education: job.eligibility || job.education || job.content,
-              ageLimit: job.age_limit || job.age_details || job.content,
-              last_date: lastDate,
-              appFeeGen: job.application_fee || job.fee_detail || job.content,
-              totalPosts: job.total_posts || job.total_vacancy
-            }} />
-          )}
-
-          <PushSubscribeWidget delay={20000} />
-
-          {/* 2. Job Banner (Thumbnail) */}
-          {job.banner_url && (
-            <div className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-zinc-900 shadow-sm bg-gray-50 dark:bg-zinc-950 mb-6">
-              <img 
-                src={job.banner_url} 
-                alt={job.title} 
-                className="w-full h-auto object-contain max-h-[250px] sm:max-h-[350px] mx-auto" 
-              />
-            </div>
-          )}
-
-          {/* 3. Blog Post Content Area (Primary Details / Tables) */}
-          <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-900 p-4 sm:p-8 shadow-sm">
-             <style>{`
-              .blog-content { line-height: 1.75; color: #374151; font-size: 15px; }
-              .dark .blog-content { color: #d1d5db; }
-              .blog-content h1, .blog-content h2 { color: #111827; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem; }
-              .blog-content h3 { color: #1f2937; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; font-size: 1rem; }
-              @media(min-width:640px){
-                .blog-content h1, .blog-content h2 { font-size: 1.5rem; margin-top: 2rem; }
-                .blog-content h3 { font-size: 1.15rem; }
-              }
-              .dark .blog-content h1, .dark .blog-content h2, .dark .blog-content h3 { color: #f9fafb; }
-              .blog-content p { margin-bottom: 0.9rem; }
-              /* ── Table: always scrollable horizontally on mobile ── */
-              .blog-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border-radius: 8px; font-size: 13px; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-              .blog-content thead, .blog-content tbody, .blog-content tr { display: table; width: 100%; table-layout: fixed; }
-              .blog-content th, .blog-content td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; white-space: normal; word-break: break-word; }
-              @media(min-width:640px){
-                .blog-content table { display: table; overflow-x: visible; white-space: normal; }
-                .blog-content thead, .blog-content tbody, .blog-content tr { display: table-row-group; width: auto; }
-                .blog-content tr { display: table-row; }
-                .blog-content th, .blog-content td { padding: 12px 14px; font-size: 14px; }
-              }
-              .blog-content th { background-color: #4f46e5; color: white; font-weight: 700; }
-              .dark .blog-content table, .dark .blog-content th, .dark .blog-content td { border-color: #18181b; }
-              .dark .blog-content th { background-color: #1e1b4b; }
-              .dark .blog-content td { background-color: #000000; color: #d1d5db; }
-              /* ── Hide AI-generated Table of Contents ── */
-              .blog-content div[style*='background:#f9fafb'],
-              .blog-content div[style*="background:#f9fafb"],
-              .blog-content div[style*='background: #f9fafb'],
-              .blog-content div[style*="background: #f9fafb"] { display: none !important; }
-              /* ── Other styles ── */
-              .blog-content img { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
-              .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-all; }
-              .dark .blog-content a { color: #818cf8; }
-              .blog-content ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.9rem; }
-              .blog-content ol { list-style-type: decimal; margin-left: 1.25rem; margin-bottom: 0.9rem; }
-              .blog-content li { margin-bottom: 0.4rem; }
-              /* ── Premium FAQ Accordion (<details>/<summary>) ── */
-              .blog-content details {
-                border: 1.5px solid #e0e7ff;
-                border-radius: 12px;
-                margin-bottom: 10px;
-                overflow: hidden;
-                background: #fafaff;
-                transition: box-shadow 0.2s;
-              }
-              .dark .blog-content details {
-                border-color: #3730a3;
-                background: #0d0d1a;
-              }
-              .blog-content details[open] {
-                box-shadow: 0 4px 20px rgba(79,70,229,0.10);
-                border-color: #6366f1;
-              }
-              .blog-content summary {
-                cursor: pointer;
-                padding: 14px 18px;
-                font-size: 0.9rem;
-                font-weight: 700;
-                color: #1e1b4b;
-                background: linear-gradient(90deg, #eef2ff 0%, #f5f3ff 100%);
-                list-style: none;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                user-select: none;
-                gap: 10px;
-              }
-              .dark .blog-content summary {
-                background: linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%);
-                color: #c7d2fe;
-              }
-              .blog-content summary::-webkit-details-marker { display: none; }
-              .blog-content summary::after {
-                content: '+';
-                font-size: 1.3rem;
-                font-weight: 300;
-                color: #6366f1;
-                flex-shrink: 0;
-                transition: transform 0.25s ease;
-                line-height: 1;
-              }
-              .blog-content details[open] > summary::after {
-                content: '−';
-              }
-              .blog-content details > p,
-              .blog-content details > div {
-                padding: 14px 18px;
-                font-size: 0.875rem;
-                line-height: 1.75;
-                color: #374151;
-                margin: 0;
-                border-top: 1px solid #e0e7ff;
-              }
-              .dark .blog-content details > p,
-              .dark .blog-content details > div {
-                color: #d1d5db;
-                border-top-color: #1e1b4b;
-              }
-              /* Hide JSON-LD script tags from visible output */
-              .blog-content script { display: none !important; }
-             `}</style>
-             
-             <article
-               className="blog-content max-w-none break-words"
-               dangerouslySetInnerHTML={{ __html: job.blog_content || DEMO_BLOG_CONTENT }}
-             />
-
-             <div className="bg-orange-50 dark:bg-orange-900/10 border-l-4 border-orange-500 p-4 rounded-r-lg mt-8">
-               <p className="text-sm text-orange-800 dark:text-orange-200">
-                 <em>Note: If you do not have time or find the process complicated, you can use our premium <strong className="font-bold">Apply For Me</strong> service. Just upload your documents securely, and our expert team will accurately fill out and submit your form.</em>
-               </p>
-             </div>
-          </div>
-
-          {/* ── Important Links — Premium Highlighted Section ── */}
-          {(() => {
-            const validLinks = Array.isArray(job.links)
-              ? job.links.filter((l: any) => l && l.label && typeof l.label === "string" && !l.label.toLowerCase().includes("apply for me"))
-              : typeof job.links === "string" && job.links.startsWith("http")
-              ? [{ label: "Official Notification / Website Link", url: job.links }]
-              : job.official_link && typeof job.official_link === "string" && job.official_link.startsWith("http")
-              ? [{ label: "Official Direct Link", url: job.official_link }]
-              : [];
-
-            if (validLinks.length === 0) return null;
-
-            return (
-              <div id="important-links" className="rounded-2xl overflow-hidden shadow-lg border-2 border-indigo-200 dark:border-indigo-900/60 mt-6">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3">
-                  <div className="bg-white/20 rounded-lg p-1.5">
-                    <LinkIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="font-black text-white text-base tracking-wide">Important Links</h2>
-                    <p className="text-indigo-200 text-xs font-medium">Official direct links — verified & updated</p>
-                  </div>
-                  <span className="ml-auto bg-white/20 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse">
-                    🔴 Live
+                {/* Meta row: Author | Date | Reading time */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-zinc-800">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">A</span>
+                    Arjun Sharma, Rojgar Suvidha
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    {formattedDate}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {readingTime} min read
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    {blogContent.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length} words
                   </span>
                 </div>
-
-                {/* Links List */}
-                <div className="bg-white dark:bg-zinc-950 divide-y divide-gray-100 dark:divide-zinc-900">
-                  {validLinks.map((link: any, idx: number) => {
-                    const lbl = (link.label || "").toLowerCase();
-                    
-                    // Color-code based on link type
-                    const isApply = lbl.includes("apply") || lbl.includes("online form") || lbl.includes("registration");
-                    const isDownload = lbl.includes("pdf") || lbl.includes("download") || lbl.includes("notification") || lbl.includes("syllabus");
-                    const isResult = lbl.includes("result") || lbl.includes("merit") || lbl.includes("scorecard");
-                    const isAdmit = lbl.includes("admit") || lbl.includes("hall ticket");
-                    const isAnswer = lbl.includes("answer") || lbl.includes("key") || lbl.includes("objection");
-
-                    const btnClass = isApply
-                      ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 dark:shadow-indigo-900/20"
-                      : isDownload
-                      ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-200 dark:shadow-orange-900/20"
-                      : isResult
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 dark:shadow-emerald-900/20"
-                      : isAdmit
-                      ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200 dark:shadow-amber-900/20"
-                      : isAnswer
-                      ? "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200 dark:shadow-purple-900/20"
-                      : "bg-gray-800 hover:bg-gray-900 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white";
-
-                    const btnIcon = isApply ? "→" : isDownload ? "↓" : isResult ? "✓" : isAdmit ? "↗" : "↗";
-
-                    // Button label: use link.button_text if set, else use link.label as button text
-                    const buttonLabel = link.button_text || link.label;
-
-                    return (
-                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors group">
-                        {/* Link title */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${isApply ? "bg-indigo-500" : isDownload ? "bg-orange-500" : isResult ? "bg-emerald-500" : isAdmit ? "bg-amber-500" : isAnswer ? "bg-purple-500" : "bg-gray-400"}`} />
-                          <span className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-snug">{link.label}</span>
-                        </div>
-                        {/* CTA Button — shows admin label text */}
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-xl text-xs font-black transition-all hover:-translate-y-0.5 shadow-sm w-full sm:w-auto shrink-0 ${btnClass}`}
-                        >
-                          {buttonLabel} <span>{btnIcon}</span>
-                        </a>
-                      </div>
-                    );
-                  })}
               </div>
 
-              {/* Footer note */}
-              <div className="bg-indigo-50 dark:bg-indigo-950/30 px-5 py-2.5 text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold border-t border-indigo-100 dark:border-indigo-900/40">
-                ⚠️ Always verify links from the official website before applying.
+              {/* ── Banner Image ── */}
+              {job.banner_url && (
+                <div className="w-full rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-sm bg-gray-50 dark:bg-zinc-950">
+                  <img
+                    src={job.banner_url}
+                    alt={job.title}
+                    className="w-full h-auto object-contain max-h-[280px] mx-auto"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+
+              {/* ── Table of Contents (mobile: above article; desktop: left col) ── */}
+              {tocItems.length >= 3 && (
+                <details className="block bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+                  <summary className="flex items-center gap-2 px-5 py-3.5 cursor-pointer select-none font-bold text-sm text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors list-none">
+                    <List className="w-4 h-4 text-indigo-500 shrink-0" />
+                    Table of Contents
+                    <span className="ml-auto text-[11px] text-gray-400 font-normal toc-chevron">(click to expand)</span>
+                  </summary>
+                  <div className="border-t border-gray-100 dark:border-zinc-800 px-5 py-4">
+                    <ol className="space-y-2 counter-reset-list">
+                      {tocItems.map((item, i) => (
+                        <li key={item.id} className="flex gap-2 text-sm">
+                          <span className="text-indigo-400 font-mono text-xs mt-0.5 shrink-0 w-5">{i + 1}.</span>
+                          <a
+                            href={`#${item.id}`}
+                            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline transition-colors font-medium leading-snug"
+                          >
+                            {item.text}
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </details>
+              )}
+
+              {/* ── BLOG CONTENT ── */}
+              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 sm:p-8 shadow-sm">
+                <style>{`
+                  .blog-content { line-height: 1.8; color: #374151; font-size: 15px; }
+                  .dark .blog-content { color: #d1d5db; }
+                  .blog-content h2 {
+                    color: #111827; font-weight: 800;
+                    margin-top: 2rem; margin-bottom: 0.75rem;
+                    font-size: 1.25rem; line-height: 1.3;
+                    padding-bottom: 0.4rem;
+                    border-bottom: 2px solid #e0e7ff;
+                    scroll-margin-top: 80px;
+                  }
+                  .dark .blog-content h2 { color: #f1f5f9; border-bottom-color: #1e1b4b; }
+                  .blog-content h3 {
+                    color: #1f2937; font-weight: 700;
+                    margin-top: 1.5rem; margin-bottom: 0.5rem;
+                    font-size: 1.05rem;
+                    scroll-margin-top: 80px;
+                  }
+                  .dark .blog-content h3 { color: #e2e8f0; }
+                  @media(min-width:640px){
+                    .blog-content h2 { font-size: 1.45rem; }
+                    .blog-content h3 { font-size: 1.15rem; }
+                  }
+                  .blog-content p { margin-bottom: 1rem; }
+                  .blog-content table {
+                    width: 100%; border-collapse: collapse;
+                    margin: 1.25rem 0 1.5rem; border-radius: 10px;
+                    font-size: 13.5px; overflow: hidden;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+                    display: block; overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                  }
+                  @media(min-width:640px){ .blog-content table { display: table; } }
+                  .blog-content th {
+                    background: #4f46e5; color: white;
+                    font-weight: 700; padding: 10px 14px; text-align: left;
+                    white-space: nowrap;
+                  }
+                  .dark .blog-content th { background: #3730a3; }
+                  .blog-content td {
+                    border: 1px solid #e5e7eb;
+                    padding: 9px 14px; text-align: left;
+                    vertical-align: top;
+                  }
+                  .dark .blog-content td { border-color: #27272a; background: #09090b; color: #d4d4d8; }
+                  .blog-content tr:nth-child(even) td { background: #f9fafb; }
+                  .dark .blog-content tr:nth-child(even) td { background: #111113; }
+                  .blog-content img { max-width: 100%; border-radius: 10px; margin: 1.25rem 0; }
+                  .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-all; font-weight: 500; }
+                  .dark .blog-content a { color: #818cf8; }
+                  .blog-content ul { list-style-type: disc; margin-left: 1.4rem; margin-bottom: 1rem; }
+                  .blog-content ol { list-style-type: decimal; margin-left: 1.4rem; margin-bottom: 1rem; }
+                  .blog-content li { margin-bottom: 0.45rem; line-height: 1.65; }
+                  /* FAQ Accordion */
+                  .blog-content details {
+                    border: 1.5px solid #e0e7ff;
+                    border-radius: 12px;
+                    margin-bottom: 10px;
+                    overflow: hidden;
+                    background: #fafaff;
+                  }
+                  .dark .blog-content details { border-color: #3730a3; background: #0d0d1a; }
+                  .blog-content details[open] { border-color: #6366f1; box-shadow: 0 2px 12px rgba(99,102,241,0.10); }
+                  .blog-content summary {
+                    cursor: pointer; padding: 13px 18px;
+                    font-size: 0.9rem; font-weight: 700;
+                    color: #1e1b4b;
+                    background: linear-gradient(90deg, #eef2ff 0%, #f5f3ff 100%);
+                    list-style: none; display: flex;
+                    align-items: center; justify-content: space-between;
+                    user-select: none; gap: 10px;
+                  }
+                  .dark .blog-content summary {
+                    background: linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%);
+                    color: #c7d2fe;
+                  }
+                  .blog-content summary::-webkit-details-marker { display: none; }
+                  .blog-content summary::after {
+                    content: '+'; font-size: 1.3rem; font-weight: 300;
+                    color: #6366f1; flex-shrink: 0; line-height: 1;
+                  }
+                  .blog-content details[open] > summary::after { content: '−'; }
+                  .blog-content details > p,
+                  .blog-content details > div {
+                    padding: 13px 18px; font-size: 0.875rem;
+                    line-height: 1.75; color: #374151; margin: 0;
+                    border-top: 1px solid #e0e7ff;
+                  }
+                  .dark .blog-content details > p,
+                  .dark .blog-content details > div { color: #d1d5db; border-top-color: #1e1b4b; }
+                  .blog-content script { display: none !important; }
+                  /* Blockquote */
+                  .blog-content blockquote {
+                    border-left: 4px solid #6366f1;
+                    background: #f5f3ff; padding: 12px 18px;
+                    border-radius: 0 8px 8px 0; margin: 1rem 0;
+                    font-style: italic; color: #4338ca;
+                  }
+                  .dark .blog-content blockquote { background: #1e1b4b; color: #c7d2fe; }
+                  /* Strong highlight */
+                  .blog-content strong { color: #111827; }
+                  .dark .blog-content strong { color: #f1f5f9; }
+                  /* Important box styles from blogHtml */
+                  .blog-content div[style*="background:#f0fdf4"],
+                  .blog-content div[style*="background: #f0fdf4"] { border-radius: 12px !important; }
+                `}</style>
+
+                <article
+                  className="blog-content max-w-none break-words"
+                  dangerouslySetInnerHTML={{ __html: blogContent }}
+                />
               </div>
-            </div>
-            );
-          })()}
 
-          {/* Middle Banner Ad */}
-          <AdSensePlaceholder format="leaderboard" />
-
-          {(() => {
-            const customApplyLink = Array.isArray(job.links) 
-              ? job.links.find((l: any) => l?.label && typeof l.label === "string" && l.label.toLowerCase().includes('apply for me'))?.url 
-              : null;
-            return (
-              <div className="relative rounded-2xl overflow-hidden mt-8 shadow-2xl shadow-orange-500/10 border border-orange-200/50 dark:border-orange-900/50">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-rose-600 dark:from-orange-600 dark:to-rose-800 opacity-95"></div>
-                <div className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-                  
-                  <div className="flex items-center gap-5 w-full sm:w-auto">
-                    <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl shrink-0 shadow-inner">
-                      <UploadCloud className="w-8 h-8 text-white" />
-                    </div>
+              {/* ── Important Links Section ── */}
+              {validLinks.length > 0 && (
+                <div id="important-links" className="rounded-2xl overflow-hidden shadow-md border border-gray-200 dark:border-zinc-800">
+                  <div className="bg-indigo-600 dark:bg-indigo-700 px-5 py-4 flex items-center gap-3">
+                    <LinkIcon className="w-5 h-5 text-white shrink-0" />
                     <div>
-                      <h3 className="text-xl font-black text-white mb-1 tracking-wide">Form Bharne Ka Time Nahi?</h3>
-                      <p className="text-orange-100 text-sm font-medium">Upload documents & let our expert team safely apply for you.</p>
+                      <h2 className="font-black text-white text-base">Important Links</h2>
+                      <p className="text-indigo-200 text-xs font-medium">Official direct links — verified & updated</p>
                     </div>
                   </div>
-                  
+                  <div className="bg-white dark:bg-zinc-950 divide-y divide-gray-100 dark:divide-zinc-900">
+                    {validLinks.map((link: any, idx: number) => {
+                      const lbl = (link.label || "").toLowerCase();
+                      const isApply = lbl.includes("apply") || lbl.includes("online form") || lbl.includes("registration");
+                      const isDownload = lbl.includes("pdf") || lbl.includes("download") || lbl.includes("notification") || lbl.includes("syllabus");
+                      const isResultLink = lbl.includes("result") || lbl.includes("merit") || lbl.includes("scorecard");
+                      const isAdmitLink = lbl.includes("admit") || lbl.includes("hall ticket");
+                      const isAnswer = lbl.includes("answer") || lbl.includes("key") || lbl.includes("objection");
+
+                      const btnClass = isApply
+                        ? "bg-indigo-600 hover:bg-indigo-700 text-white"
+                        : isDownload
+                        ? "bg-orange-500 hover:bg-orange-600 text-white"
+                        : isResultLink
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        : isAdmitLink
+                        ? "bg-amber-500 hover:bg-amber-600 text-white"
+                        : isAnswer
+                        ? "bg-purple-600 hover:bg-purple-700 text-white"
+                        : "bg-gray-800 hover:bg-gray-900 text-white";
+
+                      return (
+                        <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-zinc-900/50 transition-colors">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{link.label}</span>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold transition-all hover:-translate-y-0.5 w-full sm:w-auto shrink-0 ${btnClass}`}
+                          >
+                            {link.button_text || link.label} ↗
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="bg-gray-50 dark:bg-zinc-900 px-5 py-2.5 text-[11px] text-gray-500 dark:text-gray-400 font-medium border-t border-gray-100 dark:border-zinc-800">
+                    Always verify links from the official website before applying.
+                  </div>
+                </div>
+              )}
+
+              {/* ── Apply For Me CTA (clean, simple) ── */}
+              {!isResult && !isKey && !isNews && (
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1">
+                      Need Help Filling This Form?
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Our expert team applies accurately on your behalf — documents, fees, and submission handled.{" "}
+                      <span className="text-indigo-600 dark:text-indigo-400 font-semibold">100% error-free guarantee.</span>
+                    </p>
+                  </div>
                   {customApplyLink ? (
-                    <Link href={customApplyLink} target={customApplyLink.startsWith("http") ? "_blank" : "_self"} className="shrink-0 w-full sm:w-auto text-center bg-white text-orange-600 hover:scale-105 hover:bg-orange-50 px-8 py-4 rounded-xl font-black shadow-xl transition-all duration-300">
-                      Apply For Me Now →
+                    <Link
+                      href={customApplyLink}
+                      target={customApplyLink.startsWith("http") ? "_blank" : "_self"}
+                      className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5 shadow-md shadow-indigo-500/20 whitespace-nowrap"
+                    >
+                      Apply For Me →
                     </Link>
                   ) : (
-                    <span 
-                      title="Special 'Apply For Me' service for this job will be activated soon. Stay tuned!"
-                      className="shrink-0 w-full sm:w-auto text-center bg-white/20 text-white px-8 py-4 rounded-xl font-bold border border-white/30 cursor-not-allowed"
-                    >
+                    <span className="shrink-0 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400 px-6 py-3 rounded-xl font-bold text-sm border border-indigo-200 dark:border-indigo-700 cursor-default whitespace-nowrap">
                       Coming Soon
                     </span>
                   )}
                 </div>
+              )}
+
+              {/* ── Middle Ad ── */}
+              <AdSensePlaceholder format="leaderboard" />
+
+              {/* ── Share Section ── */}
+              <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
+                    <Share2 className="w-4 h-4 text-indigo-500" /> Share with Friends
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Help someone get a government job.</p>
+                </div>
+                <div className="flex w-full sm:w-auto gap-2.5 flex-wrap">
+                  <a
+                    href={`https://api.whatsapp.com/send?text=*${encodeURIComponent(job.title)}*%0A%0ACheck Here: https://rojgarsuvidha.com/job/${slug}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:-translate-y-0.5"
+                  >
+                    <MessageCircle className="w-4 h-4" /> WhatsApp
+                  </a>
+                  <a
+                    href={`https://t.me/share/url?url=https://rojgarsuvidha.com/job/${slug}&text=${encodeURIComponent(job.title)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:-translate-y-0.5"
+                  >
+                    <Send className="w-4 h-4" /> Telegram
+                  </a>
+                  <ShareJobButton url={`https://www.rojgarsuvidha.com/job/${slug}`} title={job.title} />
+                </div>
               </div>
-            );
-          })()}
 
-          {/* 5. Age Calculator (Check Eligibility) */}
-          <AgeCalculator />
+              {/* ── Similar Posts ── */}
+              {similarJobs && similarJobs.length > 0 && (
+                <div>
+                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <span className="w-1 h-5 bg-indigo-500 rounded-full inline-block" />
+                    You May Also Like
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {similarJobs.map((simJob: any) => (
+                      <Link
+                        href={`/job/${simJob.slug}`}
+                        key={simJob.slug}
+                        className="group bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-4 hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700/50 flex flex-col justify-between"
+                      >
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                            {simJob.category?.replace(/-/g, " ")}
+                          </span>
+                          <h4 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 mt-2">
+                            {simJob.title}
+                          </h4>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs font-semibold text-gray-500">
+                          <span>{new Date(simJob.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                          <span className="text-indigo-500 group-hover:translate-x-0.5 transition-transform">View →</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          {/* 6. Viral Share Module */}
-          <div className="bg-white dark:bg-zinc-950 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-2 h-full bg-gradient-to-b from-[#25D366] to-[#0088cc]"></div>
-            <div>
-              <h3 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-indigo-500" /> Share with Friends & Study Groups
-              </h3>
-              <p className="text-xs text-gray-500 mt-1 font-medium">Help someone get a government job by sharing this update.</p>
+              {/* ── Bottom Ad ── */}
+              <AdSensePlaceholder format="responsive" />
+
             </div>
-            <div className="flex w-full sm:w-auto gap-3 flex-wrap">
-              <a 
-                href={`https://api.whatsapp.com/send?text=🔥 *${encodeURIComponent(job.title)}* %0A%0AApply Here: https://rojgarsuvidha.com/job/${slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#25D366]/20 transition-all hover:-translate-y-0.5"
-              >
-                <MessageCircle className="w-5 h-5" /> WhatsApp
-              </a>
-              <a 
-                href={`https://t.me/share/url?url=https://rojgarsuvidha.com/job/${slug}&text=🔥 ${encodeURIComponent(job.title)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#0088cc]/20 transition-all hover:-translate-y-0.5"
-              >
-                <Send className="w-5 h-5" /> Telegram
-              </a>
-              {/* Copy Link button */}
-              <ShareJobButton url={`https://www.rojgarsuvidha.com/job/${slug}`} title={job.title} />
-            </div>
+            {/* ── END LEFT COLUMN ── */}
+
+            {/* ── RIGHT: Sticky Sidebar (desktop only) ── */}
+            <aside className="hidden lg:block w-72 shrink-0">
+              <div className="sticky top-20 space-y-4">
+
+                {/* Quick Facts Box */}
+                {!isNews && (
+                  <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                    <div className="bg-indigo-600 dark:bg-indigo-700 px-4 py-3">
+                      <h2 className="text-white font-black text-sm">Quick Information</h2>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+                      {[
+                        { label: "Category", value: categoryLabel },
+                        { label: "Last Date", value: lastDate || "Check Notification" },
+                        { label: "Total Posts", value: job.total_posts || job.total_vacancy || "Check Notification" },
+                        { label: "Fee (Gen)", value: job.application_fee || job.fee_gen || "Check Notification" },
+                        { label: "Status", value: pageBadge.label },
+                      ].map((item) => item.value ? (
+                        <div key={item.label} className="flex items-start justify-between px-4 py-2.5 gap-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium shrink-0">{item.label}</span>
+                          <span className="text-xs text-gray-900 dark:text-gray-100 font-bold text-right">{item.value}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Apply Button Sidebar */}
+                {applyLink && !isNews && (
+                  <a
+                    href={applyLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`block w-full text-center py-3.5 rounded-xl font-black text-sm text-white transition-all hover:-translate-y-0.5 shadow-md ${
+                      isResult ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20" :
+                      isAdmit ? "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20" :
+                      isKey ? "bg-purple-600 hover:bg-purple-700 shadow-purple-500/20" :
+                      "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
+                    }`}
+                  >
+                    {isResult ? "Check Result ↗" : isAdmit ? "Download Admit Card ↗" : isKey ? "View Answer Key ↗" : "Apply Online ↗"}
+                  </a>
+                )}
+
+                {/* Related Category Links */}
+                <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm p-4">
+                  <h3 className="font-black text-gray-900 dark:text-white text-sm mb-3">Browse More</h3>
+                  <div className="space-y-2">
+                    {[
+                      { href: "/latest-jobs", label: "Latest Sarkari Jobs 2026" },
+                      { href: "/results", label: "Sarkari Result 2026" },
+                      { href: "/admit-card", label: "Admit Card 2026" },
+                      { href: "/answer-key", label: "Answer Key 2026" },
+                      { href: "/admission", label: "Admission 2026" },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors group py-1"
+                      >
+                        <span>{link.label}</span>
+                        <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sidebar Ad */}
+                <AdSensePlaceholder format="responsive" />
+
+              </div>
+            </aside>
+            {/* ── END SIDEBAR ── */}
+
           </div>
+          {/* ── END MAIN LAYOUT ── */}
 
-          {/* Content Banner Ad */}
-          <AdSensePlaceholder format="responsive" />
-
-          {/* SIMILAR JOBS SECTION */}
-          {similarJobs && similarJobs.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span> 
-                You May Also Like
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {similarJobs.map((simJob: any) => (
-                  <Link href={`/job/${simJob.slug}`} key={simJob.slug} className="group bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-900 rounded-2xl p-4 hover:shadow-md transition-all hover:border-indigo-300 dark:hover:border-indigo-700/50 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
-                          {simJob.category}
-                        </span>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-zinc-900 px-2 py-0.5 rounded-md">
-                          {simJob.status}
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
-                        {simJob.title}
-                      </h4>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between text-xs font-semibold text-gray-500">
-                      <span>View Details</span>
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 5. Important Links — moved above (now shows right after article) */}
         </div>
       </div>
     </>
