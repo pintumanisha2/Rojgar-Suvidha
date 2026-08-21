@@ -18,61 +18,14 @@ import { buildHreflangAlternates, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
-const DEMO_BLOG_CONTENT = `
-<h2>SSC CGL 2026 Notification Out: Apply Online for 15,000+ Vacancies</h2>
-<p>The Staff Selection Commission (SSC) has released the official notification for the Combined Graduate Level (CGL) Examination 2026. Eligible graduates can apply online through the official portal or use our <strong>Apply For Me</strong> service for an error-free application process.</p>
-
-<h3>Important Dates</h3>
-<table>
-  <thead>
-    <tr>
-      <th>Event</th>
-      <th>Date</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Application Start Date</td>
-      <td><strong>15th May 2026</strong></td>
-    </tr>
-    <tr>
-      <td>Last Date to Apply Online</td>
-      <td><strong>14th June 2026</strong></td>
-    </tr>
-    <tr>
-      <td>Last Date for Fee Payment</td>
-      <td>15th June 2026</td>
-    </tr>
-    <tr>
-      <td>Tier 1 Exam Date</td>
-      <td>August - September 2026</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Application Fee</h3>
-<ul>
-  <li><strong>General / OBC / EWS:</strong> ₹100/-</li>
-  <li><strong>SC / ST / PH:</strong> ₹0/- (Exempted)</li>
-  <li><strong>All Category Females:</strong> ₹0/- (Exempted)</li>
-</ul>
-<p><em>Payment Mode:</em> Pay the examination fee via Debit Card, Credit Card, Net Banking, or UPI.</p>
-
-<h3>Age Limit (As on 01-08-2026)</h3>
-<p>Minimum Age: <strong>18 Years</strong><br>Maximum Age: <strong>27 - 32 Years</strong> (Post Wise)</p>
-<p><em>Age Relaxation Extra as per SSC CGL 2026 Recruitment Rules.</em></p>
-
-<h3>Eligibility Criteria</h3>
-<p>Candidates must have passed a <strong>Bachelor's Degree</strong> in any stream from a recognized university in India. For some specific posts like JSO (Junior Statistical Officer), a Bachelor's degree with minimum 60% marks in Mathematics at 12th standard is required.</p>
-
-<h2>How to Apply Online?</h2>
-<ol>
-  <li>Scroll down to the "Important Links" section below.</li>
-  <li>Click on the "Apply Online" link.</li>
-  <li>Register using your basic details and Aadhar card.</li>
-  <li>Upload your photo and signature strictly according to the SSC guidelines to avoid rejection.</li>
-  <li>Pay the fee and print the final receipt.</li>
-</ol>
+// Proper fallback when blog content is missing — never show fake demo content
+const CONTENT_LOADING_PLACEHOLDER = `
+<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:16px;padding:28px 24px;text-align:center;margin:2rem 0;">
+  <div style="font-size:2.5rem;margin-bottom:12px;">&#9998;</div>
+  <h2 style="color:#1d4ed8;font-size:1.2rem;font-weight:800;margin:0 0 8px;">Content Being Updated</h2>
+  <p style="color:#374151;font-size:0.9rem;margin:0 0 16px;line-height:1.7;">Hamari team is compiling complete details for this notification. Please check back in a few minutes or visit the official website directly using the links below.</p>
+  <p style="color:#6b7280;font-size:0.8rem;margin:0;">Rojgar Suvidha — Updated within 30 minutes of official release.</p>
+</div>
 `;
 
 // ── Helper: Extract Table of Contents from blog HTML ──────────────────────────
@@ -377,8 +330,11 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     ],
   };
 
-  // ── Blog processing ──
-  const blogContent = job.blog_content || DEMO_BLOG_CONTENT;
+  // ── Blog processing — NEVER show DEMO or fake content ──
+  const blogContent = (job.blog_content && job.blog_content.length > 100)
+    ? job.blog_content
+    : CONTENT_LOADING_PLACEHOLDER;
+  const hasRealContent = job.blog_content && job.blog_content.length > 100;
   const tocItems = extractTOC(blogContent);
   const readingTime = estimateReadingTime(blogContent);
   const formattedDate = new Date(job.created_at).toLocaleDateString("en-IN", {
@@ -481,6 +437,13 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     <CalendarDays className="w-3.5 h-3.5" />
                     {formattedDate}
                   </span>
+                  {/* Last Updated — show if different from created_at (freshness signal for users & Google) */}
+                  {job.updated_at && job.updated_at !== job.created_at && (
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Updated: {new Date(job.updated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5" />
                     {readingTime} min read
