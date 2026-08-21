@@ -1327,12 +1327,12 @@ CRITICAL JSON SYNTAX RULE
 
   const models = [
     // ── VERIFIED working models (August 2026) — in order of preference ──
-    "gemini-2.5-flash",           // Best quality, fast — primary
-    "gemini-2.5-flash-lite-preview-06-17", // Lighter, quota-friendly
-    "gemini-2.0-flash",           // Stable fallback
-    "gemini-2.0-flash-lite",      // Fast fallback
-    "gemini-1.5-flash",           // Reliable older model
-    "gemini-1.5-flash-8b",        // Smallest, last resort
+    "gemini-2.5-flash",                     // Best quality, fast — primary
+    "gemini-2.0-flash",                     // Stable fallback (high RPD quota)
+    "gemini-2.0-flash-lite",                // Fast fallback
+    "gemini-2.5-flash-lite-preview-06-17", // Lighter flash variant
+    "gemini-1.5-flash",                     // Reliable older model
+    "gemini-1.5-flash-8b",                  // Smallest, last resort
   ];
 
   let lastError = "";
@@ -1496,9 +1496,11 @@ CRITICAL JSON SYNTAX RULE
     console.warn("⚠️  All Gemini API keys exhausted. Switching to Groq fallback...");
 
     const groqModels = [
+      // ── VERIFIED Groq models (August 2026) — mixtral decommissioned, replaced ──
       "llama-3.3-70b-versatile",   // Best quality — 32k context — primary
-      "llama-3.1-8b-instant",      // Fast, lightweight — reliable fallback
-      "mixtral-8x7b-32768",        // Wide context — last resort
+      "llama-3.1-8b-instant",      // Fast, lightweight — reliable
+      "gemma2-9b-it",              // Google Gemma 2 — replaces decommissioned mixtral
+      "llama3-70b-8192",           // Legacy but stable — last resort
     ];
 
     for (const groqModel of groqModels) {
@@ -1537,8 +1539,14 @@ CRITICAL JSON SYNTAX RULE
         // ── Error handling ──
         if (groqData.error) {
           const groqErrMsg = groqData.error.message || JSON.stringify(groqData.error);
-          console.warn(`   ⚠️ Groq/${groqModel} error: ${groqErrMsg.slice(0, 100)}`);
+          console.warn(`   ⚠️ Groq/${groqModel} error: ${groqErrMsg.slice(0, 120)}`);
           lastError = `groq/${groqModel}: ${groqErrMsg}`;
+
+          // Decommissioned / deprecated model — skip immediately, no retry
+          if (/decommissioned|no longer supported|deprecated|not supported/i.test(groqErrMsg)) {
+            console.warn(`   🚫 Groq/${groqModel} permanently decommissioned — skipping`);
+            continue;
+          }
           // Rate limit on this model → try next
           if (/rate.?limit|429|quota|too many/i.test(groqErrMsg)) {
             console.warn(`   ⛔ Groq rate limit on ${groqModel} — trying next Groq model`);
