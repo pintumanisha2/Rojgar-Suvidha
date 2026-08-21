@@ -1496,11 +1496,11 @@ CRITICAL JSON SYNTAX RULE
     console.warn("⚠️  All Gemini API keys exhausted. Switching to Groq fallback...");
 
     const groqModels = [
-      // ── VERIFIED Groq models (August 2026) — mixtral decommissioned, replaced ──
-      "llama-3.3-70b-versatile",   // Best quality — 32k context — primary
-      "llama-3.1-8b-instant",      // Fast, lightweight — reliable
-      "gemma2-9b-it",              // Google Gemma 2 — replaces decommissioned mixtral
-      "llama3-70b-8192",           // Legacy but stable — last resort
+      // ── VERIFIED ACTIVE Groq models (August 2026) — live tested ──
+      // Groq decommissioned: llama-3.x, mixtral, gemma2 (all gone)
+      "openai/gpt-oss-120b",     // 120B model — best quality on Groq right now
+      "openai/gpt-oss-20b",      // 20B — fast, reliable fallback
+      "qwen/qwen3.6-27b",        // Qwen 27B — good fallback (has <think> tags, handled below)
     ];
 
     for (const groqModel of groqModels) {
@@ -1565,6 +1565,7 @@ CRITICAL JSON SYNTAX RULE
         let groqParsed: any;
         try {
           const groqCleaned = groqRawJson
+            .replace(/<think>[\s\S]*?<\/think>/gi, "")  // Strip Qwen <think> reasoning blocks
             .replace(/^```json?\s*/i, "")
             .replace(/```\s*$/i, "")
             .trim();
