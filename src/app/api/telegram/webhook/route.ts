@@ -262,7 +262,7 @@ export async function POST(request: Request) {
 
         // 8. Instantly notify Google, Bing, Yandex to crawl the new page
         // Non-blocking — runs in background, never delays the response
-        notifySearchEngines(slug).catch((e) => console.warn("[Indexing] Error:", e));
+        notifySearchEngines(slug, draft.category || "latest-jobs").catch((e) => console.warn("[Indexing] Error:", e));
 
         return NextResponse.json({ ok: true });
       }
