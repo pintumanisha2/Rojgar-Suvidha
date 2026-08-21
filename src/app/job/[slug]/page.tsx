@@ -100,17 +100,29 @@ export async function generateMetadata(
 
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
   
-  // Dynamic pSEO title incorporating competitor search intent terms (Sarkari Result, etc.)
+  // Clean SEO title — primary keyword first, ≤70 chars for SERP display
   const currentYear = new Date().getFullYear().toString();
   const hasYear = job.title.includes("2024") || job.title.includes("2025") || job.title.includes("2026") || job.title.includes("2027");
   const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
-  const title = `${baseTitle} (Sarkari Result Update) – Direct Apply Online, Eligibility & Fee | Rojgar Suvidha`;
-  
-  // Custom SEO description written by AI Super Writer / Admin, fallback to short_info or template
+  // Keep title concise — add site brand at end only if short enough
+  const title = baseTitle.length <= 50
+    ? `${baseTitle} — Official Notification & Direct Link | Rojgar Suvidha`
+    : `${baseTitle} | Rojgar Suvidha`;
+
+  // Category-aware fallback description — never starts with 'Looking for'
   const rawDescription = (job.meta_description || job.short_info || "").trim();
-  const description = rawDescription.length > 10 
+  const categoryFallbacks: Record<string, string> = {
+    "results": `${baseTitle} result released. Check merit list, cutoff marks & direct download link at Rojgar Suvidha. Instant update for all candidates.`,
+    "admit-card": `${baseTitle} admit card released. Download your hall ticket directly from Rojgar Suvidha. Check exam date, centre & important instructions.`,
+    "answer-key": `${baseTitle} answer key released. Download PDF, calculate your score & raise objections. Direct link at Rojgar Suvidha.`,
+    "admission": `${baseTitle} admission open. Check eligibility, important dates, fee structure & apply online. Full details at Rojgar Suvidha.`,
+    "news": `${baseTitle} — Latest update for all government job aspirants. Check full details, impact analysis & advisory at Rojgar Suvidha.`,
+  };
+  const fallbackDesc = categoryFallbacks[job.category || ""] 
+    || `${baseTitle} notification out. Check eligibility, vacancy, last date, fee & direct apply link. Full details at Rojgar Suvidha — India's trusted Sarkari Naukri portal.`;
+  const description = rawDescription.length > 10
     ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
-    : `Looking for ${job.title} Sarkari Result update? Check official notification, eligibility, syllabus, admit card & 1-Click Apply For Me service at Rojgar Suvidha.`;
+    : (fallbackDesc.length > 160 ? `${fallbackDesc.slice(0, 157)}...` : fallbackDesc);
 
   // Custom social share image (use banner URL if generated, fallback to logo)
   const shareImage = job.banner_url || `${BASE_URL}/og-image.png`;
