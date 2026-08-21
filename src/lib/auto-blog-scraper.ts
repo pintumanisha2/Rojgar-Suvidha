@@ -674,7 +674,8 @@ Add this green Apply button after the How to Apply steps:
     weekday: "long", day: "numeric", month: "long", year: "numeric"
   });
 
-  const cleanedRawText = sanitizeSourceText(rawText);
+  // Cap reference text to 12,000 chars (~3,000 tokens) to prevent prompt bloat & token limit errors
+  const cleanedRawText = sanitizeSourceText(rawText).slice(0, 12000);
 
   const enrichedContext = `
 SOURCE TITLE: ${cleanCompetitorBrands(sourceTitle)}
@@ -1326,13 +1327,12 @@ CRITICAL JSON SYNTAX RULE
 
 
   const models = [
-    // ── VERIFIED working models (August 2026) — in order of preference ──
-    "gemini-2.5-flash",                     // Best quality, fast — primary
-    "gemini-2.0-flash",                     // Stable fallback (high RPD quota)
-    "gemini-2.0-flash-lite",                // Fast fallback
-    "gemini-2.5-flash-lite-preview-06-17", // Lighter flash variant
-    "gemini-1.5-flash",                     // Reliable older model
-    "gemini-1.5-flash-8b",                  // Smallest, last resort
+    // ── VERIFIED ACTIVE Google Gemini models (API Listed) ──
+    "gemini-3.6-flash",         // Primary model — fast, high quality, active
+    "gemini-3.7-flash",         // Latest 3.7 Flash model
+    "gemini-3.5-flash",         // Stable 3.5 Flash model
+    "gemini-flash-latest",      // Google's dynamic alias (always maps to active Flash)
+    "gemini-2.5-flash",         // 2.5 Flash fallback
   ];
 
   let lastError = "";
