@@ -457,22 +457,100 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 </div>
               </div>
 
-              {/* ── Banner Image ── */}
-              {job.banner_url && (
-                <div className="w-full rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-sm bg-gray-50 dark:bg-zinc-950">
-                  {/* eager + fetchpriority=high: fixes LCP — hero image must not be lazy loaded */}
-                  <img
-                    src={job.banner_url}
-                    alt={job.title}
-                    className="w-full h-auto object-contain max-h-[280px] mx-auto"
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="sync"
-                    width={1200}
-                    height={630}
-                  />
-                </div>
-              )}
+              {/* ── PROFESSIONAL GRAPHIC DESIGNER BANNER ── */}
+              {(() => {
+                const catKey = (job.category || categoryLabel || "").toLowerCase();
+                const isCustomImage = job.banner_url && !job.banner_url.includes("/api/og/banner");
+
+                const theme =
+                  catKey.includes("result")
+                    ? { bg: "from-emerald-950 via-teal-900 to-zinc-950", badgeBg: "bg-emerald-500", textAccent: "text-emerald-400", border: "border-emerald-500/30", label: "🏆 SARKARI RESULT 2026" }
+                    : catKey.includes("admit")
+                    ? { bg: "from-amber-950 via-orange-900 to-zinc-950", badgeBg: "bg-orange-500", textAccent: "text-orange-400", border: "border-orange-500/30", label: "🪪 OFFICIAL ADMIT CARD" }
+                    : catKey.includes("answer")
+                    ? { bg: "from-rose-950 via-pink-900 to-zinc-950", badgeBg: "bg-rose-500", textAccent: "text-rose-400", border: "border-rose-500/30", label: "📋 OFFICIAL ANSWER KEY" }
+                    : catKey.includes("admission")
+                    ? { bg: "from-purple-950 via-violet-900 to-zinc-950", badgeBg: "bg-purple-500", textAccent: "text-purple-400", border: "border-purple-500/30", label: "🎓 ADMISSION 2026" }
+                    : catKey.includes("news")
+                    ? { bg: "from-blue-950 via-sky-900 to-zinc-950", badgeBg: "bg-blue-500", textAccent: "text-sky-400", border: "border-blue-500/30", label: "📰 SARKARI NEWS UPDATE" }
+                    : { bg: "from-slate-950 via-indigo-950 to-zinc-950", badgeBg: "bg-indigo-600", textAccent: "text-amber-400", border: "border-indigo-500/30", label: "💼 LATEST SARKARI JOB" };
+
+                return isCustomImage ? (
+                  <div className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-md bg-gray-50 dark:bg-zinc-950">
+                    <img
+                      src={job.banner_url}
+                      alt={job.title}
+                      className="w-full h-auto object-contain max-h-[320px] mx-auto"
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="sync"
+                      width={1200}
+                      height={630}
+                    />
+                  </div>
+                ) : (
+                  <div className={`w-full rounded-2xl overflow-hidden border ${theme.border} shadow-xl bg-gradient-to-br ${theme.bg} p-6 sm:p-8 text-white relative group`}>
+                    {/* Background Pattern Grid Overlay */}
+                    <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+                    
+                    {/* Top Glow Accent */}
+                    <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+
+                    {/* Top Bar: Brand + Category Badge */}
+                    <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 border border-indigo-400/40 flex items-center justify-center font-black text-white text-base shadow-lg shadow-indigo-500/30">
+                          RS
+                        </div>
+                        <div>
+                          <div className="font-black text-white text-lg tracking-tight leading-none">Rojgar Suvidha</div>
+                          <div className="text-[11px] text-indigo-300 font-semibold mt-0.5">100% Verified Sarkari Portal</div>
+                        </div>
+                      </div>
+
+                      <div className={`${theme.badgeBg} text-white px-4 py-1.5 rounded-full font-black text-xs uppercase tracking-wider shadow-md border border-white/20`}>
+                        {theme.label}
+                      </div>
+                    </div>
+
+                    {/* Middle: Main Title Block */}
+                    <div className="relative z-10 my-4 space-y-2">
+                      <div className={`text-xs font-black uppercase tracking-widest ${theme.textAccent} flex items-center gap-1.5`}>
+                        <span className="inline-block w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        Official Notification Released
+                      </div>
+                      <h2 className="font-black text-xl sm:text-3xl text-white leading-tight tracking-tight drop-shadow-md">
+                        {job.title}
+                      </h2>
+                    </div>
+
+                    {/* Bottom Bar: Quick Info Badges + Website Link */}
+                    <div className="relative z-10 pt-5 mt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                        {(job.total_posts || job.total_vacancy) && (
+                          <span className="bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 px-3 py-1.5 rounded-lg">
+                            👥 Posts: {job.total_posts || job.total_vacancy}
+                          </span>
+                        )}
+                        {lastDate && (
+                          <span className="bg-rose-500/20 text-rose-300 border border-rose-400/40 px-3 py-1.5 rounded-lg">
+                            📅 Last Date: {lastDate}
+                          </span>
+                        )}
+                        {job.state_code && job.state_code !== "ALL" && (
+                          <span className="bg-sky-500/20 text-sky-300 border border-sky-400/40 px-3 py-1.5 rounded-lg">
+                            🏛️ State: {job.state_code}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-xs font-extrabold text-indigo-200 bg-white/10 px-4 py-1.5 rounded-lg border border-white/15 backdrop-blur-sm ml-auto sm:ml-0">
+                        www.rojgarsuvidha.com
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* ── Table of Contents (mobile: above article; desktop: left col) ── */}
               {tocItems.length >= 3 && (
