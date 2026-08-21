@@ -537,10 +537,37 @@ async function getUniqueSlug(baseSlug: string, supabase: any): Promise<string> {
 // ── Blog Quality Validator ────────────────────────────────────────────────────
 // Runs AFTER AI generation, BEFORE saving to DB.
 // If validation fails → post is SKIPPED. Never publish bad content.
-function validateBlogQuality(html: string, category: string): { valid: boolean; issues: string[] } {
+function validateBlogQuality(html: string, category: string, rawSourceText?: string): { valid: boolean; issues: string[] } {
   const issues: string[] = [];
   const text = html.toLowerCase();
   const wordCount = html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+
+  // ── Originality check — detect copy-paste from source ──────────────────────
+  if (rawSourceText && rawSourceText.length > 100) {
+    const sourceWords = rawSourceText.toLowerCase().replace(/\s+/g, " ");
+    const htmlText = html.replace(/<[^>]+>/g, " ").toLowerCase().replace(/\s+/g, " ");
+
+    // Check 5+ consecutive word matches (indicates copy-paste)
+    const sourceNgrams = new Set<string>();
+    const sourceTokens = sourceWords.split(" ").filter(w => w.length > 4);
+    for (let i = 0; i <= sourceTokens.length - 6; i++) {
+      sourceNgrams.add(sourceTokens.slice(i, i + 6).join(" "));
+    }
+    const htmlTokens = htmlText.split(" ").filter(w => w.length > 4);
+    let copyHits = 0;
+    for (let i = 0; i <= htmlTokens.length - 6; i++) {
+      if (sourceNgrams.has(htmlTokens.slice(i, i + 6).join(" "))) copyHits++;
+    }
+    // If >15 matching 6-grams, likely copied content
+    if (copyHits > 15) {
+      issues.push(`Possible copy-paste detected: ${copyHits} matching phrase segments from source`);
+    }
+  }
+
+  // FreeJobAlert boilerplate phrases that get copied directly
+  if (/freejobalert\.com|freejobalert provide you|click here to check|important for candidates|note:- all the information/i.test(html)) {
+    issues.push("FreeJobAlert boilerplate text found — copied from source, not original");
+  }
 
   // Universal checks (every category)
   if (html.includes("<h1"))
@@ -657,9 +684,10 @@ EDUCATION: ${education || "As per notification"}
 OFFICIAL WEBSITE: ${officialLink || "Refer to notification links below"}
 ${applyInstruction}
 
-===== SANITIZED NOTIFICATION SOURCE CONTENT =====
+===== REFERENCE DATA — FACTS ONLY — DO NOT COPY ANY SENTENCE =====
+[Use below ONLY to extract: vacancy count, dates, fees, links, eligibility. Write ALL sentences yourself.]
 ${cleanedRawText}
-=================================================`;
+=================================================================`;
 
   // ── Category-specific writing blueprints ──────────────────────────────────
   let categoryBlueprint = "";
@@ -1024,6 +1052,40 @@ LANGUAGE RULE FOR THIS CATEGORY:
 You follow Google's E-E-A-T guidelines strictly. Your mission: give candidates ACCURATE, COMPLETE, ACTIONABLE information they can rely on.
 
 ================================================================================
+RULE 0C — ORIGINAL CONTENT ONLY (COPYRIGHT + GOOGLE DUPLICATE CONTENT RULE)
+================================================================================
+The "SOURCE CONTENT TO PROCESS" given to you at the end is REFERENCE ONLY.
+It is scraped from third-party websites (FreeJobAlert, NDTV, official sites).
+
+YOU MUST:
+  - Extract FACTS only: vacancy count, last date, fee amount, eligibility, exam dates, links
+  - Write EVERY SENTENCE yourself from scratch in Rojgar Suvidha's voice
+  - Add your own analysis, context, tips, and guidance that the source doesn't have
+  - Explain things in a way that helps the candidate — not just repeat what the source said
+
+YOU MUST NEVER:
+  - Copy any sentence from the source — not even partially
+  - Paraphrase the source by just replacing a few words
+  - Use the same structure/order of sections as the source
+  - Paste any paragraph from the source into blogHtml
+
+Think of it like this: A journalist reads a press release (source) and writes their OWN story.
+They use the facts from the press release but every sentence is their own.
+That is exactly what you must do.
+
+EXAMPLE — Wrong (copy from source):
+  Source says: "The Staff Selection Commission has released the notification for CGL 2026 recruitment."
+  Wrong: "The Staff Selection Commission has released the CGL 2026 recruitment notification."
+
+EXAMPLE — Right (original):
+  Right: "SSC CGL 2026 ka intezaar kar rahe candidates ke liye khushkhabri — official notification
+  aa gayi hai. Poori bhaari tabiyat se padho — is baar 17,000+ vacancies hain, jo pichhle saal
+  se kaafi zyada hain."
+
+Every word you write belongs to Rojgar Suvidha. No content is borrowed, copied, or paraphrased.
+
+
+================================================================================
 RULE 0 — ABSOLUTE EMOJI ZERO POLICY (OVERRIDES EVERYTHING)
 ================================================================================
 DO NOT USE ANY EMOJI CHARACTER ANYWHERE IN THE blogHtml OUTPUT.
@@ -1237,13 +1299,13 @@ CRITICAL JSON SYNTAX RULE
 
 
   const models = [
-    // ── Verified available models (checked via API on 2026-08-21) ──
-    "gemini-3.7-flash",         // ✅ Latest stable flash
-    "gemini-3.6-flash",         // ✅ Prev latest flash
-    "gemini-3.5-flash",         // ✅ Fallback
-    "gemini-2.5-flash",         // ✅ Stable fallback
-    "gemini-2.5-flash-lite",    // ✅ Lighter, faster fallback
-    "gemini-3.1-flash-lite",    // ✅ Last resort
+    // ── VERIFIED working models (August 2026) — in order of preference ──
+    "gemini-2.5-flash",           // Best quality, fast — primary
+    "gemini-2.5-flash-lite-preview-06-17", // Lighter, quota-friendly
+    "gemini-2.0-flash",           // Stable fallback
+    "gemini-2.0-flash-lite",      // Fast fallback
+    "gemini-1.5-flash",           // Reliable older model
+    "gemini-1.5-flash-8b",        // Smallest, last resort
   ];
 
   let lastError = "";
@@ -1268,7 +1330,7 @@ CRITICAL JSON SYNTAX RULE
         const payload = {
           contents: [{
             role: "user",
-            parts: [{ text: `${SYSTEM_PROMPT}\n\n===== SOURCE CONTENT TO PROCESS =====\n${enrichedContext}` }],
+            parts: [{ text: `${SYSTEM_PROMPT}\n\n===== REFERENCE DATA (READ FACTS — WRITE ORIGINAL) =====\n${enrichedContext}` }],
           }],
           generationConfig: {
             temperature: 0.75,
@@ -1571,7 +1633,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // 7. Validate blog quality BEFORE saving — reject bad AI output immediately
       const blogHtmlFinal = stripH1FromBlog(cleanCompetitorBrands(aiResult.blogHtml || ""));
-      const qualityCheck = validateBlogQuality(blogHtmlFinal, category);
+      const qualityCheck = validateBlogQuality(blogHtmlFinal, category, pageText);
+
       if (!qualityCheck.valid) {
         console.warn(`⚠️ [Quality] REJECTED: "${item.title.slice(0, 60)}"`);
         qualityCheck.issues.forEach(issue => console.warn(`   ❌ ${issue}`));
