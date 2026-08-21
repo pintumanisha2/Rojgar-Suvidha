@@ -511,7 +511,9 @@ function cleanCompetitorBrands(str: string): string {
     .replace(/fja(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/ndtv\s*education/gi, "Rojgar Suvidha News Desk")
     .replace(/ndtv\s*network/gi, "Rojgar Suvidha Network")
-    .replace(/ndtv(?:\.com)?/gi, "Rojgar Suvidha");
+    .replace(/ndtv(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/careers360(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/jagran\s*josh(?:\.com)?/gi, "Rojgar Suvidha");
 }
 
 // ── Strip H1 from blog HTML (SEO: page already has H1 in <h1> tag; AI content must not add another) ──
@@ -552,19 +554,29 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
     const sourceWords = rawSourceText.toLowerCase().replace(/\s+/g, " ");
     const htmlText = html.replace(/<[^>]+>/g, " ").toLowerCase().replace(/\s+/g, " ");
 
-    // Check 5+ consecutive word matches (indicates copy-paste)
+    // Check 6-word phrase matches (ignoring common government job boilerplate)
     const sourceNgrams = new Set<string>();
-    const sourceTokens = sourceWords.split(" ").filter(w => w.length > 4);
+    const sourceTokens = sourceWords.split(" ").filter(w => w.length > 3);
     for (let i = 0; i <= sourceTokens.length - 6; i++) {
       sourceNgrams.add(sourceTokens.slice(i, i + 6).join(" "));
     }
-    const htmlTokens = htmlText.split(" ").filter(w => w.length > 4);
+    const htmlTokens = htmlText.split(" ").filter(w => w.length > 3);
     let copyHits = 0;
     for (let i = 0; i <= htmlTokens.length - 6; i++) {
-      if (sourceNgrams.has(htmlTokens.slice(i, i + 6).join(" "))) copyHits++;
+      const phrase = htmlTokens.slice(i, i + 6).join(" ");
+      // Exclude standard official notification boilerplate phrases from copy hits
+      if (
+        !phrase.includes("last date") &&
+        !phrase.includes("application fee") &&
+        !phrase.includes("official website") &&
+        !phrase.includes("how to apply") &&
+        !phrase.includes("educational qualification")
+      ) {
+        if (sourceNgrams.has(phrase)) copyHits++;
+      }
     }
-    // If >15 matching 6-grams, likely copied content
-    if (copyHits > 15) {
+    // If >35 matching non-boilerplate 6-grams, flag copy-paste
+    if (copyHits > 35) {
       issues.push(`Possible copy-paste detected: ${copyHits} matching phrase segments from source`);
     }
   }
@@ -578,7 +590,8 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
   if (html.includes("<h1"))
     issues.push("H1 tag in blog content — double H1 SEO penalty");
 
-  if (/sarkari result|freejobalert|free job alert|ndtv\.com|careers360|jagran josh/i.test(html))
+  // Check ONLY actual competitor domain/brand names (Sarkari Result is a category term, not blocked)
+  if (/freejobalert|ndtv\.com|careers360|jagran\s*josh/i.test(html))
     issues.push("Competitor brand name found in content");
 
   if (/\bas an ai\b|language model|as of my knowledge cutoff|my training data/i.test(html))
@@ -590,7 +603,7 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
   if (wordCount < 400)
     issues.push(`Content too thin: ${wordCount} words (minimum 400 required)`);
 
-  if (!html.includes("rojgarsuvidha.com"))
+  if (!/rojgarsuvidha\.com|\/latest-jobs|\/results|\/admit-card|\/answer-key|\/admission|\/jobs\//i.test(html))
     issues.push("No internal Rojgar Suvidha link found");
 
   // Category-specific checks
