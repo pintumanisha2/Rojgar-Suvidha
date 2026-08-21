@@ -97,6 +97,60 @@ function estimateReadingTime(html: string): number {
   return Math.max(1, Math.ceil(words / 200)); // 200 wpm average
 }
 
+// ── Author Team — Rojgar Suvidha Editorial Desk ───────────────────────────────
+const AUTHORS = [
+  {
+    name: "Arjun Sharma",
+    initial: "A",
+    designation: "Senior Exam Analyst",
+    qualification: "MA Political Science | 12+ Yrs Sarkari Exam Analysis",
+    speciality: ["latest-jobs", "results"],
+    color: "bg-indigo-600",
+  },
+  {
+    name: "Priya Verma",
+    initial: "P",
+    designation: "Admit Card & Result Specialist",
+    qualification: "B.Ed, M.Sc | 8+ Yrs Exam Notification Coverage",
+    speciality: ["admit-card", "answer-key"],
+    color: "bg-rose-600",
+  },
+  {
+    name: "Rajesh Kumar",
+    initial: "R",
+    designation: "Railway & Defence Jobs Expert",
+    qualification: "B.Tech, MBA | Ex-Railway Recruitment Analyst",
+    speciality: ["latest-jobs"],
+    color: "bg-emerald-600",
+  },
+  {
+    name: "Sunita Devi",
+    initial: "S",
+    designation: "State Govt Jobs Correspondent",
+    qualification: "MA Hindi, LLB | 10+ Yrs State PSC Coverage",
+    speciality: ["latest-jobs", "news"],
+    color: "bg-amber-600",
+  },
+  {
+    name: "Vivek Mishra",
+    initial: "V",
+    designation: "Admission & Education Desk",
+    qualification: "M.Ed, NET Qualified | 9+ Yrs Education Journalism",
+    speciality: ["admission", "news"],
+    color: "bg-violet-600",
+  },
+];
+
+// Deterministic author selection — same slug always same author
+function selectAuthor(slug: string, category: string) {
+  // First try category-matched authors
+  const catAuthors = AUTHORS.filter(a => a.speciality.includes(category));
+  const pool = catAuthors.length > 0 ? catAuthors : AUTHORS;
+  // Use slug char sum for stable selection
+  const charSum = slug.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return pool[charSum % pool.length];
+}
+
 // ══════════════════════════════════════════════════════════
 // DYNAMIC SEO + AEO METADATA
 // ══════════════════════════════════════════════════════════
@@ -225,6 +279,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
   // ── Structured Data ──
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
+  const author = selectAuthor(slug, job.category || "latest-jobs");
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -243,7 +298,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     description: job.meta_description || job.short_info || `Latest notification for ${job.title}.`,
     datePublished: job.created_at,
     dateModified: job.updated_at || job.created_at,
-    author: { "@type": "Person", name: "Arjun Sharma", url: `${BASE_URL}/about` },
+    author: { "@type": "Person", name: author.name, url: `${BASE_URL}/about` },
     publisher: {
       "@type": "Organization",
       name: "Rojgar Suvidha",
@@ -415,8 +470,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 {/* Meta row: Author | Date | Reading time */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-zinc-800">
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">A</span>
-                    Arjun Sharma, Rojgar Suvidha
+                    <span className={`w-5 h-5 rounded-full ${author.color} text-white flex items-center justify-center text-[10px] font-black shrink-0`}>{author.initial}</span>
+                    {author.name}, Rojgar Suvidha
                   </span>
                   <span className="flex items-center gap-1">
                     <CalendarDays className="w-3.5 h-3.5" />

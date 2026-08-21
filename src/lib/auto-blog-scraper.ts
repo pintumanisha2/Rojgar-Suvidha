@@ -999,13 +999,56 @@ RULE 7 — SEO KEYWORD OPTIMIZATION
 ================================================================================
 MANDATORY E-E-A-T AUTHOR SECTION
 ================================================================================
-Add this VERBATIM at the END of blogHtml (after FAQ section):
+Add ONE of these author boxes VERBATIM at the END of blogHtml (after FAQ section).
+Choose the author that best matches the content category:
+
+— For Railway / Defence / Central Govt jobs → Use RAJESH KUMAR:
 <div style='border-top:2px solid #e2e8f0;margin-top:2.5rem;background:#f8fafc;border-radius:12px;padding:1.5rem;display:flex;gap:1rem;align-items:flex-start;'>
-  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>A</div>
+  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#059669,#10b981);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>R</div>
+  <div>
+    <p style='margin:0 0 4px;font-weight:700;font-size:1rem;color:#0f172a;'>Rajesh Kumar — Railway & Defence Jobs Expert</p>
+    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>B.Tech, MBA | Ex-Railway Recruitment Analyst | 11+ Years Sarkari Naukri Coverage</p>
+    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Rajesh Kumar Railway Board, DRDO, BSF, CISF aur anya defence recruitments ke specialist hain. Unke analysis se lakho aspirants ko Railway aur Central Govt jobs ki sahi jankari milti hai.</p>
+  </div>
+</div>
+
+— For Admit Card / Answer Key posts → Use PRIYA VERMA:
+<div style='border-top:2px solid #e2e8f0;margin-top:2.5rem;background:#f8fafc;border-radius:12px;padding:1.5rem;display:flex;gap:1rem;align-items:flex-start;'>
+  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#e11d48,#f43f5e);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>P</div>
+  <div>
+    <p style='margin:0 0 4px;font-weight:700;font-size:1rem;color:#0f172a;'>Priya Verma — Admit Card & Result Specialist</p>
+    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>B.Ed, M.Sc | 8+ Years Exam Notification Coverage | SSC & UPSC Qualified</p>
+    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Priya Verma admit card downloads, answer keys aur result announcements ko track karti hain. Unki timely aur accurate reporting se candidates apni exam journey manage kar paate hain.</p>
+  </div>
+</div>
+
+— For State Govt jobs (UP, Bihar, Rajasthan, MP, etc.) → Use SUNITA DEVI:
+<div style='border-top:2px solid #e2e8f0;margin-top:2.5rem;background:#f8fafc;border-radius:12px;padding:1.5rem;display:flex;gap:1rem;align-items:flex-start;'>
+  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>S</div>
+  <div>
+    <p style='margin:0 0 4px;font-weight:700;font-size:1rem;color:#0f172a;'>Sunita Devi — State Govt Jobs Correspondent</p>
+    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>MA Hindi, LLB | 10+ Years State PSC & Patwari Exam Coverage</p>
+    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Sunita Devi State PSC, Patwari, Lekhpal, Police, Teacher bharti jaise state level exams ki expert hain. Unka kaam tier-2 aur tier-3 cities ke lakho aspirants tak sahi jankari pahunchana hai.</p>
+  </div>
+</div>
+
+— For Admission / Education news → Use VIVEK MISHRA:
+<div style='border-top:2px solid #e2e8f0;margin-top:2.5rem;background:#f8fafc;border-radius:12px;padding:1.5rem;display:flex;gap:1rem;align-items:flex-start;'>
+  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>V</div>
+  <div>
+    <p style='margin:0 0 4px;font-weight:700;font-size:1rem;color:#0f172a;'>Vivek Mishra — Admission & Education Desk</p>
+    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>M.Ed, NET Qualified | 9+ Years Education Journalism | CUET & JEE Expert</p>
+    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Vivek Mishra college admissions, CUET, NEET, JEE aur university entrance exams cover karte hain. Unki guidance se students sahi college aur course choose kar paate hain.</p>
+  </div>
+</div>
+
+— For SSC / Banking / General Central Govt jobs → Use ARJUN SHARMA (default):
+<div style='border-top:2px solid #e2e8f0;margin-top:2.5rem;background:#f8fafc;border-radius:12px;padding:1.5rem;display:flex;gap:1rem;align-items:flex-start;'>
+  <div style='flex-shrink:0;width:56px;height:56px;background:linear-gradient(135deg,#4f46e5,#6366f1);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:800;'>A</div>
   <div>
     <p style='margin:0 0 4px;font-weight:700;font-size:1rem;color:#0f172a;'>Arjun Sharma — Senior Exam Analyst</p>
-    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>B.Ed, MA Political Science | 12+ Years Sarkari Exam Analysis | Ex-UPSC Aspirant</p>
-    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Arjun Sharma Rojgar Suvidha ke Senior Exam Analyst hain. 12+ saalon mein unhone SSC, Railway, State PSC, UPSC aur Banking exams ka in-depth analysis kiya hai. Unka analysis lakho candidates ko accurate, timely information dene mein madad karta hai.</p>
+    <p style='margin:0 0 8px;font-size:0.8rem;color:#64748b;'>MA Political Science | 12+ Years Sarkari Exam Analysis | Ex-UPSC Aspirant</p>
+    <p style='margin:0;font-size:0.85rem;color:#475569;line-height:1.6;'>Arjun Sharma Rojgar Suvidha ke Senior Exam Analyst hain. 12+ saalon mein unhone SSC, Banking, UPSC aur State PSC exams ka in-depth analysis kiya hai. Unka analysis lakho candidates ko accurate, timely information dene mein madad karta hai.</p>
   </div>
 </div>
 
