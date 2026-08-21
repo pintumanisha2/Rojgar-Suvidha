@@ -1000,7 +1000,8 @@ ${categoryBlueprint}
       if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(lastError)) {
         break; // break model loop → outer key loop tries next key
       }
-  }
+    } // end for (model of models)
+  } // end for (apiKey of apiKeys)
   throw new Error(`All Gemini models failed. Last error: ${lastError}`);
 }
 
