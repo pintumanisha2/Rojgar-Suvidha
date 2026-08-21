@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { runAutoBlogScraper } from "@/lib/auto-blog-scraper";
 
-// 2 blogs × ~5min AI generation + 5min gap between = ~15min total
-// Vercel Pro allows up to 800s max duration
-export const maxDuration = 800;
+// Serverless function execution timeout set to 60s (Vercel compliant)
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

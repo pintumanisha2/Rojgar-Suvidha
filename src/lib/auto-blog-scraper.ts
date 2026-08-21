@@ -1900,11 +1900,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       results.processed++;
 
-      // ⏱️ 5-minute gap between items — Google guideline compliant, avoids rate limiting
-      // This gives each blog its own crawl window and avoids AI quota pressure
+      // ⏱️ 5-second gap between items in single run (fast & rate limit safe)
+      // Posts are naturally spaced out across 30-minute Vercel Cron intervals
       if (newItems.indexOf(item) < newItems.length - 1) {
-        console.log(`   ⏳ Waiting 5 minutes before next blog (rate limit safe)...`);
-        await sleep(300000); // 5 minutes = 300,000ms
+        await sleep(5000);
       }
 
     } catch (err: any) {
