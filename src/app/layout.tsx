@@ -126,7 +126,15 @@ export const metadata: Metadata = {
     ],
   },
   verification: {
-    // google: "PASTE_YOUR_SEARCH_CONSOLE_CODE_HERE",
+    // Google Search Console is verified via:
+    // 1. Google Analytics (G-NYNEZYFGD5) — GA tag already live on site
+    // 2. HTML file method — public/81903AC6E158EBDBEA77300DC1D07ED1.txt
+    // If you need HTML tag verification, paste the code below:
+    // google: "YOUR_VERIFICATION_CODE_HERE",
+    other: {
+      // Bing/IndexNow verification
+      "msvalidate.01": "81903AC6E158EBDBEA77300DC1D07ED1",
+    },
   },
   category: "Education",
   other: {

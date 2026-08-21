@@ -1,5 +1,6 @@
 # Rojgar Suvidha - Robots.txt
 # https://www.rojgarsuvidha.com
+# Updated: August 2026 — login-only pages excluded
 
 User-agent: *
 Allow: /
@@ -9,6 +10,8 @@ Disallow: /dashboard/
 Disallow: /profile-setup/
 Disallow: /login/
 Disallow: /apply/
+Disallow: /saved-jobs/
+Disallow: /track-application/
 
 # Sitemaps
 Sitemap: https://www.rojgarsuvidha.com/sitemap.xml

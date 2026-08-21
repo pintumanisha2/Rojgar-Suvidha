@@ -1,6 +1,6 @@
 /**
- * Auto Blog Scraper Library — v2.3 (Multi-Key Rotation Enabled)
- * FreeJobAlert → Full Page Deep Read → Gemini AI (SarkariLekhan) → Supabase → Telegram
+ * Auto Blog Scraper Library — v2.4 (Multi-Key Rotation + Groq Fallback)
+ * FreeJobAlert → Full Page Deep Read → Gemini AI (SarkariLekhan) → [Groq Fallback] → Supabase → Telegram
  *
  * FIXES in v2:
  * 1. RSS URL corrected to freejobales.com (verified WordPress feed pattern)
@@ -12,6 +12,11 @@
  * 7. Delay between items to avoid rate limiting
  * 8. Content validation — skip if AI generated <500 words
  * 9. Better Coming Soon detection (FreeJobAlert specific patterns)
+ *
+ * NEW in v2.4:
+ * 10. Groq API fallback — when ALL Gemini keys/models fail (quota exhausted),
+ *     Groq (llama-3.3-70b → llama-3.1-8b → mixtral-8x7b) is tried automatically.
+ *     Zero manual intervention needed.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -902,7 +907,7 @@ LANGUAGE RULE: English headings + Hinglish body + English tables
   } else if (category === "news") {
     categoryBlueprint = `
 CATEGORY: EDUCATION & GOVERNMENT JOB NEWS / UPDATE
-WORD TARGET: Minimum 900 words
+WORD TARGET: Minimum 1400 words
 
 ABSOLUTELY FORBIDDEN:
 - Apply Online / Application section
@@ -1028,9 +1033,31 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
 
 12. OFFICIAL NOTIFICATION LINK: <h2>Official Notification & Important Links</h2>
     Mention official website and PDF notification link from source.
-    Internal links: Also visit <a href='https://www.rojgarsuvidha.com/latest-jobs'>Latest Sarkari Naukri 2026</a> | <a href='https://www.rojgarsuvidha.com/results'>Sarkari Result 2026</a> | <a href='https://www.rojgarsuvidha.com/admit-card'>Admit Card 2026</a>
 
-13. FAQ SECTION: <h2>Frequently Asked Questions</h2>
+    CONTEXTUAL INTERNAL LINKS — Add these based on the job's sector/state:
+    - If SSC related: <a href='https://www.rojgarsuvidha.com/jobs/ssc'>All SSC Recruitment 2026</a>
+    - If Railway related: <a href='https://www.rojgarsuvidha.com/jobs/railway'>Latest Railway Jobs 2026</a>
+    - If Banking/IBPS/SBI related: <a href='https://www.rojgarsuvidha.com/jobs/banking'>Bank Jobs 2026</a>
+    - If UPSC related: <a href='https://www.rojgarsuvidha.com/jobs/upsc'>UPSC Recruitment 2026</a>
+    - If Police/CRPF/BSF related: <a href='https://www.rojgarsuvidha.com/jobs/police'>Police & Paramilitary Jobs 2026</a>
+    - If Defence/Army/Navy/Air Force: <a href='https://www.rojgarsuvidha.com/jobs/defence'>Defence Jobs 2026</a>
+    - If state-specific (UP): <a href='https://www.rojgarsuvidha.com/state/up'>UP Government Jobs 2026</a>
+    - If state-specific (Bihar): <a href='https://www.rojgarsuvidha.com/state/bh'>Bihar Government Jobs 2026</a>
+    - If state-specific (Rajasthan): <a href='https://www.rojgarsuvidha.com/state/rj'>Rajasthan Government Jobs 2026</a>
+    - If state-specific (MP): <a href='https://www.rojgarsuvidha.com/state/mp'>MP Government Jobs 2026</a>
+    Always include these 3 footer links: <a href='https://www.rojgarsuvidha.com/latest-jobs'>Latest Sarkari Naukri 2026</a> | <a href='https://www.rojgarsuvidha.com/results'>Sarkari Result 2026</a> | <a href='https://www.rojgarsuvidha.com/admit-card'>Admit Card 2026</a>
+
+13. PREPARATION STRATEGY: <h2>Preparation Strategy for [Post Name]</h2>
+    THIS SECTION IS WHAT MAKES US DIFFERENT FROM COMPETITORS — add real value:
+    - What subjects/topics to study (based on selection process from source)
+    - If written exam: mention likely paper pattern (GK, Math, Reasoning, English — based on post type)
+    - Best free resources: (e.g., NCERTs for GK, previous year papers)
+    - Timeline suggestion: if last date is X weeks away, how to plan preparation
+    - Physical test requirements (if applicable from source)
+    - 2-3 concrete tips specific to this category of exam
+    NOTE: Only write what is logical for this post type. Never invent exam paper patterns.
+
+14. FAQ SECTION: <h2>Frequently Asked Questions</h2>
     Minimum 7 Q&A using FAQPage schema format.
     Questions must be specific to THIS job notification (not generic).
     Example: "What is the last date to apply for [org] [post] 2026?" / "What is the age limit for [post]?"
@@ -1458,7 +1485,129 @@ CRITICAL JSON SYNTAX RULE
       }
     } // end for (model of models)
   } // end for (apiKey of apiKeys)
-  throw new Error(`All Gemini models failed. Last error: ${lastError}`);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GROQ FALLBACK — Activates when ALL Gemini keys + models are exhausted
+  // Uses: llama-3.3-70b (best) → llama-3.1-8b (fast) → mixtral-8x7b (last)
+  // Free tier: 6000 RPD on llama-3.3-70b — more than enough for daily cron
+  // ══════════════════════════════════════════════════════════════════════════
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (groqApiKey && !groqApiKey.includes("REPLACE")) {
+    console.warn("⚠️  All Gemini API keys exhausted. Switching to Groq fallback...");
+
+    const groqModels = [
+      "llama-3.3-70b-versatile",   // Best quality — 32k context — primary
+      "llama-3.1-8b-instant",      // Fast, lightweight — reliable fallback
+      "mixtral-8x7b-32768",        // Wide context — last resort
+    ];
+
+    for (const groqModel of groqModels) {
+      try {
+        console.log(`   🟣 Trying Groq/${groqModel}...`);
+
+        const groqPayload = {
+          model: groqModel,
+          messages: [
+            {
+              role: "user",
+              content: `${SYSTEM_PROMPT}\n\n===== REFERENCE DATA (READ FACTS — WRITE ORIGINAL) =====\n${enrichedContext}`,
+            },
+          ],
+          temperature: 0.75,
+          max_tokens: 8192,
+          response_format: { type: "json_object" },
+        };
+
+        const groqController = new AbortController();
+        const groqTimeout = setTimeout(() => groqController.abort(), 90000); // 90s
+
+        const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${groqApiKey}`,
+          },
+          body: JSON.stringify(groqPayload),
+          signal: groqController.signal,
+        });
+        clearTimeout(groqTimeout);
+
+        const groqData = await groqResponse.json();
+
+        // ── Error handling ──
+        if (groqData.error) {
+          const groqErrMsg = groqData.error.message || JSON.stringify(groqData.error);
+          console.warn(`   ⚠️ Groq/${groqModel} error: ${groqErrMsg.slice(0, 100)}`);
+          lastError = `groq/${groqModel}: ${groqErrMsg}`;
+          // Rate limit on this model → try next
+          if (/rate.?limit|429|quota|too many/i.test(groqErrMsg)) {
+            console.warn(`   ⛔ Groq rate limit on ${groqModel} — trying next Groq model`);
+          }
+          continue;
+        }
+
+        const groqRawJson = groqData.choices?.[0]?.message?.content || "";
+        if (!groqRawJson) {
+          lastError = `groq/${groqModel}: empty response`;
+          console.warn(`   ⚠️ Groq/${groqModel}: empty response`);
+          continue;
+        }
+
+        // ── Parse JSON ──
+        let groqParsed: any;
+        try {
+          const groqCleaned = groqRawJson
+            .replace(/^```json?\s*/i, "")
+            .replace(/```\s*$/i, "")
+            .trim();
+          groqParsed = JSON.parse(groqCleaned);
+        } catch (groqParseErr: any) {
+          console.warn(`   ⚠️ Groq/${groqModel} JSON parse error: ${groqParseErr.message} — trying next model`);
+          lastError = `groq/${groqModel}: JSON parse failed`;
+          continue;
+        }
+
+        // ── Validate content ──
+        const groqWordCount = (groqParsed.blogHtml || "")
+          .replace(/<[^>]+>/g, " ")
+          .split(/\s+/)
+          .filter(Boolean).length;
+
+        if (groqWordCount < 500) {
+          console.warn(`   ⚠️ Groq/${groqModel}: Blog too short (${groqWordCount} words) — trying next model`);
+          lastError = `groq/${groqModel}: Blog too short (${groqWordCount} words)`;
+          continue;
+        }
+
+        if (!groqParsed.title) {
+          console.warn(`   ⚠️ Groq/${groqModel}: No title in response — trying next model`);
+          lastError = `groq/${groqModel}: No title generated`;
+          continue;
+        }
+
+        console.log(
+          `   ✅ Generated via Groq/${groqModel}: ${groqWordCount} words, title="${groqParsed.title}"`
+        );
+        return groqParsed;
+
+      } catch (groqErr: any) {
+        if (groqErr.name === "AbortError") {
+          console.warn(`   ⏰ Groq/${groqModel} timed out — trying next model`);
+          lastError = `groq/${groqModel}: timeout`;
+        } else {
+          console.warn(`   ❌ Groq/${groqModel} exception: ${groqErr.message}`);
+          lastError = `groq/${groqModel}: ${groqErr.message}`;
+        }
+        continue;
+      }
+    } // end for (groqModel of groqModels)
+
+    console.error("❌ Groq fallback also exhausted all models.");
+  } else {
+    console.warn("⚠️  GROQ_API_KEY not configured — no fallback available.");
+  }
+
+  throw new Error(`All Gemini models failed. Groq fallback also failed. Last error: ${lastError}`);
 }
 
 // ── Telegram Notification ─────────────────────────────────────────────────────

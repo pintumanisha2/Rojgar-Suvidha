@@ -113,7 +113,7 @@ export async function generateMetadata(
   const { slug } = await params;
   const { data: job } = await supabase
     .from("jobs")
-    .select("title, short_info, meta_description, banner_url, category, created_at, slug")
+    .select("title, short_info, meta_description, banner_url, category, created_at, updated_at, slug")
     .eq("slug", slug)
     .single();
 
@@ -172,7 +172,8 @@ export async function generateMetadata(
       url: `${BASE_URL}/job/${slug}`,
       type: "article",
       publishedTime: job.created_at,
-      modifiedTime: job.created_at,
+      // Fix: use updated_at so Google gets correct freshness signal
+      modifiedTime: job.updated_at || job.created_at,
       siteName: "Rojgar Suvidha",
       section: categoryLabel,
       tags: keywords.slice(0, 10),
@@ -188,8 +189,9 @@ export async function generateMetadata(
   };
 }
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// ISR: revalidate every 1 hour — Google gets fast cached responses + fresh content
+// Removed force-dynamic: it caused slow TTFB and wasted Googlebot crawl budget
+export const revalidate = 3600;
 
 export default async function JobDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
@@ -458,12 +460,16 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               {/* ── Banner Image ── */}
               {job.banner_url && (
                 <div className="w-full rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-sm bg-gray-50 dark:bg-zinc-950">
+                  {/* eager + fetchpriority=high: fixes LCP — hero image must not be lazy loaded */}
                   <img
                     src={job.banner_url}
                     alt={job.title}
                     className="w-full h-auto object-contain max-h-[280px] mx-auto"
-                    loading="lazy"
-                    decoding="async"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="sync"
+                    width={1200}
+                    height={630}
                   />
                 </div>
               )}

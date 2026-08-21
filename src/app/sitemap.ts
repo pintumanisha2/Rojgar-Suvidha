@@ -50,47 +50,48 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.65,
   }));
 
-  // ── 4. Static Pages ─────────────────────────────────────────
+  // ── 4. Static Pages ─────────────────────────────────────────────────────────
+  // NOTE: Login-required pages (saved-jobs, profile-setup, track-application, dashboard)
+  // are intentionally EXCLUDED — Googlebot gets 401/redirect = crawl budget waste
+  const SITE_LAUNCH = new Date("2024-01-01"); // Use fixed date for stable lastModified
   const staticUrls: MetadataRoute.Sitemap = [
     // Core public pages
-    { route: '',                    priority: 1.0, freq: 'hourly'  },
-    { route: '/latest-jobs',        priority: 0.95, freq: 'hourly' },
-    { route: '/results',            priority: 0.9,  freq: 'daily'  },
-    { route: '/admit-card',         priority: 0.9,  freq: 'daily'  },
-    { route: '/answer-key',         priority: 0.9,  freq: 'daily'  },
-    { route: '/admission',          priority: 0.85, freq: 'daily'  },
-    { route: '/news',               priority: 0.85, freq: 'hourly' },
-    { route: '/exam-calendar',      priority: 0.9,  freq: 'daily'  },
-    { route: '/age-calculator',     priority: 0.85, freq: 'weekly' },
-    { route: '/apply-for-me',       priority: 0.85, freq: 'weekly' },
-    { route: '/track-application',  priority: 0.7,  freq: 'weekly' },
-    { route: '/saved-jobs',         priority: 0.6,  freq: 'weekly' },
-    { route: '/complaint',          priority: 0.5,  freq: 'monthly'},
-    // Private Jobs Portal
-    { route: '/private-jobs',       priority: 0.9,  freq: 'hourly' },
-    { route: '/private-jobs/community', priority: 0.7, freq: 'daily' },
-    { route: '/private-jobs/resume-builder', priority: 0.75, freq: 'weekly' },
+    { route: '',                    priority: 1.0, freq: 'hourly',  changed: new Date() },
+    { route: '/latest-jobs',        priority: 0.95, freq: 'hourly', changed: new Date() },
+    { route: '/results',            priority: 0.9,  freq: 'daily',  changed: new Date() },
+    { route: '/admit-card',         priority: 0.9,  freq: 'daily',  changed: new Date() },
+    { route: '/answer-key',         priority: 0.9,  freq: 'daily',  changed: new Date() },
+    { route: '/admission',          priority: 0.85, freq: 'daily',  changed: new Date() },
+    { route: '/news',               priority: 0.85, freq: 'hourly', changed: new Date() },
+    { route: '/exam-calendar',      priority: 0.9,  freq: 'daily',  changed: new Date() },
+    { route: '/age-calculator',     priority: 0.85, freq: 'weekly', changed: SITE_LAUNCH },
+    { route: '/apply-for-me',       priority: 0.85, freq: 'weekly', changed: SITE_LAUNCH },
+    { route: '/complaint',          priority: 0.5,  freq: 'monthly',changed: SITE_LAUNCH },
+    // Private Jobs Portal (public listing pages only)
+    { route: '/private-jobs',       priority: 0.9,  freq: 'hourly', changed: new Date() },
+    { route: '/private-jobs/community', priority: 0.7, freq: 'daily', changed: new Date() },
+    { route: '/private-jobs/resume-builder', priority: 0.75, freq: 'weekly', changed: SITE_LAUNCH },
     // Sector category pages (high SEO value)
-    { route: '/jobs/ssc',           priority: 0.8,  freq: 'daily'  },
-    { route: '/jobs/railway',       priority: 0.8,  freq: 'daily'  },
-    { route: '/jobs/banking',       priority: 0.8,  freq: 'daily'  },
-    { route: '/jobs/upsc',          priority: 0.8,  freq: 'daily'  },
-    { route: '/jobs/police',        priority: 0.8,  freq: 'daily'  },
-    { route: '/jobs/defence',       priority: 0.75, freq: 'daily'  },
-    { route: '/jobs/teaching',      priority: 0.75, freq: 'daily'  },
-    { route: '/jobs/state-psc',     priority: 0.75, freq: 'daily'  },
+    { route: '/jobs/ssc',           priority: 0.8,  freq: 'daily',  changed: new Date() },
+    { route: '/jobs/railway',       priority: 0.8,  freq: 'daily',  changed: new Date() },
+    { route: '/jobs/banking',       priority: 0.8,  freq: 'daily',  changed: new Date() },
+    { route: '/jobs/upsc',          priority: 0.8,  freq: 'daily',  changed: new Date() },
+    { route: '/jobs/police',        priority: 0.8,  freq: 'daily',  changed: new Date() },
+    { route: '/jobs/defence',       priority: 0.75, freq: 'daily',  changed: new Date() },
+    { route: '/jobs/teaching',      priority: 0.75, freq: 'daily',  changed: new Date() },
+    { route: '/jobs/state-psc',     priority: 0.75, freq: 'daily',  changed: new Date() },
     // Info pages
-    { route: '/about-us',           priority: 0.5,  freq: 'monthly'},
-    { route: '/contact-us',         priority: 0.5,  freq: 'monthly'},
-    { route: '/privacy',            priority: 0.3,  freq: 'yearly' },
-    { route: '/terms',              priority: 0.3,  freq: 'yearly' },
-    { route: '/refund-policy',      priority: 0.3,  freq: 'yearly' },
-    { route: '/e-suvidha',          priority: 0.7,  freq: 'weekly' },
-    { route: '/community',          priority: 0.7,  freq: 'daily'  },
-    { route: '/resume-builder',     priority: 0.75, freq: 'weekly' },
-  ].map(({ route, priority, freq }) => ({
+    { route: '/about-us',           priority: 0.5,  freq: 'monthly',changed: SITE_LAUNCH },
+    { route: '/contact-us',         priority: 0.5,  freq: 'monthly',changed: SITE_LAUNCH },
+    { route: '/privacy',            priority: 0.3,  freq: 'yearly', changed: SITE_LAUNCH },
+    { route: '/terms',              priority: 0.3,  freq: 'yearly', changed: SITE_LAUNCH },
+    { route: '/refund-policy',      priority: 0.3,  freq: 'yearly', changed: SITE_LAUNCH },
+    { route: '/e-suvidha',          priority: 0.7,  freq: 'weekly', changed: SITE_LAUNCH },
+    { route: '/community',          priority: 0.7,  freq: 'daily',  changed: new Date() },
+    { route: '/resume-builder',     priority: 0.75, freq: 'weekly', changed: SITE_LAUNCH },
+  ].map(({ route, priority, freq, changed }) => ({
     url: `${baseUrl}${route}`,
-    lastModified: new Date(),
+    lastModified: changed,
     changeFrequency: freq as MetadataRoute.Sitemap[0]['changeFrequency'],
     priority,
   }));
