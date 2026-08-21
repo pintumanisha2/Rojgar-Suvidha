@@ -1174,13 +1174,14 @@ NEVER mention: FreeJobAlert, Free Job Alert, Sarkari Result .com, NDTV, Careers3
 ALWAYS use: "Rojgar Suvidha" as the brand name.
 
 ================================================================================
-RULE 3 — DATA ACCURACY (DO NOT INVENT ANY DATA)
+RULE 3 — DATA ACCURACY & ZERO-HALLUCINATION FACT GROUNDING (STRICT MANDATE)
 ================================================================================
 Write ONLY facts, numbers, dates, and links that are EXPLICITLY in the source content.
 
+- ZERO-HALLUCINATION RULE: If a date, vacancy count, fee amount, or cutoff is NOT present in the reference facts, DO NOT GUESS OR INVENT IT. Write: "Official notification confirmation pending — refer to official portal links below".
 - CUTOFF: Only write if actual numbers in source. Otherwise: "Cutoff marks official website par release hote hi update kar diya jaayega."
-- VACANCIES: Use only numbers from source. If not mentioned, do not guess.
-- EXAM DATES: Use only dates from source. No "expected" or "approximate" dates.
+- VACANCIES: Use only numbers from source. If not mentioned, write "As per notification".
+- EXAM DATES: Use only dates from source. No "expected" or "approximate" dates unless source explicitly labels them expected.
 - PDF LINKS: Only link to documents if the URL is in source.
 - SALARY: Only from source. Otherwise: "Pay Scale official notification se confirm karein."
 - APPLICATION FEE: Only from source. NEVER use ₹100/₹0 as default.
@@ -1707,13 +1708,103 @@ function generateSlug(title: string): string {
     .slice(0, 80);
 }
 
+// ── Google Trends India (geo=IN) Scraper ──────────────────────────────────────
+async function fetchGoogleTrendsItems(): Promise<{ title: string; link: string; pubDate: string; description: string; source: string; feedCategory: string }[]> {
+  try {
+    const res = await fetch("https://trends.google.com/trending/rss?geo=IN", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+
+    const items: { title: string; link: string; pubDate: string; description: string; source: string; feedCategory: string }[] = [];
+    const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
+
+    const jobEducationRegex = /result|admit\s*card|cutoff|cut-off|recruitment|vacancy|apply|counselling|counseling|answer\s*key|merit|scholarship|ssc|upsc|rrb|bpsc|uppsc|mpsc|hpsc|rpsc|board|exam|neet|jee|cuet|scorecard|allotment|hall\s*ticket|date\s*sheet|time\s*table|admission|naukri/i;
+
+    for (const rawItem of itemMatches.slice(0, 30)) {
+      const titleMatch = rawItem.match(/<title>(.*?)<\/title>/i);
+      const linkMatch = rawItem.match(/<link>(.*?)<\/link>/i) || rawItem.match(/<ht:news_item_url>(.*?)<\/ht:news_item_url>/i);
+      const pubDateMatch = rawItem.match(/<pubDate>(.*?)<\/pubDate>/i);
+      const descMatch = rawItem.match(/<description>(.*?)<\/description>/i);
+
+      let title = titleMatch ? titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/gi, "$1").trim() : "";
+      const link = linkMatch ? linkMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/gi, "$1").trim() : "";
+      const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString();
+      const description = descMatch ? descMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/gi, "$1").replace(/<[^>]+>/g, "").trim() : "";
+
+      if (title && jobEducationRegex.test(title)) {
+        let feedCategory = "news";
+        if (/result|merit|cutoff|scorecard/i.test(title)) feedCategory = "results";
+        else if (/admit|hall\s*ticket|call\s*letter/i.test(title)) feedCategory = "admit-card";
+        else if (/answer\s*key|objection/i.test(title)) feedCategory = "answer-key";
+        else if (/admission|counselling|counseling|allotment/i.test(title)) feedCategory = "admission";
+        else if (/recruitment|vacancy|apply|post/i.test(title)) feedCategory = "latest-jobs";
+
+        items.push({
+          title,
+          link: link || `https://trends.google.com/trending/rss?geo=IN#${encodeURIComponent(title)}`,
+          pubDate,
+          description,
+          source: "google_trends",
+          feedCategory,
+        });
+      }
+    }
+
+    console.log(`📡 Google Trends India: Found ${items.length} Sarkari job/education trending keywords`);
+    return items;
+  } catch (err: any) {
+    console.warn("⚠️ Google Trends RSS error:", err.message);
+    return [];
+  }
+}
+
+// ── Grounded Fact Extractor via Google News Feed ──────────────────────────────
+async function fetchGoogleNewsFacts(keyword: string): Promise<{ text: string; links: { href: string; text: string }[] }> {
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=en-IN&gl=IN&ceid=IN:en`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return { text: keyword, links: [] };
+    const xml = await res.text();
+
+    const itemMatches = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
+    const factsText: string[] = [];
+    const links: { href: string; text: string }[] = [];
+
+    for (const item of itemMatches.slice(0, 3)) {
+      const titleMatch = item.match(/<title>(.*?)<\/title>/i);
+      const linkMatch = item.match(/<link>(.*?)<\/link>/i);
+      const descMatch = item.match(/<description>(.*?)<\/description>/i);
+
+      if (titleMatch) factsText.push(titleMatch[1].replace(/<[^>]+>/g, ""));
+      if (descMatch) factsText.push(descMatch[1].replace(/<[^>]+>/g, ""));
+      if (linkMatch && linkMatch[1]) {
+        const u = linkMatch[1].trim();
+        const t = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : "Official Link";
+        links.push({ href: u, text: t });
+      }
+    }
+
+    return {
+      text: factsText.join(" | ") || keyword,
+      links,
+    };
+  } catch (_) {
+    return { text: keyword, links: [] };
+  }
+}
+
 // ── MAIN RUNNER ───────────────────────────────────────────────────────────────
 export async function runAutoBlogScraper(): Promise<ScraperResult> {
   console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
   const supabase = getSupabaseAdmin();
   const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
 
-  // 1. Fetch RSS & NDTV Education News
+  // 1. Fetch RSS, NDTV Education News & Google Trends India
   let rssItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   try {
     rssItems = await fetchRSSItems();
@@ -1722,8 +1813,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   }
 
   const ndtvItems = await fetchNDTVEducationNews();
+  const googleTrendsItems = await fetchGoogleTrendsItems();
 
   const allCandidateItems: { title: string; link: string; pubDate: string; description: string; source: string; feedCategory: string }[] = [
+    ...googleTrendsItems,
     ...rssItems.map((item) => ({ ...item, source: "freejobalert" })),
     ...ndtvItems.map((item) => ({ ...item, source: "ndtv", feedCategory: "news" })),
   ];
@@ -1736,11 +1829,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Process 1 recruitment post (FreeJobAlert) AND 1 news story (NDTV Education) per cron execution (Quota & Rate Limit Safe)
+  // 3. Select candidates: give priority to 1 Google Trend if available, 1 Job post, and 1 News story
+  const googleTrendsNew = allCandidateItems.filter((i) => i.source === "google_trends" && !scrapedUrls.has(i.link)).slice(0, 1);
   const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 1);
   const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 1);
 
-  const newItems = [...freeJobAlertNew, ...ndtvNew];
+  const newItems = [...googleTrendsNew, ...freeJobAlertNew, ...ndtvNew].slice(0, 2);
   console.log(`🆕 New items to process: ${newItems.length} (${freeJobAlertNew.length} jobs, ${ndtvNew.length} news) of ${allCandidateItems.length} candidate items`);
 
   if (newItems.length === 0) {
@@ -1753,26 +1847,37 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
     console.log(`\n📰 [${newItems.indexOf(item) + 1}/${newItems.length}] Processing (${item.source}): ${item.title}`);
 
     try {
-      // 4. Full page deep read
-      const { text: pageText, links } = await fetchFullPage(item.link);
-      console.log(`   📄 Page extracted: ${pageText.split(" ").length} words, ${links.length} links`);
+      // 4. Full page deep read or Google News grounded fact fetcher
+      let pageText = "";
+      let links: { href: string; text: string }[] = [];
+
+      if (item.source === "google_trends") {
+        console.log(`   🔥 Fetching grounded news facts for Google Trend: "${item.title}"`);
+        const facts = await fetchGoogleNewsFacts(item.title);
+        pageText = facts.text;
+        links = facts.links;
+      } else {
+        const pageData = await fetchFullPage(item.link);
+        pageText = pageData.text;
+        links = pageData.links;
+      }
+
+      console.log(`   📄 Page/Facts extracted: ${pageText.split(" ").length} words, ${links.length} links`);
 
       // 5. Smart category detection — title-first logic for ALL sources
-      // NDTV: apply real detection; only cap "latest-jobs" → "news" (NDTV has no apply forms)
-      // FreeJobAlert category feeds: detection is pre-validated by feed URL
       let category: BlogCategory = detectCategory(item.title, pageText);
 
-      if (item.source === "ndtv") {
+      if (item.source === "google_trends" && item.feedCategory) {
+        // Trust Google Trends category routing (results, admit-card, answer-key, admission, latest-jobs, news)
+        category = item.feedCategory as BlogCategory;
+      } else if (item.source === "ndtv") {
         // NDTV articles don't have application forms — cap at news level
         if (category === "latest-jobs") category = "news";
-        // But NDTV can correctly be: results, admit-card, answer-key, admission, news
       } else {
         // FreeJobAlert: if category feed is known, trust it over detection
         if (item.feedCategory && item.feedCategory !== "latest-jobs") {
-          // Feed category is highly reliable (e.g., /result/feed/ → always results)
           category = item.feedCategory as BlogCategory;
         }
-        // FreeJobAlert never has pure "news" — convert to latest-jobs as safety
         if (category === "news") category = "latest-jobs";
       }
 
@@ -1920,9 +2025,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
       if (inserted?.id) {
+        const titlePrefix = item.source === "google_trends" ? "🔥 GOOGLE TRENDING: " : "";
         sendAdminDraftApprovalAlert({
           id: inserted.id,
-          title: cleanCompetitorBrands(aiResult.title || item.title),
+          title: titlePrefix + cleanCompetitorBrands(aiResult.title || item.title),
           category: aiResult.category || category,
           stateCode: stateCode || null,
           totalPosts: aiResult.totalPosts || totalPosts || null,
