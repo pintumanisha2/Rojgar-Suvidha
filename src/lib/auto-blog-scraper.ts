@@ -1802,8 +1802,28 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         sourceTitle: item.title,
       });
 
-      // 7. Validate blog quality BEFORE saving — reject bad AI output immediately
-      const blogHtmlFinal = stripH1FromBlog(cleanCompetitorBrands(aiResult.blogHtml || ""));
+      // 7. Validate blog quality BEFORE saving — ensure blogHtml is clean HTML string (not raw JSON)
+      let rawBlogHtml = aiResult.blogHtml || "";
+      if (rawBlogHtml.trim().startsWith("{") || rawBlogHtml.includes('"blogHtml"')) {
+        try {
+          const parsed = JSON.parse(rawBlogHtml);
+          if (parsed.blogHtml) rawBlogHtml = parsed.blogHtml;
+        } catch (_) {
+          const idx = rawBlogHtml.indexOf('"blogHtml"');
+          if (idx !== -1) {
+            let extracted = rawBlogHtml.slice(idx);
+            const colonIdx = extracted.indexOf(":");
+            extracted = extracted.slice(colonIdx + 1).trim();
+            if (extracted.startsWith('"')) extracted = extracted.slice(1);
+            if (extracted.endsWith('"}')) extracted = extracted.slice(0, -2);
+            else if (extracted.endsWith('}')) extracted = extracted.slice(0, -1);
+            if (extracted.endsWith('"')) extracted = extracted.slice(0, -1);
+            rawBlogHtml = extracted.replace(/\\"/g, '"').replace(/\\n/g, "\n");
+          }
+        }
+      }
+
+      const blogHtmlFinal = stripH1FromBlog(cleanCompetitorBrands(rawBlogHtml));
       const qualityCheck = validateBlogQuality(blogHtmlFinal, category, pageText);
 
       if (!qualityCheck.valid) {

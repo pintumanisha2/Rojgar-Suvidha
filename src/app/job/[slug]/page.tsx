@@ -332,11 +332,28 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     ],
   };
 
-  // ── Blog processing — NEVER show DEMO or fake content ──
-  const blogContent = (job.blog_content && job.blog_content.length > 100)
-    ? job.blog_content
+  // ── Blog processing — sanitize & unwrap raw JSON if stored in DB ──
+  let cleanBlogHtml = (job.blog_content || "").trim();
+  if (cleanBlogHtml.startsWith("{") || cleanBlogHtml.startsWith("```json")) {
+    try {
+      const sanitizedJsonStr = cleanBlogHtml.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
+      const parsed = JSON.parse(sanitizedJsonStr);
+      if (parsed.blogHtml) {
+        cleanBlogHtml = parsed.blogHtml;
+      }
+    } catch (_) {
+      // Regex extraction fallback if JSON has unescaped quotes
+      const match = cleanBlogHtml.match(/"blogHtml"\s*:\s*"([\s\S]*)"\s*\}?\s*$/);
+      if (match?.[1]) {
+        cleanBlogHtml = match[1].replace(/\\"/g, '"').replace(/\\n/g, "\n");
+      }
+    }
+  }
+
+  const blogContent = (cleanBlogHtml && cleanBlogHtml.length > 100)
+    ? cleanBlogHtml
     : CONTENT_LOADING_PLACEHOLDER;
-  const hasRealContent = job.blog_content && job.blog_content.length > 100;
+  const hasRealContent = cleanBlogHtml && cleanBlogHtml.length > 100;
   const tocItems = extractTOC(blogContent);
   const readingTime = estimateReadingTime(blogContent);
   const formattedDate = new Date(job.created_at).toLocaleDateString("en-IN", {
