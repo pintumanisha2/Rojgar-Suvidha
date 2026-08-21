@@ -191,6 +191,33 @@ export async function POST(request: Request) {
             console.log(`✅ [Telegram Webhook] Created custom_forms entry for latest-jobs '${draft.generated_title}'`);
           } catch (formErr: any) {
             console.warn("⚠️ [Telegram Webhook] Failed to auto-create custom_forms entry:", formErr.message);
+            // ── Notify admin on Telegram to manually update Apply For Me form ──
+            if (BOT_TOKEN && chatId) {
+              const adminJobUrl = `${BASE_URL}/admin/jobs/${insertedJob.id}`;
+              const alertText = [
+                `⚠️ *ACTION REQUIRED — Apply For Me Form*`,
+                ``,
+                `Post published successfully but *Apply For Me* form could NOT be auto-created.`,
+                ``,
+                `📌 *Post:* ${draft.generated_title?.slice(0, 60)}`,
+                `🔗 *Live URL:* ${BASE_URL}/job/${slug}`,
+                ``,
+                `✏️ *Please manually update the Apply For Me form here:*`,
+                adminJobUrl,
+                ``,
+                `_Error: ${formErr.message?.slice(0, 100)}_`,
+              ].join("\n");
+              fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: alertText,
+                  parse_mode: "Markdown",
+                  disable_web_page_preview: true,
+                }),
+              }).catch(() => {});
+            }
           }
         }
 

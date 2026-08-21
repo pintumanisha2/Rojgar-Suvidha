@@ -143,6 +143,33 @@ export async function POST(
         console.log(`✅ [Auto Form Generator] Created custom_forms entry for latest-jobs '${title}'`);
       } catch (formErr: any) {
         console.warn("⚠️ [Auto Form Generator] Failed to auto-create custom_forms entry:", formErr.message);
+        // ── Notify admin on Telegram to manually update Apply For Me form ──
+        const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+        const tgChat = process.env.TELEGRAM_CHAT_ID;
+        if (tgToken && tgChat) {
+          const adminJobUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/admin/jobs/${newJobId}`;
+          const alertText = [
+            `⚠️ *ACTION REQUIRED — Apply For Me Form*`,
+            ``,
+            `Post "${title?.slice(0, 60)}" published successfully!`,
+            `But *Apply For Me* form could NOT be auto-created.`,
+            ``,
+            `✏️ *Manually update here:*`,
+            adminJobUrl,
+            ``,
+            `_Error: ${formErr.message?.slice(0, 100)}_`,
+          ].join("\n");
+          fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: tgChat,
+              text: alertText,
+              parse_mode: "Markdown",
+              disable_web_page_preview: true,
+            }),
+          }).catch(() => {});
+        }
       }
     }
 

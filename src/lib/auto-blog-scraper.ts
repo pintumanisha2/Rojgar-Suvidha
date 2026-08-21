@@ -1408,7 +1408,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         // ✅ FIX: form_documents ab apne top-level columns mein store hoga (extracted_text JSON mein nahi)
         form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
         form_fees_structure: aiResult.form_fees_structure ? JSON.stringify(aiResult.form_fees_structure) : null,
-        extracted_text: pageText.slice(0, 2000), // Sirf raw source text
+        extracted_text: JSON.stringify({
+          // Store structured data for Apply For Me form auto-creation
+          raw_preview: pageText.slice(0, 1500),
+          form_documents: aiResult.form_documents || null,
+          form_fees_structure: aiResult.form_fees_structure || null,
+        }),
         status: "pending_review",
       };
 
