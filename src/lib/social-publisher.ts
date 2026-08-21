@@ -42,7 +42,8 @@ function getCategoryBadge(category: string): string {
  */
 export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID || "@govermentform";
+  // Always target public Telegram channel (@govermentform / TELEGRAM_CHANNEL_ID), not admin personal chat ID
+  const channelId = process.env.TELEGRAM_CHANNEL_ID || "@govermentform";
 
   if (!botToken) {
     console.log("ℹ️ [Telegram Auto-Poster] TELEGRAM_BOT_TOKEN missing — skipping Telegram post");
@@ -56,20 +57,20 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
   const stateText = job.stateCode && job.stateCode !== "ALL" ? `🏛️ *State:* ${job.stateCode}` : `🌐 *Jurisdiction:* All India`;
 
   const lines = [
+    `🚨 *NEW SARKARI NOTIFICATION 2026*`,
+    "",
     `🔥 *${job.title.trim()}*`,
     "",
     `📌 *Category:* ${categoryBadge}`,
     ...(postsText ? [postsText] : []),
     ...(lastDateText ? [lastDateText] : []),
     stateText,
-    "🟢 *Status:* Online Update Live",
+    "🟢 *Status:* Verified Update Live",
     "",
-    "⚡ *100% Verified Updates @ Rojgar Suvidha*",
-    "",
-    `🔗 *Direct Link & Complete Details:*`,
+    `🔗 *Direct Apply Link & Complete Details:*`,
     jobUrl,
     "",
-    `📢 *Join Official Channel:* ${chatId}`,
+    `📢 *Join Official Channel:* ${channelId}`,
   ];
 
   const text = lines.join("\n");
@@ -82,7 +83,7 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: chatId,
+          chat_id: channelId,
           photo: photoUrl,
           caption: text.slice(0, 1024), // Telegram caption max 1024 chars
           parse_mode: "Markdown",
@@ -90,7 +91,7 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
       });
 
       if (res.ok) {
-        console.log("✅ [Telegram Auto-Poster] Photo post published successfully to Telegram channel");
+        console.log(`✅ [Telegram Auto-Poster] Photo post published successfully to Telegram channel ${channelId}`);
         return true;
       }
     }
@@ -100,7 +101,7 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: channelId,
         text,
         parse_mode: "Markdown",
         disable_web_page_preview: false,
@@ -219,13 +220,7 @@ export async function sendWhatsAppPost(job: BroadcastJobPayload): Promise<boolea
  * Enforces rule: EXCLUDE category 'news' from auto-posting to social groups/channels.
  */
 export async function broadcastJobAlert(job: BroadcastJobPayload): Promise<{ telegram: boolean; whatsapp: boolean; skipped: boolean }> {
-  // RULE 1: STRICTLY EXCLUDE NEWS CATEGORY
-  if (job.category === "news") {
-    console.log(`ℹ️ [Social Broadcaster] Category 'news' is EXCLUDED from Telegram & WhatsApp broadcasting. Skipping.`);
-    return { telegram: false, whatsapp: false, skipped: true };
-  }
-
-  console.log(`🚀 [Social Broadcaster] Broadcasting live alert for '${job.title}' (${job.category})`);
+  console.log(`🚀 [Social Broadcaster] Broadcasting live alert for '${job.title}' (${job.category}) to Telegram Channel @govermentform`);
 
   // Run Telegram and WhatsApp posters asynchronously in parallel
   const [telegram, whatsapp] = await Promise.all([
