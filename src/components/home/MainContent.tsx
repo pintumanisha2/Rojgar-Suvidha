@@ -97,8 +97,8 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
     ...conf,
     items: (jobsByCategory[conf.id] || []).slice(0, 10).map(job => {
       let lastDate = "";
-      if (job.important_dates && job.important_dates.length > 0) {
-        const ldObj = job.important_dates.find((d: any) => d.label === "Last Date");
+      if (Array.isArray(job.important_dates) && job.important_dates.length > 0) {
+        const ldObj = job.important_dates.find((d: any) => d?.label === "Last Date");
         if (ldObj) lastDate = ldObj.value;
       }
       return {

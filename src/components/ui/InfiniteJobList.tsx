@@ -116,8 +116,8 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
         {jobs.map((job) => {
           let lastDate = "";
-          if (job.important_dates && job.important_dates.length > 0) {
-            const ldObj = job.important_dates.find((d: any) => d.label === "Last Date");
+          if (Array.isArray(job.important_dates) && job.important_dates.length > 0) {
+            const ldObj = job.important_dates.find((d: any) => d?.label === "Last Date");
             if (ldObj) lastDate = ldObj.value;
           }
 

@@ -205,8 +205,8 @@ export default async function JobsByTypePage({ params }: { params: Promise<{ typ
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {jobs.map((job) => {
                 let lastDate = "";
-                if (job.important_dates?.length > 0) {
-                  const ldObj = job.important_dates.find((d: any) => d.label === "Last Date");
+                if (Array.isArray(job.important_dates) && job.important_dates.length > 0) {
+                  const ldObj = job.important_dates.find((d: any) => d?.label === "Last Date");
                   if (ldObj) lastDate = ldObj.value;
                 }
                 const st = statusMap[job.status] || statusMap["active"];
