@@ -843,11 +843,13 @@ ${categoryBlueprint}
 
 
   const models = [
-    "gemini-3.6-flash",       // ✅ Latest — recommended replacement for gemini-2.5-flash
-    "gemini-2.0-flash",       // ✅ Stable
-    "gemini-2.0-flash-lite",  // ✅ Faster/lighter
-    "gemini-1.5-flash",       // ✅ Fallback
-    "gemini-1.5-flash-8b",    // ✅ Last resort
+    // ── Verified available models (checked via API on 2026-08-21) ──
+    "gemini-3.7-flash",         // ✅ Latest stable flash
+    "gemini-3.6-flash",         // ✅ Prev latest flash
+    "gemini-3.5-flash",         // ✅ Fallback
+    "gemini-2.5-flash",         // ✅ Stable fallback
+    "gemini-2.5-flash-lite",    // ✅ Lighter, faster fallback
+    "gemini-3.1-flash-lite",    // ✅ Last resort
   ];
 
   let lastError = "";
@@ -863,112 +865,141 @@ ${categoryBlueprint}
         continue;
       }
 
-      try {
-      const payload = {
-        contents: [{
-          role: "user",
-          parts: [{ text: `${SYSTEM_PROMPT}\n\n===== SOURCE CONTENT TO PROCESS =====\n${enrichedContext}` }],
-        }],
-        generationConfig: {
-          temperature: 0.82,
-          maxOutputTokens: 16000, // Increased to 16k to prevent JSON truncation
-          responseMimeType: "application/json",
-        },
-      };
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 55000);
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
-      );
-      clearTimeout(timeout);
-
-      const data = await response.json();
-      if (data.error) {
-        const errMsg = data.error.message || JSON.stringify(data.error);
-        lastError = `${model}: ${errMsg}`;
-
-        // ── Permanently unavailable model (deprecated, removed, not available) ──
-        // Skip this model for ALL remaining API keys — no point trying them
-        if (/no longer available|not available|deprecated|model.*not.*found|does not exist/i.test(errMsg)) {
-          console.warn(`   🚫 Model ${model} is permanently unavailable — skipping for all keys`);
-          permanentlyFailedModels.add(model);
-          continue; // try next model in list
-        }
-
-        // ── Quota / Rate-limit error: break inner model loop for this key ──
-        // All models on the same key share the same quota — no point trying them
-        if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(errMsg)) {
-          console.warn(`   ⛔ Quota exceeded on key ...${apiKey.slice(-4)} — switching to next API key`);
-          break; // break inner model loop → outer key loop will try next key
-        }
-
-        console.warn(`   ⚠️ Model ${model} returned error (${errMsg.slice(0, 80)}), retrying next model in 3s...`);
-        await new Promise((r) => setTimeout(r, 3000));
-        continue;
-      }
-      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      if (!rawJson) { lastError = `${model}: empty response`; continue; }
-
-      let parsed: any;
-      try {
-        const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-        parsed = JSON.parse(cleanedJson);
-      } catch (parseErr: any) {
-        console.warn(`   ⚠️ JSON parse error on ${model}, attempting auto-repair:`, parseErr.message);
+      // ── Per-model: up to 3 attempts with exponential backoff (handles 503 overloaded) ──
+      let modelAttempt = 0;
+      const maxModelAttempts = 3;
+      while (modelAttempt < maxModelAttempts) {
+        modelAttempt++;
         try {
-          // Escape unescaped newlines/tabs inside raw JSON string
-          let repaired = rawJson
-            .replace(/^```json?\s*/i, "")
-            .replace(/```\s*$/i, "")
-            .replace(/\r\n/g, "\\n")
-            .replace(/\n/g, "\\n")
-            .replace(/\r/g, "\\r")
-            .replace(/\t/g, "\\t")
-            .trim();
+        const payload = {
+          contents: [{
+            role: "user",
+            parts: [{ text: `${SYSTEM_PROMPT}\n\n===== SOURCE CONTENT TO PROCESS =====\n${enrichedContext}` }],
+          }],
+          generationConfig: {
+            temperature: 0.75,
+            maxOutputTokens: 8192, // 8192 is reliable — avoids truncation timeouts
+            responseMimeType: "application/json",
+          },
+        };
 
-          const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
-          if (quoteCount % 2 !== 0) repaired += '"';
-          const openBraces = (repaired.match(/\{/g) || []).length;
-          const closeBraces = (repaired.match(/\}/g) || []).length;
-          for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
-          parsed = JSON.parse(repaired);
-        } catch (e2: any) {
-          console.warn(`   ⚠️ Advanced JSON repair failed on ${model}, using regex field extractor...`);
-          const titleMatch = rawJson.match(/"title"\s*:\s*"([^"]+)"/);
-          const metaMatch = rawText.match(/"metaDesc"\s*:\s*"([^"]+)"/);
-          const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]+)"\s*\}\s*$/);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 90000); // 90s timeout
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
+        );
+        clearTimeout(timeout);
 
-          if (titleMatch?.[1]) {
-            parsed = {
-              title: titleMatch[1],
-              metaDesc: metaMatch ? metaMatch[1] : "",
-              blogHtml: htmlMatch ? htmlMatch[1] : rawJson,
-              category,
-            };
-          } else {
-            lastError = `${model}: JSON parse failed: ${parseErr.message}`;
-            continue;
+        const data = await response.json();
+        if (data.error) {
+          const errMsg = data.error.message || JSON.stringify(data.error);
+          lastError = `${model}: ${errMsg}`;
+
+          // ── Permanently unavailable model (deprecated, removed, not available) ──
+          if (/no longer available|not available|deprecated|model.*not.*found|does not exist/i.test(errMsg)) {
+            console.warn(`   🚫 Model ${model} is permanently unavailable — skipping for all keys`);
+            permanentlyFailedModels.add(model);
+            break; // break while loop → continue to next model
+          }
+
+          // ── Quota / Rate-limit error → switch to next API key ──
+          if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(errMsg)) {
+            console.warn(`   ⛔ Quota exceeded on key ...${apiKey.slice(-4)} — switching to next API key`);
+            modelAttempt = maxModelAttempts; // exhaust model attempts
+            break; // will trigger outer break below
+          }
+
+          // ── Overloaded / 503 / Internal error → retry with backoff ──
+          if (/overloaded|503|internal|unavailable|server error/i.test(errMsg) || response.status === 503) {
+            const backoff = modelAttempt * 5000; // 5s, 10s, 15s
+            console.warn(`   ⏳ Model ${model} overloaded (attempt ${modelAttempt}/${maxModelAttempts}), retrying in ${backoff/1000}s...`);
+            await new Promise((r) => setTimeout(r, backoff));
+            continue; // retry same model
+          }
+
+          // ── Other errors → try next model immediately ──
+          console.warn(`   ⚠️ Model ${model} error (${errMsg.slice(0, 80)}), trying next model...`);
+          break;
+        }
+
+        // ── Check quota flag from while-loop ──
+        if (modelAttempt >= maxModelAttempts && !data.candidates) break;
+
+        const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (!rawJson) { lastError = `${model}: empty response`; break; }
+
+        let parsed: any;
+        try {
+          const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
+          parsed = JSON.parse(cleanedJson);
+        } catch (parseErr: any) {
+          console.warn(`   ⚠️ JSON parse error on ${model}, attempting auto-repair:`, parseErr.message);
+          try {
+            let repaired = rawJson
+              .replace(/^```json?\s*/i, "")
+              .replace(/```\s*$/i, "")
+              .replace(/\r\n/g, "\\n")
+              .replace(/\n/g, "\\n")
+              .replace(/\r/g, "\\r")
+              .replace(/\t/g, "\\t")
+              .trim();
+
+            const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
+            if (quoteCount % 2 !== 0) repaired += '"';
+            const openBraces = (repaired.match(/\{/g) || []).length;
+            const closeBraces = (repaired.match(/\}/g) || []).length;
+            for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
+            parsed = JSON.parse(repaired);
+          } catch (e2: any) {
+            console.warn(`   ⚠️ Advanced JSON repair failed on ${model}, using regex field extractor...`);
+            const titleMatch = rawJson.match(/"title"\s*:\s*"([^"]+)"/);
+            const metaMatch = rawText.match(/"metaDesc"\s*:\s*"([^"]+)"/);
+            const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]+)"\s*\}\s*$/);
+
+            if (titleMatch?.[1]) {
+              parsed = {
+                title: titleMatch[1],
+                metaDesc: metaMatch ? metaMatch[1] : "",
+                blogHtml: htmlMatch ? htmlMatch[1] : rawJson,
+                category,
+              };
+            } else {
+              lastError = `${model}: JSON parse failed: ${parseErr.message}`;
+              break;
+            }
           }
         }
+
+        // ── Content validation ──
+        const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+        if (wordCount < 500) {
+          lastError = `${model}: Blog too short (${wordCount} words)`; break;
+        }
+        if (!parsed.title) { lastError = `${model}: No title generated`; break; }
+
+        console.log(`   ✅ Generated via ${model} (attempt ${modelAttempt}): ${wordCount} words, title="${parsed.title}"`);
+        return parsed;
+
+      } catch (e: any) {
+        if (e.name === "AbortError") {
+          console.warn(`   ⏰ Model ${model} timed out (attempt ${modelAttempt}/${maxModelAttempts})`);
+          lastError = `${model}: timeout`;
+          if (modelAttempt < maxModelAttempts) {
+            await new Promise((r) => setTimeout(r, 3000));
+            continue; // retry on timeout
+          }
+        } else {
+          lastError = `${model}: ${e.message}`;
+        }
+        break;
       }
+      } // end while(modelAttempt)
 
-      // ── Content validation ──
-      const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
-      if (wordCount < 500) {
-        lastError = `${model}: Blog too short (${wordCount} words)`; continue;
+      // ── Quota exhausted on this key (all models) — switch key ──
+      if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(lastError)) {
+        break; // break model loop → outer key loop tries next key
       }
-      if (!parsed.title) { lastError = `${model}: No title generated`; continue; }
-
-      console.log(`   🤖 Generated via ${model}: ${wordCount} words, title="${parsed.title}"`);
-      return parsed;
-
-    } catch (e: any) {
-      lastError = `${model}: ${e.message}`;
-      continue;
-    }
-    }
   }
   throw new Error(`All Gemini models failed. Last error: ${lastError}`);
 }
