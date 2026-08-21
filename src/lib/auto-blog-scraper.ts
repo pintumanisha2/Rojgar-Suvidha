@@ -30,18 +30,35 @@ interface ScraperResult {
 // ── Config ────────────────────────────────────────────────────────────────────
 // Primary: FreeJobAlert.com (WordPress blog — /feed/ works reliably)
 // Fallback sources ordered by DA (Domain Authority) and reliability
+// ── Category-specific RSS feeds (ONLY govt-job focused, no general news) ────
+// Each category gets its own dedicated feed → correct content guaranteed
+const CATEGORY_RSS_FEEDS: Record<string, string[]> = {
+  "latest-jobs": [
+    "https://www.freejobalert.com/feed/",          // Primary — all new govt job notifications
+    "https://www.freejobalert.com/sarkari-naukri/feed/", // Secondary — sarkari naukri category
+  ],
+  "results": [
+    "https://www.freejobalert.com/result/feed/",   // Result-only feed
+  ],
+  "admit-card": [
+    "https://www.freejobalert.com/admit-card/feed/", // Admit card-only feed
+  ],
+  "answer-key": [
+    "https://www.freejobalert.com/answer-key/feed/", // Answer key-only feed (was causing 0 posts)
+  ],
+  "admission": [
+    "https://www.freejobalert.com/admission/feed/", // Admission-only feed
+  ],
+};
+
+// Flat list for backward compatibility with fetchRSSItems()
+// Order: latest-jobs first (highest volume + most important)
 const RSS_URLS = [
-  // FreeJobAlert — main source (high DA, govt jobs specific)
-  "https://www.freejobalert.com/feed/",
-  "https://freejobalert.com/feed/",
-  // Jagran Josh — India's highest DA education site (DA 78)
-  "https://www.jagranjosh.com/articles/feed",
-  // Careers360 — exam-focused, very reliable (DA 72)
-  "https://news.careers360.com/rss",
-  // India Today Education — high authority news (DA 83)
-  "https://www.indiatoday.in/rss/home",
-  // Hindustan Times Education — reliable Hindi newspaper (DA 80)
-  "https://www.hindustantimes.com/feeds/rss/education/rssfeed.xml",
+  ...CATEGORY_RSS_FEEDS["latest-jobs"],
+  ...CATEGORY_RSS_FEEDS["results"],
+  ...CATEGORY_RSS_FEEDS["admit-card"],
+  ...CATEGORY_RSS_FEEDS["answer-key"],
+  ...CATEGORY_RSS_FEEDS["admission"],
 ];
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
@@ -56,32 +73,46 @@ function getSupabaseAdmin() {
 // ── Sleep helper (avoid rate limiting) ───────────────────────────────────────
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// ── Category Detection (improved with more patterns) ─────────────────────────
+// ── Category Detection v2 — Title-First, Strict Priority ─────────────────────
+// Uses TITLE-ONLY matching first (source titles are always accurate)
+// Falls back to combined text only if title is ambiguous
 function detectCategory(title: string, content: string): BlogCategory {
-  const text = (title + " " + content).toLowerCase();
+  const t = title.toLowerCase();
+  const combined = (title + " " + content).toLowerCase();
 
-  // Results first — most specific
-  if (/\bresult\b|merit list|cut.?off|scorecard|marks obtained|selected candidates|final result/.test(text))
+  // ── TITLE-ONLY checks (highest confidence) ──────────────────────────────
+  // Results — specific result keywords in title
+  if (/\bresult\b|merit list|scorecard|cut-?off mark|selected candidates|rank list|final result|result out|result declared/.test(t))
     return "results";
 
-  // Admit card
-  if (/admit card|hall ticket|call letter|e-admit|e admit/.test(text))
+  // Admit Card — specific keywords in title
+  if (/admit card|hall ticket|call letter|e-admit|city intimation|interview letter/.test(t))
     return "admit-card";
 
-  // Answer key
-  if (/answer key|answer sheet|objection window|provisional answer/.test(text))
+  // Answer Key — specific keywords in title
+  if (/answer key|answer sheet|provisional answer|final answer|objection window|raise objection/.test(t))
     return "answer-key";
 
-  // Admission
-  if (/\badmission\b|counseling|counselling|\bcuet\b|\bneet\b|\bjee\b|university|college admission|diploma admission/.test(text))
+  // Admission / Counselling — specific keywords in title
+  if (/\bcounselling\b|\bcounseling\b|seat allot|allotment result|admission open|college admission|merit list.*admission/.test(t))
     return "admission";
 
-  // News-type posts
-  if (/age limit|syllabus change|exam postpone|exam cancel|new notification|official notice/.test(text) &&
-    !/vacancy|recruitment|post/.test(text))
+  // Latest Jobs — recruitment/vacancy in title
+  if (/recruitment|vacancy|apply online|online form|job notification|\bnoti(?:fication)?\b|\bvacancy\b|\bpost\b.*202[456]/.test(t))
+    return "latest-jobs";
+
+  // ── CONTENT-BASED fallback (lower confidence — only if title is ambiguous) ─
+  if (/\bresult\b|merit list|scorecard/.test(combined)) return "results";
+  if (/admit card|hall ticket/.test(combined)) return "admit-card";
+  if (/answer key|objection window/.test(combined)) return "answer-key";
+  if (/\bcounselling\b|seat allot/.test(combined)) return "admission";
+
+  // ── News detection (only if explicitly news-like — no job keywords) ────
+  if (/postponed|cancelled|rescheduled|syllabus change|age limit change|new rule/.test(t) &&
+    !/recruitment|vacancy|apply|result|admit|answer key/.test(t))
     return "news";
 
-  return "latest-jobs";
+  return "latest-jobs"; // Safe default — job posts are highest volume
 }
 
 // ── State Code Detection (Auto-detect State vs All India) ─────────────────
@@ -261,53 +292,68 @@ function extractPageData(pageText: string, links: { href: string; text: string }
   return { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education };
 }
 
-// ── Parse RSS Feed (with fallback URLs) ──────────────────────────────────────
-async function fetchRSSItems() {
-  let lastErr = "";
-  for (const rssUrl of RSS_URLS) {
-    try {
-      const res = await fetch(rssUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
-          "Accept": "application/rss+xml, application/xml, text/xml, */*",
-        },
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
-      const xml = await res.text();
-      if (!xml.includes("<item>")) { lastErr = "No <item> tags found"; continue; }
+// ── Fetch ALL category-specific RSS feeds ─────────────────────────────────────
+// Each feed URL is tagged with its category → guarantees correct categorization
+// Returns items from ALL category feeds in one call
+async function fetchRSSItems(): Promise<{
+  title: string; link: string; pubDate: string;
+  description: string; feedCategory: string;
+}[]> {
+  const allItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
 
-      const items: { title: string; link: string; pubDate: string; description: string }[] = [];
-      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-      let match: RegExpExecArray | null;
+  for (const [feedCat, urls] of Object.entries(CATEGORY_RSS_FEEDS)) {
+    for (const rssUrl of urls) {
+      try {
+        const res = await fetch(rssUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+          },
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!res.ok) { console.warn(`RSS [${feedCat}] ${rssUrl}: HTTP ${res.status}`); continue; }
+        const xml = await res.text();
+        if (!xml.includes("<item>")) { console.warn(`RSS [${feedCat}] ${rssUrl}: no <item> tags`); continue; }
 
-      while ((match = itemRegex.exec(xml)) !== null) {
-        const item = match[1];
-        const title =
-          item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
-          item.match(/<title>(.*?)<\/title>/)?.[1] || "";
-        const link =
-          item.match(/<link>(.*?)<\/link>/)?.[1] ||
-          item.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
-        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
-        const description =
-          item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
-          item.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+        let match: RegExpExecArray | null;
+        let count = 0;
 
-        if (title && link) {
-          items.push({ title: title.trim(), link: link.trim(), pubDate: pubDate.trim(), description: description.trim() });
+        while ((match = itemRegex.exec(xml)) !== null) {
+          const block = match[1];
+          const title =
+            block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+            block.match(/<title>(.*?)<\/title>/)?.[1] || "";
+          const link =
+            block.match(/<link>(.*?)<\/link>/)?.[1] ||
+            block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+          const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+          const description =
+            block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
+            block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+
+          if (title && link) {
+            allItems.push({
+              title: title.trim(), link: link.trim(),
+              pubDate: pubDate.trim(), description: description.trim(),
+              feedCategory: feedCat,  // ← KEY: tag with source feed category
+            });
+            count++;
+          }
         }
+        console.log(`📡 RSS [${feedCat}] from ${rssUrl}: ${count} items`);
+        break; // Got items from this feed — no need to try fallback URL
+      } catch (e: any) {
+        console.warn(`RSS [${feedCat}] ${rssUrl} failed: ${e.message}`);
       }
-      console.log(`📡 RSS from ${rssUrl}: ${items.length} items`);
-      return items;
-    } catch (e: any) {
-      lastErr = e.message;
     }
   }
-  throw new Error(`All RSS URLs failed: ${lastErr}`);
+
+  if (allItems.length === 0) throw new Error("All category RSS feeds failed");
+  return allItems;
 }
 
-// ── Fetch Full Page (deep content extraction) ─────────────────────────────────
+
 async function fetchFullPage(url: string): Promise<{
   text: string;
   links: { href: string; text: string }[];
@@ -488,7 +534,72 @@ async function getUniqueSlug(baseSlug: string, supabase: any): Promise<string> {
   }
 }
 
+// ── Blog Quality Validator ────────────────────────────────────────────────────
+// Runs AFTER AI generation, BEFORE saving to DB.
+// If validation fails → post is SKIPPED. Never publish bad content.
+function validateBlogQuality(html: string, category: string): { valid: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const text = html.toLowerCase();
+  const wordCount = html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+
+  // Universal checks (every category)
+  if (html.includes("<h1"))
+    issues.push("H1 tag in blog content — double H1 SEO penalty");
+
+  if (/sarkari result|freejobalert|free job alert|ndtv\.com|careers360|jagran josh/i.test(html))
+    issues.push("Competitor brand name found in content");
+
+  if (/\bas an ai\b|language model|as of my knowledge cutoff|my training data/i.test(html))
+    issues.push("AI self-reference phrase found (Google spam signal)");
+
+  if (/furthermore,|additionally,|moreover,|in conclusion,|in summary,|to summarize,|it is important to note|it should be noted/i.test(html))
+    issues.push("AI template phrases found (sounds robotic)");
+
+  if (wordCount < 400)
+    issues.push(`Content too thin: ${wordCount} words (minimum 400 required)`);
+
+  if (!html.includes("rojgarsuvidha.com"))
+    issues.push("No internal Rojgar Suvidha link found");
+
+  // Category-specific checks
+  if (category === "results") {
+    if (!text.includes("download") && !text.includes("check result") && !text.includes("result link") && !text.includes("scorecard"))
+      issues.push("Result post has no download/check result section");
+    if (text.includes("last date to apply") || text.includes("how to apply online"))
+      issues.push("Result post incorrectly contains apply section (category bleed)");
+  }
+
+  if (category === "admit-card") {
+    if (!text.includes("download") && !text.includes("admit card"))
+      issues.push("Admit card post has no download section");
+    if (text.includes("result link") || text.includes("merit list released"))
+      issues.push("Admit card post incorrectly contains result content");
+  }
+
+  if (category === "answer-key") {
+    if (!text.includes("answer key") && !text.includes("download"))
+      issues.push("Answer key post has no key download section");
+    if (text.includes("how to apply online") || text.includes("application fee"))
+      issues.push("Answer key post incorrectly contains application content");
+  }
+
+  if (category === "latest-jobs") {
+    if (!text.includes("last date") && !text.includes("apply"))
+      issues.push("Job post has no last date or apply section");
+    if (text.includes("result out") || text.includes("merit list released"))
+      issues.push("Job post incorrectly contains result content (category bleed)");
+  }
+
+  if (category === "news") {
+    if (text.includes("application fee") || text.includes("how to apply online"))
+      issues.push("News post incorrectly contains job application content");
+  }
+
+  return { valid: issues.length === 0, issues };
+}
+
 // ── Generate Blog via Gemini AI (Full SarkariLekhan Persona) ─────────────────
+
 async function generateBlogDraft(opts: {
   rawText: string;
   category: BlogCategory;
@@ -929,6 +1040,21 @@ CORRECT — Always do this:
 This is RULE ZERO. Highest priority. No exceptions. If you add even one emoji, the entire blog is rejected.
 
 ================================================================================
+RULE 0B — NO AI SELF-REFERENCE PHRASES (AUTOMATIC REJECTION)
+================================================================================
+NEVER use any of these phrases (they reveal AI origin and trigger Google spam detection):
+  - "as an AI", "as a language model", "I cannot", "I am unable to"
+  - "as of my knowledge cutoff", "my training data"
+  - "Furthermore,", "Additionally,", "Moreover,", "In conclusion,"
+  - "It is important to note that", "It should be noted that"
+  - "In summary,", "Overall,", "To summarize,"
+  - "it is worth mentioning", "it is worth noting"
+  - "This article will explore", "In this article, we will"
+  - "Without further ado", "Let's dive in", "Without delay"
+
+Write naturally like a human editor — not like a content template generator.
+
+================================================================================
 RULE 1 — NO H1 TAG IN blogHtml (CRITICAL FOR SEO)
 ================================================================================
 DO NOT write any <h1> tag inside blogHtml.
@@ -1355,7 +1481,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
 
   // 1. Fetch RSS & NDTV Education News
-  let rssItems: Awaited<ReturnType<typeof fetchRSSItems>> = [];
+  let rssItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   try {
     rssItems = await fetchRSSItems();
   } catch (err: any) {
@@ -1364,9 +1490,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
   const ndtvItems = await fetchNDTVEducationNews();
 
-  const allCandidateItems: { title: string; link: string; pubDate: string; description: string; source: string }[] = [
-    ...rssItems.map((i) => ({ ...i, source: "freejobalert" })),
-    ...ndtvItems.map((i) => ({ ...i, source: "ndtv" })),
+  const allCandidateItems: { title: string; link: string; pubDate: string; description: string; source: string; feedCategory: string }[] = [
+    ...rssItems.map((item) => ({ ...item, source: "freejobalert" })),
+    ...ndtvItems.map((item) => ({ ...item, source: "ndtv", feedCategory: "news" })),
   ];
 
   if (allCandidateItems.length === 0) {
@@ -1398,10 +1524,25 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const { text: pageText, links } = await fetchFullPage(item.link);
       console.log(`   📄 Page extracted: ${pageText.split(" ").length} words, ${links.length} links`);
 
-      // 5. Smart analysis (FreeJobAlert is NEVER news; NDTV is ALWAYS news)
-      let detectedCat = detectCategory(item.title, pageText);
-      if (detectedCat === "news") detectedCat = "latest-jobs";
-      const category: BlogCategory = item.source === "ndtv" ? "news" : detectedCat;
+      // 5. Smart category detection — title-first logic for ALL sources
+      // NDTV: apply real detection; only cap "latest-jobs" → "news" (NDTV has no apply forms)
+      // FreeJobAlert category feeds: detection is pre-validated by feed URL
+      let category: BlogCategory = detectCategory(item.title, pageText);
+
+      if (item.source === "ndtv") {
+        // NDTV articles don't have application forms — cap at news level
+        if (category === "latest-jobs") category = "news";
+        // But NDTV can correctly be: results, admit-card, answer-key, admission, news
+      } else {
+        // FreeJobAlert: if category feed is known, trust it over detection
+        if (item.feedCategory && item.feedCategory !== "latest-jobs") {
+          // Feed category is highly reliable (e.g., /result/feed/ → always results)
+          category = item.feedCategory as BlogCategory;
+        }
+        // FreeJobAlert never has pure "news" — convert to latest-jobs as safety
+        if (category === "news") category = "latest-jobs";
+      }
+
       const stateCode = item.source === "ndtv" ? null : detectStateCode(item.title, pageText);
       const { status: applyStatus, link: applyLink } = item.source === "ndtv" ? { status: "unknown" as ApplyStatus, link: null } : detectApplyStatus(pageText, links);
       const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education } =
@@ -1428,7 +1569,25 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         sourceTitle: item.title,
       });
 
-      // 7. Generate unique slug & dynamic banner URL
+      // 7. Validate blog quality BEFORE saving — reject bad AI output immediately
+      const blogHtmlFinal = stripH1FromBlog(cleanCompetitorBrands(aiResult.blogHtml || ""));
+      const qualityCheck = validateBlogQuality(blogHtmlFinal, category);
+      if (!qualityCheck.valid) {
+        console.warn(`⚠️ [Quality] REJECTED: "${item.title.slice(0, 60)}"`);
+        qualityCheck.issues.forEach(issue => console.warn(`   ❌ ${issue}`));
+        console.warn(`   → Skipping. URL logged so it won't retry with same broken source.`);
+        await supabase.from("scraped_urls_log").upsert(
+          [{ url: item.link, reason: `quality_fail: ${qualityCheck.issues[0]}` }],
+          { onConflict: "url" }
+        );
+        results.errors.push(`Quality rejected: ${item.title.slice(0, 50)} — ${qualityCheck.issues.join(" | ")}`);
+        continue;
+      }
+      const finalWordCount = blogHtmlFinal.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+      console.log(`✅ [Quality] Validated: ${finalWordCount} words | category=${category}`);
+
+      // 8. Generate unique slug & dynamic banner URL
+
       const baseSlug = generateSlug(aiResult.title || item.title);
       const slug = await getUniqueSlug(baseSlug, supabase);
       const bannerTitle = cleanCompetitorBrands(aiResult.title || item.title);
@@ -1453,7 +1612,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         generated_title: cleanCompetitorBrands(aiResult.title || item.title),
         generated_meta: cleanCompetitorBrands(aiResult.metaDesc || ""),
         generated_slug: slug,
-        generated_html: stripH1FromBlog(cleanCompetitorBrands(aiResult.blogHtml || "")),
+        generated_html: blogHtmlFinal, // already cleaned (stripH1 + cleanBrands) and validated above
         generated_tags: aiResult.tag ? [cleanCompetitorBrands(aiResult.tag)] : [],
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
