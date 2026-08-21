@@ -71,32 +71,70 @@ export async function POST(
       linksArray.push({ label: "Official Website", url: officialLink });
     }
 
-    // 3. Insert into jobs table (same schema as AI Writer uses)
-    const jobPayload: any = {
-      title,
-      slug,
-      blog_content: (html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
-      short_info: draft.short_description || metaDesc,
-      meta_description: metaDesc,
-      tag: draft.generated_tags?.[0] || null,
-      category,
-      state_code: stateCode || null,
-      banner_url: bannerUrl || null,
-      status: postStatus,
-      links: linksArray.length > 0 ? linksArray : (applyLink ? applyLink : null),
-      important_dates: draft.important_dates || null,
-      created_at: new Date().toISOString(),
-    };
+    // 3. Insert or Update jobs table (Duplicate Prevention & Freshness Signal)
+    let targetJobId: string | null = body.existingJobId || draft.existing_job_id || null;
+    if (!targetJobId && draft.extracted_text) {
+      try {
+        const meta = JSON.parse(draft.extracted_text);
+        if (meta.existing_job_id) targetJobId = meta.existing_job_id;
+      } catch (_) {}
+    }
 
-    const { data: insertedJob, error: insertError } = await supabase
-      .from("jobs")
-      .insert([jobPayload])
-      .select("id")
-      .single();
+    let newJobId = targetJobId;
 
-    if (insertError) throw new Error(`DB insert: ${insertError.message}`);
+    if (targetJobId) {
+      // ── UPDATE EXISTING POST ──
+      const updatePayload: any = {
+        title,
+        blog_content: (html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
+        short_info: draft.short_description || metaDesc,
+        meta_description: metaDesc,
+        tag: draft.generated_tags?.[0] || null,
+        category,
+        state_code: stateCode || null,
+        banner_url: bannerUrl || null,
+        status: postStatus,
+        links: linksArray.length > 0 ? linksArray : (applyLink ? applyLink : null),
+        important_dates: draft.important_dates || null,
+        updated_at: new Date().toISOString(),
+      };
 
-    const newJobId = insertedJob.id;
+      const { error: updateError } = await supabase
+        .from("jobs")
+        .update(updatePayload)
+        .eq("id", targetJobId);
+
+      if (updateError) throw new Error(`DB update: ${updateError.message}`);
+      console.log(`✅ [Publish] UPDATED existing job ID = ${targetJobId} (Slug: /job/${slug})`);
+    } else {
+      // ── INSERT NEW POST ──
+      const jobPayload: any = {
+        title,
+        slug,
+        blog_content: (html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
+        short_info: draft.short_description || metaDesc,
+        meta_description: metaDesc,
+        tag: draft.generated_tags?.[0] || null,
+        category,
+        state_code: stateCode || null,
+        banner_url: bannerUrl || null,
+        status: postStatus,
+        links: linksArray.length > 0 ? linksArray : (applyLink ? applyLink : null),
+        important_dates: draft.important_dates || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: insertedJob, error: insertError } = await supabase
+        .from("jobs")
+        .insert([jobPayload])
+        .select("id")
+        .single();
+
+      if (insertError) throw new Error(`DB insert: ${insertError.message}`);
+      newJobId = insertedJob.id;
+      console.log(`✅ [Publish] CREATED new job ID = ${newJobId} (Slug: /job/${slug})`);
+    }
 
     // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")
     if (category === "latest-jobs" && newJobId) {

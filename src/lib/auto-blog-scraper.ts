@@ -1798,6 +1798,52 @@ async function fetchGoogleNewsFacts(keyword: string): Promise<{ text: string; li
   }
 }
 
+// ── Existing Job Matcher (Prevents Duplicates & Updates Existing Posts) ──────
+async function findMatchingExistingJob(title: string, category: string, supabase: any): Promise<{ id: string; slug: string; title: string } | null> {
+  try {
+    const cleanTokens = title
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !["recruitment", "online", "apply", "form", "notification", "posts", "out", "released", "dates", "check", "here"].includes(w));
+
+    if (cleanTokens.length < 2) return null;
+
+    const { data: jobs } = await supabase
+      .from("jobs")
+      .select("id, title, slug, category, created_at")
+      .eq("category", category)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (!jobs || jobs.length === 0) return null;
+
+    for (const j of jobs) {
+      const jTokens = new Set(
+        j.title
+          .toLowerCase()
+          .replace(/[^\w\s]/g, "")
+          .split(/\s+/)
+          .filter((w: string) => w.length > 2)
+      );
+
+      let matches = 0;
+      for (const token of cleanTokens) {
+        if (jTokens.has(token)) matches++;
+      }
+
+      const matchRatio = matches / cleanTokens.length;
+      if (matchRatio >= 0.70 && matches >= 2) {
+        console.log(`🎯 [Duplicate Protection] Found existing job match: "${j.title}" (ID: ${j.id}, Slug: ${j.slug}) for new title: "${title}"`);
+        return { id: j.id, slug: j.slug, title: j.title };
+      }
+    }
+  } catch (e: any) {
+    console.warn("⚠️ Existing job matcher warning:", e.message);
+  }
+  return null;
+}
+
 // ── MAIN RUNNER ───────────────────────────────────────────────────────────────
 export async function runAutoBlogScraper(): Promise<ScraperResult> {
   console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
@@ -1945,12 +1991,17 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const finalWordCount = blogHtmlFinal.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
       console.log(`✅ [Quality] Validated: ${finalWordCount} words | category=${category}`);
 
-      // 8. Generate unique slug & dynamic banner URL
+      // 8. Generate slug & check for matching existing job (Duplicate Prevention)
+      const existingJobMatch = await findMatchingExistingJob(aiResult.title || item.title, category, supabase);
 
-      const baseSlug = generateSlug(aiResult.title || item.title);
-      const slug = await getUniqueSlug(baseSlug, supabase);
+      const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(aiResult.title || item.title);
+      const slug = existingJobMatch ? existingJobMatch.slug : await getUniqueSlug(baseSlug, supabase);
       const bannerTitle = cleanCompetitorBrands(aiResult.title || item.title);
       const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(bannerTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(aiResult.lastDate || lastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
+
+      if (existingJobMatch) {
+        console.log(`🎯 [Duplicate Protection] Match found! Draft will UPDATE existing job ID: ${existingJobMatch.id} (URL: /job/${existingJobMatch.slug})`);
+      }
 
       // 8. Save draft to Supabase
       const draftPayload: any = {
@@ -1976,12 +2027,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
         important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
-        // ✅ FIX: form_documents ab apne top-level columns mein store hoga (extracted_text JSON mein nahi)
         form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
         form_fees_structure: aiResult.form_fees_structure ? JSON.stringify(aiResult.form_fees_structure) : null,
         extracted_text: JSON.stringify({
-          // Store structured data for Apply For Me form auto-creation
           raw_preview: pageText.slice(0, 1500),
+          existing_job_id: existingJobMatch ? existingJobMatch.id : null,
+          existing_job_slug: existingJobMatch ? existingJobMatch.slug : null,
           form_documents: aiResult.form_documents || null,
           form_fees_structure: aiResult.form_fees_structure || null,
         }),
@@ -2025,7 +2076,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
       if (inserted?.id) {
-        const titlePrefix = item.source === "google_trends" ? "🔥 GOOGLE TRENDING: " : "";
+        const titlePrefix = existingJobMatch
+          ? `🔄 UPDATE EXISTING POST: `
+          : (item.source === "google_trends" ? "🔥 GOOGLE TRENDING: " : "");
         sendAdminDraftApprovalAlert({
           id: inserted.id,
           title: titlePrefix + cleanCompetitorBrands(aiResult.title || item.title),
