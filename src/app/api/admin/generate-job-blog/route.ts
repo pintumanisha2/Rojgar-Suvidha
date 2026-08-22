@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callGeminiWithRotation } from "@/lib/gemini-rotator";
 
 export async function POST(req: Request) {
   try {
@@ -113,48 +114,16 @@ Replace [Question X] and [Answer X] with actual content from your FAQ above:
 
 Generate the complete HTML content now:`;
 
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-      return NextResponse.json({ error: "Gemini API Key missing in .env.local" }, { status: 500 });
-    }
-
-    const models = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
     let blogHtml = "";
-    let lastError = "";
-
-    for (const model of models) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
-              generationConfig: { temperature: 0.7, maxOutputTokens: 6000 },
-            }),
-            signal: AbortSignal.timeout(50000),
-          }
-        );
-
-        const data = await response.json();
-        if (data.error) {
-          lastError = data.error.message || "Unknown error";
-          console.warn(`Model ${model} failed:`, lastError);
-          continue;
-        }
-
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        if (rawText) { blogHtml = rawText; break; }
-      } catch (modelError: any) {
-        lastError = modelError.message;
-        console.warn(`Model ${model} error:`, modelError);
-        continue;
-      }
-    }
-
-    if (!blogHtml) {
-      return NextResponse.json({ error: `AI could not generate content: ${lastError}` }, { status: 500 });
+    try {
+      blogHtml = await callGeminiWithRotation({
+        prompt: systemPrompt,
+        temperature: 0.7,
+        maxOutputTokens: 6000,
+        timeoutMs: 60000,
+      });
+    } catch (aiErr: any) {
+      return NextResponse.json({ error: `AI generation failed across all keys: ${aiErr.message}` }, { status: 500 });
     }
 
     // ── Post-processing cleanup ────────────────────────────────────────────────

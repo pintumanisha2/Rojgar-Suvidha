@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
 
@@ -220,6 +221,24 @@ export async function POST(
         published_post_id: newJobId,
       })
       .eq("id", id);
+
+    // 4.1. Immediate Cache Revalidation for Next.js / Vercel Edge Cache
+    try {
+      revalidatePath("/sitemap.xml");
+      revalidatePath("/feed.xml");
+      revalidatePath("/rss.xml");
+      revalidatePath("/latest-jobs");
+      revalidatePath("/news");
+      revalidatePath("/results");
+      revalidatePath("/admit-card");
+      revalidatePath("/answer-key");
+      revalidatePath("/admission");
+      revalidatePath("/");
+      if (slug) revalidatePath(`/job/${slug}`);
+      console.log(`✅ [Publish] Cache revalidated for /sitemap.xml, /feed.xml, /job/${slug}`);
+    } catch (revalErr: any) {
+      console.warn("⚠️ [Publish] Cache revalidation failed:", revalErr.message);
+    }
 
     // 5. Auto-translation (background, non-blocking)
     if (postStatus === "active" && newJobId) {

@@ -1341,28 +1341,23 @@ CRITICAL JSON SYNTAX RULE
 
 
   const models = [
-    // ── VERIFIED ACTIVE Google Gemini models (API Listed) ──
-    "gemini-3.6-flash",         // Primary model — fast, high quality, active
-    "gemini-3.7-flash",         // Latest 3.7 Flash model
-    "gemini-3.5-flash",         // Stable 3.5 Flash model
-    "gemini-flash-latest",      // Google's dynamic alias (always maps to active Flash)
-    "gemini-2.5-flash",         // 2.5 Flash fallback
+    // ── VERIFIED ACTIVE Google Gemini models ──
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
   ];
 
   let lastError = "";
-
-  // Track globally unavailable models (deprecated/not-found) — skip across ALL keys
   const permanentlyFailedModels = new Set<string>();
 
   for (const apiKey of apiKeys) {
-    for (const model of models) {
-      // Skip models that are permanently unavailable (checked on a previous key)
-      if (permanentlyFailedModels.has(model)) {
-        console.warn(`   ⏭️ Skipping ${model} — permanently unavailable`);
-        continue;
-      }
+    let keyQuotaExhausted = false;
 
-      // ── Per-model: up to 3 attempts with exponential backoff (handles 503 overloaded) ──
+    for (const model of models) {
+      if (keyQuotaExhausted) break; // Move to next key immediately if key quota is exhausted
+      if (permanentlyFailedModels.has(model)) continue;
+
       let modelAttempt = 0;
       const maxModelAttempts = 3;
       while (modelAttempt < maxModelAttempts) {
@@ -1375,13 +1370,13 @@ CRITICAL JSON SYNTAX RULE
           }],
           generationConfig: {
             temperature: 0.75,
-            maxOutputTokens: 8192, // 8192 is reliable — avoids truncation timeouts
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
           },
         };
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 90000); // 90s timeout
+        const timeout = setTimeout(() => controller.abort(), 90000);
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
           { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
@@ -1393,18 +1388,16 @@ CRITICAL JSON SYNTAX RULE
           const errMsg = data.error.message || JSON.stringify(data.error);
           lastError = `${model}: ${errMsg}`;
 
-          // ── Permanently unavailable model (deprecated, removed, not available) ──
           if (/no longer available|not available|deprecated|model.*not.*found|does not exist/i.test(errMsg)) {
             console.warn(`   🚫 Model ${model} is permanently unavailable — skipping for all keys`);
             permanentlyFailedModels.add(model);
-            break; // break while loop → continue to next model
+            break;
           }
 
-          // ── Quota / Rate-limit error → switch to next API key ──
           if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(errMsg)) {
             console.warn(`   ⛔ Quota exceeded on key ...${apiKey.slice(-4)} — switching to next API key`);
-            modelAttempt = maxModelAttempts; // exhaust model attempts
-            break; // will trigger outer break below
+            keyQuotaExhausted = true;
+            break;
           }
 
           // ── Overloaded / 503 / Internal error → retry with backoff ──
@@ -1845,8 +1838,37 @@ async function findMatchingExistingJob(title: string, category: string, supabase
 }
 
 // ── MAIN RUNNER ───────────────────────────────────────────────────────────────
+export async function cleanupStaleDrafts(): Promise<number> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+    const { count, error } = await supabase
+      .from("auto_blog_drafts")
+      .delete({ count: "exact" })
+      .neq("status", "published")
+      .lt("scraped_at", cutoff72h);
+
+    if (error) {
+      console.warn("⚠️ Cleanup stale drafts error:", error.message);
+      return 0;
+    }
+    const deletedCount = count || 0;
+    if (deletedCount > 0) {
+      console.log(`🧹 [Auto Cleanup] Deleted ${deletedCount} unapproved drafts older than 72 hours.`);
+    }
+    return deletedCount;
+  } catch (err: any) {
+    console.warn("⚠️ Cleanup stale drafts exception:", err.message);
+    return 0;
+  }
+}
+
 export async function runAutoBlogScraper(): Promise<ScraperResult> {
   console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
+  
+  // Auto-clean unapproved drafts older than 72 hours
+  await cleanupStaleDrafts();
+
   const supabase = getSupabaseAdmin();
   const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
 

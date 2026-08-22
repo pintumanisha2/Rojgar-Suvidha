@@ -73,12 +73,39 @@ export async function POST(request: Request) {
           .single();
 
         if (fetchErr || !draft) {
-          await answerCallbackQuery(callbackId, "❌ Draft not found in database!");
+          // Check if post was already published directly to jobs table
+          const { data: existingJob } = await supabase
+            .from("jobs")
+            .select("slug, title")
+            .eq("id", draftId)
+            .single();
+
+          if (existingJob) {
+            await answerCallbackQuery(callbackId, "✅ This post is ALREADY live on website!");
+            if (chatId && messageId) {
+              await editMessageText(
+                chatId,
+                messageId,
+                `✅ *ALREADY PUBLISHED LIVE ON WEBSITE!*\n\n📌 *Title:* ${existingJob.title}\n\n🌐 *View Live:* ${BASE_URL}/job/${existingJob.slug}`
+              );
+            }
+            return NextResponse.json({ ok: true });
+          }
+
+          await answerCallbackQuery(callbackId, "ℹ️ Stale Draft: This draft was >72h old (cleaned up) or already published.");
           return NextResponse.json({ ok: true });
         }
 
         if (draft.status === "published") {
-          await answerCallbackQuery(callbackId, "⚠️ This draft is ALREADY published live!");
+          const liveSlug = draft.generated_slug || draft.slug || "job-update";
+          await answerCallbackQuery(callbackId, "✅ This draft is ALREADY published live!");
+          if (chatId && messageId) {
+            await editMessageText(
+              chatId,
+              messageId,
+              `✅ *ALREADY PUBLISHED LIVE ON WEBSITE!*\n\n📌 *Title:* ${draft.generated_title || draft.source_title}\n\n🌐 *View Live:* ${BASE_URL}/job/${liveSlug}`
+            );
+          }
           return NextResponse.json({ ok: true });
         }
 

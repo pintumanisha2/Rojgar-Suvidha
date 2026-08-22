@@ -15,6 +15,7 @@ import type { Metadata } from "next";
 import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import { buildHreflangAlternates, SUPPORTED_LANGUAGES } from "@/lib/i18n";
+import MobileStickyActionBar from "@/components/job/MobileStickyActionBar";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -105,7 +106,7 @@ export async function generateMetadata(
   const { slug } = await params;
   const { data: job } = await supabase
     .from("jobs")
-    .select("title, short_info, meta_description, banner_url, category, created_at, updated_at, slug")
+    .select("title, short_info, meta_description, banner_url, category, state_code, created_at, updated_at, slug")
     .eq("slug", slug)
     .single();
 
@@ -138,7 +139,8 @@ export async function generateMetadata(
     ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
     : (fallbackDesc.length > 160 ? `${fallbackDesc.slice(0, 157)}...` : fallbackDesc);
 
-  const shareImage = job.banner_url || `${BASE_URL}/og-image.png`;
+  const dynamicOgUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(job.title)}&category=${encodeURIComponent(job.category || "")}&state=${encodeURIComponent(job.state_code || "")}`;
+  const shareImage = job.banner_url || dynamicOgUrl;
 
   const keywords = [
     job.title, `${job.title} ${currentYear}`,
@@ -242,9 +244,12 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     ],
   };
 
+  const dynamicOgUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(job.title)}&category=${encodeURIComponent(job.category || "")}&state=${encodeURIComponent(job.state_code || "")}`;
+  const bannerImage = job.banner_url || dynamicOgUrl;
+
   const articleSchema = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": job.category === "news" ? "NewsArticle" : "Article",
     headline: job.title,
     description: job.meta_description || job.short_info || `Latest notification for ${job.title}.`,
     datePublished: job.created_at,
@@ -253,13 +258,18 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     publisher: {
       "@type": "Organization",
       name: "Rojgar Suvidha",
-      logo: { "@type": "ImageObject", url: `${BASE_URL}/logo-blue.png` },
+      logo: { "@type": "ImageObject", url: `${BASE_URL}/logo-blue.png`, width: 600, height: 60 },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": `${BASE_URL}/job/${slug}` },
     articleSection: categoryLabel,
     inLanguage: "en",
     isAccessibleForFree: true,
-    image: job.banner_url || `${BASE_URL}/og-image.png`,
+    image: {
+      "@type": "ImageObject",
+      url: bannerImage,
+      width: 1200,
+      height: 630,
+    },
   };
 
   let lastDate = "";
@@ -340,6 +350,15 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
         cleanBlogHtml = match[1].replace(/\\"/g, '"').replace(/\\n/g, "\n");
       }
     }
+  }
+
+  // Wrap all HTML tables in responsive touch-pan scroll containers with visual swipe hints for mobile users
+  if (cleanBlogHtml.includes("<table")) {
+    cleanBlogHtml = cleanBlogHtml.replace(
+      /<table([^>]*)>/gi,
+      (_match: string, p1: string) =>
+        `<div className="overflow-x-auto my-4 -mx-2 px-2 scrollbar-thin touch-pan-x border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm"><div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 py-1 text-right sm:hidden">👈 दाएँ-बाएँ स्वाइप करें (Swipe Table) 👉</div><table${p1}>`
+    ).replace(/<\/table>/gi, "</table></div>");
   }
 
   const blogContent = (cleanBlogHtml && cleanBlogHtml.length > 100)
@@ -968,6 +987,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
         </div>
       </div>
+
+      {/* ── Mobile Sticky Floating Action Bar for 85%+ Phone Users ── */}
+      <MobileStickyActionBar applyLink={applyLink} title={job.title} slug={slug} category={job.category} />
     </>
   );
 }

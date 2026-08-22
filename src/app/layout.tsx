@@ -112,6 +112,9 @@ export const metadata: Metadata = {
       "en-IN": BASE_URL,
       "hi-IN": `${BASE_URL}?lang=hi`,
     },
+    types: {
+      "application/rss+xml": `${BASE_URL}/feed.xml`,
+    },
   },
   icons: {
     icon: [
