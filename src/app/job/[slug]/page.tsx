@@ -94,15 +94,7 @@ const AUTHORS = [
   },
 ];
 
-// Deterministic author selection — same slug always same author
-function selectAuthor(slug: string, category: string) {
-  // First try category-matched authors
-  const catAuthors = AUTHORS.filter(a => a.speciality.includes(category));
-  const pool = catAuthors.length > 0 ? catAuthors : AUTHORS;
-  // Use slug char sum for stable selection
-  const charSum = slug.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return pool[charSum % pool.length];
-}
+import { selectAuthorForJob, getAuthorBySlug } from "@/lib/authors";
 
 // ══════════════════════════════════════════════════════════
 // DYNAMIC SEO + AEO METADATA
@@ -238,7 +230,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
   // ── Structured Data ──
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
-  const author = selectAuthor(slug, job.category || "latest-jobs");
+  const author = selectAuthorForJob(slug, job.category || "latest-jobs");
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -257,7 +249,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     description: job.meta_description || job.short_info || `Latest notification for ${job.title}.`,
     datePublished: job.created_at,
     dateModified: job.updated_at || job.created_at,
-    author: { "@type": "Person", name: author.name, url: `${BASE_URL}/about` },
+    author: { "@type": "Person", name: author.name, url: `${BASE_URL}/author/${author.slug}` },
     publisher: {
       "@type": "Organization",
       name: "Rojgar Suvidha",
@@ -449,8 +441,11 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 {/* Meta row: Author | Date | Reading time */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-zinc-800">
                   <span className="flex items-center gap-1.5 font-medium">
-                    <span className={`w-5 h-5 rounded-full ${author.color} text-white flex items-center justify-center text-[10px] font-black shrink-0`}>{author.initial}</span>
-                    {author.name}, Rojgar Suvidha
+                    <Link href={`/author/${author.slug}`} className="flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      <span className={`w-5 h-5 rounded-full ${author.color} text-white flex items-center justify-center text-[10px] font-black shrink-0`}>{author.initial}</span>
+                      <span className="font-bold">{author.name}</span>
+                    </Link>
+                    <span className="text-gray-400">• Rojgar Suvidha</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <CalendarDays className="w-3.5 h-3.5" />
@@ -789,6 +784,42 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                   )}
                 </div>
               )}
+
+              {/* ── Author Profile Card (E-E-A-T Signal & Author Page Link) ── */}
+              <div className="bg-gradient-to-br from-gray-50 to-indigo-50/40 dark:from-zinc-900 dark:to-indigo-950/20 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 my-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <Link href={`/author/${author.slug}`} className="shrink-0 group">
+                      <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${author.color} text-white font-black text-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform`}>
+                        {author.initial}
+                      </div>
+                    </Link>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Written & Verified By</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Editorial Board</span>
+                      </div>
+                      <Link href={`/author/${author.slug}`} className="font-black text-lg text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors block">
+                        {author.name}
+                      </Link>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        {author.role} • {author.qualification}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/author/${author.slug}`}
+                    className="shrink-0 bg-white dark:bg-zinc-800 hover:bg-indigo-600 hover:text-white text-indigo-600 dark:text-indigo-300 font-bold text-xs px-4 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-800 shadow-sm transition-all hover:-translate-y-0.5 self-stretch sm:self-auto text-center"
+                  >
+                    View Profile & All Posts →
+                  </Link>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 pt-3 border-t border-gray-200/60 dark:border-zinc-800 leading-relaxed">
+                  {author.bio}
+                </p>
+              </div>
 
               {/* ── Middle Ad ── */}
               <AdSensePlaceholder format="leaderboard" />
