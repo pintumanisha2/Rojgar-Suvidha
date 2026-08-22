@@ -239,6 +239,7 @@ export interface DraftNotificationPayload {
   totalPosts?: string | null;
   lastDate?: string | null;
   bannerUrl?: string | null;
+  sourceTag?: string | null;
 }
 
 /**
@@ -256,17 +257,18 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
   const reviewUrl = `${BASE_URL}/admin/auto-drafts/${draft.id}`;
   const postsText = draft.totalPosts ? `👥 *Vacancies:* ${draft.totalPosts}` : null;
   const lastDateText = draft.lastDate ? `📅 *Last Date:* ${draft.lastDate}` : null;
+  const tagBadge = draft.sourceTag ? `🏷️ *Tag:* \`${draft.sourceTag}\`\n` : "";
 
   const lines = [
     `📄 *NEW AUTO-BLOG DRAFT GENERATED*`,
-    "",
+    tagBadge,
     `📌 *Title:* ${draft.title.trim()}`,
     `📊 *Category:* \`${draft.category}\` | *State:* \`${draft.stateCode || "ALL"}\``,
     ...(postsText ? [postsText] : []),
     ...(lastDateText ? [lastDateText] : []),
     "",
     `⚡ *Review or Approve in 1-Click below:*`,
-  ];
+  ].filter((l) => l !== null && l !== undefined);
 
   const text = lines.join("\n");
 

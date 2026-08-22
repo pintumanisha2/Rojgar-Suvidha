@@ -2076,17 +2076,19 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
       if (inserted?.id) {
-        const titlePrefix = existingJobMatch
-          ? `🔄 UPDATE EXISTING POST: `
-          : (item.source === "google_trends" ? "🔥 GOOGLE TRENDING: " : "");
+        const sourceTag = existingJobMatch
+          ? "🔄 Existing Job Update"
+          : (item.source === "google_trends" ? "🔥 Google Trends" : null);
+
         sendAdminDraftApprovalAlert({
           id: inserted.id,
-          title: titlePrefix + cleanCompetitorBrands(aiResult.title || item.title),
+          title: cleanCompetitorBrands(aiResult.title || item.title),
           category: aiResult.category || category,
           stateCode: stateCode || null,
           totalPosts: aiResult.totalPosts || totalPosts || null,
           lastDate: aiResult.lastDate || lastDate || null,
           bannerUrl: autoBannerUrl,
+          sourceTag,
         }).catch((e) => console.warn("Admin draft approval alert failed:", e));
       }
 
