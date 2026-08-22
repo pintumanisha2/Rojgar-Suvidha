@@ -24,7 +24,7 @@ export const AUTHORS: Author[] = [
     role: "Senior Exam Analyst & Chief Editor",
     qualification: "MA Political Science, B.Ed",
     experience: "12+ Years in Sarkari Recruitment Journalism",
-    speciality: ["latest-jobs", "results"],
+    speciality: ["results"],
     color: "bg-indigo-600",
     bio: "Arjun has over 12 years of experience analyzing central government examinations including SSC CGL, UPSC Civil Services, and Railway RRB exams. He specializes in cut-off predictions, vacancy breakdowns, and exam pattern changes.",
     socials: {
@@ -39,7 +39,7 @@ export const AUTHORS: Author[] = [
     role: "Admit Card & Result Specialist",
     qualification: "B.Ed, M.Sc Mathematics",
     experience: "8+ Years in Educational & Examination Coverage",
-    speciality: ["admit-card", "answer-key", "results"],
+    speciality: ["admit-card", "answer-key"],
     color: "bg-rose-600",
     bio: "Priya tracks live examination updates, admit card download releases, and answer key objection windows across national and state testing agencies. She ensures candidates get verified download links within minutes of release.",
     socials: {
@@ -67,7 +67,7 @@ export const AUTHORS: Author[] = [
     role: "State Govt Jobs Correspondent",
     qualification: "MA Hindi, LLB",
     experience: "10+ Years in State PSC & Teacher Recruitment",
-    speciality: ["latest-jobs", "news"],
+    speciality: ["news", "latest-jobs"],
     color: "bg-amber-600",
     bio: "Sunita covers state-level public service commission examinations including UPPSC, BPSC, MPPSC, HSSC, and REET. She specializes in local state notifications, reservation rules, and domicile criteria.",
     socials: {
@@ -81,7 +81,7 @@ export const AUTHORS: Author[] = [
     role: "Admission & Education Desk Head",
     qualification: "M.Ed, UGC-NET Qualified",
     experience: "9+ Years in Higher Education & Entrance Exams",
-    speciality: ["admission", "news"],
+    speciality: ["admission"],
     color: "bg-violet-600",
     bio: "Vivek leads the education and entrance exam desk at Rojgar Suvidha, tracking CUET, NEET, JEE, University admissions, and national scholarship schemes for students across India.",
     socials: {
@@ -97,9 +97,37 @@ export function getAuthorBySlug(slug: string): Author | undefined {
   return AUTHORS.find((a) => a.slug === slug);
 }
 
+/**
+ * Strict Category-to-Author Desk Assignment Matrix
+ * 
+ * - "admission" ➔ Vivek Mishra (100% Guaranteed)
+ * - "admit-card" / "answer-key" ➔ Priya Verma (100% Guaranteed)
+ * - "results" ➔ Arjun Sharma (100% Guaranteed)
+ * - "news" ➔ Sunita Devi (100% Guaranteed)
+ * - "latest-jobs" ➔ Rajesh Kumar / Sunita Devi
+ */
 export function selectAuthorForJob(jobSlug: string, category: string): Author {
-  const catAuthors = AUTHORS.filter((a) => a.speciality.includes(category));
-  const pool = catAuthors.length > 0 ? catAuthors : AUTHORS;
+  const cat = (category || "").toLowerCase().trim();
+
+  if (cat === "admission") {
+    return getAuthorBySlug("vivek-mishra") || AUTHORS[4];
+  }
+  if (cat === "admit-card" || cat === "answer-key") {
+    return getAuthorBySlug("priya-verma") || AUTHORS[1];
+  }
+  if (cat === "results") {
+    return getAuthorBySlug("arjun-sharma") || AUTHORS[0];
+  }
+  if (cat === "news") {
+    return getAuthorBySlug("sunita-devi") || AUTHORS[3];
+  }
+  if (cat === "latest-jobs") {
+    const charSum = jobSlug.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return charSum % 2 === 0
+      ? (getAuthorBySlug("rajesh-kumar") || AUTHORS[2])
+      : (getAuthorBySlug("sunita-devi") || AUTHORS[3]);
+  }
+
   const charSum = jobSlug.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return pool[charSum % pool.length];
+  return AUTHORS[charSum % AUTHORS.length];
 }
