@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callGeminiWithRotation } from "@/lib/gemini-rotator";
 
 export const maxDuration = 60;
 
@@ -644,40 +645,14 @@ function generateVacancyTable(meta: any): string {
 // Call Gemini API with model fallback
 // ══════════════════════════════════════════════════════════════════════════════
 async function callGemini(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {
-  const geminiApiKey = (process.env.GEMINI_API_KEY || "").trim();
-  if (!geminiApiKey) throw new Error("Gemini API Key missing in environment");
-
-  const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-  let lastError = "";
-
-  for (const model of models) {
-    try {
-      const payload: any = {
-        contents: [{
-          role: "user",
-          parts: [{ text: `${systemPrompt}\n\nUSER PROMPT/CONTENT:\n${userPrompt}` }]
-        }],
-        generationConfig: {
-          temperature: jsonMode ? 0.1 : 0.87,
-          maxOutputTokens: 5500,
-        }
-      };
-      if (jsonMode) payload.generationConfig.responseMimeType = "application/json";
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 50000);
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
-      );
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      if (data.error) { lastError = data.error.message || JSON.stringify(data.error); continue; }
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      if (rawText) return rawText;
-    } catch (e: any) { lastError = e.message; continue; }
-  }
-  throw new Error(`All Gemini models failed: ${lastError}`);
+  return await callGeminiWithRotation({
+    prompt: userPrompt,
+    systemInstruction: systemPrompt,
+    temperature: jsonMode ? 0.1 : 0.75,
+    maxOutputTokens: 8192,
+    jsonMode,
+    timeoutMs: 90000,
+  });
 }
 
 async function callAI(systemPrompt: string, userPrompt: string, jsonMode: boolean = false): Promise<string> {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callGeminiWithRotation } from "@/lib/gemini-rotator";
 
 export async function POST(req: Request) {
   try {
@@ -93,45 +94,15 @@ ${extractedText}
 
 Return ONLY the raw JSON object.`;
 
-    // Try modern Gemini models with fallback to handle quota or availability errors
-    const models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
-    let aiResult: any = null;
-    let lastError = "";
-
-    for (const model of models) {
-      try {
-        const aiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
-            }),
-            signal: AbortSignal.timeout(30000),
-          }
-        );
-
-        const data = await aiResponse.json();
-
-        if (data.error) {
-          lastError = data.error.message || "Unknown AI error";
-          console.warn(`Model ${model} failed:`, lastError);
-          continue; // try next model
-        }
-
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        const cleaned = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        aiResult = JSON.parse(cleaned);
-        break; // success — stop trying other models
-
-      } catch (modelError: any) {
-        lastError = modelError.message;
-        console.warn(`Model ${model} error:`, modelError);
-        continue;
-      }
-    }
+    const rawText = await callGeminiWithRotation({
+      prompt,
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+      jsonMode: true,
+      timeoutMs: 30000,
+    });
+    const cleaned = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const aiResult = JSON.parse(cleaned);
 
     if (!aiResult) {
       return NextResponse.json({

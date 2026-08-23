@@ -19,12 +19,12 @@ export function getGeminiApiKeys(): string[] {
   return keys;
 }
 
-// Active valid Google Gemini models in REST API order of preference
+// Active verified Google Gemini models in 2026 REST API order of preference
 export const VALID_GEMINI_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-flash-latest",
+  "gemini-3.7-flash",
 ];
 
 export interface GeminiCallOptions {
