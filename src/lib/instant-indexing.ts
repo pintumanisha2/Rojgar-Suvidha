@@ -49,8 +49,9 @@ async function submitGoogleIndexingAPI(urls: string[]): Promise<void> {
     const { createSign } = await import("crypto");
     const sign = createSign("SHA256");
     sign.update(sigInput);
+    const privateKey = creds.private_key ? creds.private_key.replace(/\\n/g, "\n") : "";
     const sig = sign
-      .sign(creds.private_key)
+      .sign(privateKey)
       .toString("base64")
       .replace(/=/g, "")
       .replace(/\+/g, "-")
