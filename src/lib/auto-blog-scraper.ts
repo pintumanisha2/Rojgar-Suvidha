@@ -1534,7 +1534,7 @@ async function sendTelegramNotification(draft: {
   apply_link?: string | null;
 }, draftId: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const chatId = process.env.ADMIN_TELEGRAM_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
   if (!token || !chatId || token.includes("REPLACE") || chatId.includes("REPLACE")) {
     console.warn("⚠️ Telegram not configured — skipping notification");
     return;
