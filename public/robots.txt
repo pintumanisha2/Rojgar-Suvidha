@@ -15,6 +15,7 @@ Disallow: /track-application/
 
 # Sitemaps
 Sitemap: https://www.rojgarsuvidha.com/sitemap.xml
+Sitemap: https://www.rojgarsuvidha.com/news-sitemap.xml
 
 # Google specific
 User-agent: Googlebot
