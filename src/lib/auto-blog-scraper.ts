@@ -21,6 +21,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { sendAdminDraftApprovalAlert, sendTelegramAdminErrorAlert, sendTelegramAdminSummaryDigest } from "./social-publisher";
+import { callGeminiWithRotation } from "./gemini-rotator";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
@@ -1335,179 +1336,76 @@ CRITICAL JSON SYNTAX RULE
 }`;
 
 
-    const rawKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
-  const apiKeys = rawKeys.split(",").map((k) => k.trim()).filter(Boolean);
-  if (apiKeys.length === 0) throw new Error("GEMINI_API_KEY missing");
-
-
-  const models = [
-    // ── VERIFIED ACTIVE Google Gemini models ──
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
-  ];
-
   let lastError = "";
-  const permanentlyFailedModels = new Set<string>();
 
-  for (const apiKey of apiKeys) {
-    let keyQuotaExhausted = false;
+  try {
+    const rawJson = await callGeminiWithRotation({
+      prompt: `${SYSTEM_PROMPT}\n\n===== REFERENCE DATA (READ FACTS — WRITE ORIGINAL) =====\n${enrichedContext}`,
+      temperature: 0.75,
+      maxOutputTokens: 8192,
+      jsonMode: true,
+      timeoutMs: 90000,
+    });
 
-    for (const model of models) {
-      if (keyQuotaExhausted) break; // Move to next key immediately if key quota is exhausted
-      if (permanentlyFailedModels.has(model)) continue;
-
-      let modelAttempt = 0;
-      const maxModelAttempts = 3;
-      while (modelAttempt < maxModelAttempts) {
-        modelAttempt++;
-        try {
-        const payload = {
-          contents: [{
-            role: "user",
-            parts: [{ text: `${SYSTEM_PROMPT}\n\n===== REFERENCE DATA (READ FACTS — WRITE ORIGINAL) =====\n${enrichedContext}` }],
-          }],
-          generationConfig: {
-            temperature: 0.75,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json",
-          },
-        };
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 90000);
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: controller.signal }
-        );
-        clearTimeout(timeout);
-
-        const data = await response.json();
-        if (data.error) {
-          const errMsg = data.error.message || JSON.stringify(data.error);
-          lastError = `${model}: ${errMsg}`;
-
-          if (/no longer available|not available|deprecated|model.*not.*found|does not exist/i.test(errMsg)) {
-            console.warn(`   🚫 Model ${model} is permanently unavailable — skipping for all keys`);
-            permanentlyFailedModels.add(model);
-            break;
-          }
-
-          if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(errMsg)) {
-            console.warn(`   ⛔ Quota exceeded on key ...${apiKey.slice(-4)} — switching to next API key`);
-            keyQuotaExhausted = true;
-            break;
-          }
-
-          // ── Overloaded / 503 / Internal error → retry with backoff ──
-          if (/overloaded|503|internal|unavailable|server error/i.test(errMsg) || response.status === 503) {
-            const backoff = modelAttempt * 5000; // 5s, 10s, 15s
-            console.warn(`   ⏳ Model ${model} overloaded (attempt ${modelAttempt}/${maxModelAttempts}), retrying in ${backoff/1000}s...`);
-            await new Promise((r) => setTimeout(r, backoff));
-            continue; // retry same model
-          }
-
-          // ── Other errors → try next model immediately ──
-          console.warn(`   ⚠️ Model ${model} error (${errMsg.slice(0, 80)}), trying next model...`);
-          break;
+    let parsed: any;
+    try {
+      const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
+      parsed = JSON.parse(cleanedJson);
+    } catch (parseErr: any) {
+      console.warn("⚠️ JSON parse error in generateBlogWithAI, attempting auto-repair:", parseErr.message);
+      try {
+        let repaired = rawJson
+          .replace(/^```json?\s*/i, "")
+          .replace(/```\s*$/i, "")
+          .replace(/\r\n/g, "\\n")
+          .replace(/\n/g, "\\n")
+          .replace(/\r/g, "\\r")
+          .replace(/\t/g, "\\t")
+          .trim();
+        const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
+        if (quoteCount % 2 !== 0) repaired += '"';
+        const openBraces = (repaired.match(/\{/g) || []).length;
+        const closeBraces = (repaired.match(/\}/g) || []).length;
+        for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
+        parsed = JSON.parse(repaired);
+      } catch (e2: any) {
+        console.warn("⚠️ Advanced JSON repair failed, using regex field extractor...");
+        const titleMatch = rawJson.match(/"title"\s*:\s*"([^"]+)"/);
+        const metaMatch = rawJson.match(/"metaDesc"\s*:\s*"([^"]+)"/);
+        const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]+)"\s*\}\s*$/);
+        if (titleMatch?.[1]) {
+          parsed = {
+            title: titleMatch[1],
+            metaDesc: metaMatch ? metaMatch[1] : "",
+            blogHtml: htmlMatch ? htmlMatch[1] : rawJson,
+            category,
+          };
         }
+      }
+    }
 
-        // ── Check quota flag from while-loop ──
-        if (modelAttempt >= maxModelAttempts && !data.candidates) break;
-
-        const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        if (!rawJson) { lastError = `${model}: empty response`; break; }
-
-        let parsed: any;
-        try {
-          const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
-          parsed = JSON.parse(cleanedJson);
-        } catch (parseErr: any) {
-          console.warn(`   ⚠️ JSON parse error on ${model}, attempting auto-repair:`, parseErr.message);
-          try {
-            let repaired = rawJson
-              .replace(/^```json?\s*/i, "")
-              .replace(/```\s*$/i, "")
-              .replace(/\r\n/g, "\\n")
-              .replace(/\n/g, "\\n")
-              .replace(/\r/g, "\\r")
-              .replace(/\t/g, "\\t")
-              .trim();
-
-            const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
-            if (quoteCount % 2 !== 0) repaired += '"';
-            const openBraces = (repaired.match(/\{/g) || []).length;
-            const closeBraces = (repaired.match(/\}/g) || []).length;
-            for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
-            parsed = JSON.parse(repaired);
-          } catch (e2: any) {
-            console.warn(`   ⚠️ Advanced JSON repair failed on ${model}, using regex field extractor...`);
-            const titleMatch = rawJson.match(/"title"\s*:\s*"([^"]+)"/);
-            const metaMatch = rawText.match(/"metaDesc"\s*:\s*"([^"]+)"/);
-            const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]+)"\s*\}\s*$/);
-
-            if (titleMatch?.[1]) {
-              parsed = {
-                title: titleMatch[1],
-                metaDesc: metaMatch ? metaMatch[1] : "",
-                blogHtml: htmlMatch ? htmlMatch[1] : rawJson,
-                category,
-              };
-            } else {
-              lastError = `${model}: JSON parse failed: ${parseErr.message}`;
-              break;
-            }
-          }
-        }
-
-        // ── Content validation ──
-        const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
-        if (wordCount < 500) {
-          lastError = `${model}: Blog too short (${wordCount} words)`; break;
-        }
-        if (!parsed.title) { lastError = `${model}: No title generated`; break; }
-
-        console.log(`   ✅ Generated via ${model} (attempt ${modelAttempt}): ${wordCount} words, title="${parsed.title}"`);
+    if (parsed && parsed.title) {
+      const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+      if (wordCount >= 500) {
+        console.log(`   ✅ Generated via Gemini Multi-Key Rotator Engine: ${wordCount} words, title="${parsed.title}"`);
         return parsed;
-
-      } catch (e: any) {
-        if (e.name === "AbortError") {
-          console.warn(`   ⏰ Model ${model} timed out (attempt ${modelAttempt}/${maxModelAttempts})`);
-          lastError = `${model}: timeout`;
-          if (modelAttempt < maxModelAttempts) {
-            await new Promise((r) => setTimeout(r, 3000));
-            continue; // retry on timeout
-          }
-        } else {
-          lastError = `${model}: ${e.message}`;
-        }
-        break;
       }
-      } // end while(modelAttempt)
-
-      // ── Quota exhausted on this key (all models) — switch key ──
-      if (/quota|rate.?limit|429|resource.?exhausted|you exceeded|too many/i.test(lastError)) {
-        break; // break model loop → outer key loop tries next key
-      }
-    } // end for (model of models)
-  } // end for (apiKey of apiKeys)
+    }
+  } catch (geminiErr: any) {
+    console.warn(`⚠️ Gemini Rotator failed in auto-blog-scraper: ${geminiErr.message}. Trying Groq fallback...`);
+    lastError = geminiErr.message;
+  }
 
   // ══════════════════════════════════════════════════════════════════════════
   // GROQ FALLBACK — Activates when ALL Gemini keys + models are exhausted
-  // Uses: llama-3.3-70b (best) → llama-3.1-8b (fast) → mixtral-8x7b (last)
-  // Free tier: 6000 RPD on llama-3.3-70b — more than enough for daily cron
   // ══════════════════════════════════════════════════════════════════════════
   const groqApiKey = process.env.GROQ_API_KEY;
   if (groqApiKey && !groqApiKey.includes("REPLACE")) {
     console.warn("⚠️  All Gemini API keys exhausted. Switching to Groq fallback...");
 
     const groqModels = [
-      // ── VERIFIED ACTIVE Groq models (August 2026) — live tested ──
-      // Groq decommissioned: llama-3.x, mixtral, gemma2 (all gone)
-      "openai/gpt-oss-120b",     // 120B model — best quality on Groq right now
-      "openai/gpt-oss-20b",      // 20B — fast, reliable fallback
-      "qwen/qwen3.6-27b",        // Qwen 27B — good fallback (has <think> tags, handled below)
+      "openai/gpt-oss-120b",     // 120B model — verified active high-capacity model
+      "openai/gpt-oss-20b",      // 20B model — fast, reliable fallback
     ];
 
     for (const groqModel of groqModels) {
