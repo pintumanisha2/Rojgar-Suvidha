@@ -106,7 +106,7 @@ Return ONLY the raw JSON object.`;
 
     if (!aiResult) {
       return NextResponse.json({
-        error: `AI extraction failed: ${lastError}. Your Gemini free quota may be exhausted. Wait a few minutes or add billing to your Google AI account.`,
+        error: "AI extraction failed: Invalid JSON response returned.",
       }, { status: 500 });
     }
 
