@@ -222,7 +222,7 @@ export default function Footer() {
           <div className="bg-gray-800/40 border border-gray-700/50 rounded-2xl p-5 text-center text-xs text-gray-400 space-y-2">
             <p className="font-extrabold text-gray-300 uppercase tracking-widest">⚠️ Legal Disclaimer & Affiliation Notice</p>
             <p className="leading-relaxed max-w-3xl mx-auto">
-              Rojgar Suvidha is a completely private educational information portal and online service provider owned and operated by PINTU KUMAR. We are <strong>NOT affiliated with, nor do we represent</strong>, any central/state government organization, department, or recruitment board. We only charge a processing service fee of ₹50 to assist candidates in error-free online form filling.
+              Rojgar Suvidha is an independent educational information portal and online service provider. We are <strong>NOT affiliated with, nor do we represent</strong>, any central or state government organization, recruitment board, or official commission. All information is curated from official releases for candidate reference.
             </p>
           </div>
         </div>
@@ -230,9 +230,8 @@ export default function Footer() {
         {/* ── Legal Bar ── */}
         <div className="border-t border-gray-800 pt-5 flex flex-col md:flex-row justify-between items-center gap-3">
           <p className="text-gray-500 text-xs text-center md:text-left">
-            © {new Date().getFullYear()} Rojgar Suvidha. All rights reserved. | 
-            <span className="text-indigo-400 font-semibold mx-1">Owned & Operated by PINTU KUMAR</span> |
-            <span className="text-gray-400 font-medium mx-1">MSME Udyam Registration No. UDYAM-BR-27-0074756</span> |
+            © {new Date().getFullYear()} Rojgar Suvidha — India's #1 Sarkari Naukri & Educational Updates Portal. All rights reserved. | 
+            <span className="text-gray-400 font-medium mx-1">MSME Reg. No. UDYAM-BR-27-0074756</span> |
             <span className="ml-1">Not affiliated with any government organization.</span>
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-x-5 gap-y-2">

@@ -170,9 +170,9 @@ export default function AboutFounderPage() {
       {/* ── LEGAL OWNERSHIP SECTION ── */}
       <div className="max-w-4xl mx-auto px-4 mt-16 text-center">
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm text-gray-500 dark:text-gray-400 text-xs">
-          <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Legal Ownership Information</p>
+          <p className="font-bold text-gray-700 dark:text-gray-300 mb-1">Legal Entity Information</p>
           <p>
-            Rojgar Suvidha (including all premium services and the e-Suvidha Portal) is legally owned, operated, and billed under the sole proprietorship entity name <strong>PINTU KUMAR</strong>.
+            Rojgar Suvidha (including all educational services and the e-Suvidha Portal) is a registered educational media and technology portal (MSME Reg. No. UDYAM-BR-27-0074756).
           </p>
         </div>
       </div>

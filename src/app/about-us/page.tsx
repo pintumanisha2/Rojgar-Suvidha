@@ -137,35 +137,33 @@ export default function AboutUsPage() {
               </h2>
               <div className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed">
                 <p>
-                  <strong className="text-gray-900 dark:text-white">Pintu Kumar</strong>, the founder of Rojgar Suvidha, grew up watching talented people miss out on government job opportunities — not because they weren&apos;t qualified, but because they couldn&apos;t access the right information in time, or made costly mistakes filling complex application forms.
+                  <strong className="text-gray-900 dark:text-white">Rojgar Suvidha Editorial Team</strong> grew out of watching talented aspirants miss out on government job opportunities — not because they weren&apos;t qualified, but because they couldn&apos;t access verified notifications in time, or made costly mistakes filling complex application forms.
                 </p>
                 <p>
-                  In 2024, he built Rojgar Suvidha from scratch in Noida, UP — a platform with one clear mission: <strong className="text-gray-900 dark:text-white">make sarkari naukri accessible to every Indian, regardless of their location, income, or technical skills.</strong>
+                  In 2024, our team built Rojgar Suvidha from scratch in Noida, UP — a portal with one clear mission: <strong className="text-gray-900 dark:text-white">make sarkari naukri accessible to every Indian, regardless of their location, income, or technical skills.</strong>
                 </p>
                 <p>
                   Today, Rojgar Suvidha serves over a lakh users across India — from Bihar to Maharashtra, from Rajasthan to West Bengal — helping them find jobs, track results, and get their forms filled by experts.
                 </p>
               </div>
             </div>
-            {/* Founder Card */}
+            {/* Editorial Team Card */}
             <div className="flex justify-center">
               <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden max-w-xs w-full">
-                <div className="relative w-full aspect-[3/4]">
-                  <Image
-                    src="/founder.jpg"
-                    alt="Pintu Kumar — Founder of Rojgar Suvidha"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 320px"
-                  />
+                <div className="relative w-full aspect-[3/4] bg-indigo-950 flex items-center justify-center p-6 text-center text-white">
+                  <div>
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-600 border border-indigo-400/40 font-black text-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">RS</div>
+                    <div className="font-black text-xl text-white">Rojgar Suvidha</div>
+                    <div className="text-xs text-indigo-300 font-semibold mt-1">Editorial & Research Board</div>
+                  </div>
                 </div>
                 <div className="p-5">
-                  <p className="font-extrabold text-gray-900 dark:text-white text-lg">Pintu Kumar</p>
-                  <p className="text-indigo-600 dark:text-indigo-400 text-sm font-semibold">Founder & CEO, Rojgar Suvidha</p>
+                  <p className="font-extrabold text-gray-900 dark:text-white text-lg">Rojgar Suvidha Team</p>
+                  <p className="text-indigo-600 dark:text-indigo-400 text-sm font-semibold">Government Recruitment Desk</p>
                   <p className="text-gray-500 dark:text-gray-400 text-xs mt-2">Sector 62, Noida, Uttar Pradesh</p>
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2 text-xs text-gray-500">
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    <span>Verified Business Owner</span>
+                    <span>Verified Educational Media Entity</span>
                   </div>
                 </div>
               </div>
