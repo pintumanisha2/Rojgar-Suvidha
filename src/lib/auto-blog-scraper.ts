@@ -1347,7 +1347,7 @@ CRITICAL JSON SYNTAX RULE
 ================================================================================
 
 {
-  "title": "SEO-optimized title — ≤60 characters — PRIMARY KEYWORD FIRST + year + key info",
+  "title": "High-CTR Discover Title — format: '[Vacancies/Key Asset] Exam/Job Name 2026: Actionable Asset (e.g. Cut Off Marks & Direct PDF Link)' — MUST start with key highlight in brackets if available (e.g. '[1590 Posts] SSC Stenographer Final Result 2026 Out: Download PDF & Cut Off')",
   "metaDesc": "150-160 chars exactly — MUST start with primary keyword + year. Key facts in middle. End with action CTA like 'Direct Link Here' or 'Check Now at Rojgar Suvidha'. NEVER start with 'Looking for'.",
   "primaryKeyword": "main keyword phrase (e.g. 'SSC MTS Result 2026')",
   "tag": "short display tag (e.g. 'Railway Jobs' / 'SSC Result' / 'Admit Card')",

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const title = searchParams.get("title") || "Sarkari Naukri Notification 2026";
     const category = (searchParams.get("category") || "Job Notification").toUpperCase();
-    const vacancies = searchParams.get("vacancies") || "";
+    const vacancies = searchParams.get("vacancies") || searchParams.get("posts") || "";
     const lastDate = searchParams.get("lastDate") || "";
     const state = (searchParams.get("state") || "").toUpperCase();
 
