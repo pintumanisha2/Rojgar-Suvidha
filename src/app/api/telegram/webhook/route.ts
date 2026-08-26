@@ -144,33 +144,81 @@ export async function POST(request: Request) {
           ? draft.generated_meta
           : metaFallback;
 
-        const jobPayload: any = {
-          title: draft.generated_title,
-          slug,
-          blog_content: (draft.generated_html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
-          short_info: draft.short_description || metaDescription,
-          meta_description: metaDescription,
-          tag: draft.generated_tags?.[0] || null,
-          category: draft.category || "latest-jobs",
-          state_code: draft.state_code || null,
-          banner_url: draft.banner_url || null,
-          status: "active",
-          links: linksArray.length > 0 ? linksArray : (draft.links || null),
-          important_dates: null,  // Auto-blog stores as JSON string which crashes page; always null here
-          created_by: "auto-blog-pipeline",  // Required for RLS policy — anon users can only read jobs with created_by set
-          created_at: new Date().toISOString(),
-        };
+        // 3. Smart Upsert: Check if job already exists by existing_job_id OR matching slug
+        let targetJobId: string | null = draft.existing_job_id || null;
+        if (!targetJobId && draft.extracted_text) {
+          try {
+            const meta = JSON.parse(draft.extracted_text);
+            if (meta.existing_job_id) targetJobId = meta.existing_job_id;
+          } catch (_) {}
+        }
+        if (!targetJobId) {
+          const { data: existingBySlug } = await supabase
+            .from("jobs")
+            .select("id")
+            .eq("slug", slug)
+            .maybeSingle();
+          if (existingBySlug?.id) {
+            targetJobId = existingBySlug.id;
+          }
+        }
 
+        let finalJobId = targetJobId;
 
-        const { data: insertedJob, error: insertErr } = await supabase
-          .from("jobs")
-          .insert([jobPayload])
-          .select("id")
-          .single();
+        if (targetJobId) {
+          // ── UPDATE EXISTING LIVE JOB ──
+          const updatePayload: any = {
+            title: draft.generated_title,
+            blog_content: (draft.generated_html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
+            short_info: draft.short_description || metaDescription,
+            meta_description: metaDescription,
+            tag: draft.generated_tags?.[0] || null,
+            category: draft.category || "latest-jobs",
+            state_code: draft.state_code || null,
+            banner_url: draft.banner_url || null,
+            status: "active",
+            links: linksArray.length > 0 ? linksArray : (draft.links || null),
+            updated_at: new Date().toISOString(),
+          };
 
-        if (insertErr) {
-          await answerCallbackQuery(callbackId, `❌ Publish failed: ${insertErr.message}`);
-          return NextResponse.json({ ok: true });
+          const { error: updateErr } = await supabase
+            .from("jobs")
+            .update(updatePayload)
+            .eq("id", targetJobId);
+
+          if (updateErr) {
+            await answerCallbackQuery(callbackId, `❌ Update failed: ${updateErr.message}`);
+            return NextResponse.json({ ok: true });
+          }
+          console.log(`✅ [Telegram Webhook] UPDATED existing job ID = ${targetJobId} (Slug: /job/${slug})`);
+        } else {
+          // ── INSERT NEW JOB (with unique slug retry safety) ──
+          let newSlug = slug;
+          let { data: insertedJob, error: insertErr } = await supabase
+            .from("jobs")
+            .insert([{ ...jobPayload, slug: newSlug }])
+            .select("id")
+            .single();
+
+          if (insertErr && /jobs_slug_key|unique/i.test(insertErr.message)) {
+            // Slug collision retry fallback with unique suffix
+            newSlug = `${slug}-${Date.now().toString().slice(-4)}`;
+            console.warn(`⚠️ [Telegram Webhook] Slug collision on '${slug}', retrying with new slug '${newSlug}'`);
+            const retryResult = await supabase
+              .from("jobs")
+              .insert([{ ...jobPayload, slug: newSlug }])
+              .select("id")
+              .single();
+            insertedJob = retryResult.data;
+            insertErr = retryResult.error;
+          }
+
+          if (insertErr) {
+            await answerCallbackQuery(callbackId, `❌ Publish failed: ${insertErr.message}`);
+            return NextResponse.json({ ok: true });
+          }
+          finalJobId = insertedJob?.id || null;
+          console.log(`✅ [Telegram Webhook] CREATED new job ID = ${finalJobId} (Slug: /job/${newSlug})`);
         }
 
         // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")

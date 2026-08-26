@@ -81,6 +81,17 @@ export async function POST(
       } catch (_) {}
     }
 
+    if (!targetJobId) {
+      const { data: existingBySlug } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (existingBySlug?.id) {
+        targetJobId = existingBySlug.id;
+      }
+    }
+
     let newJobId = targetJobId;
 
     if (targetJobId) {
@@ -106,12 +117,13 @@ export async function POST(
         .eq("id", targetJobId);
 
       if (updateError) throw new Error(`DB update: ${updateError.message}`);
-      console.log(`✅ [Publish] UPDATED existing job ID = ${targetJobId} (Slug: /job/${slug})`);
+      console.log(`✅ [Publish API] UPDATED existing job ID = ${targetJobId} (Slug: /job/${slug})`);
     } else {
-      // ── INSERT NEW POST ──
+      // ── INSERT NEW POST (with unique slug retry safety) ──
+      let newSlug = slug;
       const jobPayload: any = {
         title,
-        slug,
+        slug: newSlug,
         blog_content: (html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
         short_info: draft.short_description || metaDesc,
         meta_description: metaDesc,
@@ -126,15 +138,27 @@ export async function POST(
         updated_at: new Date().toISOString(),
       };
 
-      const { data: insertedJob, error: insertError } = await supabase
+      let { data: insertedJob, error: insertError } = await supabase
         .from("jobs")
         .insert([jobPayload])
         .select("id")
         .single();
 
+      if (insertError && /jobs_slug_key|unique/i.test(insertError.message)) {
+        newSlug = `${slug}-${Date.now().toString().slice(-4)}`;
+        console.warn(`⚠️ [Publish API] Slug collision on '${slug}', retrying with '${newSlug}'`);
+        const retryResult = await supabase
+          .from("jobs")
+          .insert([{ ...jobPayload, slug: newSlug }])
+          .select("id")
+          .single();
+        insertedJob = retryResult.data;
+        insertError = retryResult.error;
+      }
+
       if (insertError) throw new Error(`DB insert: ${insertError.message}`);
       newJobId = insertedJob.id;
-      console.log(`✅ [Publish] CREATED new job ID = ${newJobId} (Slug: /job/${slug})`);
+      console.log(`✅ [Publish API] CREATED new job ID = ${newJobId} (Slug: /job/${newSlug})`);
     }
 
     // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")
