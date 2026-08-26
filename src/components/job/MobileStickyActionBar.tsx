@@ -30,7 +30,7 @@ export default function MobileStickyActionBar({
   const customApplyUrl = `/e-suvidha/apply/${slug}?title=${encodeURIComponent(title)}`;
 
   return (
-    <div className="md:hidden fixed bottom-[60px] left-0 w-full z-40 px-3 pb-2 pointer-events-none">
+    <div className="md:hidden fixed bottom-[64px] left-0 w-full z-40 px-3 pb-1 pointer-events-none">
       <div className="bg-slate-900/95 dark:bg-zinc-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2 shadow-2xl flex items-center gap-2 pointer-events-auto">
         {/* Direct Apply / Download Button */}
         {applyLink ? (

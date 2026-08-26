@@ -83,15 +83,16 @@ export async function GET(req: NextRequest) {
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%" }}>
             <div
               style={{
-                fontSize: title.length > 60 ? "38px" : "46px",
+                fontSize: title.length > 75 ? "30px" : title.length > 50 ? "34px" : title.length > 30 ? "40px" : "46px",
                 fontWeight: 800,
-                lineHeight: "1.25",
+                lineHeight: "1.3",
                 color: "#FFFFFF",
                 textShadow: "0 2px 10px rgba(0,0,0,0.5)",
                 display: "-webkit-box",
                 WebkitLineClamp: 3,
                 WebkitBoxOrient: "vertical",
                 overflow: "hidden",
+                wordBreak: "break-word",
               }}
             >
               {title}

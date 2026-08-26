@@ -440,7 +440,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
             <ChevronRight className="w-3 h-3 text-gray-300 shrink-0" />
             <Link href={`/${job.category}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium capitalize">{categoryLabel}</Link>
             <ChevronRight className="w-3 h-3 text-gray-300 shrink-0" />
-            <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[220px]">{job.title}</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium truncate max-w-[140px] sm:max-w-[280px]">{job.title}</span>
           </nav>
 
           {/* ── MAIN LAYOUT: Content + Sidebar ── */}
@@ -478,7 +478,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                 </div>
 
                 {/* H1 Title */}
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight mb-3">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight mb-3 break-words">
                   {job.title}
                 </h1>
 
