@@ -319,7 +319,7 @@ export async function POST(request: Request) {
           .update({
             status: "published",
             published_at: new Date().toISOString(),
-            published_post_id: insertedJob.id,
+            published_post_id: finalJobId,
           })
           .eq("id", draftId);
 
