@@ -345,6 +345,24 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     ],
   };
 
+  const isBreakingNews = job.category === "results" || job.category === "admit-card" || job.category === "news";
+  const liveBlogPostingSchema = isBreakingNews ? {
+    "@context": "https://schema.org",
+    "@type": "LiveBlogPosting",
+    headline: job.title,
+    description: job.meta_description || job.short_info || job.title,
+    coverageStartTime: new Date(job.created_at).toISOString(),
+    coverageEndTime: new Date(Date.now() + 86400000 * 3).toISOString(),
+    liveBlogUpdate: [
+      {
+        "@type": "BlogPosting",
+        headline: `${job.title} — Official Live Coverage`,
+        datePublished: new Date(job.updated_at || job.created_at).toISOString(),
+        articleBody: job.short_info || job.meta_description || job.title,
+      }
+    ]
+  } : null;
+
   // ── Blog processing — sanitize & unwrap raw JSON if stored in DB ──
   let cleanBlogHtml = (job.blog_content || "").trim();
   if (cleanBlogHtml.startsWith("{") || cleanBlogHtml.startsWith("```json")) {
@@ -405,6 +423,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      {liveBlogPostingSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(liveBlogPostingSchema) }} />
+      )}
 
       {/* Analytics trackers — invisible */}
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
