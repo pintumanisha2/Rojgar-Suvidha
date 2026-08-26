@@ -157,7 +157,8 @@ export async function POST(
       }
 
       if (insertError) throw new Error(`DB insert: ${insertError.message}`);
-      newJobId = insertedJob.id;
+      newJobId = insertedJob?.id || null;
+      if (!newJobId) throw new Error("DB insert returned no ID");
       console.log(`✅ [Publish API] CREATED new job ID = ${newJobId} (Slug: /job/${newSlug})`);
     }
 
