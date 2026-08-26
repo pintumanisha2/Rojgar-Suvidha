@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, Send } from "lucide-react";
+import { SOCIAL_LINKS } from "@/lib/socialConfig";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
