@@ -123,31 +123,61 @@ function detectCategory(title: string, content: string): BlogCategory {
 
 // ── State Code Detection (Auto-detect State vs All India) ─────────────────
 function detectStateCode(title: string, content: string): string | null {
+  const titleLower = title.toLowerCase();
   const text = (title + " " + content).toLowerCase();
 
-  // Central / All India indicators
-  if (/\b(?:ssc|upsc|rrb|railway|ibps|sbi|rbi|lic|isro|drdo|cisf|bsf|crpf|itbp|ssb|ignou|iit|nit|aiims|central|all india)\b/i.test(text)) {
-    if (!/up police|bihar police|mp police|rajasthan police|delhi police/i.test(text)) {
+  // Central / All India indicators — priority override
+  if (/\b(?:ssc|upsc|rrb|railway|ibps|sbi|rbi|lic|isro|drdo|cisf|bsf|crpf|itbp|ssb|ignou|iit|nit|aiims|nta|cbse|cisce|central|all india)\b/i.test(titleLower)) {
+    // Only assign state if title explicitly contains state police/PSC or state university/board
+    if (!/police|high court|state|university|psc|ssc|board|deled/i.test(titleLower)) {
       return null; // All India / Central
     }
   }
 
-  if (/uttar pradesh|\buppsc\b|\bupsssc\b|\bup police\b|\bup teacher\b|\bup bed\b|\bup\b/i.test(text)) return "UP";
-  if (/bihar|\bbpsc\b|\bbssc\b|\bbihar police\b|\bbtsc\b|\bbihar/i.test(text)) return "BH";
-  if (/madhya pradesh|\bmppeb\b|\bmppsc\b|\bmp police\b|\bvyapam\b|\bmp\b/i.test(text)) return "MP";
-  if (/rajasthan|\brpsc\b|\brsmssb\b|\brajasthan police\b|\breet\b|\brj\b/i.test(text)) return "RJ";
-  if (/haryana|\bhssc\b|\bhpsc\b|\bharyana police\b|\bhtet\b|\bhr\b/i.test(text)) return "HR";
-  if (/delhi|\bdsssb\b|\bdelhi police\b|\bddu\b|\bdl\b/i.test(text)) return "DL";
-  if (/maharashtra|\bmpsc\b|\bmaha\b|\bmaharashtra police\b|\bmh\b/i.test(text)) return "MH";
-  if (/west bengal|\bwbpsc\b|\bwbprb\b|\bwb\b/i.test(text)) return "WB";
-  if (/uttarakhand|\bukpsc\b|\buksssc\b|\buk\b/i.test(text)) return "UK";
-  if (/jharkhand|\bjpsc\b|\bjssc\b|\bjharkhand police\b|\bjh\b/i.test(text)) return "JH";
-  if (/punjab|\bppsc\b|\bpsssb\b|\bpunjab police\b|\bpb\b/i.test(text)) return "PB";
-  if (/odisha|\bopsc\b|\bosssc\b|\bodisha police\b|\bod\b/i.test(text)) return "OD";
-  if (/chhattisgarh|\bcgpsc\b|\bcg/i.test(text)) return "CG";
-  if (/karnataka|\bkpsc\b|\bka\b/i.test(text)) return "KA";
-  if (/gujarat|\bgpsc\b|\bgujarat police\b|\bgu\b/i.test(text)) return "GU";
-  if (/assam|\bapsc\b|\bas\b/i.test(text)) return "AS";
+  // 1. Jammu & Kashmir
+  if (/jammu|kashmir|\bjkpsc\b|\bjkssb\b|j&k|kashmir university/i.test(text)) return "JK";
+  // 2. Himachal Pradesh
+  if (/himachal|\bhppsc\b|\bhpsssb\b|\bhpbose\b|hp university/i.test(text)) return "HP";
+  // 3. Uttar Pradesh — strictly match full phrases or UPPSC/UPSSSC (NO matching on single 'up' word or 'update')
+  if (/uttar pradesh|\buppsc\b|\bupsssc\b|up police|up teacher|up bed|up deled|up scholarship|up board/i.test(text)) return "UP";
+  // 4. Bihar
+  if (/bihar|\bbpsc\b|\bbssc\b|bihar police|btsc|beu patna/i.test(text)) return "BH";
+  // 5. Madhya Pradesh
+  if (/madhya pradesh|\bmppeb\b|\bmppsc\b|mp police|vyapam|mpbse/i.test(text)) return "MP";
+  // 6. Rajasthan
+  if (/rajasthan|\brpsc\b|\brsmssb\b|rajasthan police|reet|rspcb/i.test(text)) return "RJ";
+  // 7. Haryana
+  if (/haryana|\bhssc\b|\bhpsc\b|haryana police|htet/i.test(text)) return "HR";
+  // 8. Delhi
+  if (/delhi|\bdsssb\b|delhi police|ddu delhi/i.test(text)) return "DL";
+  // 9. Maharashtra
+  if (/maharashtra|\bmpsc\b|mumbai university|maha police/i.test(text)) return "MH";
+  // 10. West Bengal
+  if (/west bengal|\bwbpsc\b|\bwbprb\b|\bwbjee\b|wb police/i.test(text)) return "WB";
+  // 11. Uttarakhand
+  if (/uttarakhand|\bukpsc\b|\buksssc\b|uk police/i.test(text)) return "UK";
+  // 12. Jharkhand
+  if (/jharkhand|\bjpsc\b|\bjssc\b|\bjceceb\b|jharkhand police/i.test(text)) return "JH";
+  // 13. Punjab
+  if (/punjab|\bppsc\b|\bpsssb\b|punjabi university|punjab police/i.test(text)) return "PB";
+  // 14. Odisha
+  if (/odisha|\bopsc\b|\bosssc\b|odisha police/i.test(text)) return "OD";
+  // 15. Telangana
+  if (/telangana|\btspsc\b|\btshc\b|\btgicet\b|telangana police/i.test(text)) return "TS";
+  // 16. Andhra Pradesh
+  if (/andhra|\bappsc\b|\bapicet\b|andhra university|ap police/i.test(text)) return "AP";
+  // 17. Kerala
+  if (/kerala|\bkpsc\b|\bcee kerala\b|kerala university|kerala high court/i.test(text)) return "KL";
+  // 18. Tamil Nadu
+  if (/tamil nadu|\btnpsc\b|tn police/i.test(text)) return "TN";
+  // 19. Chhattisgarh
+  if (/chhattisgarh|\bcgpsc\b|cg police/i.test(text)) return "CG";
+  // 20. Gujarat
+  if (/gujarat|\bgpsc\b|gujarat police/i.test(text)) return "GU";
+  // 21. Assam
+  if (/assam|\bapsc\b|assam police/i.test(text)) return "AS";
+  // 22. Karnataka
+  if (/karnataka|\bkpsc\b|karnataka police/i.test(text)) return "KA";
 
   return null; // Default to Central / All India
 }
@@ -1911,19 +1941,45 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const finalWordCount = blogHtmlFinal.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
       console.log(`✅ [Quality] Validated: ${finalWordCount} words | category=${category}`);
 
-      // 8. Generate slug & check for matching existing job (Duplicate Prevention)
-      const existingJobMatch = await findMatchingExistingJob(aiResult.title || item.title, category, supabase);
+      // 8. Category-specific metadata rules (Results, Admit Cards, Answer Keys do NOT have application Last Dates)
+      const isNonRecruitmentCat = category === "results" || category === "admit-card" || category === "answer-key";
+      const sanitizedLastDate = isNonRecruitmentCat ? null : (aiResult.lastDate || lastDate || null);
 
-      const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(aiResult.title || item.title);
+      // Important dates sanitization for results & admit cards
+      let finalDatesObj = aiResult.important_dates;
+      if (isNonRecruitmentCat) {
+        if (Array.isArray(finalDatesObj)) {
+          finalDatesObj = finalDatesObj.filter((d: any) => !/last\s*date/i.test(d?.label || ""));
+        } else if (typeof finalDatesObj === "string") {
+          try {
+            const parsedDates = JSON.parse(finalDatesObj);
+            if (Array.isArray(parsedDates)) {
+              finalDatesObj = parsedDates.filter((d: any) => !/last\s*date/i.test(d?.label || ""));
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Title & Link Status Alignment (Prevent false "Result Out" when link is Coming Soon)
+      let cleanedTitle = cleanCompetitorBrands(aiResult.title || item.title);
+      if (applyStatus === "coming_soon" || !applyLink) {
+        cleanedTitle = cleanedTitle
+          .replace(/\b(Out Now|Released|Direct Link Available)\b/gi, "Notice Out")
+          .replace(/\b(Out|Released)\b/gi, "Date Announced");
+      }
+
+      // 9. Generate slug & check for matching existing job (Duplicate Prevention)
+      const existingJobMatch = await findMatchingExistingJob(cleanedTitle, category, supabase);
+
+      const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(cleanedTitle);
       const slug = existingJobMatch ? existingJobMatch.slug : await getUniqueSlug(baseSlug, supabase);
-      const bannerTitle = cleanCompetitorBrands(aiResult.title || item.title);
-      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(bannerTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(aiResult.lastDate || lastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
+      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
 
       if (existingJobMatch) {
         console.log(`🎯 [Duplicate Protection] Match found! Draft will UPDATE existing job ID: ${existingJobMatch.id} (URL: /job/${existingJobMatch.slug})`);
       }
 
-      // 8. Save draft to Supabase
+      // 10. Save draft to Supabase
       const draftPayload: any = {
         source_url: item.link,
         source_title: item.title,
@@ -1934,19 +1990,19 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         notification_link: notificationLink || null,
         state_code: stateCode || null,
         banner_url: autoBannerUrl,
-        last_date: aiResult.lastDate || lastDate,
+        last_date: sanitizedLastDate,
         total_posts: aiResult.totalPosts || totalPosts,
-        app_fee_gen: aiResult.appFeeGen || appFeeGen,
-        app_fee_res: aiResult.appFeeRes || appFeeRes,
+        app_fee_gen: isNonRecruitmentCat ? null : (aiResult.appFeeGen || appFeeGen),
+        app_fee_res: isNonRecruitmentCat ? null : (aiResult.appFeeRes || appFeeRes),
         category: aiResult.category || category,
-        generated_title: cleanCompetitorBrands(aiResult.title || item.title),
+        generated_title: cleanedTitle,
         generated_meta: cleanCompetitorBrands(aiResult.metaDesc || ""),
         generated_slug: slug,
         generated_html: blogHtmlFinal, // already cleaned (stripH1 + cleanBrands) and validated above
         generated_tags: aiResult.tag ? [cleanCompetitorBrands(aiResult.tag)] : [],
         primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
         short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
-        important_dates: typeof aiResult.important_dates === "string" ? aiResult.important_dates : JSON.stringify(aiResult.important_dates || null),
+        important_dates: typeof finalDatesObj === "string" ? finalDatesObj : JSON.stringify(finalDatesObj || null),
         form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
         form_fees_structure: aiResult.form_fees_structure ? JSON.stringify(aiResult.form_fees_structure) : null,
         extracted_text: JSON.stringify({
