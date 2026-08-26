@@ -277,7 +277,7 @@ export async function POST(request: Request) {
               documents: docsList,
               fees_structure: feesStruct,
               status: "active",
-              job_id: insertedJob.id,
+              job_id: finalJobId,
               job_slug: slug,
             }]);
             console.log(`✅ [Telegram Webhook] Created custom_forms entry for latest-jobs '${draft.generated_title}'`);
@@ -285,7 +285,7 @@ export async function POST(request: Request) {
             console.warn("⚠️ [Telegram Webhook] Failed to auto-create custom_forms entry:", formErr.message);
             // ── Notify admin on Telegram to manually update Apply For Me form ──
             if (BOT_TOKEN && chatId) {
-              const adminJobUrl = `${BASE_URL}/admin/jobs/${insertedJob.id}`;
+              const adminJobUrl = `${BASE_URL}/admin/jobs/${finalJobId}`;
               const alertText = [
                 `⚠️ *ACTION REQUIRED — Apply For Me Form*`,
                 ``,
