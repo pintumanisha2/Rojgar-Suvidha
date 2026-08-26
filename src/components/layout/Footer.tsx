@@ -98,19 +98,15 @@ export default function Footer() {
           {/* Quick Links – SEO Anchor Texts */}
           <div>
             <h3 className="text-sm font-bold mb-4 text-gray-200 tracking-wider">Quick Links</h3>
-            
-            {/* HIGHLIGHTED HR LOGIN BUTTON */}
-            <Link
-              href="/employer/login"
-              className="group flex items-center justify-between p-1 pl-3 pr-1 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg shadow-md hover:shadow-emerald-500/20 transition-all mb-4 border border-emerald-400/30 hover:scale-105 active:scale-95"
-            >
-              <span className="font-extrabold text-white text-xs tracking-wide">HR / Recruiter Login</span>
-              <span className="w-6 h-6 rounded flex items-center justify-center text-white bg-white/20 group-hover:bg-white group-hover:text-emerald-600 transition-colors">
-                →
-              </span>
-            </Link>
-
             <ul className="space-y-2.5">
+              <li>
+                <Link
+                  href="/employer/login"
+                  className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 font-bold text-sm transition-colors"
+                >
+                  <span>👔 HR / Recruiter Login</span>
+                </Link>
+              </li>
               {quickLinks.map(link => (
                 <li key={link.href}>
                   <Link 
@@ -158,8 +154,7 @@ export default function Footer() {
             <ul className="space-y-2.5">
               {eSuvidhaLinks.map(link => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-blue-500"></span>
+                  <Link href={link.href} className="text-gray-400 hover:text-white transition-colors text-sm">
                     {link.label}
                   </Link>
                 </li>
@@ -243,9 +238,9 @@ export default function Footer() {
           <div className="flex flex-wrap justify-center md:justify-end gap-x-5 gap-y-2">
             <Link href="/about" className="text-gray-500 hover:text-white transition-colors text-xs">About Us</Link>
             <Link href="/contact-us" className="text-gray-500 hover:text-white transition-colors text-xs">Contact Us</Link>
-            <Link href="/complaint" className="text-red-400 hover:text-red-300 transition-colors text-xs font-semibold">Help & Support</Link>
+            <Link href="/complaint" className="text-gray-500 hover:text-white transition-colors text-xs">Help & Support</Link>
             <Link href="/track-application" className="text-gray-500 hover:text-white transition-colors text-xs">Track Application</Link>
-            <Link href="/sitemap" className="text-indigo-400 hover:text-indigo-300 transition-colors text-xs font-semibold">HTML Sitemap</Link>
+            <Link href="/sitemap" className="text-gray-500 hover:text-white transition-colors text-xs">HTML Sitemap</Link>
             <Link href="/privacy" className="text-gray-500 hover:text-white transition-colors text-xs">Privacy Policy</Link>
             <Link href="/terms" className="text-gray-500 hover:text-white transition-colors text-xs">Terms of Service</Link>
             <Link href="/refund-policy" className="text-gray-500 hover:text-white transition-colors text-xs">Refund Policy</Link>

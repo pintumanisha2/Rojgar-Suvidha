@@ -154,7 +154,7 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                 </div>
               </div>
 
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 leading-snug hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors relative z-10">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 leading-snug h-12 flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors relative z-10">
                 <Link href={`/job/${job.slug}`}>{job.title}</Link>
               </h3>
 
@@ -216,7 +216,7 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                   }
                   return (
                     <>
-                      <Link href={`/job/${job.slug}`} className="flex-1 text-center py-2 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl border border-gray-200 dark:border-zinc-800 transition-all">
+                      <Link href={`/job/${job.slug}`} className="flex-1 text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm shadow-indigo-500/10">
                         View Details
                       </Link>
                       {applyLink ? (
@@ -224,14 +224,14 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                           href={applyLink} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="flex-1 text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm shadow-indigo-500/10"
+                          className="flex-1 text-center py-2 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 transition-all"
                         >
                           Apply Official
                         </a>
                       ) : (
                         <Link 
                           href="/apply-for-me" 
-                          className="flex-1 text-center py-2 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-black rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 transition-all"
+                          className="flex-1 text-center py-2 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-xl border border-indigo-200/50 dark:border-indigo-900/30 transition-all"
                         >
                           Apply For Me ✨
                         </Link>
@@ -245,14 +245,16 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
         })}
       </div>
       
-      {/* Loading Skeleton Trigger for Infinite Scroll */}
-      {hasMore && (
-        <div ref={observerTarget} className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 pt-4">
-          <JobCardSkeleton />
-          <div className="hidden sm:block"><JobCardSkeleton /></div>
-          <div className="hidden lg:block"><JobCardSkeleton /></div>
-        </div>
-      )}
+      {/* Loading Skeleton Trigger for Infinite Scroll — Only render when active loadingMore */}
+      <div ref={observerTarget} className="mt-6 pt-4">
+        {loadingMore && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+            <JobCardSkeleton />
+            <div className="hidden sm:block"><JobCardSkeleton /></div>
+            <div className="hidden lg:block"><JobCardSkeleton /></div>
+          </div>
+        )}
+      </div>
     </>
   );
 }

@@ -117,10 +117,10 @@ export default async function CategoryPageTemplate({ category, title, descriptio
               <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
               
               <div className="relative z-10 flex-1 text-center md:text-left">
-                <span className="inline-block px-3 py-1 bg-yellow-400 text-yellow-900 text-[10px] font-extrabold rounded-full uppercase tracking-wider mb-3 shadow-sm">{badgeText}</span>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">
+                <span className="inline-block px-3 py-1 bg-yellow-400 text-yellow-950 text-xs font-extrabold rounded-full tracking-wide mb-3 shadow-sm">{badgeText}</span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">
                   {heading}
-                </h3>
+                </h2>
                 <p className="text-indigo-100 text-sm sm:text-base max-w-xl mx-auto md:mx-0">
                   {desc}
                 </p>
