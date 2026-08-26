@@ -547,14 +547,20 @@ function cleanCompetitorBrands(str: string): string {
     .replace(/jagran\s*josh(?:\.com)?/gi, "Rojgar Suvidha");
 }
 
-// ── Strip H1 from blog HTML (SEO: page already has H1 in <h1> tag; AI content must not add another) ──
-// Converts any <h1> in blogHtml to <h2> to prevent double H1 penalty from Google
+// ── Strip H1 & Mobile Overflow Protection ────────────────────────────────────
 function stripH1FromBlog(html: string): string {
   if (!html) return "";
-  // Convert <h1 ...> to <h2 ...> and </h1> to </h2>
-  return html
+  let clean = html
     .replace(/<h1(\s[^>]*)?>/gi, (_, attrs) => `<h2${attrs || ""}>`)  
-    .replace(/<\/h1>/gi, "</h2>");
+    .replace(/<\/h1>/gi, "</h2>")
+    // Strip fixed pixel widths (e.g. style="width: 700px;") that break mobile layout
+    .replace(/style=(["'])(?:(?!\1).)*?width\s*:\s*\d+px[^\1]*?\1/gi, "")
+    // Auto-wrap raw <table> tags in a responsive container if not already wrapped
+    .replace(/(<table(?:\s[^>]*)?>[\s\S]*?<\/table>)/gi, (match) => {
+      if (match.includes("table-wrapper")) return match;
+      return `<div class='table-wrapper' style='overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin:1rem 0;'>${match}</div>`;
+    });
+  return clean;
 }
 
 // ── Slug duplicate check ──────────────────────────────────────────────────────

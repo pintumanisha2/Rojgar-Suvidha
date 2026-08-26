@@ -642,9 +642,17 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               )}
 
               {/* ── BLOG CONTENT ── */}
-              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 sm:p-8 shadow-sm">
+              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 sm:p-8 shadow-sm overflow-hidden max-w-full">
                 <style>{`
-                  .blog-content { line-height: 1.8; color: #374151; font-size: 15px; }
+                  .blog-content {
+                    line-height: 1.8;
+                    color: #374151;
+                    font-size: 15px;
+                    max-width: 100% !important;
+                    overflow-x: hidden;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                  }
                   .dark .blog-content { color: #d1d5db; }
                   .blog-content h2 {
                     color: #111827; font-weight: 800;
@@ -653,6 +661,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     padding-bottom: 0.4rem;
                     border-bottom: 2px solid #e0e7ff;
                     scroll-margin-top: 80px;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
                   }
                   .dark .blog-content h2 { color: #f1f5f9; border-bottom-color: #1e1b4b; }
                   .blog-content h3 {
@@ -660,22 +670,29 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     margin-top: 1.5rem; margin-bottom: 0.5rem;
                     font-size: 1.05rem;
                     scroll-margin-top: 80px;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
                   }
                   .dark .blog-content h3 { color: #e2e8f0; }
                   @media(min-width:640px){
                     .blog-content h2 { font-size: 1.45rem; }
                     .blog-content h3 { font-size: 1.15rem; }
                   }
-                  .blog-content p { margin-bottom: 1rem; }
-                  .blog-content table {
-                    width: 100%; border-collapse: collapse;
-                    margin: 1.25rem 0 1.5rem; border-radius: 10px;
-                    font-size: 13.5px; overflow: hidden;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-                    display: block; overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
+                  .blog-content p, .blog-content div, .blog-content li {
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                    max-width: 100%;
                   }
-                  @media(min-width:640px){ .blog-content table { display: table; } }
+                  .blog-content p { margin-bottom: 1rem; }
+                  .blog-content .table-wrapper, .blog-content table {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    display: block !important;
+                    overflow-x: auto !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    margin: 1.25rem 0 1.5rem;
+                    border-radius: 10px;
+                  }
                   .blog-content th {
                     background: #4f46e5; color: white;
                     font-weight: 700; padding: 10px 14px; text-align: left;
@@ -690,8 +707,14 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                   .dark .blog-content td { border-color: #27272a; background: #09090b; color: #d4d4d8; }
                   .blog-content tr:nth-child(even) td { background: #f9fafb; }
                   .dark .blog-content tr:nth-child(even) td { background: #111113; }
-                  .blog-content img { max-width: 100%; border-radius: 10px; margin: 1.25rem 0; }
-                  .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-all; font-weight: 500; }
+                  .blog-content img, .blog-content iframe, .blog-content video {
+                    max-width: 100% !important;
+                    height: auto !important;
+                    border-radius: 10px;
+                    margin: 1.25rem 0;
+                    object-fit: contain;
+                  }
+                  .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-word; font-weight: 500; }
                   .dark .blog-content a { color: #818cf8; }
                   .blog-content ul { list-style-type: disc; margin-left: 1.4rem; margin-bottom: 1rem; }
                   .blog-content ol { list-style-type: decimal; margin-left: 1.4rem; margin-bottom: 1rem; }
