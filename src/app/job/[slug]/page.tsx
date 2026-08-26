@@ -385,8 +385,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
   if (cleanBlogHtml.includes("<table")) {
     cleanBlogHtml = cleanBlogHtml.replace(
       /<table([^>]*)>/gi,
-      (_match: string, p1: string) =>
-        `<div className="overflow-x-auto my-4 -mx-2 px-2 scrollbar-thin touch-pan-x border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm"><div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 py-1 text-right sm:hidden">👈 दाएँ-बाएँ स्वाइप करें (Swipe Table) 👉</div><table${p1}>`
+      (_match: string, p1: string) => {
+        return `<div class="unicorn-table-box"><div class="table-swipe-hint text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-1.5 flex items-center gap-1 sm:hidden"><span>↔ दाएँ-बाएँ स्वाइप करें (Swipe Table)</span></div><table${p1}>`;
+      }
     ).replace(/<\/table>/gi, "</table></div>");
   }
 
@@ -690,13 +691,16 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                   .blog-content .unicorn-table-box, .blog-content .table-wrapper {
                     width: 100% !important;
                     max-width: 100% !important;
+                    display: block !important;
                     overflow-x: auto !important;
                     -webkit-overflow-scrolling: touch !important;
+                    touch-action: pan-x !important;
                     margin: 1.25rem 0 1.5rem;
                     border-radius: 12px;
                     padding: 8px;
                     border: 1px solid #e0e7ff;
                     background: #fafaff;
+                    box-sizing: border-box !important;
                   }
                   .dark .blog-content .unicorn-table-box, .dark .blog-content .table-wrapper {
                     border-color: #27272a;
@@ -704,22 +708,37 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                   }
                   .blog-content table {
                     width: 100% !important;
-                    min-width: 480px;
+                    min-width: 540px !important;
+                    max-width: none !important;
                     border-collapse: collapse;
                     font-size: 13.5px;
+                    display: table !important;
+                    table-layout: auto !important;
                   }
                   .blog-content th {
                     background: #4f46e5; color: white;
                     font-weight: 700; padding: 10px 14px; text-align: left;
                     white-space: nowrap;
+                    max-width: none !important;
                   }
                   .dark .blog-content th { background: #3730a3; }
                   .blog-content td {
                     border: 1px solid #e5e7eb;
                     padding: 9px 14px; text-align: left;
                     vertical-align: top;
+                    max-width: none !important;
+                    overflow-wrap: normal !important;
+                    word-break: normal !important;
+                    white-space: normal;
                   }
                   .dark .blog-content td { border-color: #27272a; background: #09090b; color: #d4d4d8; }
+                  .blog-content td:first-child, .blog-content th:first-child {
+                    min-width: 130px !important;
+                    font-weight: 700;
+                  }
+                  .blog-content td:nth-child(2), .blog-content th:nth-child(2) {
+                    min-width: 250px !important;
+                  }
                   .blog-content tr:nth-child(even) td { background: #f9fafb; }
                   .dark .blog-content tr:nth-child(even) td { background: #111113; }
                   .blog-content img, .blog-content iframe, .blog-content video {
