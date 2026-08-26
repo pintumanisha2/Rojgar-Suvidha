@@ -746,7 +746,7 @@ function ApplyContent() {
             🔄 Dobara Apply Karo
           </button>
           <p className="text-xs text-gray-400 mt-4">Tracking ID: <strong className="text-indigo-500">{pendingTrackingCode}</strong></p>
-          <p className="text-xs text-gray-400 mt-1">Agar payment ho gayi thi toh WhatsApp karo — <a href="https://wa.me/91XXXXXXXXXX" target="_blank" className="text-indigo-500 underline">Help Line</a></p>
+          <p className="text-xs text-gray-400 mt-1">Agar payment ho gayi thi toh WhatsApp karo — <a href="https://wa.me/918877434088" target="_blank" className="text-indigo-500 underline">Help Line</a></p>
         </div>
       </div>
     );
@@ -980,7 +980,7 @@ function ApplyContent() {
           {/* Help Text */}
           <div className="text-center text-xs text-gray-400 pb-4 space-y-1">
             <p>Tracking ID: <strong className="text-indigo-600 dark:text-indigo-400">{pendingTrackingCode}</strong></p>
-            <p>Koi dikkat? WhatsApp karo: <a href="https://wa.me/91XXXXXXXXXX" className="text-indigo-500 underline" target="_blank">Help Line</a></p>
+            <p>Koi dikkat? WhatsApp karo: <a href="https://wa.me/918877434088" className="text-indigo-500 underline" target="_blank">Help Line</a></p>
           </div>
         </div>
       </div>
