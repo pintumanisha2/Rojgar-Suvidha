@@ -555,10 +555,10 @@ function stripH1FromBlog(html: string): string {
     .replace(/<\/h1>/gi, "</h2>")
     // Strip fixed pixel widths (e.g. style="width: 700px;") that break mobile layout
     .replace(/style=["'][^"']*width\s*:\s*\d+px[^"']*["']/gi, "")
-    // Auto-wrap raw <table> tags in a responsive container if not already wrapped
+    // Auto-wrap raw <table> tags in a unicorn responsive container with scroll indicator if not already wrapped
     .replace(/(<table(?:\s[^>]*)?>[\s\S]*?<\/table>)/gi, (match) => {
-      if (match.includes("table-wrapper")) return match;
-      return `<div class='table-wrapper' style='overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin:1rem 0;'>${match}</div>`;
+      if (match.includes("unicorn-table-box") || match.includes("table-wrapper")) return match;
+      return `<div class='unicorn-table-box' style='overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin:1.25rem 0;border-radius:12px;padding:4px;border:1px solid #e0e7ff;background:#fafaff;'><div style='font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:4px;display:flex;align-items:center;gap:4px;'><span class='sm-scroll-hint'>↔ Swipe table left/right</span></div>${match}</div>`;
     });
   return clean;
 }

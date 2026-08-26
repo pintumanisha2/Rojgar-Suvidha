@@ -431,8 +431,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       <TrackJobViewWrapper slug={job.slug} title={job.title} category={job.category} />
       <JobAbandonTracker jobTitle={job.title} jobSlug={job.slug} />
 
-      <div className="bg-gray-50 dark:bg-[#0a0a0a] min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
+      <div className="bg-gray-50 dark:bg-[#0a0a0a] min-h-screen w-full overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-8 w-full box-border">
 
           {/* ── Breadcrumb ── */}
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-5 flex-wrap">
@@ -447,10 +447,10 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
             {/* ── LEFT: Main Content Column ── */}
-            <div className="flex-1 min-w-0 space-y-5">
+            <div className="flex-1 min-w-0 space-y-5 w-full">
 
               {/* ── POST HEADER ── */}
-              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-5 sm:p-7 shadow-sm">
+              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 sm:p-7 shadow-sm w-full box-border">
                 
                 {/* Category + Status row */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -687,14 +687,26 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     max-width: 100% !important;
                   }
                   .blog-content p { margin-bottom: 1rem; }
-                  .blog-content .table-wrapper, .blog-content table {
+                  .blog-content .unicorn-table-box, .blog-content .table-wrapper {
                     width: 100% !important;
                     max-width: 100% !important;
-                    display: block !important;
                     overflow-x: auto !important;
                     -webkit-overflow-scrolling: touch !important;
                     margin: 1.25rem 0 1.5rem;
-                    border-radius: 10px;
+                    border-radius: 12px;
+                    padding: 8px;
+                    border: 1px solid #e0e7ff;
+                    background: #fafaff;
+                  }
+                  .dark .blog-content .unicorn-table-box, .dark .blog-content .table-wrapper {
+                    border-color: #27272a;
+                    background: #09090b;
+                  }
+                  .blog-content table {
+                    width: 100% !important;
+                    min-width: 480px;
+                    border-collapse: collapse;
+                    font-size: 13.5px;
                   }
                   .blog-content th {
                     background: #4f46e5; color: white;
