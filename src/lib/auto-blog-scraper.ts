@@ -1421,6 +1421,7 @@ CRITICAL JSON SYNTAX RULE
     }
 
     if (parsed && parsed.title) {
+      parsed.title = parsed.title.replace(/\s*\.{2,}\s*$/g, "").replace(/\s*\.\s*$/g, "").trim();
       const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
       if (wordCount >= 500) {
         console.log(`   ✅ Generated via Gemini Multi-Key Rotator Engine: ${wordCount} words, title="${parsed.title}"`);

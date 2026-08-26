@@ -236,7 +236,7 @@ export default function AIChatBot() {
         }
       `}</style>
 
-      <div className="fixed bottom-[135px] md:bottom-5 right-4 md:right-5 z-[999] flex flex-col items-end gap-3">
+      <div className="hidden md:flex fixed bottom-5 right-5 z-[999] flex-col items-end gap-3">
         
         {/* ── Chat Window ── */}
         {isOpen && (
