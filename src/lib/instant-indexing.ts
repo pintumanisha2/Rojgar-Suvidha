@@ -70,10 +70,10 @@ async function submitGoogleIndexingAPI(urls: string[]): Promise<void> {
       return;
     }
 
-    // Submit URL_UPDATED notifications for each language URL
-    await Promise.allSettled(
-      urls.map((pageUrl) =>
-        fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
+    // Submit URL_UPDATED notifications for each language URL with detailed logging
+    const results = await Promise.allSettled(
+      urls.map(async (pageUrl) => {
+        const res = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -81,10 +81,13 @@ async function submitGoogleIndexingAPI(urls: string[]): Promise<void> {
           },
           body: JSON.stringify({ url: pageUrl, type: "URL_UPDATED" }),
           signal: AbortSignal.timeout(12000),
-        })
-      )
+        });
+        const resData = await res.json().catch(() => ({}));
+        console.log(` 📡 [Google Indexing API] HTTP ${res.status} — ${pageUrl} | Response:`, JSON.stringify(resData));
+        return { url: pageUrl, status: res.status, data: resData };
+      })
     );
-    console.log(`✅ [Indexing] Google Indexing API: Submitted ${urls.length} language URLs successfully`);
+    console.log(`✅ [Indexing] Google Indexing API: Processed ${urls.length} URLs`);
   } catch (err: any) {
     console.warn(`⚠️ [Indexing] Google Indexing API failed: ${err.message}`);
   }
