@@ -642,18 +642,21 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               )}
 
               {/* ── BLOG CONTENT ── */}
-              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 sm:p-8 shadow-sm overflow-hidden max-w-full">
+              <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 p-3.5 sm:p-7 shadow-sm w-full">
                 <style>{`
                   .blog-content {
                     line-height: 1.8;
                     color: #374151;
                     font-size: 15px;
+                    width: 100% !important;
                     max-width: 100% !important;
-                    overflow-x: hidden;
-                    word-break: break-word;
-                    overflow-wrap: break-word;
+                    box-sizing: border-box !important;
                   }
                   .dark .blog-content { color: #d1d5db; }
+                  .blog-content * {
+                    box-sizing: border-box !important;
+                    max-width: 100% !important;
+                  }
                   .blog-content h2 {
                     color: #111827; font-weight: 800;
                     margin-top: 2rem; margin-bottom: 0.75rem;
@@ -661,8 +664,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     padding-bottom: 0.4rem;
                     border-bottom: 2px solid #e0e7ff;
                     scroll-margin-top: 80px;
-                    word-break: break-word;
-                    overflow-wrap: break-word;
+                    overflow-wrap: anywhere !important;
+                    word-break: break-word !important;
                   }
                   .dark .blog-content h2 { color: #f1f5f9; border-bottom-color: #1e1b4b; }
                   .blog-content h3 {
@@ -670,18 +673,18 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     margin-top: 1.5rem; margin-bottom: 0.5rem;
                     font-size: 1.05rem;
                     scroll-margin-top: 80px;
-                    word-break: break-word;
-                    overflow-wrap: break-word;
+                    overflow-wrap: anywhere !important;
+                    word-break: break-word !important;
                   }
                   .dark .blog-content h3 { color: #e2e8f0; }
                   @media(min-width:640px){
                     .blog-content h2 { font-size: 1.45rem; }
                     .blog-content h3 { font-size: 1.15rem; }
                   }
-                  .blog-content p, .blog-content div, .blog-content li {
-                    word-break: break-word;
-                    overflow-wrap: break-word;
-                    max-width: 100%;
+                  .blog-content p, .blog-content div, .blog-content li, .blog-content span {
+                    overflow-wrap: anywhere !important;
+                    word-break: break-word !important;
+                    max-width: 100% !important;
                   }
                   .blog-content p { margin-bottom: 1rem; }
                   .blog-content .table-wrapper, .blog-content table {
@@ -714,10 +717,10 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     margin: 1.25rem 0;
                     object-fit: contain;
                   }
-                  .blog-content a { color: #4f46e5; text-decoration: underline; word-break: break-word; font-weight: 500; }
+                  .blog-content a { color: #4f46e5; text-decoration: underline; overflow-wrap: anywhere !important; word-break: break-word !important; font-weight: 500; }
                   .dark .blog-content a { color: #818cf8; }
-                  .blog-content ul { list-style-type: disc; margin-left: 1.4rem; margin-bottom: 1rem; }
-                  .blog-content ol { list-style-type: decimal; margin-left: 1.4rem; margin-bottom: 1rem; }
+                  .blog-content ul { list-style-type: disc; padding-left: 1.2rem; margin-left: 0; margin-bottom: 1rem; }
+                  .blog-content ol { list-style-type: decimal; padding-left: 1.2rem; margin-left: 0; margin-bottom: 1rem; }
                   .blog-content li { margin-bottom: 0.45rem; line-height: 1.65; }
                   /* FAQ Accordion */
                   .blog-content details {
