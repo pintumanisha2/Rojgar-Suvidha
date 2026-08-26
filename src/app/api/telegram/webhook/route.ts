@@ -239,7 +239,7 @@ export async function POST(request: Request) {
         }
 
         // 3.1. Auto-create "Apply For Me" Custom Form (ONLY FOR category === "latest-jobs")
-        if ((draft.category || "latest-jobs") === "latest-jobs" && insertedJob?.id) {
+        if ((draft.category || "latest-jobs") === "latest-jobs" && finalJobId) {
           try {
             let extractedMeta: any = {};
             if (draft.extracted_text) {
