@@ -1,5 +1,6 @@
 // Server Component — compact design, minimal vertical space on mobile
 import { Send, MessageCircle, TrendingUp } from "lucide-react";
+import { SOCIAL_LINKS } from "@/lib/socialConfig";
 
 export default function SocialPromo() {
   return (
@@ -13,15 +14,15 @@ export default function SocialPromo() {
         <TrendingUp className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
         <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex-1">Join karo — Job alerts FREE:</span>
         <div className="flex gap-1.5 shrink-0">
-          <a href="https://t.me/rojgarsuvidha" target="_blank" rel="noopener noreferrer"
+          <a href={SOCIAL_LINKS.telegram} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 bg-sky-500 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform">
             <Send className="w-3 h-3" /> TG
           </a>
-          <a href="https://whatsapp.com/channel/rojgarsuvidha" target="_blank" rel="noopener noreferrer"
+          <a href={SOCIAL_LINKS.whatsappChannel} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 bg-[#25D366] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform">
             <MessageCircle className="w-3 h-3" /> WA
           </a>
-          <a href="https://youtube.com/@rojgarsuvidha" target="_blank" rel="noopener noreferrer"
+          <a href={SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M19.812 5.418c.861.23 1.538.907 1.768 1.768C21.998 8.746 22 12 22 12s0 3.255-.418 4.814a2.504 2.504 0 0 1-1.768 1.768c-1.56.419-7.814.419-7.814.419s-6.255 0-7.814-.419a2.505 2.505 0 0 1-1.768-1.768C2 15.255 2 12 2 12s0-3.255.417-4.814a2.507 2.507 0 0 1 1.768-1.768C5.744 5 11.998 5 11.998 5s6.255 0 7.814.418ZM15.194 12 10 15V9l5.194 3Z" clipRule="evenodd" /></svg>
             YT
@@ -31,7 +32,7 @@ export default function SocialPromo() {
 
       {/* Desktop view — full cards with stats */}
       <div className="hidden sm:grid sm:grid-cols-3 gap-3">
-        <a href="https://t.me/rojgarsuvidha" target="_blank" rel="noopener noreferrer"
+        <a href={SOCIAL_LINKS.telegram} target="_blank" rel="noopener noreferrer"
           className="relative overflow-hidden bg-slate-900/90 dark:bg-zinc-900 border border-sky-500/30 rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-3 text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.98]">
           <div className="flex items-center gap-3">
             <div className="bg-sky-500/20 text-sky-400 p-2 rounded-xl border border-sky-400/20"><Send className="w-4 h-4" /></div>
@@ -39,7 +40,7 @@ export default function SocialPromo() {
           </div>
           <span className="bg-sky-500/20 text-sky-300 border border-sky-400/30 text-xs font-bold px-2 py-0.5 rounded-full">FREE</span>
         </a>
-        <a href="https://whatsapp.com/channel/rojgarsuvidha" target="_blank" rel="noopener noreferrer"
+        <a href={SOCIAL_LINKS.whatsappChannel} target="_blank" rel="noopener noreferrer"
           className="relative overflow-hidden bg-slate-900/90 dark:bg-zinc-900 border border-emerald-500/30 rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-3 text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 active:scale-[0.98]">
           <div className="flex items-center gap-3">
             <div className="relative bg-emerald-500/20 text-emerald-400 p-2 rounded-xl border border-emerald-400/20">

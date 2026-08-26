@@ -34,7 +34,7 @@ export default function FloatingSocials() {
     >
       {/* YouTube */}
       <a
-        href="https://youtube.com/@rojgarsuvidha"
+        href={SOCIAL_LINKS.youtube}
         target="_blank"
         rel="noopener noreferrer"
         className="group relative flex items-center justify-center w-10 h-10 bg-red-600/90 hover:bg-red-600 text-white rounded-full shadow-md hover:shadow-red-500/30 transition-all hover:scale-110 opacity-85 hover:opacity-100"
@@ -50,7 +50,7 @@ export default function FloatingSocials() {
 
       {/* Telegram */}
       <a
-        href="https://t.me/rojgarsuvidha"
+        href={SOCIAL_LINKS.telegram}
         target="_blank"
         rel="noopener noreferrer"
         className="group relative flex items-center justify-center w-10 h-10 bg-sky-500/90 hover:bg-sky-500 text-white rounded-full shadow-md hover:shadow-sky-500/30 transition-all hover:scale-110 opacity-85 hover:opacity-100"
@@ -64,7 +64,7 @@ export default function FloatingSocials() {
 
       {/* WhatsApp */}
       <a
-        href="https://whatsapp.com/channel/rojgarsuvidha"
+        href={SOCIAL_LINKS.whatsappChannel}
         target="_blank"
         rel="noopener noreferrer"
         className="group relative flex items-center justify-center w-10 h-10 bg-[#25D366]/90 hover:bg-[#25D366] text-white rounded-full shadow-md shadow-[#25D366]/20 transition-all hover:scale-110 opacity-85 hover:opacity-100"

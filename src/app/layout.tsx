@@ -173,9 +173,9 @@ const organizationSchema = {
   description: "India's #1 trusted portal for Sarkari Naukri, Government Jobs, Admit Cards, Results & Apply For Me service.",
   foundingDate: "2024",
   sameAs: [
-    "https://t.me/rojgarsuvidha",
+    "https://t.me/govermentform",
     "https://youtube.com/@rojgarsuvidha",
-    "https://whatsapp.com/channel/rojgarsuvidha",
+    "https://whatsapp.com/channel/0029Vb7gNWP4Crfj2Jq5gz01",
   ],
   contactPoint: {
     "@type": "ContactPoint",

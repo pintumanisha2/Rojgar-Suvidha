@@ -8,6 +8,7 @@ import {
   Bell, Star, AlertTriangle, CheckCircle,
   ArrowRight, Bookmark, TrendingUp,
 } from "lucide-react";
+import { SOCIAL_LINKS } from "@/lib/socialConfig";
 
 interface Exam {
   name: string;
@@ -480,7 +481,7 @@ export default function ExamCalendarClient({ exams }: Props) {
           </div>
           <div className="flex gap-3 shrink-0">
             <a
-              href="https://t.me/rojgarsuvidha"
+              href={SOCIAL_LINKS.telegram}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-5 py-3 bg-white text-emerald-700 font-extrabold text-sm rounded-xl hover:bg-emerald-50 transition-colors shadow-lg active:scale-95"

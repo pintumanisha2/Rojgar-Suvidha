@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { Clock, Send, Phone, Play, Sparkles } from "lucide-react";
 import confetti from "canvas-confetti";
+import { SOCIAL_LINKS } from "@/lib/socialConfig";
 
 // Target launch date: July 2, 2026 at 11:11 AM IST (GMT+05:30)
 const LAUNCH_DATE = new Date("2026-07-02T11:11:00+05:30");
@@ -347,15 +348,17 @@ export default function CountdownGate({ children }: { children: React.ReactNode 
         {/* Launch Notification Links */}
         <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md relative z-10">
           <a
-            href="https://whatsapp.com" 
+            href={SOCIAL_LINKS.whatsappChannel} 
             target="_blank" 
+            rel="noopener noreferrer"
             className="flex-1 py-4 px-6 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
           >
             <Phone className="w-5 h-5" /> Join WhatsApp Group
           </a>
           <a
-            href="https://t.me" 
+            href={SOCIAL_LINKS.telegram} 
             target="_blank" 
+            rel="noopener noreferrer"
             className="flex-1 py-4 px-6 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-extrabold rounded-2xl shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2 transition-all"
           >
             <Send className="w-5 h-5" /> Join Telegram Channel

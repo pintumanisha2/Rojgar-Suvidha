@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, Phone, MapPin, ExternalLink } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { SOCIAL_LINKS } from '@/lib/socialConfig';
 
 // SEO-rich keyword links for internal linking
 const quickLinks = [
@@ -190,11 +191,11 @@ export default function Footer() {
                 className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-red-600 hover:text-white transition-all shadow-md">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M19.812 5.418c.861.23 1.538.907 1.768 1.768C21.998 8.746 22 12 22 12s0 3.255-.418 4.814a2.504 2.504 0 0 1-1.768 1.768c-1.56.419-7.814.419-7.814.419s-6.255 0-7.814-.419a2.505 2.505 0 0 1-1.768-1.768C2 15.255 2 12 2 12s0-3.255.417-4.814a2.507 2.507 0 0 1 1.768-1.768C5.744 5 11.998 5 11.998 5s6.255 0 7.814.418ZM15.194 12 10 15V9l5.194 3Z" clipRule="evenodd" /></svg>
               </a>
-              <a href="https://t.me/rojgarsuvidha" target="_blank" rel="noopener noreferrer" aria-label="Rojgar Suvidha Telegram Channel"
+              <a href={SOCIAL_LINKS.telegram} target="_blank" rel="noopener noreferrer" aria-label="Rojgar Suvidha Telegram Channel"
                 className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-sky-500 hover:text-white transition-all shadow-md">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.944 20a11.944 11.944 0 1 0 0-23.888 11.944 11.944 0 0 0 0 23.888Zm-3.178-9.452 1.488 4.84c.16.516.488.544.756.24.22-.24.588-.58.916-.9 1.108 1.084 3.016 2.3 3.528 2.528.532.236.936.172 1.116-.396.408-1.296 2.152-7.848 2.656-9.98.12-.488-.032-.736-.34-.616-1.552.616-8.5 3.516-10.236 4.192-.516.204-.528.484-.04.636l2.164.672v-.004Zm6.392-4.048-4.524 4.092-.124 1.492 1.144-1.216 3.504-4.368Z"/></svg>
               </a>
-              <a href="https://whatsapp.com/channel/rojgarsuvidha" target="_blank" rel="noopener noreferrer" aria-label="Rojgar Suvidha WhatsApp Channel"
+              <a href={SOCIAL_LINKS.whatsappChannel} target="_blank" rel="noopener noreferrer" aria-label="Rojgar Suvidha WhatsApp Channel"
                 className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-[#25D366] hover:text-white transition-all shadow-md">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.013 2.008c-5.464 0-9.897 4.435-9.897 9.901 0 1.956.512 3.82 1.48 5.48L2 22l4.75-1.246c1.6.896 3.42 1.368 5.263 1.368 5.464 0 9.897-4.436 9.897-9.902 0-5.466-4.433-9.901-9.897-9.901zm0 18.252c-1.636 0-3.235-.436-4.64-1.265l-.33-.195-3.46.907.925-3.374-.216-.344c-.91-1.453-1.393-3.138-1.393-4.887 0-4.996 4.062-9.06 9.06-9.06s9.06 4.064 9.06 9.06c0 4.997-4.06 9.06-9.06 9.06zm4.97-6.79c-.272-.136-1.614-.796-1.865-.886-.25-.092-.435-.137-.617.136-.183.272-.705.886-.864 1.067-.158.182-.317.204-.59.068-.272-.136-1.152-.424-2.193-1.352-.81-.72-1.356-1.61-1.516-1.88-.16-.273-.017-.42.12-.556.124-.123.273-.317.408-.475.137-.16.183-.273.273-.454.09-.182.045-.34-.023-.477-.068-.136-.617-1.492-.845-2.042-.222-.538-.448-.465-.617-.474-.158-.008-.34-.01-.522-.01-.183 0-.477.068-.727.34-.25.272-.953.93-.953 2.27 0 1.34.93 2.635 1.066 2.816.136.18 1.916 2.923 4.64 4.066.647.272 1.152.434 1.545.556.65.305 1.24.26 1.705.158.523-.114 1.614-.66 1.84-1.296.228-.636.228-1.18.16-1.296-.07-.113-.25-.18-.522-.316z"/></svg>
               </a>
