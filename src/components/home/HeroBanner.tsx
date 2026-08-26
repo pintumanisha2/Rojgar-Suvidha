@@ -205,7 +205,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
                 <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1.5 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
-                  <p className="text-white font-bold text-[11px] leading-tight drop-shadow line-clamp-1">
+                  <p className="text-white font-bold text-xs leading-tight drop-shadow line-clamp-1">
                     {side1.title}
                   </p>
                 </div>
@@ -229,7 +229,7 @@ export default function HeroBanner({ initialBanners = [] }: HeroBannerProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10" />
                 <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1.5 pointer-events-none z-10 bg-gradient-to-t from-black/70 to-transparent">
-                  <p className="text-white font-bold text-[11px] leading-tight drop-shadow line-clamp-1">
+                  <p className="text-white font-bold text-xs leading-tight drop-shadow line-clamp-1">
                     {side2.title}
                   </p>
                 </div>

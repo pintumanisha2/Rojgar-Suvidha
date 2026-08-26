@@ -48,7 +48,7 @@ export default function FeaturedServices() {
               <h3 className="font-extrabold text-gray-900 dark:text-white text-xs group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
                 {service.name}
               </h3>
-              <p className="text-[10px] text-gray-400 dark:text-zinc-500 line-clamp-1 mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
                 {service.desc}
               </p>
             </div>

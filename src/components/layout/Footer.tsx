@@ -97,14 +97,14 @@ export default function Footer() {
 
           {/* Quick Links – SEO Anchor Texts */}
           <div>
-            <h3 className="text-sm font-bold mb-4 text-gray-200 uppercase tracking-wider">Quick Links</h3>
+            <h3 className="text-sm font-bold mb-4 text-gray-200 tracking-wider">Quick Links</h3>
             
             {/* HIGHLIGHTED HR LOGIN BUTTON */}
             <Link
               href="/employer/login"
               className="group flex items-center justify-between p-1 pl-3 pr-1 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg shadow-md hover:shadow-emerald-500/20 transition-all mb-4 border border-emerald-400/30 hover:scale-105 active:scale-95"
             >
-              <span className="font-extrabold text-white text-[11px] tracking-widest uppercase">HR / Recruiter Login</span>
+              <span className="font-extrabold text-white text-xs tracking-wide">HR / Recruiter Login</span>
               <span className="w-6 h-6 rounded flex items-center justify-center text-white bg-white/20 group-hover:bg-white group-hover:text-emerald-600 transition-colors">
                 →
               </span>
@@ -126,7 +126,7 @@ export default function Footer() {
 
           {/* Jobs by Category – Internal Linking */}
           <div>
-            <h3 className="text-sm font-bold mb-4 text-gray-200 uppercase tracking-wider">Jobs by Category</h3>
+            <h3 className="text-sm font-bold mb-4 text-gray-200 tracking-wider">Jobs by Category</h3>
             <ul className="space-y-2.5">
               {jobsByCategory.map(link => (
                 <li key={link.href}>
@@ -140,7 +140,7 @@ export default function Footer() {
 
           {/* Jobs by State – Internal Linking */}
           <div>
-            <h3 className="text-sm font-bold mb-4 text-gray-200 uppercase tracking-wider">Jobs by State</h3>
+            <h3 className="text-sm font-bold mb-4 text-gray-200 tracking-wider">Jobs by State</h3>
             <ul className="space-y-2.5">
               {jobsByState.map(link => (
                 <li key={link.href}>
@@ -154,7 +154,7 @@ export default function Footer() {
 
           {/* e-Suvidha Services */}
           <div>
-            <h3 className="text-sm font-bold mb-4 text-blue-400 uppercase tracking-wider">e-Suvidha Services</h3>
+            <h3 className="text-sm font-bold mb-4 text-blue-400 tracking-wider">e-Suvidha Services</h3>
             <ul className="space-y-2.5">
               {eSuvidhaLinks.map(link => (
                 <li key={link.href}>
@@ -172,7 +172,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8 pb-6 grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Contact Info */}
           <div>
-            <h3 className="text-sm font-bold mb-4 text-gray-200 uppercase tracking-wider">Contact Us</h3>
+            <h3 className="text-sm font-bold mb-4 text-gray-200 tracking-wider">Contact Us</h3>
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-indigo-400 shrink-0" />
@@ -189,7 +189,7 @@ export default function Footer() {
 
           {/* Social Links */}
           <div>
-            <h3 className="text-sm font-bold mb-4 text-gray-200 uppercase tracking-wider">Follow Us for Daily Job Alerts</h3>
+            <h3 className="text-sm font-bold mb-4 text-gray-200 tracking-wider">Follow Us for Daily Job Alerts</h3>
             <div className="flex gap-3">
               <a href="https://youtube.com/@rojgarsuvidha" target="_blank" rel="noopener noreferrer" aria-label="Rojgar Suvidha YouTube Channel"
                 className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-red-600 hover:text-white transition-all shadow-md">

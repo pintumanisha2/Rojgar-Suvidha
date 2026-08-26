@@ -167,9 +167,9 @@ export default function TrustSignals() {
         {/* --- STATS COUNTER --- */}
         <div className="mb-12">
           <div className="text-center mb-6">
-            <h2 className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 tracking-wider uppercase mb-1">
+            <p className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 tracking-wider mb-1">
               Why Students Trust Us
-            </h2>
+            </p>
             <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
               India's #1 Trusted Job Portal & Form Service
             </p>
@@ -191,10 +191,10 @@ export default function TrustSignals() {
         </div>
 
         {/* --- REAL WHATSAPP TESTIMONIALS CAROUSEL --- */}
-        <div className="relative">
+        <div className="relative mb-8">
           <div className="flex items-end justify-between mb-6">
-            <div>
-              <span className="inline-flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full mb-1.5 uppercase tracking-wider">
+            <div className="flex flex-col items-start gap-1">
+              <span className="inline-flex items-center gap-1.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-xs font-black px-2.5 py-1 rounded-full tracking-wide">
                 💬 100% Real Student Feedback
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
@@ -205,14 +205,14 @@ export default function TrustSignals() {
             <div className="flex gap-2">
               <button 
                 onClick={() => scroll('left')}
-                className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-emerald-50 hover:text-emerald-600 transition-colors shadow-sm"
+                className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-md active:scale-95"
                 aria-label="Previous chats"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button 
                 onClick={() => scroll('right')}
-                className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-emerald-50 hover:text-emerald-600 transition-colors shadow-sm"
+                className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all shadow-md active:scale-95"
                 aria-label="Next chats"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -247,7 +247,7 @@ export default function TrustSignals() {
                       />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-bold text-xs leading-tight text-white truncate">{chat.studentName}</h4>
+                      <h3 className="font-bold text-xs leading-tight text-white truncate">{chat.studentName}</h3>
                       <p className="text-[10px] text-emerald-200/90 dark:text-gray-300 leading-none mt-0.5 truncate">{chat.role}</p>
                     </div>
                   </div>

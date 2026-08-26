@@ -207,5 +207,74 @@ img, video, iframe, canvas, svg, picture {
   word-break: break-word;
 }
 
+/* === System Button Variant Utility Classes === */
+.btn-primary {
+  background: linear-gradient(to right, #4f46e5, #7c3aed);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+.btn-primary:hover {
+  background: linear-gradient(to right, #4338ca, #6d28d9);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease;
+}
+.dark .btn-secondary {
+  color: #e5e7eb;
+  border-color: #374151;
+}
+.btn-secondary:hover {
+  background: #f3f4f6;
+}
+.dark .btn-secondary:hover {
+  background: #1f2937;
+}
+
+.btn-accent {
+  background: linear-gradient(to right, #fbbf24, #f59e0b);
+  color: #451a03;
+  font-weight: 800;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+.btn-accent:hover {
+  background: linear-gradient(to right, #f59e0b, #d97706);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #4b5563;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  transition: all 0.2s ease;
+}
+.dark .btn-ghost {
+  color: #9ca3af;
+}
+.btn-ghost:hover {
+  background: rgba(243, 244, 246, 0.8);
+  color: #111827;
+}
+.dark .btn-ghost:hover {
+  background: rgba(31, 41, 55, 0.8);
+  color: #f9fafb;
+}
+
 
 
