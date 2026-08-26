@@ -554,7 +554,7 @@ function stripH1FromBlog(html: string): string {
     .replace(/<h1(\s[^>]*)?>/gi, (_, attrs) => `<h2${attrs || ""}>`)  
     .replace(/<\/h1>/gi, "</h2>")
     // Strip fixed pixel widths (e.g. style="width: 700px;") that break mobile layout
-    .replace(/style=(["'])(?:(?!\1).)*?width\s*:\s*\d+px[^\1]*?\1/gi, "")
+    .replace(/style=["'][^"']*width\s*:\s*\d+px[^"']*["']/gi, "")
     // Auto-wrap raw <table> tags in a responsive container if not already wrapped
     .replace(/(<table(?:\s[^>]*)?>[\s\S]*?<\/table>)/gi, (match) => {
       if (match.includes("table-wrapper")) return match;
