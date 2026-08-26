@@ -16,6 +16,7 @@ import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import { buildHreflangAlternates, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 import MobileStickyActionBar from "@/components/job/MobileStickyActionBar";
+import { parseJobLinks } from "@/lib/jobLinksParser";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -210,7 +211,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
   // ── Parse links ──
   let applyLink: string | null = null;
-  let customApplyLink: string | null = null;
+  let customApplyLink: string | null = `/apply-for-me?jobSlug=${job.slug}&title=${encodeURIComponent(job.title)}`;
 
   if (Array.isArray(job.links)) {
     const customObj = job.links.find((l: any) => l.label && typeof l.label === "string" && l.label.toLowerCase().includes("apply for me"));
@@ -408,14 +409,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
   const pageBadge = getJobStatusBadge(job);
 
-  // ── Valid links list ──
-  const validLinks = Array.isArray(job.links)
-    ? job.links.filter((l: any) => l && l.label && typeof l.label === "string" && !l.label.toLowerCase().includes("apply for me"))
-    : typeof job.links === "string" && job.links.startsWith("http")
-    ? [{ label: "Official Notification / Website Link", url: job.links }]
-    : job.official_link && typeof job.official_link === "string" && job.official_link.startsWith("http")
-    ? [{ label: "Official Direct Link", url: job.official_link }]
-    : [];
+  // ── Universal Extracted Links ──
+  const validLinks = parseJobLinks(job);
 
   return (
     <>

@@ -351,6 +351,37 @@ function ApplyForMeContent() {
               </div>
             )}
 
+            {/* ── PRE-FILLED SELECTED JOB ORDER CARD ── */}
+            {debouncedQuery && (
+              <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-violet-900 text-white rounded-3xl p-6 sm:p-7 shadow-xl border border-indigo-500/30 relative overflow-hidden mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-yellow-400 text-yellow-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                    ✨ Selected Job Order
+                  </span>
+                  <span className="text-xs text-indigo-200 font-semibold">• Service Charge: ₹99</span>
+                </div>
+                
+                <h2 className="text-xl sm:text-2xl font-black text-white mb-2 leading-tight">
+                  {debouncedQuery}
+                </h2>
+                <p className="text-indigo-200 text-xs sm:text-sm mb-6 max-w-xl">
+                  Hamari expert team aapke liye <strong className="text-yellow-300">{debouncedQuery}</strong> ka official application form 100% accuracy se bharegi.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <a
+                    href={`https://wa.me/916681095051?text=${encodeURIComponent(`Hello Rojgar Suvidha! Mujhe is job ka form bharwana hai:\n📌 Job: ${debouncedQuery}\n\nPlease help me fill this form.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 py-3 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Instant Order via WhatsApp (₹99)
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Search Box */}
             <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden">
               <div className="relative">
