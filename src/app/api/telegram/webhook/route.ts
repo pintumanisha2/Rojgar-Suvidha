@@ -144,6 +144,23 @@ export async function POST(request: Request) {
           ? draft.generated_meta
           : metaFallback;
 
+        const jobPayload: any = {
+          title: draft.generated_title,
+          blog_content: (draft.generated_html || "").replace(/<h1(\s[^>]*)?>/g, (_m: string, a: string) => `<h2${a || ""}>` ).replace(/<\/h1>/gi, "</h2>"),
+          short_info: draft.short_description || metaDescription,
+          meta_description: metaDescription,
+          tag: draft.generated_tags?.[0] || null,
+          category: draft.category || "latest-jobs",
+          state_code: draft.state_code || null,
+          banner_url: draft.banner_url || null,
+          status: "active",
+          links: linksArray.length > 0 ? linksArray : (draft.links || null),
+          important_dates: null,  // Auto-blog stores as JSON string which crashes page; always null here
+          created_by: "auto-blog-pipeline",  // Required for RLS policy — anon users can only read jobs with created_by set
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
         // 3. Smart Upsert: Check if job already exists by existing_job_id OR matching slug
         let targetJobId: string | null = draft.existing_job_id || null;
         if (!targetJobId && draft.extracted_text) {
