@@ -34,26 +34,39 @@ interface ScraperResult {
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
-// Primary: FreeJobAlert.com (WordPress blog — /feed/ works reliably)
-// Fallback sources ordered by DA (Domain Authority) and reliability
-// ── Category-specific RSS feeds (ONLY govt-job focused, no general news) ────
-// Each category gets its own dedicated feed → correct content guaranteed
+// Sources: FreeJobAlert.com + SarkariResult.com (both WordPress RSS — reliable)
+// Each run processes 1 item from each source = 2 blogs per 30-min cron
+// ── Category-specific RSS feeds ─────────────────────────────────────────────
 const CATEGORY_RSS_FEEDS: Record<string, string[]> = {
   "latest-jobs": [
-    "https://www.freejobalert.com/feed/",          // Primary — all new govt job notifications
-    "https://www.freejobalert.com/sarkari-naukri/feed/", // Secondary — sarkari naukri category
+    "https://www.freejobalert.com/feed/",               // Primary — all govt job notifications
+    "https://www.freejobalert.com/sarkari-naukri/feed/", // Secondary — sarkari naukri
   ],
   "results": [
-    "https://www.freejobalert.com/result/feed/",   // Result-only feed
+    "https://www.freejobalert.com/result/feed/",
   ],
   "admit-card": [
-    "https://www.freejobalert.com/admit-card/feed/", // Admit card-only feed
+    "https://www.freejobalert.com/admit-card/feed/",
   ],
   "answer-key": [
-    "https://www.freejobalert.com/answer-key/feed/", // Answer key-only feed (was causing 0 posts)
+    "https://www.freejobalert.com/answer-key/feed/",
   ],
   "admission": [
-    "https://www.freejobalert.com/admission/feed/", // Admission-only feed
+    "https://www.freejobalert.com/admission/feed/",
+  ],
+};
+
+// ── SarkariResult.com RSS feeds (separate — distinct source) ────────────────
+const SARKARIRESULT_RSS_FEEDS: Record<string, string[]> = {
+  "latest-jobs": [
+    "https://www.sarkariresult.com/feed/",  // All posts — SarkariResult is not categorized by type in RSS
+  ],
+  "results": [
+    "https://www.sarkariresult.com/feed/?cat=result",
+    "https://www.sarkariresult.com/feed/",  // fallback — detect from title
+  ],
+  "admit-card": [
+    "https://www.sarkariresult.com/feed/",  // detect from title
   ],
 };
 
@@ -610,6 +623,79 @@ async function fetchRSSItems(): Promise<{
   return allItems;
 }
 
+// ── SarkariResult.com RSS Fetcher ─────────────────────────────────────────────
+// SarkariResult uses WordPress RSS — same format as FreeJobAlert
+// Their RSS has minimal content (title + link only), so we deep-read each page
+async function fetchSarkariResultItems(): Promise<{
+  title: string; link: string; pubDate: string;
+  description: string; feedCategory: string;
+}[]> {
+  const allItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
+  const seen = new Set<string>();
+
+  for (const [feedCat, urls] of Object.entries(SARKARIRESULT_RSS_FEEDS)) {
+    for (const rssUrl of urls) {
+      try {
+        const res = await fetch(rssUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+          },
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!res.ok) { console.warn(`SarkariResult RSS [${feedCat}] ${rssUrl}: HTTP ${res.status}`); continue; }
+        const xml = await res.text();
+        if (!xml.includes("<item>")) { console.warn(`SarkariResult RSS [${feedCat}] ${rssUrl}: no <item> tags`); continue; }
+
+        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+        let match: RegExpExecArray | null;
+        let count = 0;
+
+        while ((match = itemRegex.exec(xml)) !== null) {
+          const block = match[1];
+          const title =
+            block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+            block.match(/<title>(.*?)<\/title>/)?.[1] || "";
+          const link =
+            block.match(/<link>(.*?)<\/link>/)?.[1] ||
+            block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+          const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+          const description =
+            block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
+            block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+
+          // SarkariResult: detect feedCategory from title (since RSS is not categorized)
+          let detectedCat = feedCat;
+          if (feedCat === "latest-jobs") {
+            const t = title.toLowerCase();
+            if (/result|merit list|scorecard|cut.?off|selected candidates/.test(t)) detectedCat = "results";
+            else if (/admit card|hall ticket|call letter/.test(t)) detectedCat = "admit-card";
+            else if (/answer key/.test(t)) detectedCat = "answer-key";
+            else if (/admission|counselling/.test(t)) detectedCat = "admission";
+          }
+
+          // Deduplicate (SarkariResult sends same item across multiple feeds)
+          const linkKey = link.trim();
+          if (title && linkKey && !seen.has(linkKey)) {
+            seen.add(linkKey);
+            allItems.push({
+              title: title.trim(), link: linkKey,
+              pubDate: pubDate.trim(), description: description.trim(),
+              feedCategory: detectedCat,
+            });
+            count++;
+          }
+        }
+        console.log(`📡 SarkariResult RSS [${feedCat}] from ${rssUrl}: ${count} items`);
+        break; // Got items from this URL — skip fallback
+      } catch (e: any) {
+        console.warn(`SarkariResult RSS [${feedCat}] ${rssUrl} failed: ${e.message}`);
+      }
+    }
+  }
+
+  return allItems; // Empty is OK — FreeJobAlert is the primary source
+}
 
 async function fetchFullPage(url: string): Promise<{
   text: string;
@@ -757,16 +843,26 @@ function sanitizeSourceText(text: string): string {
 function cleanCompetitorBrands(str: string): string {
   if (!str) return "";
   return str
+    // FreeJobAlert
     .replace(/free\s*job\s*alert(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/freejobalert(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/freejobales(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/fja(?:\.com)?/gi, "Rojgar Suvidha")
+    // SarkariResult
+    .replace(/sarkari\s*result\s*®/gi, "Rojgar Suvidha")
+    .replace(/sarkariresult(?:\.com)?/gi, "Rojgar Suvidha")
+    .replace(/www\.sarkariresult\.com/gi, "www.rojgarsuvidha.com")
+    .replace(/WWW\.SARKARIRESULT\.COM/g, "www.rojgarsuvidha.com")
+    .replace(/SARKARI RESULT®/g, "Rojgar Suvidha")
+    // NDTV
     .replace(/ndtv\s*education/gi, "Rojgar Suvidha News Desk")
     .replace(/ndtv\s*network/gi, "Rojgar Suvidha Network")
     .replace(/ndtv(?:\.com)?/gi, "Rojgar Suvidha")
+    // Others
     .replace(/careers360(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/jagran\s*josh(?:\.com)?/gi, "Rojgar Suvidha");
 }
+
 
 // ── Strip H1 & Mobile Overflow Protection ────────────────────────────────────
 function stripH1FromBlog(html: string): string {
@@ -844,13 +940,19 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
     issues.push("FreeJobAlert boilerplate text found — copied from source, not original");
   }
 
+  // SarkariResult boilerplate phrases
+  if (/sarkariresult\.com|www\.sarkariresult|SARKARI RESULT®|sarkari result®|Sarkari Result® Official/i.test(html)) {
+    issues.push("SarkariResult brand/URL found in content — must be stripped before publishing");
+  }
+
   // Universal checks (every category)
   if (html.includes("<h1"))
     issues.push("H1 tag in blog content — double H1 SEO penalty");
 
-  // Check ONLY actual competitor domain/brand names (Sarkari Result is a category term, not blocked)
-  if (/freejobalert|ndtv\.com|careers360|jagran\s*josh/i.test(html))
+  // Check ONLY actual competitor domain/brand names
+  if (/freejobalert|sarkariresult\.com|ndtv\.com|careers360|jagran\s*josh/i.test(html))
     issues.push("Competitor brand name found in content");
+
 
   if (/\bas an ai\b|language model|as of my knowledge cutoff|my training data/i.test(html))
     issues.push("AI self-reference phrase found (Google spam signal)");
@@ -2088,12 +2190,20 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const supabase = getSupabaseAdmin();
   const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
 
-  // 1. Fetch RSS, NDTV Education News & Google Trends India
+  // 1. Fetch RSS from FreeJobAlert + SarkariResult + NDTV + Google Trends
   let rssItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   try {
     rssItems = await fetchRSSItems();
   } catch (err: any) {
-    console.warn("⚠️ RSS Error:", err.message);
+    console.warn("⚠️ FreeJobAlert RSS Error:", err.message);
+  }
+
+  let sarkariResultItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
+  try {
+    sarkariResultItems = await fetchSarkariResultItems();
+    console.log(`📡 SarkariResult: ${sarkariResultItems.length} total items fetched`);
+  } catch (err: any) {
+    console.warn("⚠️ SarkariResult RSS Error:", err.message);
   }
 
   const ndtvItems = await fetchNDTVEducationNews();
@@ -2102,6 +2212,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const allCandidateItems: { title: string; link: string; pubDate: string; description: string; source: string; feedCategory: string }[] = [
     ...googleTrendsItems,
     ...rssItems.map((item) => ({ ...item, source: "freejobalert" })),
+    ...sarkariResultItems.map((item) => ({ ...item, source: "sarkariresult" })),
     ...ndtvItems.map((item) => ({ ...item, source: "ndtv", feedCategory: "news" })),
   ];
 
@@ -2113,13 +2224,15 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Select candidates: give priority to 1 Google Trend if available, 1 Job post, and 1 News story
+  // 3. Select candidates: 1 Google Trend + 1 FreeJobAlert + 1 SarkariResult + 1 News
   const googleTrendsNew = allCandidateItems.filter((i) => i.source === "google_trends" && !scrapedUrls.has(i.link)).slice(0, 1);
   const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 1);
+  const sarkariResultNew = allCandidateItems.filter((i) => i.source === "sarkariresult" && !scrapedUrls.has(i.link)).slice(0, 1);
   const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 1);
 
-  const newItems = [...googleTrendsNew, ...freeJobAlertNew, ...ndtvNew].slice(0, 2);
-  console.log(`🆕 New items to process: ${newItems.length} (${freeJobAlertNew.length} jobs, ${ndtvNew.length} news) of ${allCandidateItems.length} candidate items`);
+  // Max 3 items per run: prioritize real job posts (FreeJobAlert + SarkariResult) over news
+  const newItems = [...googleTrendsNew, ...freeJobAlertNew, ...sarkariResultNew, ...ndtvNew].slice(0, 3);
+  console.log(`🆕 New items to process: ${newItems.length} (FJA: ${freeJobAlertNew.length}, SR: ${sarkariResultNew.length}, NDTV: ${ndtvNew.length}, Trends: ${googleTrendsNew.length})`);
 
   if (newItems.length === 0) {
     results.skipped = allCandidateItems.length;
@@ -2342,7 +2455,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       if (inserted?.id) {
         const sourceTag = existingJobMatch
           ? "🔄 Existing Job Update"
-          : (item.source === "google_trends" ? "🔥 Google Trends" : null);
+          : item.source === "google_trends" ? "🔥 Google Trends"
+          : item.source === "sarkariresult" ? "🌐 SarkariResult.com"
+          : item.source === "freejobalert" ? "📰 FreeJobAlert.com"
+          : null;
 
         sendAdminDraftApprovalAlert({
           id: inserted.id,
