@@ -122,64 +122,102 @@ function detectCategory(title: string, content: string): BlogCategory {
 }
 
 // ── State Code Detection (Auto-detect State vs All India) ─────────────────
+// RULE: State detection is TITLE-FIRST. Body content is only used as secondary
+// confirmation, never as the sole source. This prevents false UP/state assignments
+// when a page body mentions states in passing (e.g., age relaxation tables, address).
 function detectStateCode(title: string, content: string): string | null {
-  const titleLower = title.toLowerCase();
-  const text = (title + " " + content).toLowerCase();
+  const t = title.toLowerCase();
 
-  // Central / All India indicators — priority override
-  if (/\b(?:ssc|upsc|rrb|railway|ibps|sbi|rbi|lic|isro|drdo|cisf|bsf|crpf|itbp|ssb|ignou|iit|nit|aiims|nta|cbse|cisce|central|all india)\b/i.test(titleLower)) {
-    // Only assign state if title explicitly contains state police/PSC or state university/board
-    if (!/police|high court|state|university|psc|ssc|board|deled/i.test(titleLower)) {
-      return null; // All India / Central
-    }
+  // ── Step 1: All-India / Central org check (TITLE ONLY) ─────────────────────
+  // If title contains a central org abbreviation → always return null (All India)
+  // FIX: Removed 'psc' from the exception list — TSPSC/WBPSC/MPSC are STATE orgs,
+  // not central. They should be caught by state-specific patterns below.
+  const isCentralOrg = /\b(?:upsc|rrb|rrc|rrb-ntpc|rrb-group|railway|ibps|sbi|rbi|lic|isro|drdo|cisf|bsf|crpf|itbp|ssb|ignou|iit|nit|aiims|nta|cbse|cisce)\b/i.test(t);
+  const isAllIndia = /\ball[ -]india\b|\bcentral government\b|\bcentral govt\b/i.test(t);
+  const isSSCCentral = /\bssc\b/i.test(t) && !/\bhssc\b|\bjssc\b|\bbssc\b|\bsssc\b|\bosssc\b|\bwbssc\b|\btssc\b/i.test(t); // SSC = central, but state SSCs are covered separately
+
+  if (isCentralOrg || isAllIndia || isSSCCentral) {
+    return null; // All India — no state
   }
 
-  // 1. Jammu & Kashmir
-  if (/jammu|kashmir|\bjkpsc\b|\bjkssb\b|j&k|kashmir university/i.test(text)) return "JK";
-  // 2. Himachal Pradesh
-  if (/himachal|\bhppsc\b|\bhpsssb\b|\bhpbose\b|hp university/i.test(text)) return "HP";
-  // 3. Uttar Pradesh — strictly match full phrases or UPPSC/UPSSSC (NO matching on single 'up' word or 'update')
-  if (/uttar pradesh|\buppsc\b|\bupsssc\b|up police|up teacher|up bed|up deled|up scholarship|up board/i.test(text)) return "UP";
-  // 4. Bihar
-  if (/bihar|\bbpsc\b|\bbssc\b|bihar police|btsc|beu patna/i.test(text)) return "BH";
-  // 5. Madhya Pradesh
-  if (/madhya pradesh|\bmppeb\b|\bmppsc\b|mp police|vyapam|mpbse/i.test(text)) return "MP";
-  // 6. Rajasthan
-  if (/rajasthan|\brpsc\b|\brsmssb\b|rajasthan police|reet|rspcb/i.test(text)) return "RJ";
-  // 7. Haryana
-  if (/haryana|\bhssc\b|\bhpsc\b|haryana police|htet/i.test(text)) return "HR";
-  // 8. Delhi
-  if (/delhi|\bdsssb\b|delhi police|ddu delhi/i.test(text)) return "DL";
-  // 9. Maharashtra
-  if (/maharashtra|\bmpsc\b|mumbai university|maha police/i.test(text)) return "MH";
-  // 10. West Bengal
-  if (/west bengal|\bwbpsc\b|\bwbprb\b|\bwbjee\b|wb police/i.test(text)) return "WB";
-  // 11. Uttarakhand
-  if (/uttarakhand|\bukpsc\b|\buksssc\b|uk police/i.test(text)) return "UK";
-  // 12. Jharkhand
-  if (/jharkhand|\bjpsc\b|\bjssc\b|\bjceceb\b|jharkhand police/i.test(text)) return "JH";
-  // 13. Punjab
-  if (/punjab|\bppsc\b|\bpsssb\b|punjabi university|punjab police/i.test(text)) return "PB";
-  // 14. Odisha
-  if (/odisha|\bopsc\b|\bosssc\b|odisha police/i.test(text)) return "OD";
-  // 15. Telangana
-  if (/telangana|\btspsc\b|\btshc\b|\btgicet\b|telangana police/i.test(text)) return "TS";
-  // 16. Andhra Pradesh
-  if (/andhra|\bappsc\b|\bapicet\b|andhra university|ap police/i.test(text)) return "AP";
-  // 17. Kerala
-  if (/kerala|\bkpsc\b|\bcee kerala\b|kerala university|kerala high court/i.test(text)) return "KL";
-  // 18. Tamil Nadu
-  if (/tamil nadu|\btnpsc\b|tn police/i.test(text)) return "TN";
-  // 19. Chhattisgarh
-  if (/chhattisgarh|\bcgpsc\b|cg police/i.test(text)) return "CG";
-  // 20. Gujarat
-  if (/gujarat|\bgpsc\b|gujarat police/i.test(text)) return "GU";
-  // 21. Assam
-  if (/assam|\bapsc\b|assam police/i.test(text)) return "AS";
-  // 22. Karnataka
-  if (/karnataka|\bkpsc\b|karnataka police/i.test(text)) return "KA";
+  // ── Step 2: Title-based state detection (HIGH confidence) ──────────────────
+  // These fire ONLY when the state is clearly named in the JOB TITLE itself.
+  // Order: most-specific first to avoid partial overlaps.
 
-  return null; // Default to Central / All India
+  // Uttar Pradesh — must have full name or clear UP-specific body
+  if (/uttar pradesh|\buppsc\b|\bupsssc\b|\bup police\b|\bup teacher\b|\bup bed\b|\bup deled\b|\bup board\b|\bup tet\b/i.test(t)) return "UP";
+  // Bihar
+  if (/bihar|\bbpsc\b|\bbssc\b|\bbihar police\b|\bbtsc\b/i.test(t)) return "BH";
+  // Madhya Pradesh
+  if (/madhya pradesh|\bmppeb\b|\bmppsc\b|\bmp police\b|\bvyapam\b|\bmpbse\b|\bmptet\b/i.test(t)) return "MP";
+  // Rajasthan
+  if (/rajasthan|\brpsc\b|\brsmssb\b|\brajasthan police\b|\breet\b|\brspcb\b/i.test(t)) return "RJ";
+  // Haryana — \bhssc\b is Haryana SSC (not central SSC)
+  if (/haryana|\bhssc\b|\bhpsc\b|\bharyana police\b|\bhtet\b/i.test(t)) return "HR";
+  // Himachal Pradesh
+  if (/himachal|\bhppsc\b|\bhpsssb\b|\bhpbose\b|\bhp board\b/i.test(t)) return "HP";
+  // Delhi
+  if (/\bdelhi\b|\bdsssb\b|\bdelhi police\b|\bddu delhi\b/i.test(t)) return "DL";
+  // Maharashtra
+  if (/maharashtra|\bmpsc\b|\bmaha police\b|\bmsbshse\b/i.test(t)) return "MH";
+  // West Bengal
+  if (/west bengal|\bwbpsc\b|\bwbprb\b|\bwbjee\b|\bwb police\b|\bwbssc\b/i.test(t)) return "WB";
+  // Uttarakhand
+  if (/uttarakhand|\bukpsc\b|\buksssc\b|\buk police\b|\butet\b/i.test(t)) return "UK";
+  // Jharkhand
+  if (/jharkhand|\bjpsc\b|\bjssc\b|\bjceceb\b|\bjharkhand police\b/i.test(t)) return "JH";
+  // Punjab
+  if (/punjab|\bppsc\b|\bpsssb\b|\bpunjab police\b|\bpunjabi university\b/i.test(t)) return "PB";
+  // Odisha
+  if (/odisha|\bopsc\b|\bosssc\b|\bodisha police\b|\botet\b/i.test(t)) return "OD";
+  // Telangana
+  if (/telangana|\btspsc\b|\btshc\b|\btgicet\b|\btelangana police\b/i.test(t)) return "TS";
+  // Andhra Pradesh
+  if (/andhra|\bappsc\b|\bapicet\b|\bap police\b|\bandhra university\b/i.test(t)) return "AP";
+  // Kerala
+  if (/kerala|\bkpsc\b|\bcee kerala\b|\bkerala university\b|\bkerala high court\b/i.test(t)) return "KL";
+  // Tamil Nadu
+  if (/tamil nadu|\btnpsc\b|\btn police\b|\btnusrb\b/i.test(t)) return "TN";
+  // Chhattisgarh
+  if (/chhattisgarh|\bcgpsc\b|\bcg police\b|\bcgvyapam\b/i.test(t)) return "CG";
+  // Gujarat
+  if (/gujarat|\bgpsc\b|\bgujarat police\b|\bgsssb\b/i.test(t)) return "GU";
+  // Assam
+  if (/assam|\bapsc\b|\bassam police\b|\bslprb\b/i.test(t)) return "AS";
+  // Karnataka
+  if (/karnataka|\bkpsc\b|\bkarnataka police\b|\bktet\b|\bkseeb\b/i.test(t)) return "KA";
+  // Jammu & Kashmir
+  if (/jammu|kashmir|\bjkpsc\b|\bjkssb\b/i.test(t)) return "JK";
+  // Goa
+  if (/\bgoa\b|\bgpsc goa\b/i.test(t)) return "GA";
+
+  // ── Step 3: Secondary check — ONLY if title has NO central org but content has STRONG state signal ──
+  // Use a SHORT slice of content (first 500 chars = headline/intro) to avoid false positives
+  // from age-relaxation tables or footer links that mention all state names
+  const preview = content.slice(0, 500).toLowerCase();
+  if (/uttar pradesh|\buppsc\b|\bupsssc\b/i.test(preview)) return "UP";
+  if (/madhya pradesh|\bmppsc\b|\bmppeb\b/i.test(preview)) return "MP";
+  if (/rajasthan|\brpsc\b|\brsmssb\b/i.test(preview)) return "RJ";
+  if (/bihar|\bbpsc\b/i.test(preview)) return "BH";
+  if (/haryana|\bhssc\b/i.test(preview)) return "HR";
+  if (/himachal|\bhppsc\b|\bhpsssb\b/i.test(preview)) return "HP";
+  if (/telangana|\btspsc\b/i.test(preview)) return "TS";
+  if (/andhra|\bappsc\b/i.test(preview)) return "AP";
+  if (/karnataka|\bkpsc\b|\bktet\b/i.test(preview)) return "KA";
+  if (/west bengal|\bwbpsc\b/i.test(preview)) return "WB";
+  if (/jharkhand|\bjpsc\b|\bjssc\b/i.test(preview)) return "JH";
+  if (/odisha|\bopsc\b|\bosssc\b/i.test(preview)) return "OD";
+  if (/punjab|\bpsssb\b/i.test(preview)) return "PB";
+  if (/chhattisgarh|\bcgpsc\b/i.test(preview)) return "CG";
+  if (/gujarat|\bgpsc\b|\bgsssb\b/i.test(preview)) return "GU";
+  if (/assam|\bapsc\b/i.test(preview)) return "AS";
+  if (/kerala|\bkpsc\b/i.test(preview)) return "KL";
+  if (/tamil nadu|\btnpsc\b/i.test(preview)) return "TN";
+  if (/maharashtra|\bmpsc\b/i.test(preview)) return "MH";
+  if (/delhi|\bdsssb\b/i.test(preview)) return "DL";
+  if (/jammu|kashmir|\bjkpsc\b|\bjkssb\b/i.test(preview)) return "JK";
+
+  return null; // Central / All India — no state tag
 }
 
 // ── Apply Link Detection (FreeJobAlert-specific patterns) ─────────────────────

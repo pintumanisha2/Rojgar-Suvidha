@@ -330,7 +330,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
         name: `How to apply for ${job.title}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `You can apply for ${job.title} through the official website. Visit ${BASE_URL}/job/${slug} for direct apply links and step-by-step instructions.`,
+          text: `${job.title} ke liye aavedan karne ke liye official website par jaiye. Direct apply link aur step-by-step instructions ke liye Rojgar Suvidha par visit karein: ${BASE_URL}/job/${slug}. Online form fill karo, documents upload karo aur fee pay karo.`,
         },
       },
       {
@@ -339,8 +339,36 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
         acceptedAnswer: {
           "@type": "Answer",
           text: lastDate
-            ? `The last date to apply for ${job.title} is ${lastDate}. Visit Rojgar Suvidha for the latest updates.`
-            : `Please check the official notification for the exact last date. Visit Rojgar Suvidha for real-time updates.`,
+            ? `${job.title} ke liye apply karne ki last date ${lastDate} hai. Kisi bhi badlav ke liye Rojgar Suvidha check karte rahein ya official notification dekho.`
+            : `${job.title} ki last date ke liye official notification check karein. Rojgar Suvidha par real-time updates milenge.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `How many vacancies are there in ${job.title}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: job.total_posts
+            ? `${job.title} mein total ${job.total_posts} vacancies hain. Category-wise vacancy breakdown ke liye official notification dekho.`
+            : `${job.title} ki total vacancies ke liye official notification refer karein. Rojgar Suvidha par updated information milegi.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `What is the application fee for ${job.title}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: job.app_fee_gen
+            ? `${job.title} ke liye General/OBC category ka application fee ₹${job.app_fee_gen} hai. SC/ST/Female candidates ke liye fee alag ho sakti hai — official notification confirm karein.`
+            : `${job.title} ki application fee ke liye official notification dekho. Fee Debit Card, Credit Card, Net Banking ya UPI se pay hoti hai.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `What is the eligibility for ${job.title}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${job.title} ke liye eligibility criteria mein educational qualification aur age limit shamil hain. Detailed eligibility, age relaxation aur reserved category benefits ke liye official notification aur Rojgar Suvidha ka full article padho: ${BASE_URL}/job/${slug}`,
         },
       },
     ],
