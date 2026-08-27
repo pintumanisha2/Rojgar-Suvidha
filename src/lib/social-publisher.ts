@@ -240,6 +240,7 @@ export interface DraftNotificationPayload {
   lastDate?: string | null;
   bannerUrl?: string | null;
   sourceTag?: string | null;
+  qualityScore?: number | null;
 }
 
 /**
@@ -259,6 +260,12 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
   const lastDateText = draft.lastDate ? `📅 *Last Date:* ${draft.lastDate}` : null;
   const tagBadge = draft.sourceTag ? `🏷️ *Tag:* \`${draft.sourceTag}\`\n` : "";
 
+  const scoreText = draft.qualityScore != null
+    ? (draft.qualityScore >= 85 ? `\n🟢 *Content Quality: ${draft.qualityScore}/100* — Good to publish`
+      : draft.qualityScore >= 65 ? `\n🟡 *Content Quality: ${draft.qualityScore}/100* — Review before publishing`
+      : `\n🔴 *Content Quality: ${draft.qualityScore}/100* — LOW — Review carefully!`)
+    : "";
+
   const lines = [
     `📄 *NEW AUTO-BLOG DRAFT GENERATED*`,
     tagBadge,
@@ -266,6 +273,7 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
     `📊 *Category:* \`${draft.category}\` | *State:* \`${draft.stateCode || "ALL"}\``,
     ...(postsText ? [postsText] : []),
     ...(lastDateText ? [lastDateText] : []),
+    scoreText,
     "",
     `⚡ *Review or Approve in 1-Click below:*`,
   ].filter((l) => l !== null && l !== undefined);

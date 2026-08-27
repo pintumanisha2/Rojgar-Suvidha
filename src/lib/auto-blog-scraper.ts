@@ -220,7 +220,190 @@ function detectStateCode(title: string, content: string): string | null {
   return null; // Central / All India — no state tag
 }
 
-// ── Apply Link Detection (FreeJobAlert-specific patterns) ─────────────────────
+// ── Post Type Detection (for specific document lists) ─────────────────────────
+function detectPostType(title: string): string {
+  const t = title.toLowerCase();
+  if (/\bdriver\b|\bchauffeur\b|\bchowkidar\b/i.test(t)) return "driver";
+  if (/\bteacher\b|\blecturer\b|\bpgt\b|\btgt\b|\bprt\b|\btet\b|\bb\.ed\b|\bsst\b|\bprimary teacher\b/i.test(t)) return "teacher";
+  if (/\bjunior engineer\b|\bje\b(?=\s|$)|\bassistant engineer\b|\bae\b(?=\s|$)|\bcivil engineer\b|\belectrical engineer\b|\bmechanical engineer\b/i.test(t)) return "engineer";
+  if (/\bconstable\b|\bsub inspector\b|\b\bsi\b(?=\s|$)|\bdsp\b|\binspector\b|\bpolice\b(?=\s|2)/i.test(t)) return "police";
+  if (/\bnurse\b|\bstaff nurse\b|\bans\b(?=\s|$)|\bnursing\b/i.test(t)) return "nurse";
+  if (/\baccountant\b|\bauditor\b|\baccounts officer\b|\bfinancial advisor\b/i.test(t)) return "accountant";
+  if (/\bpeon\b|\bmts\b|\bmulti tasking\b|\bgroup[- ]d\b|\bsweeper\b|\bhousekeeper\b/i.test(t)) return "mts";
+  if (/\bscientist\b|\bresearch\b|\banalyst\b|\blab\b|\btechnician\b/i.test(t)) return "scientist";
+  if (/\bclerk\b|\bdata entry\b|\bdeo\b|\bsteno\b|\btyping\b/i.test(t)) return "clerk";
+  if (/\bdoctor\b|\bmedical officer\b|\bmo\b(?=\s|$)|\bphysician\b/i.test(t)) return "doctor";
+  if (/\bpilot\b|\baircraft\b|\baviation\b/i.test(t)) return "aviation";
+  if (/\bcommando\b|\bagni\b|\bagniveer\b|\bsoldier\b|\bnavy\b|\bairforce\b|\barmy\b|\bdefence\b/i.test(t)) return "defence";
+  return "general";
+}
+
+// ── Days Until Date Calculator ─────────────────────────────────────────────────
+function getDaysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  // Handle common Indian date formats: "31 March 2026", "31-03-2026", "31/03/2026"
+  const cleaned = dateStr.replace(/(\d+)[\/\-](\d+)[\/\-](\d+)/, "$3-$2-$1");
+  const d = new Date(cleaned);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+// ── Context Sentence Generator (Makes Every Blog Unique) ──────────────────────
+// Generates 1-2 factual, time-relevant sentences that AI cannot replicate.
+// These appear as a highlighted box just below the Quick Summary table.
+function generateContextSentence(opts: {
+  title: string;
+  lastDate: string | null;
+  totalPosts: string | null;
+  category: string;
+  stateCode: string | null;
+  appFeeGen: string | null;
+}): string {
+  const alerts: string[] = [];
+  const daysLeft = getDaysUntil(opts.lastDate);
+  const posts = opts.totalPosts ? parseInt(opts.totalPosts.replace(/,/g, "").match(/\d+/)?.[0] || "0") : null;
+
+  // ── Urgency alert ────────────────────────────────────────────────────────────
+  if (daysLeft !== null) {
+    if (daysLeft < 0) {
+      alerts.push(`🔴 <strong>Last date nikal chuki hai.</strong> Ab notification ke liye dobarah dekhte rahein.`);
+    } else if (daysLeft === 0) {
+      alerts.push(`🚨 <strong>AAJ LAST DATE HAI!</strong> Abhi apply karo — aaj midnight ke baad link band ho sakta hai.`);
+    } else if (daysLeft <= 3) {
+      alerts.push(`🚨 <strong>Sirf ${daysLeft} din bacha hai!</strong> Aaj hi form bharein — server down hone se pehle.`);
+    } else if (daysLeft <= 7) {
+      alerts.push(`⚠️ <strong>Last date: ${daysLeft} din mein.</strong> Agar documents ready nahi hain to aaj hi gather karo.`);
+    } else if (daysLeft <= 15) {
+      alerts.push(`📅 Apply karne ke liye <strong>${daysLeft} din</strong> bacha hai. Eligibility zaroor check karo.`);
+    } else if (daysLeft > 45) {
+      alerts.push(`✅ <strong>Kafi samay hai (${daysLeft} din).</strong> Properly padho, documents ready karo aur sahi se apply karo.`);
+    }
+  }
+
+  // ── Scale context ────────────────────────────────────────────────────────────
+  if (posts !== null && posts > 0) {
+    if (posts >= 50000) {
+      alerts.push(`🔥 <strong>${posts.toLocaleString("en-IN")} vacancies</strong> — Itni badi bharti saalon mein ek baar aati hai. Miss mat karo.`);
+    } else if (posts >= 10000) {
+      alerts.push(`📊 <strong>${posts.toLocaleString("en-IN")} posts</strong> — Bahut bada recruitment hai, selection ratio accha milega.`);
+    } else if (posts <= 50) {
+      alerts.push(`⚡ <strong>Sirf ${posts} seats hain</strong> — Competition bahut zyada hoga, preparation strong honi chahiye.`);
+    }
+  }
+
+  // ── Free for reserved categories ─────────────────────────────────────────────
+  if (opts.appFeeGen === "0" || opts.appFeeGen === "nil" || opts.appFeeGen === "free") {
+    alerts.push(`🎉 <strong>Application fee ZERO hai</strong> — Koi bhi eligible candidate bina fee ki chinta ke apply kar sakta hai.`);
+  }
+
+  if (alerts.length === 0) return "";
+
+  // Return as a styled box (max 2 alerts)
+  const alertHtml = alerts.slice(0, 2).map(a => `<p style="margin:4px 0;color:#1e293b;">${a}</p>`).join("");
+  return `
+<div style="background:#fefce8;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:10px;margin:1rem 0 1.5rem;">
+  <strong style="color:#b45309;font-size:0.9rem;">📌 Rojgar Suvidha Alert</strong>
+  ${alertHtml}
+</div>`;
+}
+
+// ── Post-type specific document list generator ────────────────────────────────
+function getDocumentListForPostType(postType: string): string {
+  const common = [
+    "10th Certificate & Marksheet (Date of Birth proof)",
+    "Aadhaar Card (self-attested photocopy)",
+    "Passport Size Photograph (recent, formal background, 3.5×4.5 cm)",
+    "Signature on White Paper",
+    "Caste Certificate (OBC/SC/ST — issued by competent authority)",
+    "EWS Certificate (if applicable, current year)",
+    "PwD Certificate (if applicable — issued from CMO/Civil Surgeon)",
+  ];
+
+  const specific: Record<string, string[]> = {
+    teacher: [
+      "B.Ed / D.El.Ed / BTC Certificate",
+      "TET/CTET Marksheet (if applicable)",
+      "Teaching Experience Certificate (if required)",
+      "12th & Graduation Marksheets",
+    ],
+    engineer: [
+      "Engineering Degree/Diploma Certificate",
+      "All Semester Marksheets",
+      "NOC from current employer (if employed)",
+      "Experience Certificate (if applicable)",
+    ],
+    police: [
+      "Domicile Certificate (state-specific)",
+      "Medical Fitness Certificate",
+      "Character Certificate from Gazetted Officer",
+      "NCC Certificate (if applicable for bonus marks)",
+      "Sports Certificate (if applicable)",
+    ],
+    nurse: [
+      "GNM / B.Sc Nursing Certificate",
+      "Nursing Council Registration Certificate",
+      "Clinical Experience Certificate",
+      "12th (Science stream) Marksheet",
+    ],
+    driver: [
+      "Valid Driving License (Heavy Vehicle / LMV as required)",
+      "PSV Badge (if applicable for passenger vehicle)",
+      "Driving Experience Certificate",
+    ],
+    doctor: [
+      "MBBS / MD / MS Degree Certificate",
+      "MCI / State Medical Council Registration",
+      "Internship Completion Certificate",
+      "Specialization Certificate (if applicable)",
+    ],
+    accountant: [
+      "Graduation in Commerce/B.Com/M.Com",
+      "CA / ICWA Certificate (if required)",
+      "Tally / Accounting Software Certificate (if applicable)",
+    ],
+    mts: [
+      "8th / 10th Pass Certificate",
+      "Domicile Certificate",
+      "Character Certificate",
+    ],
+    scientist: [
+      "M.Sc / B.E / B.Tech relevant field",
+      "All semester Marksheets",
+      "Research/Project Experience Certificate",
+      "Publications list (if applicable)",
+    ],
+    clerk: [
+      "Typing Speed Certificate (if required)",
+      "Computer Certificate (O-Level/DCA/PGDCA)",
+      "Graduation Marksheets",
+    ],
+    defence: [
+      "Domicile/Permanent Resident Certificate",
+      "Medical Fitness Certificate (from registered doctor)",
+      "Sports/NCC Certificate (for extra marks)",
+      "Character Certificate (from SDM/Gazetted Officer)",
+    ],
+    aviation: [
+      "Valid DGCA License (as applicable)",
+      "Medical Fitness Certificate (Class 1/2)",
+      "Flying hours logbook",
+    ],
+    general: [
+      "Qualifying Degree Certificate + All Marksheets",
+      "Experience Certificate (if applicable)",
+    ],
+  };
+
+  const typeItems = specific[postType] || specific.general;
+  const allDocs = [...typeItems, ...common];
+
+  return allDocs.map(d => `<li style="margin-bottom:4px;">${d}</li>`).join("\n");
+}
+
+
 function detectApplyStatus(
   pageText: string,
   links: { href: string; text: string }[]
@@ -715,8 +898,36 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
       issues.push("News post incorrectly contains job application content");
   }
 
-  return { valid: issues.length === 0, issues };
+  // ── Enhanced AI-ish phrase detection (Google spam signals) ──────────────────
+  const genericAIPhrases = [
+    "it is worth noting", "it goes without saying", "needless to say",
+    "don't miss this golden chance", "this is a golden opportunity",
+    "yeh ek shandaar mauka hai", "unmatched opportunity",
+    "a great opportunity for", "highly competitive era",
+    "dream of securing", "countless aspirants",
+    "financial stability and job security", "embark on a rewarding career",
+  ];
+  const foundAIPhrases = genericAIPhrases.filter(p => text.includes(p));
+  if (foundAIPhrases.length >= 2) {
+    issues.push(`Generic AI phrases (${foundAIPhrases.length} found): "${foundAIPhrases[0]}" — rewrite with specific content`);
+  }
+
+  // ── Word count bounds ────────────────────────────────────────────────────────
+  if (wordCount > 1800 && (category === "latest-jobs" || category === "results")) {
+    issues.push(`Content too long: ${wordCount} words (aim 900-1200 for better UX and lower bounce rate)`);
+  }
+
+  // ── Quality score calculation (0-100) ────────────────────────────────────────
+  let score = 100;
+  score -= Math.min(70, issues.length * 12); // Each issue costs 12 points, max 70 deducted
+  if (wordCount >= 700 && wordCount <= 1400) score += 5;  // Optimal length bonus
+  if (text.includes("faq") || text.includes("frequently asked")) score += 5;
+  if (text.includes("zaroor check") || text.includes("checklist")) score += 5;
+  score = Math.max(0, Math.min(100, score));
+
+  return { valid: issues.length === 0, issues, score };
 }
+
 
 // ── Generate Blog via Gemini AI (Full SarkariLekhan Persona) ─────────────────
 
@@ -762,14 +973,32 @@ Add this green Apply button after the How to Apply steps:
     weekday: "long", day: "numeric", month: "long", year: "numeric"
   });
 
+  // ── Detect post type for specific document lists ─────────────────────────────
+  const postType = detectPostType(sourceTitle);
+
+  // ── Generate unique context sentence (time-relevant, factual) ────────────────
+  const contextSentenceHtml = generateContextSentence({
+    title: sourceTitle,
+    lastDate,
+    totalPosts,
+    category,
+    stateCode: null, // Not available at this stage
+    appFeeGen,
+  });
+
+  // ── Post-type specific document list ─────────────────────────────────────────
+  const specificDocumentList = getDocumentListForPostType(postType);
+
   // Cap reference text to 12,000 chars (~3,000 tokens) to prevent prompt bloat & token limit errors
   const cleanedRawText = sanitizeSourceText(rawText).slice(0, 12000);
 
   const enrichedContext = `
 SOURCE TITLE: ${cleanCompetitorBrands(sourceTitle)}
 CATEGORY: ${category}
+POST TYPE: ${postType} (use this to write relevant content)
 TODAY: ${todayDate}
 LAST DATE: ${lastDate || "Check official notification"}
+DAYS LEFT TO APPLY: ${getDaysUntil(lastDate) !== null ? getDaysUntil(lastDate) + " days" : "Unknown"}
 TOTAL VACANCIES: ${totalPosts || "Check official notification"}
 FEE (Gen/OBC): ${appFeeGen || "Check notification"}
 FEE (SC/ST): ${appFeeRes || "Check notification (may be free)"}
@@ -777,6 +1006,14 @@ AGE LIMIT: ${ageLimit || "As per notification"}
 EDUCATION: ${education || "As per notification"}
 OFFICIAL WEBSITE: ${officialLink || "Refer to notification links below"}
 ${applyInstruction}
+
+PRE-GENERATED CONTEXT ALERT BOX (insert this VERBATIM just after the Quick Summary table — do not modify):
+${contextSentenceHtml || "<!-- no alert -->"}  
+
+POST-TYPE SPECIFIC DOCUMENTS (use ONLY these for the Documents Required section — do not add generic ones):
+<ul>
+${specificDocumentList}
+</ul>
 
 ===== REFERENCE DATA — FACTS ONLY — DO NOT COPY ANY SENTENCE =====
 [Use below ONLY to extract: vacancy count, dates, fees, links, eligibility. Write ALL sentences yourself.]
@@ -1040,7 +1277,9 @@ LANGUAGE RULE: English headings + Hinglish body (mix is fine here — this is ne
     // Default: latest-jobs — most important category
     categoryBlueprint = `
 CATEGORY: SARKARI JOB NOTIFICATION (Latest Government Jobs)
-WORD TARGET: Minimum 2000 words
+WORD TARGET: 900-1200 words OPTIMAL (NEVER exceed 1500 — long content = high bounce rate = rank drop)
+MOBILE-FIRST RULE: Every key info (last date, fee, apply link) MUST appear in first 300 words.
+QUALITY OVER QUANTITY: 950 genuinely helpful words ranks better than 2000 generic words.
 
 ABSOLUTELY FORBIDDEN:
 - Result / Scorecard / Merit List section
@@ -1110,15 +1349,10 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
     [Add apply button here if link is live]
 
 11. REQUIRED DOCUMENTS: <h2>Documents Required for Application</h2>
-    List appropriate documents FOR THIS SPECIFIC POST (not generic list):
-    - 10th Certificate (DOB proof)
-    - Qualifying Degree Certificate + Marksheet
-    - Aadhaar Card
-    - Passport Size Photograph (recent, formal)
-    - Signature (on white paper)
-    - Caste Certificate (OBC/SC/ST if applicable)
-    - PwD Certificate (if applicable)
-    - Any post-specific document (e.g., for technical posts: relevant degree/diploma; for driver posts: Driving License; for teacher posts: B.Ed certificate)
+    IMPORTANT: Use ONLY the POST-TYPE SPECIFIC DOCUMENTS list provided in enrichedContext above.
+    Do NOT add generic/default documents — those are already in the list.
+    Just render the <ul> list exactly as provided in "POST-TYPE SPECIFIC DOCUMENTS" section.
+    Add this note after the list: <p style='font-size:0.85rem;color:#64748b;margin-top:8px;'>Note: Always verify the complete document list from the official notification PDF before submitting your application.</p>
 
 12. OFFICIAL NOTIFICATION LINK: <h2>Official Notification & Important Links</h2>
     Mention official website and PDF notification link from source.
@@ -1136,15 +1370,20 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
     - If state-specific (MP): <a href='https://www.rojgarsuvidha.com/state/mp'>MP Government Jobs 2026</a>
     Always include these 3 footer links: <a href='https://www.rojgarsuvidha.com/latest-jobs'>Latest Sarkari Naukri 2026</a> | <a href='https://www.rojgarsuvidha.com/results'>Sarkari Result 2026</a> | <a href='https://www.rojgarsuvidha.com/admit-card'>Admit Card 2026</a>
 
-13. PREPARATION STRATEGY: <h2>Preparation Strategy for [Post Name]</h2>
-    THIS SECTION IS WHAT MAKES US DIFFERENT FROM COMPETITORS — add real value:
-    - What subjects/topics to study (based on selection process from source)
-    - If written exam: mention likely paper pattern (GK, Math, Reasoning, English — based on post type)
-    - Best free resources: (e.g., NCERTs for GK, previous year papers)
-    - Timeline suggestion: if last date is X weeks away, how to plan preparation
-    - Physical test requirements (if applicable from source)
-    - 2-3 concrete tips specific to this category of exam
-    NOTE: Only write what is logical for this post type. Never invent exam paper patterns.
+13. CANDIDATE ALERT & QUICK CHECKLIST: <h2>Quick Checklist Before You Apply</h2>
+    Write a clean checklist box. Each item must be SPECIFIC to this exact job, not generic.
+    Format exactly like this:
+    <div style='background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:18px 22px;margin:1.5rem 0;'>
+      <h3 style='color:#15803d;margin:0 0 12px;font-size:1rem;'>✅ Apply Karne Se Pehle Ye Zaroor Check Karo</h3>
+      <ul style='margin:0;padding-left:20px;color:#1e293b;line-height:1.8;'>
+        <li><strong>Eligibility:</strong> [specific age range and education from source]</li>
+        <li><strong>Last Date:</strong> [date from source in bold]</li>
+        <li><strong>Application Fee:</strong> [exact fee from source]</li>
+        <li><strong>Key Document:</strong> [1 most important post-specific document]</li>
+        <li><strong>Selection Stage:</strong> [first selection stage from source, e.g., Written Exam / Physical Test]</li>
+        <li><strong>Pro Tip:</strong> [1 specific genuine tip for THIS post type — e.g., for police: "Height/Chest measurement ke liye 3 mahine pehle se practice karo"; for bank: "CIBIL score 750+ rakho"; for teacher: "TET certificate ki expiry date check karo"]</li>
+      </ul>
+    </div>
 
 14. FAQ SECTION: <h2>Frequently Asked Questions</h2>
     Minimum 7 Q&A using FAQPage schema format.
@@ -1607,7 +1846,7 @@ async function sendTelegramNotification(draft: {
   last_date: string | null;
   total_posts: string | null;
   apply_link?: string | null;
-}, draftId: string) {
+}, draftId: string, qualityScore: number = 100) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.ADMIN_TELEGRAM_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
   if (!token || !chatId || token.includes("REPLACE") || chatId.includes("REPLACE")) {
@@ -1630,6 +1869,9 @@ async function sendTelegramNotification(draft: {
     "news": "📰 News",
   }[draft.category] || draft.category;
 
+  const scoreEmoji = qualityScore >= 85 ? "🟢" : qualityScore >= 65 ? "🟡" : "🔴";
+  const scoreWarning = qualityScore < 70 ? `\n⚠️ *Low quality score — review carefully before publishing*` : "";
+
   const lines = [
     `🆕 *New Blog Draft Ready!*`,
     ``,
@@ -1639,11 +1881,12 @@ async function sendTelegramNotification(draft: {
     `🔗 ${statusEmoji}`,
     draft.total_posts ? `👥 Vacancies: *${draft.total_posts}*` : "",
     draft.last_date ? `📅 Last Date: *${draft.last_date}*` : "",
+    `${scoreEmoji} Content Quality Score: *${qualityScore}/100*${scoreWarning}`,
     ``,
     `✏️ Review & Publish:`,
     reviewUrl,
     ``,
-    `_Auto-scraped from FreeJobAlert.com — Please review before publishing_`,
+    `_Auto-scraped — Please review before publishing_`,
   ].filter((l) => l !== undefined && l !== null);
 
   try {
@@ -2110,6 +2353,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
           lastDate: aiResult.lastDate || lastDate || null,
           bannerUrl: autoBannerUrl,
           sourceTag,
+          qualityScore: (qualityCheck as any).score ?? null,
         }).catch((e) => console.warn("Admin draft approval alert failed:", e));
       }
 
