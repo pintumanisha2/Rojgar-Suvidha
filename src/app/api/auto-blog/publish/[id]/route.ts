@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { waitUntil } from "@vercel/functions";
 import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
 
@@ -274,16 +275,16 @@ export async function POST(
       }).catch((e) => console.warn("Auto-translation failed:", e));
     }
 
-    // 6. Full instant indexing — all 5 methods (IndexNow + Google Indexing API + Sitemap + PubSub)
-    // Fires in background — does NOT block publish response
+    // 6. Full instant indexing — guaranteed via waitUntil (never cancelled by Vercel)
     if (postStatus === "active") {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
-      fetch(`${baseUrl}/api/admin/index-now`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Pass slug + category so all 5 indexing methods fire correctly
-        body: JSON.stringify({ slug, category }),
-      }).catch((e) => console.warn("Instant indexing fire failed:", e));
+      waitUntil(
+        fetch(`${baseUrl}/api/admin/index-now`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug, category }),
+        }).catch((e) => console.warn("Instant indexing fire failed:", e))
+      );
     }
 
     // 7. Push notification (background)
@@ -307,15 +308,17 @@ export async function POST(
     // 8. Social Channel Broadcasting (Telegram Channel & WhatsApp Group Auto-Poster)
     // Rule: EXCLUDE category 'news' from auto-posting to social groups/channels
     if (postStatus === "active") {
-      broadcastJobAlert({
-        title,
-        slug,
-        category,
-        totalPosts: totalPosts || draft.total_posts || null,
-        lastDate: lastDate || draft.last_date || null,
-        stateCode: stateCode || draft.state_code || null,
-        bannerUrl: bannerUrl || draft.banner_url || null,
-      }).catch((e) => console.warn("Social broadcasting error:", e));
+      waitUntil(
+        broadcastJobAlert({
+          title,
+          slug,
+          category,
+          totalPosts: totalPosts || draft.total_posts || null,
+          lastDate: lastDate || draft.last_date || null,
+          stateCode: stateCode || draft.state_code || null,
+          bannerUrl: bannerUrl || draft.banner_url || null,
+        }).catch((e) => console.warn("Social broadcasting error:", e))
+      );
     }
 
     return NextResponse.json({

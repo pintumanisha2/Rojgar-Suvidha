@@ -97,26 +97,37 @@ async function submitGoogleIndexingAPI(urls: string[]): Promise<void> {
 async function pingWebSubHubs(): Promise<void> {
   const rssFeedUrl = encodeURIComponent(`${BASE_URL}/feed.xml`);
   const sitemapUrl = encodeURIComponent(`${BASE_URL}/sitemap.xml`);
+  const newsSitemapUrl = encodeURIComponent(`${BASE_URL}/news-sitemap.xml`);
 
   const hubs = [
     { url: "https://pubsubhubbub.appspot.com/", topic: rssFeedUrl },
     { url: "https://pubsubhubbub.appspot.com/", topic: sitemapUrl },
+    { url: "https://pubsubhubbub.appspot.com/", topic: newsSitemapUrl },
     { url: "https://pubsubhubbub.superfeedr.com/", topic: rssFeedUrl },
   ];
 
+  // Also ping Google and Bing sitemap endpoints directly
+  const sitemapPings = [
+    `https://www.google.com/ping?sitemap=${sitemapUrl}`,
+    `https://www.bing.com/ping?sitemap=${sitemapUrl}`,
+  ];
+
   try {
-    const results = await Promise.allSettled(
-      hubs.map(({ url, topic }) =>
+    const results = await Promise.allSettled([
+      ...hubs.map(({ url, topic }) =>
         fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: `hub.mode=publish&hub.url=${topic}`,
           signal: AbortSignal.timeout(8000),
         })
-      )
-    );
+      ),
+      ...sitemapPings.map((pingUrl) =>
+        fetch(pingUrl, { signal: AbortSignal.timeout(8000) })
+      ),
+    ]);
     const ok = results.filter((r) => r.status === "fulfilled").length;
-    console.log(`✅ [Indexing] WebSub RSS/Sitemap pinged: ${ok}/${hubs.length} hubs responded`);
+    console.log(`✅ [Indexing] WebSub RSS/Sitemap pinged: ${ok}/${hubs.length + sitemapPings.length} hubs responded`);
   } catch (err: any) {
     console.warn(`⚠️ [Indexing] WebSub ping failed: ${err.message}`);
   }

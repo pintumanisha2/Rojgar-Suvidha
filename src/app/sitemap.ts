@@ -4,7 +4,7 @@ import { SERVICE_INFO_DB } from '@/lib/eSuvidhaContent';
 import { SUPPORTED_LANGUAGES } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60; // Revalidate sitemap every 60 seconds
+export const revalidate = 0; // Always fresh — Google must see new slugs immediately after publish
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://www.rojgarsuvidha.com';

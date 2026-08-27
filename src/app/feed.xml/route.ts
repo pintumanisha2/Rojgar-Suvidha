@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60; // Revalidate every 60 seconds
+export const revalidate = 0; // Always fresh — critical for Google News/Discover feed discovery
 
 function escapeXml(unsafe: string): string {
   return unsafe
@@ -56,7 +56,7 @@ export async function GET() {
   return new NextResponse(rssXml.trim(), {
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
+      'Cache-Control': 'public, max-age=0, s-maxage=0, must-revalidate',
     },
   });
 }

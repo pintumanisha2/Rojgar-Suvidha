@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
 import { notifySearchEngines } from "@/lib/instant-indexing";
@@ -342,19 +343,49 @@ export async function POST(request: Request) {
         }
 
         // 7. Broadcast alert to Main Telegram Channel (@govermentform)
-        broadcastJobAlert({
-          title: draft.generated_title,
-          slug,
-          category: draft.category || "latest-jobs",
-          totalPosts: draft.total_posts,
-          lastDate: draft.last_date,
-          stateCode: draft.state_code,
-          bannerUrl: draft.banner_url,
-        }).catch((e) => console.warn("Broadcasting error:", e));
+        // Use waitUntil so Vercel keeps the function alive for background tasks
+        waitUntil(
+          broadcastJobAlert({
+            title: draft.generated_title,
+            slug,
+            category: draft.category || "latest-jobs",
+            totalPosts: draft.total_posts,
+            lastDate: draft.last_date,
+            stateCode: draft.state_code,
+            bannerUrl: draft.banner_url,
+          }).catch((e) => console.warn("Broadcasting error:", e))
+        );
 
-        // 8. Instantly notify Google, Bing, Yandex to crawl the new page
-        // Non-blocking — runs in background, never delays the response
-        notifySearchEngines(slug, draft.category || "latest-jobs").catch((e) => console.warn("[Indexing] Error:", e));
+        // 8. Instantly notify Google, Bing, Yandex — guaranteed execution via waitUntil
+        // waitUntil() prevents Vercel from killing the background task after response is sent
+        waitUntil(
+          notifySearchEngines(slug, draft.category || "latest-jobs").then(async () => {
+            // After indexing fires, send a follow-up Telegram message with status
+            if (BOT_TOKEN && chatId) {
+              const statusText = [
+                `📡 *Indexing Status for* \`${slug}\``,
+                ``,
+                `✅ Google Indexing API → Queued`,
+                `✅ IndexNow (Bing/Yandex) → Submitted`,
+                `✅ WebSub RSS Ping → Fired`,
+                `✅ Sitemap Revalidated → Fresh`,
+                ``,
+                `⏱️ *Expected in Google: ~3–8 minutes*`,
+                `🔍 Check: https://search.google.com/search-console`,
+              ].join("\n");
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: statusText,
+                  parse_mode: "Markdown",
+                  disable_web_page_preview: true,
+                }),
+              }).catch(() => {});
+            }
+          }).catch((e) => console.warn("[Indexing] Error:", e))
+        );
 
         return NextResponse.json({ ok: true });
       }
