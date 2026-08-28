@@ -494,6 +494,67 @@ function generateLSIKeywords(title: string, category: string): string {
   return lsi.slice(0, 12).join(", ");
 }
 
+// ── Editor Opinion Generator ───────────────────────────────────────────────
+// Generates a category + context specific expert opinion box.
+// This is a key E-E-A-T signal — shows human expertise, not just facts.
+function generateEditorOpinion(opts: {
+  category: string;
+  postType: string;
+  totalPosts: string | null;
+  lastDate: string | null;
+  appFeeGen: string | null;
+  sourceTitle: string;
+}): string {
+  const { category, postType, totalPosts, lastDate, appFeeGen, sourceTitle } = opts;
+  const title = sourceTitle.toLowerCase();
+  const daysLeft = getDaysUntil(lastDate);
+  const isFree = !appFeeGen || appFeeGen === "0" || /free|nil|no\s*fee/i.test(appFeeGen || "");
+
+  let opinionText = "";
+
+  if (category === "latest-jobs") {
+    const posts = parseInt(totalPosts || "0", 10);
+
+    // Competition analysis based on post count
+    if (posts >= 10000) {
+      opinionText = `Is recruitment mein ${posts.toLocaleString("en-IN")} vacancies hain — jo hamare hisab se is saal ki sabse badi opportunities mein se ek hai. Haan, competition bhi zyada hoga, but bulk vacancies mein selection ratio better rehta hai. Agar aap genuinely eligible ho, to apply zaroor karo.`;
+    } else if (posts >= 1000) {
+      opinionText = `${posts.toLocaleString("en-IN")} vacancies — ye average size recruitment hai. Competition tight hoga, isliye preparation ke saath sahi form fill karna equally important hai. Ek bhi document missing hone par rejection ho sakti hai.`;
+    } else if (posts > 0 && posts < 1000) {
+      opinionText = `Sirf ${posts} vacancies hain is recruitment mein. Competition bahut tight hoga. Agar aap genuinely eligible ho tabhi apply karo — half-prepared form se time aur paise dono waste honge.`;
+    } else if (isFree) {
+      opinionText = `Is form ka koi fee nahi hai — matlab loss kuch nahi, gain zyada. Agar eligibility match karti hai to bina soche apply karo.`;
+    } else if (daysLeft !== null && daysLeft <= 7) {
+      opinionText = `Sirf ${daysLeft} din bacha hai apply karne ke liye. Agar aap eligible ho aur abhi tak form nahi bhara, to aaj hi bhar lo — kal pe mat chhodna.`;
+    }
+
+    // Post-type specific additions
+    if (/police|crpf|bsf|cisf/i.test(title)) {
+      opinionText += " Physical test ke liye abhi se preparation shuru karo — written exam ke baad physical mein hi zyada candidates bahar hote hain.";
+    } else if (/teacher|tet|ctet/i.test(title)) {
+      opinionText += " TET certificate ki validity zaroor check karo — expired certificate ke saath form reject hoga.";
+    } else if (/bank|ibps|sbi/i.test(title)) {
+      opinionText += " Bank exams mein sectional cutoff hoti hai — sirf overall marks kafi nahi, har section pass karna zaroori hai.";
+    }
+  } else if (category === "results") {
+    opinionText = `Result check karte waqt apna Roll Number aur Date of Birth ready rakhein. Agar result site slow ho — jo aksar peak time par hoti hai — to thodi der baad try karein. Result PDF save karna na bhoolein, kyunki baad mein link band ho sakta hai.`;
+  } else if (category === "admit-card") {
+    opinionText = `Admit card download karne ke baad ek cheez zaroor check karein: name, roll number aur exam centre sahi hain ya nahi. Koi bhi galti hone par turant official helpline par contact karein — exam din par kuch nahi ho sakta.`;
+  } else if (category === "answer-key") {
+    opinionText = `Agar koi answer galat lage to official objection process zaroor use karein. Many candidates objection nahi karte — lekin past mein answer key changes se cutoff shift hui hai. Apna time spend karo — worth it hai.`;
+  } else if (category === "admission") {
+    opinionText = `Admission mein document verification sabse critical step hota hai. Sabse pehle check karo ki aapke paas sab required certificates hain — baad mein dhundhna bahut stressful hota hai.`;
+  } else {
+    opinionText = `Ye update sabhi government job aspirants ke liye important hai. Rojgar Suvidha par in-depth analysis ke liye bookmark zaroor karein.`;
+  }
+
+  if (!opinionText.trim()) return "";
+
+  return `<div style='background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;margin:1.5rem 0;border-radius:0 8px 8px 0;'>
+  <p style='margin:0 0 4px;font-size:0.72rem;font-weight:700;color:#92400e;letter-spacing:0.06em;text-transform:uppercase;'>Rojgar Suvidha Expert View</p>
+  <p style='margin:0;color:#1e293b;font-size:0.9rem;line-height:1.65;'>${opinionText}</p>
+</div>`;
+}
 
 function detectApplyStatus(
   pageText: string,
@@ -1172,6 +1233,12 @@ Add this green Apply button after the How to Apply steps:
   // ── LSI Keywords (category + title specific) ─────────────────────────────
   const lsiKeywords = generateLSIKeywords(sourceTitle, category);
 
+  // ── Editor Opinion Box (E-E-A-T human signal) ──────────────────────────
+  const editorOpinionHtml = generateEditorOpinion({
+    category, postType, totalPosts: totalPosts || null,
+    lastDate: lastDate || null, appFeeGen: appFeeGen || null, sourceTitle,
+  });
+
   // Cap reference text to 12,000 chars (~3,000 tokens) to prevent prompt bloat & token limit errors
   const cleanedRawText = sanitizeSourceText(rawText).slice(0, 12000);
 
@@ -1205,6 +1272,9 @@ BANNER IMAGE ALT TAG RULE (if any <img> tag is added):
 alt must be: "[Primary Keyword] — [Secondary Angle] | Rojgar Suvidha"
 Example: alt="SSC CGL 2026 Notification — Eligibility, Vacancy & Apply Online | Rojgar Suvidha"
 NEVER use: alt="image", alt="banner", alt="Rojgar Suvidha", or any generic text.
+
+EDITOR OPINION BOX (insert this VERBATIM after section 3 INTRODUCTION — do not modify the HTML):
+${editorOpinionHtml || "<!-- no opinion box for this post -->"}  
 
 ===== REFERENCE DATA — FACTS ONLY — DO NOT COPY ANY SENTENCE =====
 [Use below ONLY to extract: vacancy count, dates, fees, links, eligibility. Write ALL sentences yourself.]
@@ -1493,9 +1563,29 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
    Salary / Pay Scale | [from source, else "As per notification"]
    Official Website | [real .gov/.nic link]
 
-3. INTRODUCTION: <h2>About This Recruitment</h2>
-   2-3 paragraphs. Organization background, what the post involves, why this is a good opportunity for candidates.
-   Warm Hinglish tone — write as if advising a younger sibling.
+3. INTRODUCTION: <h2>About This [Post Name] Recruitment 2026</h2>
+   Write 3-4 paragraphs. Follow this EXACT structure:
+
+   PARAGRAPH 1 (Hook + Competition Math):
+   - Open with a SHORT punchy sentence (4-6 words max): "Notification aa gayi." or "Good news hai."
+   - Mention organization + post + vacancy count in next sentence
+   - IF totalPosts is known: calculate competition context:
+     "Roughly [estimated applicants: vacancies x 150-300] candidates is post ke liye apply karenge —
+      matlab competition ratio lagbhag [ratio]:1 hoga. [One honest 1-line take on difficulty/opportunity]"
+   - IF totalPosts unknown: skip competition math, don't guess
+
+   PARAGRAPH 2 (What this post means for the candidate):
+   - Salary/pay scale in practical terms ("monthly in-hand ~X hoga after deductions")
+   - Job security angle: permanent government job vs private sector
+   - Who should seriously consider applying (education level, age group, state)
+
+   PARAGRAPH 3 (Urgency / Key alert):
+   - Days remaining to apply (use DAYS LEFT TO APPLY from enrichedContext)
+   - 1-2 most important eligibility points to check right now
+   - End with: today's date reference naturally: "Aaj, [TODAY from enrichedContext] tak yeh information verified hai."
+
+   TONE: Write as if advising a younger sibling over phone — warm, direct, no fluff.
+   NO generic phrases like "golden opportunity", "don't miss this chance", "dream job".
 
 4. IMPORTANT DATES: <h2>Important Dates</h2>
    Table: Event | Date
@@ -1733,6 +1823,38 @@ Numbers/dates/fees    | Always English numerals
 NEVER write: Pure Hindi/Devanagari script anywhere.
 HINGLISH means: English words + Hindi sentence structure. NOT Roman Hindi (not "yahan click karo" everywhere — mix properly).
 
+HUMAN VOICE MARKERS — Use these patterns naturally throughout:
+
+1. DIRECT ADDRESS — Always address "aap", not "candidates":
+   Wrong: "Candidates should check their eligibility carefully"
+   Right: "Aap apni eligibility yahan check kar sakte hain"
+
+2. EMPATHY STATEMENT — Add exactly 1 per blog (in introduction):
+   Examples:
+   - "Hum jaante hain form filling stressful hoti hai — isliye yahan sab step-by-step diya hai"
+   - "Notification PDF padna boring lagta hai — isliye hum ne important points yahan summarize kar diye hain"
+   - "Itni saari notifications aati hain ki confuse hona normal hai — Rojgar Suvidha yahi kaam karta hai"
+
+3. NATURAL TRANSITIONS — Replace AI transitions with these:
+   Wrong: "Furthermore", "Additionally", "Moreover", "It is important to note"
+   Right:
+   - "Ek important baat aur —"
+   - "Aur haan —"
+   - "By the way, ek cheez aur batate hain —"
+   - "Yahan ek baat dhyan mein rakhna —"
+
+4. CONVERSATIONAL ASIDES — Use 1-2 parenthetical notes per blog:
+   Examples:
+   - "(SC/ST candidates ke liye yeh practically free hai)"
+   - "(Ye link abhi active nahi hai — update hone par yahan add kar diya jaayega)"
+   - "(Driving license required hai — bina iske form reject hoga)"
+   - "(Official notification PDF download karna recommended hai — link neeche hai)"
+
+5. LAST PARAGRAPH — Always end with specific next steps, not generic conclusion:
+   Wrong: "Candidates are advised to apply before the last date."
+   Right: "Toh aap abhi kya karein: (1) Neeche diye official notification PDF download karo (2) Apni category aur age limit check karo (3) Agar eligible ho to form fill karo — last date [DATE] hai, sirf [DAYS] din bacha hai. Aur kuch sawaal ho to neeche comment mein poochho — Rojgar Suvidha team jawab deti hai."
+
+
 ================================================================================
 RULE 7 — SEO KEYWORD OPTIMIZATION (MANDATORY — GOOGLE RANKING DEPENDS ON THIS)
 ================================================================================
@@ -1777,6 +1899,42 @@ E. META DESCRIPTION (handled separately, but know this)
 - Starts with primary keyword
 - Contains: vacancy count OR last date OR key benefit
 - Under 160 characters
+
+================================================================================
+RULE 8 — HUMAN SENTENCE RHYTHM (AI DETECTION PREVENTION)
+================================================================================
+This is critical. Uniform sentence length = AI fingerprint. Vary it.
+
+MANDATORY MIX per paragraph:
+  SHORT sentences (4-8 words)  — 1-2 per paragraph (punch, emphasis, urgency)
+  MEDIUM sentences (10-18 words) — 2-3 per paragraph (facts, data, steps)
+  LONG sentences (20-30 words) — 1 per paragraph (context, explanation, nuance)
+
+EXAMPLE — CORRECT (human rhythm):
+  "Notice aa gayi. Finally.
+  BPSC 70th CCE mein is baar 1,929 vacancies hain — jo pichhle saal se kaafi zyada hain.
+  Agar aap Bihar mein sarkari naukri ke liye seriously prepare kar rahe hain aur graduation
+  complete ho gayi hai, to ye notification aapke liye is mahine ka sabse important update hai."
+
+EXAMPLE — WRONG (AI pattern — reject this):
+  "BPSC 70th CCE notification 2026 has been officially released by the Bihar Public Service
+  Commission for various posts. The examination will be conducted in multiple stages. Candidates
+  need to check the eligibility criteria carefully before applying for the posts."
+  (All sentences ~20 words — robotic, predictable, AI-like)
+
+SHORT SENTENCE USE CASES (use these naturally):
+  Opening punches: "Notification aa gayi.", "Result out hai.", "Good news hai."
+  Urgency signals: "Last date close hai.", "Sirf [X] din bacha hai."
+  Emphasis: "Free hai. Bilkul free.", "No fee for SC/ST."
+  Simple facts: "Total posts: 17,727.", "Age limit: 18-27 years."
+
+FRESHNESS MARKER — Add exactly 1 per blog:
+  Naturally reference today's date somewhere in the content:
+  - "Aaj, [TODAY] tak yeh information verified hai."
+  - "Is update ko [TODAY] ko cross-check kiya gaya hai."
+  - "Agar aap yeh [TODAY] ke baad padh rahe hain, to official site se dates re-verify karein."
+  This signals to Google that a human actively maintains this content.
+
 
 ================================================================================
 MANDATORY E-E-A-T AUTHOR SECTION
