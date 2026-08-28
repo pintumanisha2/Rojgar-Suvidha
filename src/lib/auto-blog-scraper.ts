@@ -416,6 +416,84 @@ function getDocumentListForPostType(postType: string): string {
   return allDocs.map(d => `<li style="margin-bottom:4px;">${d}</li>`).join("\n");
 }
 
+// ── LSI Keyword Generator ─────────────────────────────────────────────────────
+// Generates category + title specific LSI phrases for the AI to weave into content.
+// These improve topical authority and featured snippet eligibility.
+function generateLSIKeywords(title: string, category: string): string {
+  const t = title.toLowerCase();
+  const year = new Date().getFullYear();
+  const lsi: string[] = [];
+
+  // ── Category base LSI ──────────────────────────────────────────────────────
+  if (category === "latest-jobs") {
+    lsi.push(
+      `sarkari naukri ${year}`, `government job notification ${year}`,
+      "online application form", "last date to apply", "application fee",
+      "age relaxation", "selection process", "official notification PDF",
+    );
+  } else if (category === "results") {
+    lsi.push(
+      `merit list ${year}`, "cutoff marks", "scorecard download",
+      "qualifying marks", "roll number", "result PDF", "rank list",
+      "next stage selection", "document verification",
+    );
+  } else if (category === "admit-card") {
+    lsi.push(
+      "hall ticket download", "exam centre", "reporting time",
+      "exam day instructions", "photo ID proof", "barcode", "roll number slip",
+    );
+  } else if (category === "answer-key") {
+    lsi.push(
+      "provisional answer key", "raise objection", "final answer key",
+      "correct answers", "question paper PDF", "objection window",
+    );
+  } else if (category === "admission") {
+    lsi.push(
+      "merit-based admission", "counselling process", "seat allotment",
+      "college list", "choice filling", "document verification",
+    );
+  } else {
+    lsi.push(
+      `government jobs ${year}`, "sarkari naukri", "latest notification",
+    );
+  }
+
+  // ── Title-specific LSI ─────────────────────────────────────────────────────
+  if (/ssc|combined\s*graduate/i.test(t)) {
+    lsi.push("Staff Selection Commission", "Tier-1 exam pattern", "Combined Graduate Level", "CGL syllabus");
+  }
+  if (/railway|rrb|rrb\s*ntpc|group\s*d/i.test(t)) {
+    lsi.push("Railway Recruitment Board", "non-technical popular categories", "computer based test CBT");
+  }
+  if (/bank|ibps|sbi|rbi/i.test(t)) {
+    lsi.push("banking exam", "IBPS PO syllabus", "probationary officer", "clerk recruitment");
+  }
+  if (/upsc|ias|civil\s*services/i.test(t)) {
+    lsi.push("Union Public Service Commission", "civil services exam", "IAS IPS IFS", "CSAT prelims");
+  }
+  if (/police|crpf|bsf|cisf|paramilitary/i.test(t)) {
+    lsi.push("physical endurance test", "constable recruitment", "height chest measurement", "written exam");
+  }
+  if (/teacher|ctet|tet|kvs|nvs/i.test(t)) {
+    lsi.push("teaching certification", "B.Ed qualification", "primary teacher", "TGT PGT recruitment");
+  }
+  if (/bpsc|bihar/i.test(t)) {
+    lsi.push("Bihar Public Service Commission", "BPSC exam pattern", "combined competitive examination");
+  }
+  if (/uppsc|up\s*police|up.*lekh|lekhpal/i.test(t)) {
+    lsi.push("Uttar Pradesh public service", "UP recruitment exam", "lekhpal bharti");
+  }
+  if (/neet|jee|cuet|medical/i.test(t)) {
+    lsi.push("medical entrance exam", "engineering entrance", "national testing agency NTA");
+  }
+  if (/nursing|anm|gnm/i.test(t)) {
+    lsi.push("nursing recruitment", "ANM GNM qualification", "healthcare jobs");
+  }
+
+  // Return as comma-separated string, max 12 terms
+  return lsi.slice(0, 12).join(", ");
+}
+
 
 function detectApplyStatus(
   pageText: string,
@@ -1091,6 +1169,9 @@ Add this green Apply button after the How to Apply steps:
   // ── Post-type specific document list ─────────────────────────────────────────
   const specificDocumentList = getDocumentListForPostType(postType);
 
+  // ── LSI Keywords (category + title specific) ─────────────────────────────
+  const lsiKeywords = generateLSIKeywords(sourceTitle, category);
+
   // Cap reference text to 12,000 chars (~3,000 tokens) to prevent prompt bloat & token limit errors
   const cleanedRawText = sanitizeSourceText(rawText).slice(0, 12000);
 
@@ -1116,6 +1197,14 @@ POST-TYPE SPECIFIC DOCUMENTS (use ONLY these for the Documents Required section 
 <ul>
 ${specificDocumentList}
 </ul>
+
+LSI KEYWORDS — Weave 4-6 of these NATURALLY into body paragraphs (do NOT list them, just use in sentences):
+${lsiKeywords}
+
+BANNER IMAGE ALT TAG RULE (if any <img> tag is added):
+alt must be: "[Primary Keyword] — [Secondary Angle] | Rojgar Suvidha"
+Example: alt="SSC CGL 2026 Notification — Eligibility, Vacancy & Apply Online | Rojgar Suvidha"
+NEVER use: alt="image", alt="banner", alt="Rojgar Suvidha", or any generic text.
 
 ===== REFERENCE DATA — FACTS ONLY — DO NOT COPY ANY SENTENCE =====
 [Use below ONLY to extract: vacancy count, dates, fees, links, eligibility. Write ALL sentences yourself.]
@@ -1645,12 +1734,49 @@ NEVER write: Pure Hindi/Devanagari script anywhere.
 HINGLISH means: English words + Hindi sentence structure. NOT Roman Hindi (not "yahan click karo" everywhere — mix properly).
 
 ================================================================================
-RULE 7 — SEO KEYWORD OPTIMIZATION
+RULE 7 — SEO KEYWORD OPTIMIZATION (MANDATORY — GOOGLE RANKING DEPENDS ON THIS)
 ================================================================================
-- Mention "Rojgar Suvidha" 3-5 times naturally in body text
-- Primary keyword must appear in: first 100 words, at least 2 H2 headings, last paragraph
-- Every H2/H3 should contain a searchable phrase (e.g., "SSC MTS Result 2026", "How to Download RRB JE Admit Card")
-- Meta description starts with primary keyword (handled separately — just write good blogHtml)
+
+A. BRAND MENTIONS
+- Mention "Rojgar Suvidha" exactly 3-5 times naturally in body text (not forced)
+
+B. PRIMARY KEYWORD PLACEMENT
+- Must appear in: first 100 words, at least 3 H2 headings, and last paragraph
+- Use primary keyword naturally: "SSC CGL 2026 notification", not stuffed repetition
+
+C. H2 HEADING RULES — CRITICAL FOR RANKING
+
+MANDATORY:
+1. First H2 must NEVER be identical or near-identical to the H1 title
+   - H1 says "SSC CGL 2026 Notification" → First H2 CANNOT be "SSC CGL 2026 Notification"
+   - First H2 must add a NEW ANGLE: "SSC CGL 2026 Notification: Vacancy Breakdown by Category"
+2. Every H2 must contain at least one searchable keyword phrase
+   - Good: "How to Apply for BPSC 70th CCE 2026 Online", "RRB NTPC 2026 Eligibility Criteria for 10th Pass"
+   - Bad: "What Happened", "Full Story", "Key Highlights", "Overview", "Important Things"
+3. Minimum 6 H2 headings per blog (for 900+ word content)
+4. At least 3 H2s must contain the year (2026)
+5. H2 format = real user queries Google search patterns:
+   "How to [Action] [Org] [Post] 2026"
+   "What is the [Detail] for [Post] 2026?"
+   "[Org] [Post] 2026 [Category] — [Specific Angle]"
+
+FORBIDDEN H2 PATTERNS (automatic rewrite required):
+- "What Happened" → replace with "[Org Event] 2026: What Changed for Candidates"
+- "Full Story" → replace with "[Org] [Post] 2026: Complete Notification Details"
+- "Key Highlights" → replace with "[Org] [Post] 2026: Key Points for Candidates"
+- "Impact on Candidates" → replace with "How [Event] Affects Your [Exam/Application] 2026"
+- "Frequently Asked Questions" → replace with "FAQs on [Org] [Post] 2026"
+- "Overview" alone → must add keyword: "[Org] [Post] 2026: Complete Overview & Details"
+
+D. LSI KEYWORDS
+- Use the LSI KEYWORDS list from enrichedContext naturally in body paragraphs
+- Aim for 4-6 LSI terms spread across the article (not in headings)
+- These help Google understand the full topic scope — improves featured snippet chances
+
+E. META DESCRIPTION (handled separately, but know this)
+- Starts with primary keyword
+- Contains: vacancy count OR last date OR key benefit
+- Under 160 characters
 
 ================================================================================
 MANDATORY E-E-A-T AUTHOR SECTION
