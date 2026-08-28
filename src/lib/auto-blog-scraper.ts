@@ -1037,7 +1037,7 @@ async function getUniqueSlug(baseSlug: string, supabase: any): Promise<string> {
 // ── Blog Quality Validator ────────────────────────────────────────────────────
 // Runs AFTER AI generation, BEFORE saving to DB.
 // If validation fails → post is SKIPPED. Never publish bad content.
-function validateBlogQuality(html: string, category: string, rawSourceText?: string): { valid: boolean; issues: string[] } {
+function validateBlogQuality(html: string, category: string, rawSourceText?: string): { valid: boolean; issues: string[]; score: number } {
   const issues: string[] = [];
   const text = html.toLowerCase();
   const wordCount = html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
@@ -2753,7 +2753,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
           lastDate: aiResult.lastDate || lastDate || null,
           bannerUrl: autoBannerUrl,
           sourceTag,
-          qualityScore: (qualityCheck as any).score ?? null,
+          qualityScore: qualityCheck.score ?? null,
           sourceUrl: item.link || null,  // Original URL for admin cross-check
         }).catch((e) => console.warn("Admin draft approval alert failed:", e));
       }
