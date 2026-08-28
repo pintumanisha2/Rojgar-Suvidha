@@ -2470,6 +2470,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
           bannerUrl: autoBannerUrl,
           sourceTag,
           qualityScore: (qualityCheck as any).score ?? null,
+          sourceUrl: item.link || null,  // Original URL for admin cross-check
         }).catch((e) => console.warn("Admin draft approval alert failed:", e));
       }
 

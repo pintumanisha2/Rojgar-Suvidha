@@ -241,6 +241,7 @@ export interface DraftNotificationPayload {
   bannerUrl?: string | null;
   sourceTag?: string | null;
   qualityScore?: number | null;
+  sourceUrl?: string | null;  // Original source URL for cross-checking
 }
 
 /**
@@ -266,6 +267,10 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
       : `\n🔴 *Content Quality: ${draft.qualityScore}/100* — LOW — Review carefully!`)
     : "";
 
+  const sourceUrlLine = draft.sourceUrl
+    ? `\n🔗 *Source URL:* ${draft.sourceUrl}`
+    : "";
+
   const lines = [
     `📄 *NEW AUTO-BLOG DRAFT GENERATED*`,
     tagBadge,
@@ -274,11 +279,17 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
     ...(postsText ? [postsText] : []),
     ...(lastDateText ? [lastDateText] : []),
     scoreText,
+    sourceUrlLine,
     "",
     `⚡ *Review or Approve in 1-Click below:*`,
   ].filter((l) => l !== null && l !== undefined);
 
   const text = lines.join("\n");
+
+  // Inline keyboard — source URL button added if available
+  const sourceUrlButton = draft.sourceUrl
+    ? [{ text: "🔍 View Original Source", url: draft.sourceUrl }]
+    : null;
 
   const inlineKeyboard = {
     inline_keyboard: [
@@ -288,7 +299,8 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
       [
         { text: "👁️ Review in Admin UI", url: reviewUrl },
         { text: "❌ Reject Draft", callback_data: `rej_${draft.id}` },
-      ]
+      ],
+      ...(sourceUrlButton ? [sourceUrlButton] : []),
     ]
   };
 
