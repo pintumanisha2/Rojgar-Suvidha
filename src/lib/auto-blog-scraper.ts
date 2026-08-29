@@ -2551,6 +2551,7 @@ export async function cleanupStaleDrafts(): Promise<number> {
 }
 
 export async function runAutoBlogScraper(): Promise<ScraperResult> {
+  const startTime = Date.now();
   console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
   
   // Auto-clean unapproved drafts older than 72 hours
@@ -2559,24 +2560,20 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const supabase = getSupabaseAdmin();
   const results: ScraperResult = { processed: 0, skipped: 0, errors: [] };
 
-  // 1. Fetch RSS from FreeJobAlert + SarkariResult + NDTV + Google Trends
-  let rssItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
-  try {
-    rssItems = await fetchRSSItems();
-  } catch (err: any) {
-    console.warn("⚠️ FreeJobAlert RSS Error:", err.message);
-  }
+  // 1. Parallel RSS Fetching (FreeJobAlert + SarkariResult + NDTV + Google Trends)
+  const [fjaResult, srResult, ndtvResult, trendsResult] = await Promise.allSettled([
+    fetchRSSItems(),
+    fetchSarkariResultItems(),
+    fetchNDTVEducationNews(),
+    fetchGoogleTrendsItems(),
+  ]);
 
-  let sarkariResultItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
-  try {
-    sarkariResultItems = await fetchSarkariResultItems();
-    console.log(`📡 SarkariResult: ${sarkariResultItems.length} total items fetched`);
-  } catch (err: any) {
-    console.warn("⚠️ SarkariResult RSS Error:", err.message);
-  }
+  const rssItems = fjaResult.status === "fulfilled" ? fjaResult.value : [];
+  const sarkariResultItems = srResult.status === "fulfilled" ? srResult.value : [];
+  const ndtvItems = ndtvResult.status === "fulfilled" ? ndtvResult.value : [];
+  const googleTrendsItems = trendsResult.status === "fulfilled" ? trendsResult.value : [];
 
-  const ndtvItems = await fetchNDTVEducationNews();
-  const googleTrendsItems = await fetchGoogleTrendsItems();
+  console.log(`📡 Fetched items in ${Date.now() - startTime}ms — FJA: ${rssItems.length}, SR: ${sarkariResultItems.length}, NDTV: ${ndtvItems.length}, Trends: ${googleTrendsItems.length}`);
 
   const allCandidateItems: { title: string; link: string; pubDate: string; description: string; source: string; feedCategory: string }[] = [
     ...googleTrendsItems,
@@ -2593,15 +2590,22 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Select candidates: 1 Google Trend + 1 FreeJobAlert + 1 SarkariResult + 1 News
+  // 3. Candidate selection per source
   const googleTrendsNew = allCandidateItems.filter((i) => i.source === "google_trends" && !scrapedUrls.has(i.link)).slice(0, 1);
   const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 1);
   const sarkariResultNew = allCandidateItems.filter((i) => i.source === "sarkariresult" && !scrapedUrls.has(i.link)).slice(0, 1);
   const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 1);
 
-  // Max 3 items per run: prioritize real job posts (FreeJobAlert + SarkariResult) over news
-  const newItems = [...googleTrendsNew, ...freeJobAlertNew, ...sarkariResultNew, ...ndtvNew].slice(0, 3);
-  console.log(`🆕 New items to process: ${newItems.length} (FJA: ${freeJobAlertNew.length}, SR: ${sarkariResultNew.length}, NDTV: ${ndtvNew.length}, Trends: ${googleTrendsNew.length})`);
+  // 4. Source Priority Rotation (Fair Scheduler across 30-min cron intervals)
+  // Ensures SarkariResult gets FIRST priority on alternating runs, preventing timeout skips!
+  const runIntervalIdx = Math.floor(Date.now() / (1000 * 60 * 30)); // 30-min window index
+  const prioritizedSources = (runIntervalIdx % 2 === 0)
+    ? [...sarkariResultNew, ...freeJobAlertNew, ...googleTrendsNew, ...ndtvNew]
+    : [...freeJobAlertNew, ...sarkariResultNew, ...googleTrendsNew, ...ndtvNew];
+
+  // Process max 2 high-quality items per cron run (safely fits within Vercel 60s timeout)
+  const newItems = prioritizedSources.slice(0, 2);
+  console.log(`🆕 New items to process (Run Priority ${runIntervalIdx % 2 === 0 ? "SarkariResult First" : "FreeJobAlert First"}): ${newItems.length}`);
 
   if (newItems.length === 0) {
     results.skipped = allCandidateItems.length;
@@ -2610,6 +2614,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   }
 
   for (const item of newItems) {
+    // Vercel 45-second Time Guard (prevents 60s function timeout from hard-killing process)
+    if (Date.now() - startTime > 45000) {
+      console.log(`⏱️ [Time Guard] 45s elapsed — safely deferring remaining items to next cron run`);
+      break;
+    }
+
     console.log(`\n📰 [${newItems.indexOf(item) + 1}/${newItems.length}] Processing (${item.source}): ${item.title}`);
 
     try {
