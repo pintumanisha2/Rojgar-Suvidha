@@ -59,14 +59,14 @@ const CATEGORY_RSS_FEEDS: Record<string, string[]> = {
 // ── SarkariResult.com RSS feeds (separate — distinct source) ────────────────
 const SARKARIRESULT_RSS_FEEDS: Record<string, string[]> = {
   "latest-jobs": [
-    "https://www.sarkariresult.com/feed/",  // All posts — SarkariResult is not categorized by type in RSS
+    "https://www.sarkariresult.com/feed/",  // All posts — SarkariResult RSS main
+    "https://news.google.com/rss/search?q=site:sarkariresult.com&hl=en-IN&gl=IN&ceid=IN:en", // Google News RSS fallback
   ],
   "results": [
-    "https://www.sarkariresult.com/feed/?cat=result",
-    "https://www.sarkariresult.com/feed/",  // fallback — detect from title
+    "https://www.sarkariresult.com/feed/",
   ],
   "admit-card": [
-    "https://www.sarkariresult.com/feed/",  // detect from title
+    "https://www.sarkariresult.com/feed/",
   ],
 };
 
@@ -558,47 +558,64 @@ function generateEditorOpinion(opts: {
 
 function detectApplyStatus(
   pageText: string,
-  links: { href: string; text: string }[]
+  links: { href: string; text: string; label?: string }[]
 ): { status: ApplyStatus; link: string | null } {
   const text = pageText.toLowerCase();
 
-  // ── Coming Soon detection (FreeJobAlert specific) ──
-  // They often write "Apply Online : Coming Soon" in tables
-  if (/apply\s*online\s*[:\-–]\s*coming\s*soon/.test(text)) {
-    return { status: "coming_soon", link: null };
-  }
-  if (/coming\s*soon|will\s*be\s*available\s*soon|link\s*will\s*be\s*activated|not\s*yet\s*active|to\s*be\s*announced/.test(text)) {
-    return { status: "coming_soon", link: null };
+  // ── Coming Soon detection ──
+  if (/apply\s*online\s*[:\-–]?\s*coming\s*soon|link\s*will\s*be\s*activat|not\s*yet\s*active|to\s*be\s*announced/i.test(text)) {
+    // If explicit "link active on [date]" or "coming soon" row text exists
+    const comingSoonLink = links.find(l => /coming\s*soon|will\s*be\s*activat/i.test(l.label || ""));
+    if (comingSoonLink && !links.some(l => /apply\s*(online|registration|now)/i.test(l.label || l.text) && !/coming\s*soon/i.test(l.label || ""))) {
+      return { status: "coming_soon", link: null };
+    }
   }
 
   // ── Closed detection ──
-  if (/application\s*closed|last\s*date\s*over|form\s*closed|apply\s*last\s*date\s*passed/.test(text)) {
+  if (/application\s*closed|last\s*date\s*over|form\s*closed|apply\s*last\s*date\s*passed/i.test(text)) {
     return { status: "closed", link: null };
   }
 
-  // ── Find real apply link ──
-  // Priority order: most specific patterns first
+  // ── Find real apply link (Check label context + anchor text + href) ──
   const applyPatterns = [
-    // Direct apply link text patterns
-    (l: { href: string; text: string }) => /^apply\s*(online|now)?$/i.test(l.text.trim()),
-    (l: { href: string; text: string }) => /apply\s*online/i.test(l.text) && l.href.startsWith("http"),
-    (l: { href: string; text: string }) => /click\s*here\s*to\s*apply/i.test(l.text),
-    // URL patterns
-    (l: { href: string; text: string }) => /\/(apply|register|application|form)\//i.test(l.href) && l.href.startsWith("http"),
+    // 1. Contextual table label (e.g. "Apply Online Click Here" on SarkariResult / FreeJobAlert)
+    (l: { href: string; text: string; label?: string }) => 
+      /apply\s*(online|registration|now|form)/i.test(l.label || "") &&
+      !/coming\s*soon|will\s*be\s*activat|how\s*to\s*apply|video/i.test(l.label || "") &&
+      l.href.startsWith("http"),
+
+    // 2. Direct anchor text
+    (l: { href: string; text: string; label?: string }) => 
+      /^apply\s*(online|now)?$/i.test(l.text.trim()) && l.href.startsWith("http"),
+
+    (l: { href: string; text: string; label?: string }) => 
+      /click\s*here\s*to\s*apply/i.test(l.label || l.text) && l.href.startsWith("http"),
+
+    // 3. URL patterns
+    (l: { href: string; text: string; label?: string }) => 
+      /\/(apply|register|application|form)\//i.test(l.href) && l.href.startsWith("http"),
   ];
 
   for (const pattern of applyPatterns) {
     const found = links.find(pattern);
     if (found?.href?.startsWith("http")) {
-      // Exclude internal/navigation links
-      const isInternal = found.href.includes("freejobalert") || found.href.includes("rojgarsuvidha");
+      // Exclude competitor internal links / social media
+      const isInternal = 
+        found.href.includes("freejobalert.com") || 
+        found.href.includes("rojgarsuvidha.com") ||
+        found.href.includes("sarkariresult.com") ||
+        found.href.includes("t.me") ||
+        found.href.includes("whatsapp.com") ||
+        found.href.includes("youtube.com") ||
+        found.href.includes("instagram.com");
+
       if (!isInternal) {
         return { status: "open", link: found.href };
       }
     }
   }
 
-  // ── Fallback: "Apply Online" text present but no link → Coming Soon ──
+  // ── Fallback: "Apply Online" text present but no direct external link → Coming Soon ──
   if (/apply\s*online/i.test(text)) {
     return { status: "coming_soon", link: null };
   }
@@ -607,11 +624,12 @@ function detectApplyStatus(
 }
 
 // ── Deep Data Extraction (FreeJobAlert table structure) ───────────────────────
-function extractPageData(pageText: string, links: { href: string; text: string }[] = []) {
+function extractPageData(pageText: string, links: { href: string; text: string; label?: string }[] = []) {
   const text = pageText;
 
-  // Last date — multiple patterns covering FreeJobAlert's table format
+  // Last date — multiple patterns covering FreeJobAlert & SarkariResult table formats
   const lastDatePatterns = [
+    /last\s*date\s*(?:for|to)?[^:]*[:\-–]\s*(\d{1,2}[\/\-\.][\d\w]+[\/\-\.]\d{2,4}[^\.\n\|]*)/i,
     /last\s*date(?:\s*to\s*apply|\s*of\s*application|\s*for\s*online\s*application)?[:\s]+([^\n\r|]{5,60})/i,
     /apply\s*before[:\s]+([^\n\r|]{5,60})/i,
     /closing\s*date[:\s]+([^\n\r|]{5,60})/i,
@@ -624,19 +642,23 @@ function extractPageData(pageText: string, links: { href: string; text: string }
     if (m?.[1]) { lastDate = m[1].trim().slice(0, 60).replace(/[|]/g, "").trim(); break; }
   }
 
-  // Total posts — FreeJobAlert often writes "Total Vacancy : 1000"
+  // Total posts — support singular "for 23757 post", "Total Post : 23,757", "Total Vacancy : 1,599"
   const postsPatterns = [
-    /total\s*(?:vacancy|vacancies|post|posts?)[:\s–\-]+(\d[\d,]+)/i,
-    /(?:no\.?\s*of\s*)?(?:vacancy|vacancies|post)[:\s–\-]+(\d[\d,]+)/i,
-    /(\d[\d,]+)\s*(?:post|vacancy|vacancies|seat)/i,
+    /for\s*([\d,]+)\s*(?:post|posts|vacancy|vacancies)/i,
+    /total\s*(?:vacancy|vacancies|post|posts?)[:\s–\-]+([\d,]+)/i,
+    /(?:no\.?\s*of\s*)?(?:vacancy|vacancies|post)[:\s–\-]+([\d,]+)/i,
+    /([\d,]+)\s*(?:post|posts|vacancy|vacancies|seat)/i,
   ];
   let totalPosts: string | null = null;
   for (const pattern of postsPatterns) {
     const m = text.match(pattern);
-    if (m?.[1]) { totalPosts = m[1].replace(/,/g, ""); break; }
+    if (m?.[1] && parseInt(m[1].replace(/,/g, ""), 10) > 0) {
+      totalPosts = m[1].replace(/,/g, "");
+      break;
+    }
   }
 
-  // Application fee — FreeJobAlert shows "General/OBC : 500", "SC/ST : Free"
+  // Application fee — General / OBC / EWS
   const feeGenPatterns = [
     /(?:general|gen|ur|obc|ews)[\/,\s]+(?:obc[\/,\s]+)?(?:ews[\/,\s]+)?(?:[:\-–]\s*)₹?\s*(\d+)/i,
     /application\s*fee[:\s–\-]*(?:general|gen|ur)?[:\s]*₹?\s*(\d+)/i,
@@ -659,11 +681,14 @@ function extractPageData(pageText: string, links: { href: string; text: string }
     if (m) { appFeeRes = m[0].slice(0, 40).trim(); break; }
   }
 
-  // Official website extraction from text + links
+  // Official website extraction — use contextual label + text + href
   let officialLink: string | null = null;
   const officialLinkObj = links.find(l => 
-    /official\s*(website|site|portal)/i.test(l.text) || 
-    (/\.(gov|nic|org)\.in/i.test(l.href) && !l.href.includes("freejobalert"))
+    /official\s*(website|site|portal)/i.test(l.label || l.text) &&
+    l.href.startsWith("http") &&
+    !l.href.includes("freejobalert") &&
+    !l.href.includes("sarkariresult") &&
+    !l.href.includes("rojgarsuvidha")
   );
   if (officialLinkObj?.href) {
     officialLink = officialLinkObj.href;
@@ -679,19 +704,22 @@ function extractPageData(pageText: string, links: { href: string; text: string }
     }
   }
 
-  // Notification PDF extraction from links
+  // Notification PDF extraction — use contextual label + text + href
   let notificationLink: string | null = null;
   const notifLinkObj = links.find(l => 
-    /notification|advt|detailed notification|pdf/i.test(l.text) && 
-    !l.href.includes("freejobalert") && 
-    l.href.startsWith("http")
+    /(download\s*)?(notification|advt|advertisement|detailed notification|pdf)/i.test(l.label || l.text) &&
+    l.href.startsWith("http") &&
+    !l.href.includes("freejobalert") &&
+    !l.href.includes("sarkariresult") &&
+    !l.href.includes("rojgarsuvidha")
   );
   if (notifLinkObj?.href) {
     notificationLink = notifLinkObj.href;
   }
 
   // Age limit extraction
-  const ageMatch = text.match(/age\s*limit[:\s]+([^\n\r|]{3,40})/i);
+  const ageMatch = text.match(/age\s*limit[:\s]+([^\n\r|]{3,40})/i) ||
+    text.match(/minimum\s*age\s*[:\-–]\s*(\d+\s*(?:years|yrs)?)/i);
   const ageLimit = ageMatch ? ageMatch[1].trim().slice(0, 40) : null;
 
   // Education qualification
@@ -875,15 +903,36 @@ async function fetchFullPage(url: string): Promise<{
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<div[^>]*(?:sidebar|widget|ad-|advertisement|comment)[^>]*>[\s\S]*?<\/div>/gi, " ");
 
-  // Extract all links (important for finding Apply Online button)
-  const links: { href: string; text: string }[] = [];
+  // Extract all links with contextual table labels (important for SarkariResult/FreeJobAlert tables)
+  const links: { href: string; text: string; label?: string }[] = [];
+
+  // 1. Table row links — captures context like "Apply Online Click Here"
+  const trMatches = workingHtml.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  for (const tr of trMatches) {
+    const rowText = tr.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const rowLinkRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let rMatch: RegExpExecArray | null;
+    while ((rMatch = rowLinkRegex.exec(tr)) !== null) {
+      const href = rMatch[1].trim();
+      const text = rMatch[2].replace(/<[^>]+>/g, "").trim();
+      if (href && text && text.length < 100) {
+        const label = `${rowText} (${text})`;
+        links.push({ href, text, label });
+      }
+    }
+  }
+
+  // 2. Standard link extraction (fallback for non-table links)
   const linkRegex = /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let linkMatch: RegExpExecArray | null;
-  const linkRegexCopy = new RegExp(linkRegex.source, linkRegex.flags);
-  while ((linkMatch = linkRegexCopy.exec(workingHtml)) !== null) {
+  while ((linkMatch = linkRegex.exec(workingHtml)) !== null) {
     const href = linkMatch[1].trim();
     const text = linkMatch[2].replace(/<[^>]+>/g, "").trim();
-    if (href && text && text.length < 100) links.push({ href, text });
+    if (href && text && text.length < 100) {
+      if (!links.some(l => l.href === href)) {
+        links.push({ href, text, label: text });
+      }
+    }
   }
 
   // Strip HTML and decode entities
@@ -924,6 +973,10 @@ async function fetchFullPage(url: string): Promise<{
  * Fetch NDTV Education News RSS / HTML feed
  */
 export async function fetchNDTVEducationNews(): Promise<{ title: string; link: string; pubDate: string; description: string }[]> {
+  const items: { title: string; link: string; pubDate: string; description: string }[] = [];
+  const seen = new Set<string>();
+
+  // 1. Try direct NDTV Education fetch
   try {
     const res = await fetch("https://www.ndtv.com/education", {
       headers: {
@@ -931,35 +984,67 @@ export async function fetchNDTVEducationNews(): Promise<{ title: string; link: s
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) throw new Error(`NDTV fetch failed: ${res.status}`);
-    const html = await res.text();
-
-    const linkRegex = /<a\s+[^>]*href=["'](https:\/\/www\.ndtv\.com\/education\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-    const items: { title: string; link: string; pubDate: string; description: string }[] = [];
-    const seen = new Set<string>();
-
-    let match: RegExpExecArray | null;
-    while ((match = linkRegex.exec(html)) !== null) {
-      const url = match[1];
-      const rawText = match[2].replace(/<[^>]+>/g, "").replace(/&#039;/g, "'").replace(/&amp;/g, "&").trim();
-      if (rawText && rawText.length > 20 && !seen.has(url) && !url.includes("/page-") && !url.endsWith("/education") && !url.endsWith("/results")) {
-        seen.add(url);
-        items.push({
-          title: cleanCompetitorBrands(rawText),
-          link: url,
-          pubDate: new Date().toISOString(),
-          description: rawText,
-        });
+    if (res.ok) {
+      const html = await res.text();
+      const linkRegex = /<a\s+[^>]*href=["'](https:\/\/www\.ndtv\.com\/education\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      let match: RegExpExecArray | null;
+      while ((match = linkRegex.exec(html)) !== null) {
+        const url = match[1];
+        const rawText = match[2].replace(/<[^>]+>/g, "").replace(/&#039;/g, "'").replace(/&amp;/g, "&").trim();
+        if (rawText && rawText.length > 20 && !seen.has(url) && !url.includes("/page-") && !url.endsWith("/education") && !url.endsWith("/results")) {
+          seen.add(url);
+          items.push({
+            title: cleanCompetitorBrands(rawText),
+            link: url,
+            pubDate: new Date().toISOString(),
+            description: rawText,
+          });
+        }
       }
     }
-    console.log(`📡 NDTV Education Scraper: ${items.length} news items found`);
-    return items;
   } catch (err: any) {
-    console.warn("⚠️ NDTV Education fetch error:", err.message);
-    return [];
+    console.warn("⚠️ Direct NDTV Education fetch failed/blocked:", err.message);
   }
+
+  // 2. Fallback to Google News RSS for NDTV Education if direct fetch gets 0 items
+  if (items.length === 0) {
+    try {
+      const gRes = await fetch("https://news.google.com/rss/search?q=site:ndtv.com+education&hl=en-IN&gl=IN&ceid=IN:en", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+        },
+        signal: AbortSignal.timeout(12000),
+      });
+      if (gRes.ok) {
+        const xml = await gRes.text();
+        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+        let match: RegExpExecArray | null;
+        while ((match = itemRegex.exec(xml)) !== null) {
+          const block = match[1];
+          const rawTitle = block.match(/<title>(.*?)<\/title>/)?.[1] || "";
+          const title = rawTitle.replace(/\s*-\s*NDTV$/i, "").trim();
+          const link = block.match(/<link>(.*?)<\/link>/)?.[1] || block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+          const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || new Date().toISOString();
+          if (title && link && !seen.has(link)) {
+            seen.add(link);
+            items.push({
+              title: cleanCompetitorBrands(title),
+              link,
+              pubDate,
+              description: title,
+            });
+          }
+        }
+      }
+    } catch (gErr: any) {
+      console.warn("⚠️ Google News RSS fallback for NDTV failed:", gErr.message);
+    }
+  }
+
+  console.log(`📡 NDTV Education Scraper: ${items.length} news items found`);
+  return items;
 }
 
 // ── Competitor Brand Scrubbing Helpers ────────────────────────────────────────
