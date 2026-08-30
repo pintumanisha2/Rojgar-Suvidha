@@ -2377,6 +2377,35 @@ async function sendTelegramNotification(draft: {
   }
 }
 
+// ── AI Topic-Specific Banner Generator (Pollinations.ai Free Flux Model) ───────
+function generateAiTopicBannerUrl(title: string, category: string, stateCode?: string | null): string {
+  let subjectPrompt = "Sarkari Naukri Government Job Notification official badge";
+  const cleanT = title.toLowerCase();
+
+  if (cleanT.includes("post") || cleanT.includes("gds") || cleanT.includes("dak") || cleanT.includes("post office")) {
+    subjectPrompt = "Indian Post Office GDS mail van envelope gold stamp 3d isometric render";
+  } else if (cleanT.includes("police") || cleanT.includes("constable") || cleanT.includes("si ") || cleanT.includes("sub inspector") || cleanT.includes("lokrakshak")) {
+    subjectPrompt = "Indian Police officer gold metallic emblem badge navy blue uniform 3d render";
+  } else if (cleanT.includes("railway") || cleanT.includes("rrb") || cleanT.includes("ntpc") || cleanT.includes("alp") || cleanT.includes("loco")) {
+    subjectPrompt = "Indian Railways Vande Bharat high speed train engine golden rails 3d render";
+  } else if (cleanT.includes("bank") || cleanT.includes("sbi") || cleanT.includes("ibps") || cleanT.includes("rbi") || cleanT.includes("clerk") || cleanT.includes("po ")) {
+    subjectPrompt = "State Bank of India building gold coins financial growth chart 3d render";
+  } else if (cleanT.includes("isro") || cleanT.includes("drdo") || cleanT.includes("scientist") || cleanT.includes("engineer")) {
+    subjectPrompt = "ISRO rocket launch satellite space technology dark blue glowing 3d render";
+  } else if (cleanT.includes("army") || cleanT.includes("navy") || cleanT.includes("air force") || cleanT.includes("nda") || cleanT.includes("cds") || cleanT.includes("defence")) {
+    subjectPrompt = "Indian Military Armed Forces gold badge camouflage background 3d render";
+  } else if (cleanT.includes("teacher") || cleanT.includes("tet") || cleanT.includes("neet") || cleanT.includes("cuet") || cleanT.includes("school") || cleanT.includes("college")) {
+    subjectPrompt = "Education graduation hat study books glowing golden diploma certificate 3d render";
+  } else if (cleanT.includes("upsc") || cleanT.includes("psc") || cleanT.includes("ssc") || cleanT.includes("cgl") || cleanT.includes("chsl")) {
+    subjectPrompt = "Ashoka Stambha Lion Capital official government seal gold 3d render";
+  }
+
+  const promptText = `3D ultra realistic cinematic lighting banner for ${subjectPrompt}, vibrant colors, 8k resolution studio photo`;
+  
+  // Use Pollinations AI Free Flux Model
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=1200&height=630&model=flux&nologo=true`;
+}
+
 // ── Slug Generator ────────────────────────────────────────────────────────────
 function generateSlug(title: string): string {
   return title
@@ -2753,7 +2782,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(cleanedTitle);
       const slug = existingJobMatch ? existingJobMatch.slug : await getUniqueSlug(baseSlug, supabase);
-      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
+      const autoBannerUrl = generateAiTopicBannerUrl(cleanedTitle, aiResult.category || category, stateCode);
 
       if (existingJobMatch) {
         console.log(`🎯 [Duplicate Protection] Match found! Draft will UPDATE existing job ID: ${existingJobMatch.id} (URL: /job/${existingJobMatch.slug})`);
