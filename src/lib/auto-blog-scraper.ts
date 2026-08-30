@@ -2781,8 +2781,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       const existingJobMatch = await findMatchingExistingJob(cleanedTitle, category, supabase);
 
       const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(cleanedTitle);
-      const slug = existingJobMatch ? existingJobMatch.slug : await getUniqueSlug(baseSlug, supabase);
-      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
+      const startDateVal = aiResult.startDate || "";
+      const qualVal = aiResult.qualification || aiResult.eligibility || "";
+      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}`;
 
       if (existingJobMatch) {
         console.log(`🎯 [Duplicate Protection] Match found! Draft will UPDATE existing job ID: ${existingJobMatch.id} (URL: /job/${existingJobMatch.slug})`);

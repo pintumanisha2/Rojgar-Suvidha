@@ -611,28 +611,34 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                       </h2>
                     </div>
 
-                    {/* Bottom Bar: Quick Info Badges + Website Link */}
-                    <div className="relative z-10 pt-5 mt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-                        {(job.total_posts || job.total_vacancy) && (
-                          <span className="bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 px-3 py-1.5 rounded-lg">
-                            👥 Posts: {job.total_posts || job.total_vacancy}
-                          </span>
-                        )}
-                        {lastDate && (
-                          <span className="bg-rose-500/20 text-rose-300 border border-rose-400/40 px-3 py-1.5 rounded-lg">
-                            📅 Last Date: {lastDate}
-                          </span>
-                        )}
-                        {job.state_code && job.state_code !== "ALL" && (
-                          <span className="bg-sky-500/20 text-sky-300 border border-sky-400/40 px-3 py-1.5 rounded-lg">
-                            🏛️ State: {job.state_code}
-                          </span>
-                        )}
+                    {/* Bottom Bar: 4-Metric Grid + Website Branding Link */}
+                    <div className="relative z-10 pt-5 mt-4 border-t border-white/10 space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-bold">
+                        <div className="bg-white/10 backdrop-blur-sm border border-white/15 p-2.5 rounded-xl flex flex-col gap-0.5">
+                          <span className="text-[10px] text-gray-300 font-bold uppercase">Total Vacancies</span>
+                          <span className="text-yellow-300 font-black text-sm truncate">👥 {job.total_posts || job.total_vacancy || "Notice Out"}</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm border border-white/15 p-2.5 rounded-xl flex flex-col gap-0.5">
+                          <span className="text-[10px] text-gray-300 font-bold uppercase">Start Date</span>
+                          <span className="text-sky-300 font-black text-sm truncate">📅 {job.start_date || "Online Form"}</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm border border-white/15 p-2.5 rounded-xl flex flex-col gap-0.5">
+                          <span className="text-[10px] text-gray-300 font-bold uppercase">Last Date</span>
+                          <span className="text-rose-300 font-black text-sm truncate">⏳ {lastDate || "Check Notice"}</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-sm border border-white/15 p-2.5 rounded-xl flex flex-col gap-0.5">
+                          <span className="text-[10px] text-gray-300 font-bold uppercase">Jurisdiction</span>
+                          <span className="text-emerald-300 font-black text-sm truncate">🏛️ {job.state_code && job.state_code !== "ALL" ? job.state_code : "All India"}</span>
+                        </div>
                       </div>
 
-                      <div className="text-xs font-extrabold text-indigo-200 bg-white/10 px-4 py-1.5 rounded-lg border border-white/15 backdrop-blur-sm ml-auto sm:ml-0">
-                        www.rojgarsuvidha.com
+                      <div className="flex items-center justify-between text-xs font-extrabold text-indigo-200 pt-1">
+                        <span className="flex items-center gap-1 text-[11px] text-indigo-300 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> 100% Verified Official Sarkari Update
+                        </span>
+                        <span className="bg-white/10 px-3.5 py-1 rounded-md border border-white/15 font-black text-white">
+                          www.rojgarsuvidha.com
+                        </span>
                       </div>
                     </div>
                   </div>

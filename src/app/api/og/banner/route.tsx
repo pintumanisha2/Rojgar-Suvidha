@@ -9,8 +9,30 @@ export async function GET(req: NextRequest) {
     const title = searchParams.get("title") || "Sarkari Naukri Notification 2026";
     const category = (searchParams.get("category") || "latest-jobs").toLowerCase();
     const vacancies = searchParams.get("vacancies") || searchParams.get("posts") || "";
+    const startDate = searchParams.get("startDate") || "";
     const lastDate = searchParams.get("lastDate") || "";
+    const qualification = searchParams.get("qualification") || searchParams.get("eligibility") || "";
     const state = (searchParams.get("state") || "").toUpperCase();
+    const orgName = searchParams.get("orgName") || "";
+
+    // Detect Organization Type for Badge Icon
+    const cleanT = (title + " " + orgName).toLowerCase();
+    let orgBadge = "🏢 SARKARI PORTAL";
+    if (cleanT.includes("police") || cleanT.includes("constable") || cleanT.includes("lokrakshak") || cleanT.includes("si ")) {
+      orgBadge = "🛡️ POLICE BHARTI";
+    } else if (cleanT.includes("railway") || cleanT.includes("rrb") || cleanT.includes("ntpc") || cleanT.includes("alp")) {
+      orgBadge = "🚆 RAILWAY BHARTI";
+    } else if (cleanT.includes("post") || cleanT.includes("gds") || cleanT.includes("post office")) {
+      orgBadge = "📮 INDIA POST BHARTI";
+    } else if (cleanT.includes("bank") || cleanT.includes("sbi") || cleanT.includes("ibps") || cleanT.includes("rbi")) {
+      orgBadge = "🏦 BANKING BHARTI";
+    } else if (cleanT.includes("isro") || cleanT.includes("drdo") || cleanT.includes("scientist")) {
+      orgBadge = "🚀 ISRO / DRDO BHARTI";
+    } else if (cleanT.includes("army") || cleanT.includes("navy") || cleanT.includes("defence") || cleanT.includes("nda")) {
+      orgBadge = "⚔️ DEFENCE BHARTI";
+    } else if (cleanT.includes("upsc") || cleanT.includes("ssc") || cleanT.includes("psc")) {
+      orgBadge = "🏛️ CENTRAL / STATE PSC";
+    }
 
     const formattedCategory = category
       .replace(/-/g, " ")
@@ -21,7 +43,7 @@ export async function GET(req: NextRequest) {
       .replace("admission", "ADMISSION 2026")
       .toUpperCase();
 
-    // High-CTR Category Themes
+    // 6 Master High-CTR Category Themes
     const theme = category.includes("result")
       ? { bg: "linear-gradient(135deg, #022c22 0%, #065f46 50%, #047857 100%)", badgeBg: "#10b981", accent: "#34d399", label: "🏆 SARKARI RESULT" }
       : category.includes("admit")
@@ -34,6 +56,35 @@ export async function GET(req: NextRequest) {
       ? { bg: "linear-gradient(135deg, #0c4a6e 0%, #0369a1 50%, #0284c7 100%)", badgeBg: "#0ea5e9", accent: "#38bdf8", label: "📰 SARKARI NEWS UPDATE" }
       : { bg: "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #312e81 100%)", badgeBg: "#4f46e5", accent: "#fbbf24", label: "💼 LATEST SARKARI JOB" };
 
+    // Adaptive 4-Metric Grid Configuration
+    let card1Label = "TOTAL VACANCIES";
+    let card1Val = vacancies ? `${vacancies} Posts` : "Notification Out";
+    let card1Color = theme.accent;
+
+    let card2Label = "START DATE";
+    let card2Val = startDate || "Online / Offline";
+    let card2Color = "#38BDF8";
+
+    let card3Label = "LAST DATE";
+    let card3Val = lastDate || "Check Notice";
+    let card3Color = "#F43F5E";
+
+    let card4Label = "ELIGIBILITY";
+    let card4Val = qualification || (state && state !== "ALL" ? `${state} Govt` : "10th/12th/Graduate");
+    let card4Color = "#A7F3D0";
+
+    if (category.includes("result")) {
+      card1Label = "RESULT STATUS"; card1Val = "Declared / Scorecard"; card1Color = "#34D399";
+      card2Label = "RESULT DATE"; card2Val = lastDate || "Today Live"; card2Color = "#FDE047";
+      card3Label = "MERIT LIST"; card3Val = "PDF Available"; card3Color = "#60A5FA";
+      card4Label = "VACANCIES"; card4Val = vacancies ? `${vacancies} Posts` : "All Candidates"; card4Color = "#C084FC";
+    } else if (category.includes("admit")) {
+      card1Label = "ADMIT CARD"; card1Val = "Download Live"; card1Color = "#FB923C";
+      card2Label = "EXAM DATE"; card2Val = lastDate || "Check Notification"; card2Color = "#FDE047";
+      card3Label = "HALL TICKET"; card3Val = "Direct Link"; card3Color = "#34D399";
+      card4Label = "EXAM SHIFT"; card4Val = "Shift Wise"; card4Color = "#E879F9";
+    }
+
     return new ImageResponse(
       (
         <div
@@ -45,75 +96,179 @@ export async function GET(req: NextRequest) {
             alignItems: "flex-start",
             justifyContent: "space-between",
             background: theme.bg,
-            padding: "48px 56px",
+            padding: "44px 52px",
             fontFamily: "sans-serif",
             color: "#FFFFFF",
             position: "relative",
           }}
         >
-          {/* Header Badges */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          {/* Top Bar: Category Pill + Org Badge + State Badge + Verified Seal */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", flexWrap: "nowrap" }}>
             <div
               style={{
                 backgroundColor: theme.badgeBg,
                 color: "#FFFFFF",
-                padding: "8px 22px",
-                borderRadius: "30px",
-                fontSize: "18px",
-                fontWeight: 800,
-                letterSpacing: "1px",
+                padding: "8px 20px",
+                borderRadius: "24px",
+                fontSize: "16px",
+                fontWeight: 900,
+                letterSpacing: "0.8px",
                 boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
               }}
             >
               {formattedCategory}
             </div>
+
+            <div
+              style={{
+                backgroundColor: "rgba(255,255,255,0.15)",
+                color: "#FFFFFF",
+                padding: "8px 18px",
+                borderRadius: "24px",
+                fontSize: "15px",
+                fontWeight: 800,
+                border: "1px solid rgba(255,255,255,0.25)",
+              }}
+            >
+              {orgBadge}
+            </div>
+
             {state && state !== "ALL" && (
               <div
                 style={{
                   backgroundColor: "rgba(255,255,255,0.15)",
                   color: "#FFFFFF",
-                  padding: "8px 18px",
-                  borderRadius: "30px",
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  border: "1px solid rgba(255,255,255,0.2)",
+                  padding: "8px 16px",
+                  borderRadius: "24px",
+                  fontSize: "15px",
+                  fontWeight: 800,
+                  border: "1px solid rgba(255,255,255,0.25)",
                 }}
               >
-                📍 STATE: {state}
+                📍 {state}
               </div>
             )}
+
             <div
               style={{
-                backgroundColor: "rgba(234, 179, 8, 0.2)",
+                backgroundColor: "rgba(234, 179, 8, 0.25)",
                 color: "#FDE047",
                 padding: "8px 18px",
-                borderRadius: "30px",
-                fontSize: "16px",
-                fontWeight: 700,
+                borderRadius: "24px",
+                fontSize: "14px",
+                fontWeight: 800,
                 border: "1px solid rgba(234, 179, 8, 0.4)",
+                marginLeft: "auto",
               }}
             >
-              ⚡ VERIFIED NOTIFICATION 2026
+              🏅 100% VERIFIED SARKARI UPDATE
             </div>
           </div>
 
           {/* Main Title Box */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", margin: "20px 0" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", margin: "16px 0" }}>
             <div
               style={{
-                fontSize: title.length > 70 ? "32px" : title.length > 45 ? "38px" : "44px",
+                fontSize: title.length > 70 ? "30px" : title.length > 45 ? "35px" : "40px",
                 fontWeight: 900,
                 lineHeight: "1.25",
                 color: "#FFFFFF",
-                textShadow: "0 4px 20px rgba(0,0,0,0.6)",
+                textShadow: "0 4px 18px rgba(0,0,0,0.6)",
                 display: "-webkit-box",
-                WebkitLineClamp: 3,
+                WebkitLineClamp: 2,
                 WebkitBoxOrient: "vertical",
                 overflow: "hidden",
                 wordBreak: "break-word",
               }}
             >
               {title}
+            </div>
+          </div>
+
+          {/* 4 Glassmorphic Fact Metric Cards (Graphic Designer Grid) */}
+          <div style={{ display: "flex", gap: "16px", width: "100%", marginBottom: "16px" }}>
+            {/* Card 1 */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.18)",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
+                {card1Label}
+              </span>
+              <span style={{ fontSize: "18px", fontWeight: 900, color: card1Color }}>
+                {card1Val}
+              </span>
+            </div>
+
+            {/* Card 2 */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.18)",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
+                {card2Label}
+              </span>
+              <span style={{ fontSize: "18px", fontWeight: 900, color: card2Color }}>
+                {card2Val}
+              </span>
+            </div>
+
+            {/* Card 3 */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.18)",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
+                {card3Label}
+              </span>
+              <span style={{ fontSize: "18px", fontWeight: 900, color: card3Color }}>
+                {card3Val}
+              </span>
+            </div>
+
+            {/* Card 4 */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.18)",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+              }}
+            >
+              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
+                {card4Label}
+              </span>
+              <span style={{ fontSize: "18px", fontWeight: 900, color: card4Color }}>
+                {card4Val}
+              </span>
             </div>
           </div>
 
@@ -124,37 +279,26 @@ export async function GET(req: NextRequest) {
               alignItems: "center",
               justifyContent: "space-between",
               width: "100%",
-              borderTop: "2px solid rgba(255,255,255,0.18)",
-              paddingTop: "22px",
+              borderTop: "1.5px solid rgba(255,255,255,0.18)",
+              paddingTop: "16px",
             }}
           >
-            <div style={{ display: "flex", gap: "24px" }}>
-              {vacancies && (
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "13px", color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Total Vacancies</span>
-                  <span style={{ fontSize: "22px", fontWeight: 900, color: theme.accent }}>👥 {vacancies} Posts</span>
-                </div>
-              )}
-              {lastDate && (
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: "13px", color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Last Date to Apply</span>
-                  <span style={{ fontSize: "22px", fontWeight: 900, color: "#F43F5E" }}>📅 {lastDate}</span>
-                </div>
-              )}
+            <div style={{ fontSize: "14px", fontWeight: 800, color: "#CBD5E1" }}>
+              ⚡ Updated Live on Official Portal • Rojgar Suvidha
             </div>
 
             {/* Site Branding Seal */}
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div
                 style={{
-                  width: "46px",
-                  height: "46px",
-                  borderRadius: "14px",
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "12px",
                   backgroundColor: "#4F46E5",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "24px",
+                  fontSize: "22px",
                   fontWeight: 900,
                   color: "#FFFFFF",
                   boxShadow: "0 4px 14px rgba(79,70,229,0.5)",
@@ -163,10 +307,10 @@ export async function GET(req: NextRequest) {
                 RS
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "22px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.5px" }}>
+                <span style={{ fontSize: "20px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.5px" }}>
                   ROJGAR SUVIDHA
                 </span>
-                <span style={{ fontSize: "13px", color: "#818CF8", fontWeight: 700 }}>
+                <span style={{ fontSize: "12px", color: "#818CF8", fontWeight: 700 }}>
                   www.rojgarsuvidha.com
                 </span>
               </div>
