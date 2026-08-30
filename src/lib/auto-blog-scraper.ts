@@ -2782,7 +2782,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(cleanedTitle);
       const slug = existingJobMatch ? existingJobMatch.slug : await getUniqueSlug(baseSlug, supabase);
-      const autoBannerUrl = generateAiTopicBannerUrl(cleanedTitle, aiResult.category || category, stateCode);
+      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&state=${encodeURIComponent(stateCode || "")}`;
 
       if (existingJobMatch) {
         console.log(`🎯 [Duplicate Protection] Match found! Draft will UPDATE existing job ID: ${existingJobMatch.id} (URL: /job/${existingJobMatch.slug})`);
