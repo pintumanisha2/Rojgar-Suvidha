@@ -716,7 +716,11 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     word-break: break-word !important;
                     max-width: 100% !important;
                   }
-                  .blog-content p { margin-bottom: 1rem; }
+                  .blog-content p {
+                    margin-bottom: 1rem;
+                    text-align: justify !important;
+                    text-justify: inter-word !important;
+                  }
                   .blog-content .unicorn-table-box, .blog-content .table-wrapper {
                     width: 100% !important;
                     max-width: 100% !important;

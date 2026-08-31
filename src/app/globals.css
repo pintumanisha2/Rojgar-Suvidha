@@ -276,5 +276,8 @@ img, video, iframe, canvas, svg, picture {
   color: #f9fafb;
 }
 
-
-
+/* === Professional Blog Paragraph Text Alignment (Equal Margins on Both Sides) === */
+.blog-content p {
+  text-align: justify !important;
+  text-justify: inter-word !important;
+}
