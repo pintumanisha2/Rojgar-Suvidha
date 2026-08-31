@@ -22,7 +22,9 @@ export interface BacklinkRecord {
 }
 
 /**
- * Enqueue & Log Backlinks AFTER Admin Approves Job in Telegram
+ * Enqueue Backlinks AFTER Admin Approves Job in Telegram
+ * Inserts 5 platform records with status='queued' into backlinks_log.
+ * The /api/cron/process-backlink-queue cron picks one every 15 mins and publishes it LIVE.
  */
 export async function enqueuePostApprovalBacklinks(
   jobId: string,
@@ -33,52 +35,51 @@ export async function enqueuePostApprovalBacklinks(
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    console.log(`🚀 [Backlink Engine] Triggered post-approval backlinks for Job ID: ${jobId} (${slug})`);
+    console.log(`🚀 [Backlink Engine] Queuing post-approval backlinks for Job ID: ${jobId} (${slug})`);
 
     const liveJobUrl = `${BASE_URL}/job/${slug}`;
 
-    // Sample high-authority Web2 satellite backlink generators
-    // In production, these connectors interface with platform APIs (Blogger, Medium, Pinterest, Tumblr, Reddit)
-    const initialPlatforms = [
-      {
-        platform: "blogger",
-        url: `https://rojgarsuvidha-alerts.blogspot.com/2026/08/${slug}.html`,
-        anchor: `Read Official Notification on Rojgar Suvidha`,
-      },
-      {
-        platform: "medium",
-        url: `https://medium.com/@rojgarsuvidha/${slug}-2026-b9a8f`,
-        anchor: `Check Full Eligibility & Apply Form at RojgarSuvidha.com`,
-      },
-      {
-        platform: "pinterest",
-        url: `https://pinterest.com/pin/rojgarsuvidha-${slug.slice(0, 15)}`,
-        anchor: `RojgarSuvidha.com Visual Pin`,
-      },
+    // Anchor text pool — diversity matrix (40% brand, 35% CTA, 15% URL, 10% topic)
+    const anchors = [
+      "Rojgar Suvidha",
+      "Check Full Eligibility & Apply Online",
+      liveJobUrl,
+      "View Official Notification & Selection Process",
+      "Read Complete Notification on Rojgar Suvidha",
+    ];
+    const pickAnchor = (i: number) => anchors[i % anchors.length];
+
+    // 5 platform records — status 'queued' — cron processes 1 per 15 mins (safe drip)
+    const platforms = [
+      { platform: "blogger",  anchor: pickAnchor(0) },
+      { platform: "medium",   anchor: pickAnchor(1) },
+      { platform: "pinterest", anchor: pickAnchor(2) },
+      { platform: "reddit",   anchor: pickAnchor(3) },
+      { platform: "tumblr",   anchor: pickAnchor(4) },
     ];
 
-    const insertRecords: BacklinkRecord[] = initialPlatforms.map((p) => ({
+    const insertRecords: BacklinkRecord[] = platforms.map((p) => ({
       job_id: jobId,
       platform: p.platform,
-      backlink_url: p.url,
+      backlink_url: liveJobUrl, // placeholder; updated with real URL when cron publishes
       anchor_text: p.anchor,
-      status: "active",
+      status: "queued",         // ← QUEUED state — cron will publish & update to 'published'
     }));
 
-    // Log backlinks into Supabase (failsafe table check)
     const { error } = await supabase
       .from("backlinks_log")
       .insert(insertRecords);
 
     if (error) {
-      console.warn(`⚠️ [Backlink Engine] backlinks_log insert note: ${error.message}`);
+      console.warn(`⚠️ [Backlink Engine] Insert note: ${error.message}`);
     } else {
-      console.log(`✅ [Backlink Engine] Successfully logged ${insertRecords.length} backlinks for job ID: ${jobId}`);
+      console.log(`✅ [Backlink Engine] Queued ${insertRecords.length} backlinks for job ID: ${jobId}. Drip-feed cron will publish one every 15 mins.`);
     }
   } catch (err: any) {
-    console.error("❌ [Backlink Engine] Error triggering backlinks:", err.message || err);
+    console.error("❌ [Backlink Engine] Error queuing backlinks:", err.message || err);
   }
 }
+
 
 /**
  * Generate Daily 9:00 PM IST Executive Summary Telegram Report

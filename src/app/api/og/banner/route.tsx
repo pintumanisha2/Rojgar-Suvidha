@@ -342,7 +342,7 @@ export async function GET(req: NextRequest) {
             </div>
 
             {/* Site Branding Seal */}
-            <div style={{ display: "flex", flexContent: "column", alignItems: "center", gap: "2px", textAlign: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", textAlign: "center" }}>
               <span style={{ fontSize: "16px", fontWeight: 900, color: "#FFFFFF" }}>
                 ROJGAR SUVIDHA
               </span>

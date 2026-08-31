@@ -300,6 +300,20 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     }
   }
 
+  // ── Auto-extract salary from job fields for Google salary rich snippet ──
+  let salaryMin: number | null = null;
+  let salaryMax: number | null = null;
+  if (job.salary_min) salaryMin = parseInt(String(job.salary_min).replace(/[^0-9]/g, "")) || null;
+  if (job.salary_max) salaryMax = parseInt(String(job.salary_max).replace(/[^0-9]/g, "")) || null;
+  // Fallback: try parsing from short_info or meta_description
+  if (!salaryMin && !salaryMax && (job.short_info || job.meta_description)) {
+    const salaryText = (job.short_info || job.meta_description || "");
+    const salaryMatch = salaryText.match(/(?:salary|pay|stipend|CTC)[^\d]*(?:₹|Rs\.?|INR)?\s*(\d[\d,]+)/i);
+    if (salaryMatch?.[1]) {
+      salaryMin = parseInt(salaryMatch[1].replace(/,/g, "")) || null;
+    }
+  }
+
   const jobPostingSchema = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
@@ -320,6 +334,21 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     },
     applicantLocationRequirements: { "@type": "Country", name: "India" },
     directApply: false,
+    // baseSalary: enables Google to show salary range directly in SERP
+    ...(salaryMin || salaryMax ? {
+      baseSalary: {
+        "@type": "MonetaryAmount",
+        currency: "INR",
+        value: {
+          "@type": "QuantitativeValue",
+          ...(salaryMin ? { minValue: salaryMin } : {}),
+          ...(salaryMax ? { maxValue: salaryMax } : (salaryMin ? { value: salaryMin } : {})),
+          unitText: "MONTH",
+        },
+      },
+    } : {}),
+    // totalJobOpenings — enables vacancy count in Google Jobs
+    ...(job.total_posts ? { totalJobOpenings: parseInt(String(job.total_posts).replace(/[^0-9]/g, "")) || undefined } : {}),
   };
 
   const faqSchema = {
