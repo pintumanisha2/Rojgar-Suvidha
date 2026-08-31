@@ -274,21 +274,21 @@ export default function Navbar() {
 
 
               {/* Right Controls */}
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
 
-                {/* Search Toggle */}
+                {/* Search Toggle (Desktop only) */}
                 <button
                   onClick={() => setIsSearchOpen(!isSearchOpen)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-all text-white/80 hover:text-white"
+                  className="hidden sm:flex p-2 rounded-lg hover:bg-white/10 transition-all text-white/80 hover:text-white"
                   aria-label="Search"
                 >
                   <Search className="w-5 h-5" />
                 </button>
 
-                {/* Saved Jobs Icon */}
+                {/* Saved Jobs Icon (Desktop only) */}
                 <Link
                   href="/saved-jobs"
-                  className="p-2 rounded-lg hover:bg-white/10 transition-all text-white/80 hover:text-white relative"
+                  className="hidden sm:flex p-2 rounded-lg hover:bg-white/10 transition-all text-white/80 hover:text-white relative"
                   aria-label="Saved Jobs"
                 >
                   <Bookmark className="w-5 h-5" />
@@ -299,40 +299,44 @@ export default function Navbar() {
                   )}
                 </Link>
 
-                {/* Language Switcher */}
+                {/* Language Switcher Pill (Clear & High Contrast on Mobile) */}
                 <div className="relative">
                   <button
                     onClick={() => { setIsLangOpen(!isLangOpen); setIsStateOpen(false); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-all text-white/80 hover:text-white text-sm font-semibold"
+                    className="flex items-center gap-1 bg-white/15 hover:bg-white/25 border border-white/20 px-2.5 py-1.5 rounded-lg transition-all text-white text-xs font-bold shadow-sm"
+                    aria-label="Change Language"
                   >
-                    <Globe className="w-4 h-4" />
-                    <span className="hidden sm:inline">{selectedLang.code}</span>
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isLangOpen ? 'rotate-180' : ''}`} />
+                    <Globe className="w-3.5 h-3.5 text-yellow-300 shrink-0" />
+                    <span className="font-extrabold">{selectedLang.code}</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 opacity-80 ${isLangOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {isLangOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden z-50">
+                    <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden z-50">
+                      <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800/40 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                        Select Language
+                      </div>
                       {languages.map((lang) => (
                         <button
                           key={lang.code}
                           onClick={() => handleLanguageChange(lang)}
-                          className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${selectedLang.code === lang.code ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold transition-colors ${selectedLang.code === lang.code ? 'bg-indigo-600 text-white font-extrabold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
                           <span>{lang.label}</span>
-                          <span className="text-xs text-gray-400">{lang.code}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold ${selectedLang.code === lang.code ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>{lang.code}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Dark Mode */}
+                {/* Dark Mode Toggle */}
                 <button
                   onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-all text-white/80 hover:text-white"
+                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all text-white shadow-sm"
                   aria-label="Toggle Dark Mode"
                 >
-                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  {isDark ? <Sun className="w-4 h-4 text-yellow-300" /> : <Moon className="w-4 h-4 text-white" />}
                 </button>
 
                 {/* Aspirants Adda (Desktop only) */}
@@ -537,6 +541,28 @@ export default function Navbar() {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)}></div>
           <div className="absolute top-[60px] left-0 right-0 bg-white dark:bg-gray-950 shadow-2xl max-h-[calc(100vh-60px)] overflow-y-auto">
             
+            {/* Mobile Language Selector Pill Bar */}
+            <div className="p-4 pb-0">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-indigo-500" /> Select Language / भाषा चुनें
+              </p>
+              <div className="grid grid-cols-5 gap-1.5 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-xl border border-gray-200 dark:border-gray-800">
+                {languages.map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleLanguageChange(lang)}
+                    className={`py-2 rounded-lg text-xs font-extrabold transition-all text-center ${
+                      selectedLang.code === lang.code
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    {lang.code}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Mobile Actions */}
             <div className="p-4 pb-0">
               <div className="flex flex-col gap-2 w-full">
