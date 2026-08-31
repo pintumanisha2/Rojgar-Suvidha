@@ -966,29 +966,30 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               <AdSensePlaceholder format="leaderboard" />
 
               {/* ── Share Section ── */}
-              <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+              <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
-                    <Share2 className="w-4 h-4 text-indigo-500" /> Share with Friends
+                    <Share2 className="w-4 h-4 text-indigo-500 shrink-0" /> Share with Friends
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Help someone get a government job.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Help someone get a government job alert.</p>
                 </div>
-                <div className="flex w-full sm:w-auto gap-2.5 flex-wrap">
+                <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
                   <a
                     href={`https://api.whatsapp.com/send?text=*${encodeURIComponent(job.title)}*%0A%0ACheck Here: https://rojgarsuvidha.com/job/${slug}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:-translate-y-0.5"
+                    className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
                   >
-                    <MessageCircle className="w-4 h-4" /> WhatsApp
+                    <MessageCircle className="w-4 h-4 shrink-0" />
+                    <span>WhatsApp</span>
                   </a>
                   <a
                     href={`https://t.me/share/url?url=https://rojgarsuvidha.com/job/${slug}&text=${encodeURIComponent(job.title)}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all hover:-translate-y-0.5"
+                    className="flex items-center justify-center gap-2 bg-[#0088cc] hover:bg-[#0077b5] text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
                   >
-                    <Send className="w-4 h-4" /> Telegram
+                    <Send className="w-4 h-4 shrink-0" />
+                    <span>Telegram</span>
                   </a>
-                  <ShareJobButton url={`https://www.rojgarsuvidha.com/job/${slug}`} title={job.title} />
                 </div>
               </div>
 
