@@ -11,79 +11,51 @@ export async function GET(req: NextRequest) {
     const vacancies = searchParams.get("vacancies") || searchParams.get("posts") || "";
     const startDate = searchParams.get("startDate") || "";
     const lastDate = searchParams.get("lastDate") || "";
-    const qualification = searchParams.get("qualification") || searchParams.get("eligibility") || "";
-    const state = (searchParams.get("state") || "").toUpperCase();
+    const salary = searchParams.get("salary") || searchParams.get("salaryText") || "";
+    const ageLimit = searchParams.get("ageLimit") || searchParams.get("ageText") || "";
+    const location = searchParams.get("location") || searchParams.get("state") || "";
+    const selection = searchParams.get("selection") || searchParams.get("selectionText") || "";
+    const subheading = searchParams.get("subheading") || searchParams.get("postName") || "";
     const orgName = searchParams.get("orgName") || "";
 
-    // Detect Organization Type for Badge Icon
-    const cleanT = (title + " " + orgName).toLowerCase();
-    let orgBadge = "🏢 SARKARI PORTAL";
-    if (cleanT.includes("police") || cleanT.includes("constable") || cleanT.includes("lokrakshak") || cleanT.includes("si ")) {
-      orgBadge = "🛡️ POLICE BHARTI";
-    } else if (cleanT.includes("railway") || cleanT.includes("rrb") || cleanT.includes("ntpc") || cleanT.includes("alp")) {
-      orgBadge = "🚆 RAILWAY BHARTI";
-    } else if (cleanT.includes("post") || cleanT.includes("gds") || cleanT.includes("post office")) {
-      orgBadge = "📮 INDIA POST BHARTI";
-    } else if (cleanT.includes("bank") || cleanT.includes("sbi") || cleanT.includes("ibps") || cleanT.includes("rbi")) {
-      orgBadge = "🏦 BANKING BHARTI";
-    } else if (cleanT.includes("isro") || cleanT.includes("drdo") || cleanT.includes("scientist")) {
-      orgBadge = "🚀 ISRO / DRDO BHARTI";
-    } else if (cleanT.includes("army") || cleanT.includes("navy") || cleanT.includes("defence") || cleanT.includes("nda")) {
-      orgBadge = "⚔️ DEFENCE BHARTI";
-    } else if (cleanT.includes("upsc") || cleanT.includes("ssc") || cleanT.includes("psc")) {
-      orgBadge = "🏛️ CENTRAL / STATE PSC";
+    // Extract Organization & Post Subject
+    const cleanT = (title + " " + orgName).toUpperCase();
+    let displayOrg = "SARKARI NAUKRI";
+    if (cleanT.includes("INDIA POST") || cleanT.includes("GDS") || cleanT.includes("POST OFFICE")) {
+      displayOrg = "INDIA POST";
+    } else if (cleanT.includes("BANK OF BARODA") || cleanT.includes("BOB ")) {
+      displayOrg = "BANK OF BARODA";
+    } else if (cleanT.includes("UCO BANK")) {
+      displayOrg = "UCO BANK";
+    } else if (cleanT.includes("SBI") || cleanT.includes("STATE BANK")) {
+      displayOrg = "STATE BANK OF INDIA";
+    } else if (cleanT.includes("POLICE") || cleanT.includes("UP POLICE")) {
+      displayOrg = "POLICE DEPARTMENT";
+    } else if (cleanT.includes("RAILWAY") || cleanT.includes("RRB")) {
+      displayOrg = "INDIAN RAILWAYS";
+    } else if (cleanT.includes("SSC")) {
+      displayOrg = "STAFF SELECTION COMMISSION";
+    } else if (cleanT.includes("UPSC")) {
+      displayOrg = "UPSC COMMISSION";
+    } else {
+      const words = cleanT.split(" ");
+      displayOrg = words.slice(0, 3).join(" ");
     }
 
-    const formattedCategory = category
-      .replace(/-/g, " ")
-      .replace("latest jobs", "SARKARI BHARTI 2026")
-      .replace("results", "SARKARI RESULT OUT")
-      .replace("admit card", "ADMIT CARD RELEASED")
-      .replace("answer key", "ANSWER KEY RELEASED")
-      .replace("admission", "ADMISSION 2026")
-      .toUpperCase();
-
-    // 6 Master High-CTR Category Themes
-    const theme = category.includes("result")
-      ? { bg: "linear-gradient(135deg, #022c22 0%, #065f46 50%, #047857 100%)", badgeBg: "#10b981", accent: "#34d399", label: "🏆 SARKARI RESULT" }
-      : category.includes("admit")
-      ? { bg: "linear-gradient(135deg, #451a03 0%, #9a3412 50%, #c2410c 100%)", badgeBg: "#f97316", accent: "#fb923c", label: "🪪 OFFICIAL ADMIT CARD" }
-      : category.includes("answer")
-      ? { bg: "linear-gradient(135deg, #4c0519 0%, #881337 50%, #be123c 100%)", badgeBg: "#f43f5e", accent: "#fb7185", label: "📋 OFFICIAL ANSWER KEY" }
-      : category.includes("admission")
-      ? { bg: "linear-gradient(135deg, #2e1065 0%, #581c87 50%, #6b21a8 100%)", badgeBg: "#a855f7", accent: "#c084fc", label: "🎓 ADMISSION 2026" }
-      : category.includes("news")
-      ? { bg: "linear-gradient(135deg, #0c4a6e 0%, #0369a1 50%, #0284c7 100%)", badgeBg: "#0ea5e9", accent: "#38bdf8", label: "📰 SARKARI NEWS UPDATE" }
-      : { bg: "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #312e81 100%)", badgeBg: "#4f46e5", accent: "#fbbf24", label: "💼 LATEST SARKARI JOB" };
-
-    // Adaptive 4-Metric Grid Configuration
-    let card1Label = "TOTAL VACANCIES";
-    let card1Val = vacancies ? `${vacancies} Posts` : "Notification Out";
-    let card1Color = theme.accent;
-
-    let card2Label = "START DATE";
-    let card2Val = startDate || "Online / Offline";
-    let card2Color = "#38BDF8";
-
-    let card3Label = "LAST DATE";
-    let card3Val = lastDate || "Check Notice";
-    let card3Color = "#F43F5E";
-
-    let card4Label = "ELIGIBILITY";
-    let card4Val = qualification || (state && state !== "ALL" ? `${state} Govt` : "10th/12th/Graduate");
-    let card4Color = "#A7F3D0";
-
-    if (category.includes("result")) {
-      card1Label = "RESULT STATUS"; card1Val = "Declared / Scorecard"; card1Color = "#34D399";
-      card2Label = "RESULT DATE"; card2Val = lastDate || "Today Live"; card2Color = "#FDE047";
-      card3Label = "MERIT LIST"; card3Val = "PDF Available"; card3Color = "#60A5FA";
-      card4Label = "VACANCIES"; card4Val = vacancies ? `${vacancies} Posts` : "All Candidates"; card4Color = "#C084FC";
-    } else if (category.includes("admit")) {
-      card1Label = "ADMIT CARD"; card1Val = "Download Live"; card1Color = "#FB923C";
-      card2Label = "EXAM DATE"; card2Val = lastDate || "Check Notification"; card2Color = "#FDE047";
-      card3Label = "HALL TICKET"; card3Val = "Direct Link"; card3Color = "#34D399";
-      card4Label = "EXAM SHIFT"; card4Val = "Shift Wise"; card4Color = "#E879F9";
+    let displaySub = subheading;
+    if (!displaySub) {
+      if (cleanT.includes("GDS") || cleanT.includes("DAK SEVAK")) displaySub = "GRAMIN DAK SEVAK POSTS";
+      else if (cleanT.includes("LBO") || cleanT.includes("LOCAL BANK")) displaySub = "LOCAL BANK OFFICER";
+      else if (cleanT.includes("MANAGER")) displaySub = "MANAGER VACANCIES";
+      else if (cleanT.includes("CONSTABLE")) displaySub = "CONSTABLE & SI RECRUITMENT";
+      else if (cleanT.includes("NTPC")) displaySub = "NON-TECHNICAL POPULAR CATEGORY";
+      else displaySub = "OFFICIAL NOTIFICATION RELEASED";
     }
+
+    const defaultSalary = salary || (cleanT.includes("GDS") ? "₹10,000 TO ₹29,380" : cleanT.includes("BANK") ? "₹48,480 TO ₹85,920" : "as per rules");
+    const defaultAge = ageLimit || (cleanT.includes("GDS") ? "18 TO 40 YEARS" : "18 TO 30 YEARS");
+    const defaultLocation = location && location !== "ALL" ? location : "ACROSS INDIA";
+    const defaultSelection = selection || (cleanT.includes("GDS") ? "10th MERIT LIST" : "ONLINE TEST + INTERVIEW");
 
     return new ImageResponse(
       (
@@ -92,228 +64,291 @@ export async function GET(req: NextRequest) {
             height: "100%",
             width: "100%",
             display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
+            flexDirection: "row",
+            alignItems: "stretch",
             justifyContent: "space-between",
-            background: theme.bg,
-            padding: "44px 52px",
+            background: "linear-gradient(135deg, #060913 0%, #0f172a 40%, #1e1b4b 100%)",
             fontFamily: "sans-serif",
             color: "#FFFFFF",
             position: "relative",
+            overflow: "hidden",
           }}
         >
-          {/* Top Bar: Category Pill + Org Badge + State Badge + Verified Seal */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", flexWrap: "nowrap" }}>
-            <div
-              style={{
-                backgroundColor: theme.badgeBg,
-                color: "#FFFFFF",
-                padding: "8px 20px",
-                borderRadius: "24px",
-                fontSize: "16px",
-                fontWeight: 900,
-                letterSpacing: "0.8px",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
-              }}
-            >
-              {formattedCategory}
-            </div>
-
-            <div
-              style={{
-                backgroundColor: "rgba(255,255,255,0.15)",
-                color: "#FFFFFF",
-                padding: "8px 18px",
-                borderRadius: "24px",
-                fontSize: "15px",
-                fontWeight: 800,
-                border: "1px solid rgba(255,255,255,0.25)",
-              }}
-            >
-              {orgBadge}
-            </div>
-
-            {state && state !== "ALL" && (
+          {/* LEFT PANEL (65% Width) — Typography & Dynamic Chips */}
+          <div
+            style={{
+              width: "65%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              padding: "36px 40px 0px 44px",
+              position: "relative",
+              zIndex: 10,
+            }}
+          >
+            {/* Main Header Typography */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               <div
                 style={{
-                  backgroundColor: "rgba(255,255,255,0.15)",
+                  fontSize: displayOrg.length > 20 ? "34px" : "44px",
+                  fontWeight: 900,
                   color: "#FFFFFF",
-                  padding: "8px 16px",
-                  borderRadius: "24px",
-                  fontSize: "15px",
-                  fontWeight: 800,
-                  border: "1px solid rgba(255,255,255,0.25)",
+                  letterSpacing: "1px",
+                  textShadow: "0 4px 12px rgba(0,0,0,0.8)",
+                  lineHeight: "1.1",
                 }}
               >
-                📍 {state}
+                {displayOrg}
+              </div>
+
+              <div
+                style={{
+                  fontSize: "36px",
+                  fontWeight: 900,
+                  color: "#FACC15",
+                  letterSpacing: "0.5px",
+                  textShadow: "0 4px 12px rgba(0,0,0,0.8)",
+                  lineHeight: "1.1",
+                }}
+              >
+                RECRUITMENT 2026
+              </div>
+
+              {/* Subheading Badge Pill */}
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  color: "#0F172A",
+                  padding: "6px 16px",
+                  borderRadius: "8px",
+                  fontSize: "18px",
+                  fontWeight: 900,
+                  letterSpacing: "0.5px",
+                  alignSelf: "flex-start",
+                  marginTop: "6px",
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+                }}
+              >
+                {displaySub}
+              </div>
+            </div>
+
+            {/* Red Vacancies Pill */}
+            {vacancies && (
+              <div
+                style={{
+                  backgroundColor: "#DC2626",
+                  color: "#FFFFFF",
+                  padding: "8px 18px",
+                  borderRadius: "12px",
+                  fontSize: "24px",
+                  fontWeight: 900,
+                  border: "2px solid #FEF08A",
+                  alignSelf: "flex-start",
+                  margin: "8px 0",
+                  boxShadow: "0 4px 14px rgba(220,38,38,0.5)",
+                }}
+              >
+                🔥 {vacancies} VACANCIES / POSTS
               </div>
             )}
 
-            <div
-              style={{
-                backgroundColor: "rgba(234, 179, 8, 0.25)",
-                color: "#FDE047",
-                padding: "8px 18px",
-                borderRadius: "24px",
-                fontSize: "14px",
-                fontWeight: 800,
-                border: "1px solid rgba(234, 179, 8, 0.4)",
-                marginLeft: "auto",
-              }}
-            >
-              🏅 100% VERIFIED SARKARI UPDATE
+            {/* 4 Fact Metric Chips (Graphic Designer Pill Grid) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+              <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                {/* Salary Chip */}
+                <div
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    color: "#0F172A",
+                    borderRadius: "10px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>💰</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 800 }}>SALARY</span>
+                    <span style={{ fontSize: "13px", fontWeight: 900, color: "#DC2626" }}>{defaultSalary}</span>
+                  </div>
+                </div>
+
+                {/* Age Limit Chip */}
+                <div
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    color: "#0F172A",
+                    borderRadius: "10px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>🎂</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 800 }}>AGE LIMIT</span>
+                    <span style={{ fontSize: "13px", fontWeight: 900, color: "#0F172A" }}>{defaultAge}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+                {/* Location Chip */}
+                <div
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    color: "#0F172A",
+                    borderRadius: "10px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>📍</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 800 }}>JOB LOCATION</span>
+                    <span style={{ fontSize: "13px", fontWeight: 900, color: "#0F172A" }}>{defaultLocation}</span>
+                  </div>
+                </div>
+
+                {/* Selection Chip */}
+                <div
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#FFFFFF",
+                    color: "#0F172A",
+                    borderRadius: "10px",
+                    padding: "8px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  <span style={{ fontSize: "18px" }}>📝</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: "10px", color: "#64748B", fontWeight: 800 }}>SELECTION</span>
+                    <span style={{ fontSize: "13px", fontWeight: 900, color: "#2563EB" }}>{defaultSelection}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom CTA Ribbon (Red Notification Out + Yellow Apply Now) */}
+            <div style={{ display: "flex", width: "100%", height: "54px", marginTop: "12px" }}>
+              <div
+                style={{
+                  backgroundColor: "#DC2626",
+                  color: "#FFFFFF",
+                  fontSize: "20px",
+                  fontWeight: 900,
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "0 24px",
+                  borderTopLeftRadius: "12px",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                NOTIFICATION OUT
+              </div>
+              <div
+                style={{
+                  backgroundColor: "#FACC15",
+                  color: "#0F172A",
+                  fontSize: "22px",
+                  fontWeight: 900,
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "0 28px",
+                  borderTopRightRadius: "12px",
+                  letterSpacing: "0.5px",
+                  boxShadow: "0 -2px 10px rgba(250,204,21,0.4)",
+                }}
+              >
+                APPLY NOW ➔
+              </div>
             </div>
           </div>
 
-          {/* Main Title Box */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", margin: "16px 0" }}>
-            <div
-              style={{
-                fontSize: title.length > 70 ? "30px" : title.length > 45 ? "35px" : "40px",
-                fontWeight: 900,
-                lineHeight: "1.25",
-                color: "#FFFFFF",
-                textShadow: "0 4px 18px rgba(0,0,0,0.6)",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                wordBreak: "break-word",
-              }}
-            >
-              {title}
-            </div>
-          </div>
-
-          {/* 4 Glassmorphic Fact Metric Cards (Graphic Designer Grid) */}
-          <div style={{ display: "flex", gap: "16px", width: "100%", marginBottom: "16px" }}>
-            {/* Card 1 */}
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
-                borderRadius: "16px",
-                padding: "12px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
-                {card1Label}
-              </span>
-              <span style={{ fontSize: "18px", fontWeight: 900, color: card1Color }}>
-                {card1Val}
-              </span>
-            </div>
-
-            {/* Card 2 */}
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
-                borderRadius: "16px",
-                padding: "12px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
-                {card2Label}
-              </span>
-              <span style={{ fontSize: "18px", fontWeight: 900, color: card2Color }}>
-                {card2Val}
-              </span>
-            </div>
-
-            {/* Card 3 */}
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
-                borderRadius: "16px",
-                padding: "12px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
-                {card3Label}
-              </span>
-              <span style={{ fontSize: "18px", fontWeight: 900, color: card3Color }}>
-                {card3Val}
-              </span>
-            </div>
-
-            {/* Card 4 */}
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.18)",
-                borderRadius: "16px",
-                padding: "12px 16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 800, letterSpacing: "0.5px" }}>
-                {card4Label}
-              </span>
-              <span style={{ fontSize: "18px", fontWeight: 900, color: card4Color }}>
-                {card4Val}
-              </span>
-            </div>
-          </div>
-
-          {/* Footer Highlights & Branding */}
+          {/* RIGHT PANEL (35% Width) — Visual Card + Megaphone Sticker */}
           <div
             style={{
+              width: "35%",
+              height: "100%",
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "space-between",
-              width: "100%",
-              borderTop: "1.5px solid rgba(255,255,255,0.18)",
-              paddingTop: "16px",
+              background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+              borderLeft: "3px solid #FACC15",
+              padding: "28px 24px",
+              position: "relative",
             }}
           >
-            <div style={{ fontSize: "14px", fontWeight: 800, color: "#CBD5E1" }}>
-              ⚡ Updated Live on Official Portal • Rojgar Suvidha
+            {/* Top Right Megaphone Burst Sticker */}
+            <div
+              style={{
+                backgroundColor: "#DC2626",
+                color: "#FFFFFF",
+                padding: "10px 16px",
+                borderRadius: "14px",
+                fontSize: "15px",
+                fontWeight: 900,
+                textAlign: "center",
+                border: "2px solid #FACC15",
+                boxShadow: "0 4px 14px rgba(220,38,38,0.6)",
+                transform: "rotate(3deg)",
+              }}
+            >
+              📢 NOTIFICATION OUT!!!
+            </div>
+
+            {/* Central Organization Graphic Visual Emblem */}
+            <div
+              style={{
+                width: "140px",
+                height: "140px",
+                borderRadius: "28px",
+                backgroundColor: "#1E1B4B",
+                border: "4px solid #FACC15",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
+              }}
+            >
+              <span style={{ fontSize: "48px" }}>
+                {cleanT.includes("GDS") || cleanT.includes("POST") ? "📮" : cleanT.includes("BANK") ? "🏦" : cleanT.includes("POLICE") ? "🛡️" : cleanT.includes("RAILWAY") ? "🚆" : "🏛️"}
+              </span>
+              <span style={{ fontSize: "13px", fontWeight: 900, color: "#FFFFFF", textAlign: "center", padding: "0 6px" }}>
+                {displayOrg.slice(0, 16)}
+              </span>
             </div>
 
             {/* Site Branding Seal */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div
-                style={{
-                  width: "42px",
-                  height: "42px",
-                  borderRadius: "12px",
-                  backgroundColor: "#4F46E5",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "22px",
-                  fontWeight: 900,
-                  color: "#FFFFFF",
-                  boxShadow: "0 4px 14px rgba(79,70,229,0.5)",
-                }}
-              >
-                RS
-              </div>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "20px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.5px" }}>
-                  ROJGAR SUVIDHA
-                </span>
-                <span style={{ fontSize: "12px", color: "#818CF8", fontWeight: 700 }}>
-                  www.rojgarsuvidha.com
-                </span>
-              </div>
+            <div style={{ display: "flex", flexContent: "column", alignItems: "center", gap: "2px", textAlign: "center" }}>
+              <span style={{ fontSize: "16px", fontWeight: 900, color: "#FFFFFF" }}>
+                ROJGAR SUVIDHA
+              </span>
+              <span style={{ fontSize: "12px", color: "#FACC15", fontWeight: 800 }}>
+                www.rojgarsuvidha.com
+              </span>
             </div>
           </div>
         </div>
