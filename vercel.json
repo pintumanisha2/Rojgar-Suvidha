@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/auto-blog/cron",
+      "schedule": "*/30 * * * *"
+    },
+    {
       "path": "/api/admin/job-scout",
       "schedule": "0 0 * * *"
     },
@@ -22,4 +26,5 @@
     }
   ]
 }
+
 
