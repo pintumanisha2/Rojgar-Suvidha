@@ -2189,8 +2189,9 @@ CRITICAL JSON SYNTAX RULE
     console.warn("⚠️  All Gemini API keys exhausted. Switching to Groq fallback...");
 
     const groqModels = [
-      "openai/gpt-oss-120b",     // 120B model — verified active high-capacity model
-      "openai/gpt-oss-20b",      // 20B model — fast, reliable fallback
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
+      "mixtral-8x7b-32768",
     ];
 
     for (const groqModel of groqModels) {
