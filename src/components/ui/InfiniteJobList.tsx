@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Calendar, ChevronRight, Flame, Sparkles, AlertCircle, Clock } from "lucide-react";
 import JobCardSkeleton from "./JobCardSkeleton";
 import { getJobStatusBadge } from "@/lib/jobStatusHelper";
+import SmartHighlightedTitle from "@/components/ui/SmartHighlightedTitle";
 
 const statusMap: Record<string, { label: string; dot: string; text: string; bg: string }> = {
   out:    { label: "Out",     dot: "bg-green-500",  text: "text-green-700 dark:text-green-400",   bg: "bg-green-50 dark:bg-green-900/20" },
@@ -154,8 +155,10 @@ export default function InfiniteJobList({ initialJobs, category }: { initialJobs
                 </div>
               </div>
 
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 leading-snug h-12 flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors relative z-10">
-                <Link href={`/job/${job.slug}`}>{job.title}</Link>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 line-clamp-2 leading-snug min-h-[48px] flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors relative z-10">
+                <Link href={`/job/${job.slug}`}>
+                  <SmartHighlightedTitle title={job.title} isCard />
+                </Link>
               </h3>
 
               <div className="space-y-2 mb-5 relative z-10">

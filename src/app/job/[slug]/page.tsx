@@ -17,6 +17,7 @@ import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import { buildHreflangAlternates, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 import MobileStickyActionBar from "@/components/job/MobileStickyActionBar";
 import { parseJobLinks } from "@/lib/jobLinksParser";
+import SmartHighlightedTitle from "@/components/ui/SmartHighlightedTitle";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";
 
@@ -503,7 +504,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
                 {/* H1 Title */}
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight mb-3 break-words">
-                  {job.title}
+                  <SmartHighlightedTitle title={job.title} />
                 </h1>
 
                 {/* Short Info (subtitle) */}
