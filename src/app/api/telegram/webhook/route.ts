@@ -3,6 +3,7 @@ import { waitUntil } from "@vercel/functions";
 import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
 import { notifySearchEngines } from "@/lib/instant-indexing";
+import { enqueuePostApprovalBacklinks } from "@/lib/backlink-engine";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -356,7 +357,16 @@ export async function POST(request: Request) {
           }).catch((e) => console.warn("Broadcasting error:", e))
         );
 
-        // 8. Instantly notify Google, Bing, Yandex — guaranteed execution via waitUntil
+        // 8. Trigger Post-Approval Backlink Generation (ONLY after Admin approves!)
+        if (finalJobId) {
+          waitUntil(
+            enqueuePostApprovalBacklinks(finalJobId, draft.generated_title, slug).catch((e) =>
+              console.warn("Backlink engine error:", e)
+            )
+          );
+        }
+
+        // 9. Instantly notify Google, Bing, Yandex — guaranteed execution via waitUntil
         // waitUntil() prevents Vercel from killing the background task after response is sent
         waitUntil(
           notifySearchEngines(slug, draft.category || "latest-jobs").then(async () => {
