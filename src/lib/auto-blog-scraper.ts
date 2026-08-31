@@ -968,82 +968,75 @@ async function fetchFullPage(url: string): Promise<{
   return { text: cleanedText, links, rawHtml: workingHtml.slice(0, 2000) };
 }
 
-// ── Fetch NDTV Education News Articles ───────────────────────────────────────
+// ── Fetch Government Education News (PIB + Google News RSS) ──────────────────
 /**
- * Fetch NDTV Education News RSS / HTML feed
+ * Replaces blocked NDTV scraper.
+ * Sources:
+ *   1. PIB (Press Information Bureau) — Official govt press releases, never blocked
+ *   2. Google News RSS — sarkari result 2026 OR admit card 2026 OR govt jobs 2026
  */
 export async function fetchNDTVEducationNews(): Promise<{ title: string; link: string; pubDate: string; description: string }[]> {
   const items: { title: string; link: string; pubDate: string; description: string }[] = [];
   const seen = new Set<string>();
 
-  // 1. Try direct NDTV Education fetch
-  try {
-    const res = await fetch("https://www.ndtv.com/education", {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (res.ok) {
-      const html = await res.text();
-      const linkRegex = /<a\s+[^>]*href=["'](https:\/\/www\.ndtv\.com\/education\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const RSS_SOURCES = [
+    // PIB RSS — official government press releases (never blocked)
+    "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3",
+    // Google News RSS — Sarkari jobs/results/admit card news (English)
+    "https://news.google.com/rss/search?q=sarkari+result+OR+admit+card+OR+government+jobs+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    // Google News RSS — Hindi sarkari naukri
+    "https://news.google.com/rss/search?q=sarkari+naukri+2026+OR+sarkari+result+2026&hl=hi&gl=IN&ceid=IN:hi",
+  ];
+
+  const EDU_FILTER = /result|admit.card|cutoff|cut.off|recruitment|vacancy|apply|answer.key|merit|scholarship|ssc|upsc|rrb|bpsc|uppsc|board|exam|neet|jee|cuet|scorecard|allotment|hall.ticket|sarkari|naukri|notification|government.job|govt.job|ministry|pib/i;
+
+  for (const rssUrl of RSS_SOURCES) {
+    try {
+      const res = await fetch(rssUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+          "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) continue;
+      const xml = await res.text();
+
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
       let match: RegExpExecArray | null;
-      while ((match = linkRegex.exec(html)) !== null) {
-        const url = match[1];
-        const rawText = match[2].replace(/<[^>]+>/g, "").replace(/&#039;/g, "'").replace(/&amp;/g, "&").trim();
-        if (rawText && rawText.length > 20 && !seen.has(url) && !url.includes("/page-") && !url.endsWith("/education") && !url.endsWith("/results")) {
-          seen.add(url);
+      while ((match = itemRegex.exec(xml)) !== null) {
+        const block = match[1];
+        const rawTitle = block.match(/<title[^>]*>(.*?)<\/title>/)?.[1] || "";
+        const title = rawTitle
+          .replace(/<!\[CDATA\[(.*?)\]\]>/gi, "$1")
+          .replace(/\s*-\s*(PIB|Jagran Josh|Hindustan Times|Times of India)$/i, "")
+          .trim();
+        const link =
+          block.match(/<link>(.*?)<\/link>/)?.[1] ||
+          block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+        const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || new Date().toISOString();
+        const desc = block.match(/<description[^>]*>([\s\S]*?)<\/description>/)?.[1]
+          ?.replace(/<!\[CDATA\[(.*?)\]\]>/gi, "$1")
+          ?.replace(/<[^>]+>/g, "")
+          ?.trim() || "";
+
+        if (title && title.length > 15 && link && !seen.has(link) && EDU_FILTER.test(title + " " + desc)) {
+          seen.add(link);
           items.push({
-            title: cleanCompetitorBrands(rawText),
-            link: url,
-            pubDate: new Date().toISOString(),
-            description: rawText,
+            title: cleanCompetitorBrands(title),
+            link,
+            pubDate,
+            description: cleanCompetitorBrands(desc || title),
           });
         }
       }
+    } catch (err: any) {
+      console.warn(`⚠️ News RSS fetch failed:`, err.message);
     }
-  } catch (err: any) {
-    console.warn("⚠️ Direct NDTV Education fetch failed/blocked:", err.message);
+    if (items.length >= 10) break;
   }
 
-  // 2. Fallback to Google News RSS for NDTV Education if direct fetch gets 0 items
-  if (items.length === 0) {
-    try {
-      const gRes = await fetch("https://news.google.com/rss/search?q=site:ndtv.com+education&hl=en-IN&gl=IN&ceid=IN:en", {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
-        },
-        signal: AbortSignal.timeout(12000),
-      });
-      if (gRes.ok) {
-        const xml = await gRes.text();
-        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-        let match: RegExpExecArray | null;
-        while ((match = itemRegex.exec(xml)) !== null) {
-          const block = match[1];
-          const rawTitle = block.match(/<title>(.*?)<\/title>/)?.[1] || "";
-          const title = rawTitle.replace(/\s*-\s*NDTV$/i, "").trim();
-          const link = block.match(/<link>(.*?)<\/link>/)?.[1] || block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
-          const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || new Date().toISOString();
-          if (title && link && !seen.has(link)) {
-            seen.add(link);
-            items.push({
-              title: cleanCompetitorBrands(title),
-              link,
-              pubDate,
-              description: title,
-            });
-          }
-        }
-      }
-    } catch (gErr: any) {
-      console.warn("⚠️ Google News RSS fallback for NDTV failed:", gErr.message);
-    }
-  }
-
-  console.log(`📡 NDTV Education Scraper: ${items.length} news items found`);
+  console.log(`📡 Govt News Scraper (PIB + Google News): ${items.length} education/govt news items found`);
   return items;
 }
 
