@@ -1,9 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -27,6 +30,9 @@ export async function enqueuePostApprovalBacklinks(
   slug: string
 ) {
   try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
     console.log(`🚀 [Backlink Engine] Triggered post-approval backlinks for Job ID: ${jobId} (${slug})`);
 
     const liveJobUrl = `${BASE_URL}/job/${slug}`;
@@ -80,6 +86,9 @@ export async function enqueuePostApprovalBacklinks(
  */
 export async function sendDailyExecutiveReport(): Promise<{ success: boolean; publishedCount: number; backlinksCount: number }> {
   try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return { success: false, publishedCount: 0, backlinksCount: 0 };
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
