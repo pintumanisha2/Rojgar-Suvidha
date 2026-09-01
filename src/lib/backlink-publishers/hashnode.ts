@@ -30,6 +30,7 @@ async function fetchPublicationId(apiKey: string): Promise<string | null> {
       headers: {
         "Authorization": apiKey,
         "Content-Type": "application/json",
+        "User-Agent": "RojgarSuvidhaBot/1.0",
       },
       body: JSON.stringify({
         query: `
@@ -56,6 +57,7 @@ async function fetchPublicationId(apiKey: string): Promise<string | null> {
       cachedPubId = pubId;
       return cachedPubId;
     }
+    console.warn("⚠️ [Hashnode Publisher] fetchPublicationId response:", JSON.stringify(json));
     return null;
   } catch (err: any) {
     console.warn("⚠️ [Hashnode Publisher] Fetch Publication ID error:", err.message);
