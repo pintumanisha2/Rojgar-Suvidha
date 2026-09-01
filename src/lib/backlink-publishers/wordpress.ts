@@ -1,12 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * WORDPRESS.COM REST API v1.1 — REAL AUTO-PUBLISHER
+ * WORDPRESS.COM REST API — REAL AUTO-PUBLISHER
  * ═══════════════════════════════════════════════════════════════════
  * Publishes satellite blog posts to your official WordPress.com blog (DA-92)
- *
- * Required ENV vars (in Vercel):
- *   WORDPRESS_SITE_URL     — e.g. "rojgarsuvidha.wordpress.com"
- *   WORDPRESS_ACCESS_TOKEN — OAuth2 Token from developer.wordpress.com/apps
+ * Supports:
+ *  1. WORDPRESS_ACCESS_TOKEN (Bearer Token)
+ *  2. WORDPRESS_CLIENT_ID + WORDPRESS_CLIENT_SECRET + WORDPRESS_USERNAME + WORDPRESS_PASSWORD (Password Grant)
+ *  3. WORDPRESS_USERNAME + WORDPRESS_APP_PASSWORD (Basic Auth)
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
@@ -15,8 +15,48 @@ function getWpCredentials() {
   return {
     SITE_URL: process.env.WORDPRESS_SITE_URL,
     ACCESS_TOKEN: process.env.WORDPRESS_ACCESS_TOKEN,
+    CLIENT_ID: process.env.WORDPRESS_CLIENT_ID,
+    CLIENT_SECRET: process.env.WORDPRESS_CLIENT_SECRET,
+    USERNAME: process.env.WORDPRESS_USERNAME,
+    PASSWORD: process.env.WORDPRESS_PASSWORD || process.env.WORDPRESS_APP_PASSWORD,
     GEMINI_KEY: process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY,
   };
+}
+
+let cachedAccessToken: string | null = null;
+
+async function getWpAccessToken(): Promise<string | null> {
+  const { ACCESS_TOKEN, CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD } = getWpCredentials();
+
+  if (ACCESS_TOKEN) return ACCESS_TOKEN;
+  if (cachedAccessToken) return cachedAccessToken;
+
+  // Try Password Grant OAuth token exchange for WordPress.com Developer Apps
+  if (CLIENT_ID && CLIENT_SECRET && USERNAME && PASSWORD) {
+    try {
+      const res = await fetch("https://public-api.wordpress.com/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          grant_type: "password",
+          username: USERNAME,
+          password: PASSWORD,
+        }).toString(),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        cachedAccessToken = data.access_token;
+        return cachedAccessToken;
+      }
+    } catch (err: any) {
+      console.warn("⚠️ [WordPress] Password grant token error:", err.message);
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -63,52 +103,75 @@ export async function publishToWordPress(params: {
   slug: string;
   category?: string;
 }): Promise<string | null> {
-  const { SITE_URL, ACCESS_TOKEN, GEMINI_KEY } = getWpCredentials();
+  const { SITE_URL, USERNAME, PASSWORD, GEMINI_KEY } = getWpCredentials();
 
-  if (!SITE_URL || !ACCESS_TOKEN) {
-    console.log("ℹ️ [WordPress Publisher] WORDPRESS_SITE_URL or WORDPRESS_ACCESS_TOKEN not set — skipping.");
+  if (!SITE_URL) {
+    console.log("ℹ️ [WordPress Publisher] WORDPRESS_SITE_URL not set — skipping.");
     return null;
   }
 
-  const jobUrl = `${BASE_URL}/job/${slugToClean(params.slug)}`;
+  const token = await getWpAccessToken();
+  const cleanSite = SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const contentHtml = await generateWpContent(params.title, params.slug, GEMINI_KEY);
 
-  const cleanSite = SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  // Method 1: OAuth Bearer Token
+  if (token) {
+    try {
+      const res = await fetch(
+        `https://public-api.wordpress.com/rest/v1.1/sites/${cleanSite}/posts/new`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: `${params.title} — Recruitment 2026`,
+            content: contentHtml,
+            tags: ["sarkari naukri", "government jobs", "recruitment", "rojgar suvidha"],
+            categories: ["Government Jobs"],
+            status: "publish",
+          }),
+          signal: AbortSignal.timeout(15000),
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data?.URL) {
+        console.log(`✅ [WordPress Publisher] Published via Bearer Token: ${data.URL}`);
+        return data.URL;
+      }
+    } catch (err: any) {
+      console.warn("⚠️ [WordPress Publisher] Bearer post error:", err.message);
+    }
+  }
 
-  try {
-    const res = await fetch(
-      `https://public-api.wordpress.com/rest/v1.1/sites/${cleanSite}/posts/new`,
-      {
+  // Method 2: Basic Auth (Username + Application Password)
+  if (USERNAME && PASSWORD) {
+    try {
+      const authHeader = "Basic " + Buffer.from(`${USERNAME}:${PASSWORD}`).toString("base64");
+      const res = await fetch(`https://${cleanSite}/wp-json/wp/v2/posts`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${ACCESS_TOKEN}`,
+          "Authorization": authHeader,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           title: `${params.title} — Recruitment 2026`,
           content: contentHtml,
-          tags: ["sarkari naukri", "government jobs", "recruitment", "rojgar suvidha"],
-          categories: ["Government Jobs"],
           status: "publish",
         }),
         signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (res.ok && data?.link) {
+        console.log(`✅ [WordPress Publisher] Published via Basic Auth: ${data.link}`);
+        return data.link;
       }
-    );
-    const data = await res.json();
-
-    if (res.ok && data?.URL) {
-      console.log(`✅ [WordPress Publisher] Published: ${data.URL}`);
-      return data.URL;
-    } else {
-      console.warn("⚠️ [WordPress Publisher] API error:", JSON.stringify(data));
-      return null;
+    } catch (err: any) {
+      console.warn("⚠️ [WordPress Publisher] Basic Auth post error:", err.message);
     }
-  } catch (err: any) {
-    console.warn("⚠️ [WordPress Publisher] Exception:", err.message);
-    return null;
   }
-}
 
-function slugToClean(s: string) {
-  return s ? s.trim() : "";
+  console.warn("⚠️ [WordPress Publisher] No valid authentication method succeeded.");
+  return null;
 }
