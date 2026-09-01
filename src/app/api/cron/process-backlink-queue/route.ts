@@ -25,6 +25,8 @@ import { publishToGitlab } from "@/lib/backlink-publishers/gitlab";
 import { publishToTumblr } from "@/lib/backlink-publishers/tumblr";
 import { publishToPastebin } from "@/lib/backlink-publishers/pastebin";
 import { publishToNotion } from "@/lib/backlink-publishers/notion";
+import { publishToLivejournal } from "@/lib/backlink-publishers/livejournal";
+import { publishToGitbook } from "@/lib/backlink-publishers/gitbook";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -145,6 +147,20 @@ export async function GET(request: Request) {
       });
     } else if (queuedItem.platform === "notion") {
       publishedUrl = await publishToNotion({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "livejournal") {
+      publishedUrl = await publishToLivejournal({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "gitbook") {
+      publishedUrl = await publishToGitbook({
         jobId: queuedItem.job_id,
         title: job.title,
         slug: job.slug,

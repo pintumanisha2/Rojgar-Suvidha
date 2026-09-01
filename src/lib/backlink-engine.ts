@@ -57,8 +57,10 @@ export async function enqueuePostApprovalBacklinks(
       { platform: "wordpress", anchor: pickAnchor(3) },
       { platform: "telegraph", anchor: pickAnchor(4) },
       { platform: "devto",     anchor: pickAnchor(5) },
-      { platform: "pastebin",  anchor: pickAnchor(6) },
-      { platform: "notion",    anchor: pickAnchor(7) },
+      { platform: "pastebin",    anchor: pickAnchor(6) },
+      { platform: "notion",      anchor: pickAnchor(7) },
+      { platform: "livejournal", anchor: pickAnchor(8) },
+      { platform: "gitbook",     anchor: pickAnchor(9) },
     ];
 
     const insertRecords: BacklinkRecord[] = platforms.map((p) => ({
