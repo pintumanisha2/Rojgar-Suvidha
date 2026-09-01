@@ -185,17 +185,15 @@ export async function GET(request: Request) {
         .update({ status: "failed" })
         .eq("id", queuedItem.id);
 
-      if (queuedItem.platform === 'tumblr') {
+      if (queuedItem.platform === 'pastebin') {
         return NextResponse.json({
           ok: true,
           processed: 0,
           platform: queuedItem.platform,
           message: `Publisher for '${queuedItem.platform}' returned null`,
           debugEnv: {
-            TUMBLR_BLOG_NAME: process.env.TUMBLR_BLOG_NAME || "NOT_SET",
-            TUMBLR_CONSUMER_KEY_present: !!process.env.TUMBLR_CONSUMER_KEY,
-            TUMBLR_CONSUMER_SECRET_present: !!process.env.TUMBLR_CONSUMER_SECRET,
-            lastTumblrError: (globalThis as any)._lastTumblrError || "No detailed error captured",
+            PASTEBIN_API_KEY_present: !!(process.env.PASTEBIN_API_KEY || process.env.PASTEBIN_DEV_KEY),
+            PASTEBIN_API_KEY_preview: (process.env.PASTEBIN_API_KEY || process.env.PASTEBIN_DEV_KEY || "").slice(0, 6) + "...",
           }
         });
       }
