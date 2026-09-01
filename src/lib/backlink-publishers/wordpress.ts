@@ -69,38 +69,21 @@ async function getWpAccessToken(): Promise<string | null> {
 }
 
 /**
- * Generate unique article for WordPress satellite blog using Gemini AI
+ * Generate unique 250-300 word article for WordPress via centralized content generator
  */
-async function generateWpContent(title: string, slug: string, geminiKey?: string): Promise<string> {
+async function generateWpContent(title: string, slug: string, _geminiKey?: string): Promise<string> {
   const jobUrl = `${BASE_URL}/job/${slug}`;
   const defaultHtml = `<p>A new recruitment notification has been announced for <strong>${title}</strong>. Candidates searching for government vacancies in India can check the complete eligibility details, selection process, and application procedure.</p><p>For full details, official notification PDF, and direct apply link, visit <a href="${jobUrl}" rel="dofollow"><strong>Rojgar Suvidha — Official Notification</strong></a>.</p>`;
 
-  if (!geminiKey) return defaultHtml;
-
-  const prompt = `Write a 200-250 word engaging satellite blog post in English about this government job: "${title}".
-Rules:
-- Write UNIQUE content, not copied from official site.
-- Include key sections: Notification Overview, Who Can Apply, Selection Criteria.
-- Include a clear call to action link to "${jobUrl}" with anchor text "Rojgar Suvidha Official Portal".
-- Format in HTML (<p>, <h3>, <ul>, <li>, <strong>, <a>).`;
-
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        signal: AbortSignal.timeout(20000),
-      }
-    );
-    const data = await res.json();
-    const html = data?.candidates?.[0]?.content?.parts?.[0]?.text || defaultHtml;
-    return html.trim();
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("wordpress", title, slug);
+    return result.body || defaultHtml;
   } catch {
     return defaultHtml;
   }
 }
+
 
 /**
  * Publish a post to WordPress.com via REST API

@@ -37,8 +37,22 @@ export async function publishToDevto(params: {
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
-  const mdBody = `---
-title: ${params.title} — Notification & Eligibility
+  // Generate unique Markdown article for Dev.to (career guide angle)
+  let mdBody: string;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("devto", params.title, params.slug);
+    mdBody = `---
+title: ${result.title}
+published: true
+tags: ${(result.tags || ["sarkari-naukri", "government-jobs", "india", "career"]).join(", ")}
+canonical_url: ${jobUrl}
+---
+
+${result.body}`;
+  } catch {
+    mdBody = `---
+title: ${params.title} — Government Job 2026
 published: true
 tags: jobs, career, india, sarkari
 canonical_url: ${jobUrl}
@@ -46,14 +60,11 @@ canonical_url: ${jobUrl}
 
 # ${params.title}
 
-A new government recruitment notification has been announced across India. Candidates searching for government vacancies can check complete qualification criteria, application fees, and selection procedures.
+A new government recruitment notification has been announced. Check complete eligibility and apply online at [Rojgar Suvidha](${jobUrl}).
 
-## Quick Highlights & Direct Apply Link
+📢 *Join [Telegram @govermentform](https://t.me/govermentform) for instant alerts.*`.trim();
+  }
 
-Read the official notification PDF, eligibility breakdown, and access the direct online apply form at [Rojgar Suvidha — Official Portal](${jobUrl}).
-
-📢 *For real-time exam alerts, join [Rojgar Suvidha Telegram](https://t.me/govermentform).*
-`.trim();
 
   try {
     const res = await fetch("https://dev.to/api/articles", {

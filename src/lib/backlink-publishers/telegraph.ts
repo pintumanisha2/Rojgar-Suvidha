@@ -48,45 +48,40 @@ export async function publishToTelegraph(params: {
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
-  // Telegraph API uses JSON DOM Node structure
-  const contentNodes = [
-    {
-      tag: "p",
-      children: [
-        "A new government job notification has been announced for ",
-        { tag: "strong", children: [params.title] },
-        ". Candidates looking for government employment in India can check complete vacancy details, qualification criteria, and application procedure."
-      ]
-    },
-    {
-      tag: "h4",
-      children: ["Key Highlights & Application Direct Link"]
-    },
-    {
-      tag: "p",
-      children: [
-        "Read the official advertisement notification, eligibility breakdown, and access the direct online apply form at ",
-        {
-          tag: "a",
-          attrs: { href: jobUrl, target: "_blank" },
-          children: ["Rojgar Suvidha Official Portal"]
-        },
-        "."
-      ]
-    },
-    {
-      tag: "p",
-      children: [
-        "📢 For instant government exam & sarkari result alerts on Telegram, join ",
-        {
-          tag: "a",
-          attrs: { href: "https://t.me/govermentform" },
-          children: ["@govermentform"]
-        },
-        "."
-      ]
+  // Generate unique AI content for Telegraph
+  let uniqueContent: string | null = null;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("telegraph", params.title, params.slug);
+    uniqueContent = result.body;
+  } catch {
+    uniqueContent = null;
+  }
+
+  // Parse HTML into Telegraph-compatible JSON nodes or use fallback
+  const buildNodes = (html: string | null) => {
+    if (!html) {
+      return [
+        { tag: "p", children: [`A new government job notification has been announced: `, { tag: "strong", children: [params.title] }, `. Check complete eligibility, vacancy details, and the official application link at Rojgar Suvidha.`] },
+        { tag: "p", children: [`📌 Full details: `, { tag: "a", attrs: { href: jobUrl }, children: ["Rojgar Suvidha Official Portal"] }, `.`] },
+        { tag: "p", children: [`📢 Join `, { tag: "a", attrs: { href: "https://t.me/govermentform" }, children: ["@govermentform"] }, ` on Telegram for instant job alerts.`] },
+      ];
     }
-  ];
+
+    // Convert simple HTML to telegraph nodes
+    const stripped = html.replace(/<\/?(?:h[1-6]|ul|li|br)[^>]*>/gi, "\n").replace(/<b[^>]*>(.*?)<\/b>/gi, "$1").replace(/<\/?p[^>]*>/gi, "\n");
+    const lines = stripped.split("\n").map(l => l.trim()).filter(Boolean);
+    const nodes: any[] = lines.map(line => {
+      if (line.includes(jobUrl)) {
+        return { tag: "p", children: [`📌 Full details & apply: `, { tag: "a", attrs: { href: jobUrl }, children: ["Rojgar Suvidha"] }] };
+      }
+      return { tag: "p", children: [line] };
+    });
+    nodes.push({ tag: "p", children: [`📢 Telegram alerts: `, { tag: "a", attrs: { href: "https://t.me/govermentform" }, children: ["@govermentform"] }] });
+    return nodes;
+  };
+
+  const contentNodes = buildNodes(uniqueContent);
 
   try {
     const paramsBody = new URLSearchParams({
@@ -118,3 +113,4 @@ export async function publishToTelegraph(params: {
     return null;
   }
 }
+

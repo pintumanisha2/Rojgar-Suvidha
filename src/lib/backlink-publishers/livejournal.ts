@@ -37,12 +37,15 @@ export async function publishToLivejournal(params: {
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
-  const eventHtml = `
-    <h2>${params.title} — Recruitment 2026 Notification</h2>
-    <p>A new government job notification has been released across India. Candidates searching for latest sarkari naukri vacancies can check complete eligibility criteria, application fees, age limits, and selection procedures.</p>
-    <p><strong>Official Notification & Online Application Portal:</strong> <a href="${jobUrl}" target="_blank" rel="dofollow"><strong>Rojgar Suvidha — Official Application Link</strong></a></p>
-    <p>📢 <em>Join Telegram Channel <a href="https://t.me/govermentform">@govermentform</a> for daily job alerts.</em></p>
-  `.trim();
+  // Generate unique personal blog-style HTML for LiveJournal
+  let eventHtml: string;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("livejournal", params.title, params.slug);
+    eventHtml = result.body;
+  } catch {
+    eventHtml = `<h2>${params.title} — Recruitment 2026</h2><p>A new government job notification has been released! Check complete eligibility and apply at <a href="${jobUrl}">Rojgar Suvidha</a>.</p><p>📢 <em>Join <a href="https://t.me/govermentform">@govermentform</a> on Telegram for daily job alerts.</em></p>`;
+  }
 
   const now = new Date();
 
@@ -70,7 +73,9 @@ export async function publishToLivejournal(params: {
       signal: AbortSignal.timeout(15000),
     });
 
-    const lines = responseText.split("\n").map((l) => l.trim());
+    const responseText = await res.text();
+    const lines = responseText.split("\n").map((l: string) => l.trim());
+
 
     // LiveJournal flat interface returns line-by-line key/value format
     const urlIdx = lines.indexOf("url");

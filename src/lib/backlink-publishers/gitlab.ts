@@ -32,21 +32,19 @@ export async function publishToGitlab(params: {
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
-  const mdContent = `# ${params.title} — Recruitment 2026
-
-A new government job notification has been released for **${params.title}**.
-
-Eligible candidates searching for government jobs in India can check the complete eligibility details, selection process, and application procedure.
-
-## Official Apply Online Link
-
-Visit the official portal [Rojgar Suvidha](${jobUrl}) for the complete notification, direct apply link, and step-by-step application guide.
-
-📢 *Join Telegram [@govermentform](https://t.me/govermentform) for instant government job alerts.*
-`.trim();
+  // Generate unique Markdown for GitLab (README/reference document angle)
+  let mdContent: string;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("gitlab", params.title, params.slug);
+    mdContent = result.body;
+  } catch {
+    mdContent = `# ${params.title} — Recruitment 2026\n\nA new government job notification has been released. Check complete eligibility and apply at [Rojgar Suvidha](${jobUrl}).\n\n📢 *Join [@govermentform](https://t.me/govermentform) on Telegram.*`;
+  }
 
   const safeSlug = params.slug.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 35);
   const fileName = `${safeSlug}-job-notification.md`;
+
 
   try {
     const res = await fetch("https://gitlab.com/api/v4/snippets", {

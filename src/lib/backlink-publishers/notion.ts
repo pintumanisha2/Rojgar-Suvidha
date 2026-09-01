@@ -71,30 +71,30 @@ export async function publishToNotion(params: {
           ],
         },
         children: [
-          {
+        {
             object: "block",
             type: "heading_2",
             heading_2: {
-              rich_text: [
-                {
-                  text: { content: `${params.title} (Recruitment 2026)` },
-                },
-              ],
+              rich_text: [{ text: { content: `${params.title} (Recruitment 2026)` } }],
             },
           },
-          {
-            object: "block",
-            type: "paragraph",
-            paragraph: {
-              rich_text: [
-                {
-                  text: {
-                    content: "A new government job recruitment notification has been released across India. Candidates searching for latest sarkari naukri alerts can check complete qualification details, age limits, and online application procedures.",
-                  },
-                },
-              ],
-            },
-          },
+          ...(await (async () => {
+            let introText = "A new government job recruitment notification has been released across India. Candidates searching for latest sarkari naukri alerts can check complete qualification details, age limits, and online application procedures.";
+            try {
+              const { generatePlatformContent } = await import("./content-generator");
+              const result = await generatePlatformContent("notion", params.title, params.slug);
+              // Extract first non-empty line from markdown as intro
+              const firstPara = result.plainText.split("\n").find(l => l.trim().length > 50);
+              if (firstPara) introText = firstPara.trim().slice(0, 600);
+            } catch { /* use default */ }
+            return [{
+              object: "block",
+              type: "paragraph",
+              paragraph: {
+                rich_text: [{ text: { content: introText } }],
+              },
+            }];
+          })()),
           {
             object: "block",
             type: "callout",

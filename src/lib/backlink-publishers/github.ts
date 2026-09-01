@@ -24,23 +24,20 @@ export async function publishToGithub(params: {
 }): Promise<string | null> {
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
-  const mdContent = `# ${params.title} — Notification Overview
-
-A new government recruitment notification has been published for **${params.title}**. 
-
-Eligible candidates across India can check the complete eligibility details, vacancy distribution, application fee, and selection process.
-
-## Official Links & Application Guide
-
-- **Official Portal:** [Rojgar Suvidha — Direct Apply Link](${jobUrl})
-- **Updates Channel:** [Telegram Alert @govermentform](https://t.me/govermentform)
-
-*This is an automated educational summary. For official notifications, visit [Rojgar Suvidha](${jobUrl}).*
-`.trim();
+  // Generate unique Markdown content for GitHub Gist
+  let mdContent: string;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("github", params.title, params.slug);
+    mdContent = result.body;
+  } catch {
+    mdContent = `# ${params.title} — Recruitment 2026\n\nA new government recruitment notification has been published.\n\n## Apply Online\n\n- [Rojgar Suvidha — Direct Apply Link](${jobUrl})\n- [Telegram Alerts @govermentform](https://t.me/govermentform)\n\n*For official details, visit [Rojgar Suvidha](${jobUrl}).*`;
+  }
 
   // Sanitize filename for GitHub Gist
   const safeSlug = params.slug.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 35);
   const fileName = `${safeSlug}-recruitment-2026.md`;
+
 
   const token = getGithubToken();
 

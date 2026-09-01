@@ -61,41 +61,22 @@ async function getBloggerAccessToken(): Promise<string | null> {
 }
 
 /**
- * Generate a 200-word unique teaser using Gemini AI
- * (0% duplicate content — never copies from main blog)
+ * Generate a 400-500 word unique Blogger article using centralized content generator
+ * (0% duplicate content across all platforms — unique angle per platform)
  */
-async function generateBloggerTeaser(title: string, slug: string, geminiKey?: string): Promise<string> {
+async function generateBloggerContent(title: string, slug: string): Promise<string> {
   const jobUrl = `${BASE_URL}/job/${slug}`;
-  const defaultHtml = `<p>A new government recruitment notification has been published for <strong>${title}</strong>. Eligible candidates can check complete details including eligibility, vacancy breakdown, application fee, and last date at <a href="${jobUrl}" rel="canonical">Rojgar Suvidha</a>.</p><p>Visit the official portal now to read the complete notification and apply online before the last date.</p>`;
-
-  if (!geminiKey) return defaultHtml;
-
-  const prompt = `Write a 180-200 word unique, engaging blog teaser in English about this government job notification: "${title}".
-
-Rules:
-- DO NOT copy any text from the original notification.
-- Write fresh, unique content from a different angle (e.g., why this opportunity matters for job seekers).
-- End with: "For complete details, eligibility, and apply online link, visit <a href='${jobUrl}' rel='canonical'>Rojgar Suvidha</a>."
-- Return only valid HTML paragraphs. No markdown, no headers.
-- 0% plagiarism. Write as an experienced career advisor speaking to Indian government job aspirants.`;
+  const defaultHtml = `<p>A new government recruitment notification has been published for <strong>${title}</strong>. Eligible candidates can check complete eligibility, vacancy breakdown, application fee, and last date at <a href="${jobUrl}" rel="nofollow ugc">Rojgar Suvidha</a>.</p><p>Visit the official portal now to read the complete notification and apply online before the last date.</p>`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        signal: AbortSignal.timeout(20000),
-      }
-    );
-    const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    return text.trim() || defaultHtml;
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("blogger", title, slug);
+    return result.body || defaultHtml;
   } catch {
     return defaultHtml;
   }
 }
+
 
 /**
  * Pick a random anchor text from the diversity matrix
@@ -129,8 +110,9 @@ export async function publishToBlogger(params: {
   if (!accessToken) return null;
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
-  const teaserHtml = await generateBloggerTeaser(params.title, params.slug, GEMINI_KEY);
+  const teaserHtml = await generateBloggerContent(params.title, params.slug);
   const anchorText = pickAnchorText(params.slug);
+
 
   const categoryLabels: Record<string, string> = {
     "latest-jobs": "Sarkari Naukri",

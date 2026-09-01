@@ -39,29 +39,51 @@ export async function enqueuePostApprovalBacklinks(
 
     const liveJobUrl = `${BASE_URL}/job/${slug}`;
 
-    // Anchor text pool — diversity matrix (40% brand, 35% CTA, 15% URL, 10% topic)
+    // Anchor text pool — diversity matrix (White-Hat best practice):
+    // 40% Brand | 25% CTA | 15% Naked URL | 10% Keyword+Brand | 10% Generic
     const anchors = [
+      "Rojgar Suvidha",                                     // Brand (40%)
       "Rojgar Suvidha",
-      "Check Full Eligibility & Apply Online",
-      liveJobUrl,
-      "View Official Notification & Selection Process",
+      "Rojgar Suvidha",
+      "Rojgar Suvidha",
+      "Check Full Eligibility & Apply Online",              // CTA (25%)
+      "View Official Notification & Apply",
       "Read Complete Notification on Rojgar Suvidha",
+      liveJobUrl,                                           // Naked URL (15%)
+      "Sarkari Naukri Rojgar Suvidha 2026",                 // Keyword+Brand (10%)
+      "Click Here for Latest Job Alerts",                   // Generic (10%)
     ];
-    const pickAnchor = (i: number) => anchors[i % anchors.length];
 
-    // 6 platform records — status 'queued' — cron processes 1 per 15 mins (safe drip)
-    const platforms = [
-      { platform: "blogger",   anchor: pickAnchor(0) },
-      { platform: "github",    anchor: pickAnchor(1) },
-      { platform: "gitlab",    anchor: pickAnchor(2) },
-      { platform: "wordpress", anchor: pickAnchor(3) },
-      { platform: "telegraph", anchor: pickAnchor(4) },
-      { platform: "devto",     anchor: pickAnchor(5) },
-      { platform: "pastebin",    anchor: pickAnchor(6) },
-      { platform: "notion",      anchor: pickAnchor(7) },
-      { platform: "livejournal", anchor: pickAnchor(8) },
-      { platform: "gitbook",     anchor: pickAnchor(9) },
+    // Shuffle anchors for variety across runs
+    const shuffledAnchors = [...anchors].sort(() => Math.random() - 0.5);
+    const pickAnchor = (i: number) => shuffledAnchors[i % shuffledAnchors.length];
+
+    // All 10 available platforms (2 tiers)
+    const tier1 = ["blogger", "github"];     // Always include — highest DA
+    const tier2 = ["gitlab", "wordpress", "gitbook", "devto"];  // Rotate 2 of 4
+    const tier3 = ["telegraph", "notion", "livejournal", "pastebin"]; // Rotate 1 of 4
+
+    // Rotate selection based on job hash for deterministic-but-varied rotation
+    const hashSeed = jobId.charCodeAt(0) + jobId.charCodeAt(jobId.length - 1);
+    const t2offset = hashSeed % tier2.length;
+    const t3offset = (hashSeed + 1) % tier3.length;
+
+    // Pick 2 from tier2 and 1 from tier3 (total = 2 + 2 + 1 = 5)
+    const selectedTier2 = [
+      tier2[t2offset % tier2.length],
+      tier2[(t2offset + 1) % tier2.length],
     ];
+    const selectedTier3 = [tier3[t3offset % tier3.length]];
+
+    // Final 5-platform set for this job
+    const selectedPlatforms = [...tier1, ...selectedTier2, ...selectedTier3];
+
+    console.log(`📍 [Backlink Engine] Selected platforms for job ${jobId.slice(0, 8)}: ${selectedPlatforms.join(", ")}`);
+
+    const platforms = selectedPlatforms.map((platform, i) => ({
+      platform,
+      anchor: pickAnchor(i),
+    }));
 
     const insertRecords: BacklinkRecord[] = platforms.map((p) => ({
       job_id: jobId,
@@ -78,7 +100,7 @@ export async function enqueuePostApprovalBacklinks(
     if (error) {
       console.warn(`⚠️ [Backlink Engine] Insert note: ${error.message}`);
     } else {
-      console.log(`✅ [Backlink Engine] Queued ${insertRecords.length} backlinks for job ID: ${jobId}. Drip-feed cron will publish one every 15 mins.`);
+      console.log(`✅ [Backlink Engine] Queued ${insertRecords.length} backlinks for job ID: ${jobId}. Cron will publish one every 2 hours (White-Hat drip velocity).`);
     }
   } catch (err: any) {
     console.error("❌ [Backlink Engine] Error queuing backlinks:", err.message || err);

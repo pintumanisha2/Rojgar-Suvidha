@@ -33,21 +33,16 @@ export async function publishToPastebin(params: {
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
-  const pasteCode = `
-# ${params.title} — Recruitment 2026 Notification
+  // Generate unique plain text content for Pastebin (quick reference format)
+  let pasteCode: string;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("pastebin", params.title, params.slug);
+    pasteCode = result.plainText;
+  } catch {
+    pasteCode = `${params.title} — Recruitment 2026\n\nA new government job notification has been announced. Check eligibility and apply at:\n${jobUrl}\n\nWebsite: Rojgar Suvidha (https://www.rojgarsuvidha.com)\nTelegram: @govermentform (https://t.me/govermentform)\n\nStay updated with daily sarkari job alerts, admit cards, answer keys & results.`;
+  }
 
-A new government job notification has been announced across India. Candidates searching for sarkari naukri vacancies can check complete qualification details, age limits, and online application procedures.
-
-============================================================
-OFFICIAL NOTIFICATION & APPLY ONLINE PORTAL:
-${jobUrl}
-============================================================
-
-Website: Rojgar Suvidha (https://www.rojgarsuvidha.com)
-Telegram Channel: @govermentform (https://t.me/govermentform)
-
-Stay updated with daily sarkari job alerts, admit cards, answer keys & results.
-`.trim();
 
   try {
     const res = await fetch("https://pastebin.com/api/api_post.php", {
