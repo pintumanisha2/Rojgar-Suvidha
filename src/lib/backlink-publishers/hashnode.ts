@@ -4,19 +4,63 @@
  * ═══════════════════════════════════════════════════════════════════
  * Publishes satellite articles to Hashnode (DA-86) via GraphQL API
  *
- * Required ENV vars (in Vercel):
- *   HASHNODE_API_KEY     — From hashnode.com → Account Settings → Developer
- *   HASHNODE_PUBLICATION_ID — Your Hashnode publication ID
+ * Required ENV var (in Vercel):
+ *   HASHNODE_API_KEY — From hashnode.com → Account Settings → Developer
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
+
+let cachedPubId: string | null = null;
 
 function getHashnodeCredentials() {
   return {
     API_KEY: process.env.HASHNODE_API_KEY?.trim(),
     PUBLICATION_ID: process.env.HASHNODE_PUBLICATION_ID?.trim(),
-    GEMINI_KEY: (process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY)?.trim(),
   };
+}
+
+/**
+ * Automatically fetch user's primary publication ID from Hashnode GraphQL API
+ */
+async function fetchPublicationId(apiKey: string): Promise<string | null> {
+  if (cachedPubId) return cachedPubId;
+  try {
+    const res = await fetch("https://gql.hashnode.com", {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: `
+          query Me {
+            me {
+              id
+              username
+              publications(first: 1) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+            }
+          }
+        `,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const json = await res.json();
+    const pubId = json?.data?.me?.publications?.edges?.[0]?.node?.id;
+    if (pubId) {
+      cachedPubId = pubId;
+      return cachedPubId;
+    }
+    return null;
+  } catch (err: any) {
+    console.warn("⚠️ [Hashnode Publisher] Fetch Publication ID error:", err.message);
+    return null;
+  }
 }
 
 /**
@@ -31,8 +75,14 @@ export async function publishToHashnode(params: {
 }): Promise<string | null> {
   const { API_KEY, PUBLICATION_ID } = getHashnodeCredentials();
 
-  if (!API_KEY || !PUBLICATION_ID) {
-    console.log("ℹ️ [Hashnode Publisher] HASHNODE_API_KEY or HASHNODE_PUBLICATION_ID not set — skipping.");
+  if (!API_KEY) {
+    console.log("ℹ️ [Hashnode Publisher] HASHNODE_API_KEY not set — skipping.");
+    return null;
+  }
+
+  const targetPubId = PUBLICATION_ID || (await fetchPublicationId(API_KEY));
+  if (!targetPubId) {
+    console.warn("⚠️ [Hashnode Publisher] Could not resolve Publication ID.");
     return null;
   }
 
@@ -62,7 +112,7 @@ Read the official notification PDF, eligibility breakdown, and access the direct
 
   const variables = {
     input: {
-      publicationId: PUBLICATION_ID,
+      publicationId: targetPubId,
       title: `${params.title} — Notification Overview`,
       contentMarkdown,
       originalArticleURL: jobUrl,
