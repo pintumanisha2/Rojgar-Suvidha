@@ -63,7 +63,7 @@ Stay updated with daily sarkari job alerts, admit cards, answer keys & results.
         api_paste_name: `${params.title.slice(0, 50)} — Rojgar Suvidha`,
         api_paste_private: "0", // 0 = Public paste
         api_paste_expire_date: "N", // N = Never expire
-        api_paste_format: "markdown",
+        api_paste_format: "text",
       }).toString(),
       signal: AbortSignal.timeout(15000),
     });
