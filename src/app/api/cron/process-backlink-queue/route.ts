@@ -137,7 +137,7 @@ export async function GET(request: Request) {
         .update({ status: "failed" })
         .eq("id", queuedItem.id);
 
-      return NextResponse.json({ ok: true, processed: 0, message: "Publisher returned null — credentials may be missing" });
+      return NextResponse.json({ ok: true, processed: 0, platform: queuedItem.platform, message: `Publisher for '${queuedItem.platform}' returned null — credentials may be missing or invalid` });
     }
   } catch (err: any) {
     console.error("❌ [Queue Cron] Exception:", err.message);

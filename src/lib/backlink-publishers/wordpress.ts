@@ -199,6 +199,12 @@ export async function publishToWordPress(params: {
     }
   }
 
+  console.warn("⚠️ [WordPress Publisher] Credentials check:", {
+    SITE_URL: !!SITE_URL,
+    USERNAME: !!USERNAME,
+    PASSWORD_present: !!PASSWORD,
+    token_present: !!token,
+  });
   console.warn("⚠️ [WordPress Publisher] No valid authentication method succeeded.");
   return null;
 }
