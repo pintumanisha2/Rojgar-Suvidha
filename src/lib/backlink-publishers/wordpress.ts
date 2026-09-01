@@ -197,6 +197,46 @@ export async function publishToWordPress(params: {
     } catch (err: any) {
       console.warn("⚠️ [WordPress Publisher] Basic Auth v1.1 error:", err.message);
     }
+
+    // Method 3: XML-RPC (Always enabled on WordPress.com hosted sites)
+    try {
+      const xmlPayload = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>wp.newPost</methodName>
+  <params>
+    <param><value><int>1</int></value></param>
+    <param><value><string>${escapeXml(USERNAME)}</string></value></param>
+    <param><value><string>${escapeXml(cleanPass)}</string></value></param>
+    <param>
+      <value>
+        <struct>
+          <member><name>post_title</name><value><string>${escapeXml(params.title + " — Recruitment 2026")}</string></value></member>
+          <member><name>post_content</name><value><string>${escapeXml(contentHtml)}</string></value></member>
+          <member><name>post_status</name><value><string>publish</string></value></member>
+        </struct>
+      </value>
+    </param>
+  </params>
+</methodCall>`.trim();
+
+      const xmlRes = await fetch(`https://${cleanSite}/xmlrpc.php`, {
+        method: "POST",
+        headers: { "Content-Type": "text/xml" },
+        body: xmlPayload,
+        signal: AbortSignal.timeout(15000),
+      });
+      const xmlText = await xmlRes.text();
+      const postIdMatch = xmlText.match(/<string>(\d+)<\/string>/) || xmlText.match(/<integer>(\d+)<\/integer>/);
+      if (xmlRes.ok && postIdMatch) {
+        const liveUrl = `https://${cleanSite}/?p=${postIdMatch[1]}`;
+        console.log(`✅ [WordPress Publisher] Published via XML-RPC: ${liveUrl}`);
+        return liveUrl;
+      } else {
+        console.warn("⚠️ [WordPress Publisher] XML-RPC response:", xmlText.slice(0, 200));
+      }
+    } catch (xmlErr: any) {
+      console.warn("⚠️ [WordPress Publisher] XML-RPC error:", xmlErr.message);
+    }
   }
 
   console.warn("⚠️ [WordPress Publisher] Credentials check:", {
@@ -207,4 +247,13 @@ export async function publishToWordPress(params: {
   });
   console.warn("⚠️ [WordPress Publisher] No valid authentication method succeeded.");
   return null;
+}
+
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
