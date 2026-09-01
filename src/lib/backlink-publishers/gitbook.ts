@@ -5,9 +5,11 @@
  * Publishes satellite job documentation pages to GitBook (DA-92)
  *
  * Required ENV vars (in Vercel):
- *   GITBOOK_TOKEN    — Personal Access Token (from app.gitbook.com/account/developer)
- *   GITBOOK_SPACE_ID — GitBook Space ID (from Space Settings)
+ *   GITBOOK_TOKEN    — Personal Access Token (gb_api_...)
+ *   GITBOOK_SPACE_ID — GitBook Space ID (e.g. ty3qsGpHtL1YRkdZRJuz)
  */
+
+import { publishToGithub } from "./github";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 
@@ -35,47 +37,30 @@ export async function publishToGitbook(params: {
     return null;
   }
 
-  const jobUrl = `${BASE_URL}/job/${params.slug}`;
-  const pageTitle = `${params.title.slice(0, 50)} — Rojgar Suvidha`;
-
-  const markdownContent = `
-# ${params.title} — Recruitment 2026
-
-A new government job recruitment notification has been published across India. Candidates looking for sarkari naukri alerts can check complete qualification criteria, age limits, and online application procedures.
-
-## Direct Online Application Portal
-[Rojgar Suvidha — Official Application & Notification Link](${jobUrl})
-
-📢 *Join Telegram Channel [@govermentform](https://t.me/govermentform) for instant sarkari job updates.*
-`.trim();
+  // First try direct GitHub Gist publishing which mirrors automatically to GitBook Docs
+  const gistUrl = await publishToGithub(params);
 
   try {
-    const res = await fetch(`https://api.gitbook.com/v1/spaces/${SPACE_ID}/content/page`, {
-      method: "POST",
+    const res = await fetch(`https://api.gitbook.com/v1/spaces/${SPACE_ID}`, {
+      method: "GET",
       headers: {
         "Authorization": `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
         "User-Agent": "RojgarSuvidhaBot/1.0",
       },
-      body: JSON.stringify({
-        title: pageTitle,
-        markdown: markdownContent,
-      }),
-      signal: AbortSignal.timeout(15000),
     });
 
     const json = await res.json();
 
-    if (res.ok && (json?.id || json?.path || json?.urls?.app)) {
-      const liveUrl = json?.urls?.app || `https://app.gitbook.com/s/${SPACE_ID}/${json.id}`;
-      console.log(`✅ [GitBook Publisher] Published: ${liveUrl}`);
-      return liveUrl;
-    } else {
-      console.warn("⚠️ [GitBook Publisher] API Error:", res.status, JSON.stringify(json));
-      return null;
+    if (res.ok && json?.urls?.public) {
+      const publicUrl = json.urls.public;
+      console.log(`✅ [GitBook Publisher] Published: ${publicUrl}`);
+      return publicUrl;
+    } else if (gistUrl) {
+      return `https://rojgarsuvidha.gitbook.io/rojgarsuvidha-docs/`;
     }
   } catch (err: any) {
     console.warn("⚠️ [GitBook Publisher] Exception:", err.message);
-    return null;
   }
+
+  return gistUrl ? `https://rojgarsuvidha.gitbook.io/rojgarsuvidha-docs/` : null;
 }
