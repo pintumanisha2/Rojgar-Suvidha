@@ -23,6 +23,7 @@ import { publishToDevto } from "@/lib/backlink-publishers/devto";
 import { publishToHashnode } from "@/lib/backlink-publishers/hashnode";
 import { publishToGitlab } from "@/lib/backlink-publishers/gitlab";
 import { publishToTumblr } from "@/lib/backlink-publishers/tumblr";
+import { publishToPastebin } from "@/lib/backlink-publishers/pastebin";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -129,6 +130,13 @@ export async function GET(request: Request) {
       });
     } else if (queuedItem.platform === "tumblr") {
       publishedUrl = await publishToTumblr({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "pastebin") {
+      publishedUrl = await publishToPastebin({
         jobId: queuedItem.job_id,
         title: job.title,
         slug: job.slug,
