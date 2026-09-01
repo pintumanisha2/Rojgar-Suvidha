@@ -13,13 +13,13 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.
 
 function getWpCredentials() {
   return {
-    SITE_URL: process.env.WORDPRESS_SITE_URL,
-    ACCESS_TOKEN: process.env.WORDPRESS_ACCESS_TOKEN,
-    CLIENT_ID: process.env.WORDPRESS_CLIENT_ID,
-    CLIENT_SECRET: process.env.WORDPRESS_CLIENT_SECRET,
-    USERNAME: process.env.WORDPRESS_USERNAME,
-    PASSWORD: process.env.WORDPRESS_PASSWORD || process.env.WORDPRESS_APP_PASSWORD,
-    GEMINI_KEY: process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY,
+    SITE_URL: process.env.WORDPRESS_SITE_URL?.trim(),
+    ACCESS_TOKEN: process.env.WORDPRESS_ACCESS_TOKEN?.trim(),
+    CLIENT_ID: process.env.WORDPRESS_CLIENT_ID?.trim(),
+    CLIENT_SECRET: process.env.WORDPRESS_CLIENT_SECRET?.trim(),
+    USERNAME: process.env.WORDPRESS_USERNAME?.trim(),
+    PASSWORD: (process.env.WORDPRESS_PASSWORD || process.env.WORDPRESS_APP_PASSWORD)?.trim(),
+    GEMINI_KEY: (process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY)?.trim(),
   };
 }
 
@@ -111,7 +111,7 @@ export async function publishToWordPress(params: {
   }
 
   const token = await getWpAccessToken();
-  const cleanSite = SITE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const cleanSite = (SITE_URL || "").trim().replace(/^https?:\/\//, "").replace(/\/+$/, "").trim();
   const contentHtml = await generateWpContent(params.title, params.slug, GEMINI_KEY);
 
   // Method 1: OAuth Bearer Token
