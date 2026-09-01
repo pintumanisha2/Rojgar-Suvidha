@@ -51,13 +51,40 @@ async function fetchPublicationId(apiKey: string): Promise<string | null> {
       signal: AbortSignal.timeout(12000),
     });
     const json = await res.json();
-    const pubId = json?.data?.me?.publications?.edges?.[0]?.node?.id || json?.data?.me?.id;
+    const pubId = json?.data?.me?.publications?.edges?.[0]?.node?.id;
     if (pubId) {
       cachedPubId = pubId;
-      console.log(`✅ [Hashnode Publisher] Found Publication ID: ${pubId}`);
+      console.log(`✅ [Hashnode Publisher] Found Publication ID via Me query: ${pubId}`);
       return cachedPubId;
     }
-    console.warn("⚠️ [Hashnode Publisher] fetchPublicationId response:", JSON.stringify(json));
+
+    // Fallback: Query by domain host rojgarsuvidha.hashnode.dev
+    const hostRes = await fetch("https://gql.hashnode.com", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "RojgarSuvidhaBot/1.0",
+      },
+      body: JSON.stringify({
+        query: `
+          query Pub {
+            publication(host: "rojgarsuvidha.hashnode.dev") {
+              id
+            }
+          }
+        `,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const hostJson = await hostRes.json();
+    const hostPubId = hostJson?.data?.publication?.id;
+    if (hostPubId) {
+      cachedPubId = hostPubId;
+      console.log(`✅ [Hashnode Publisher] Found Publication ID via Host query: ${hostPubId}`);
+      return cachedPubId;
+    }
+
+    console.warn("⚠️ [Hashnode Publisher] fetchPublicationId response:", JSON.stringify(json), JSON.stringify(hostJson));
     return null;
   } catch (err: any) {
     console.warn("⚠️ [Hashnode Publisher] Fetch Publication ID error:", err.message);
