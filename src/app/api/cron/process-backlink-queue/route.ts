@@ -18,6 +18,7 @@ import { publishToMedium } from "@/lib/backlink-publishers/medium";
 import { publishToPinterest } from "@/lib/backlink-publishers/pinterest";
 import { publishToTelegraph } from "@/lib/backlink-publishers/telegraph";
 import { publishToWordPress } from "@/lib/backlink-publishers/wordpress";
+import { publishToGithub } from "@/lib/backlink-publishers/github";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -89,6 +90,13 @@ export async function GET(request: Request) {
       });
     } else if (queuedItem.platform === "wordpress") {
       publishedUrl = await publishToWordPress({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "github") {
+      publishedUrl = await publishToGithub({
         jobId: queuedItem.job_id,
         title: job.title,
         slug: job.slug,
