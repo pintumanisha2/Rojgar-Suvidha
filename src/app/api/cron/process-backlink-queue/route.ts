@@ -209,19 +209,12 @@ export async function GET(request: Request) {
         .update({ status: "failed" })
         .eq("id", queuedItem.id);
 
-      if (queuedItem.platform === 'livejournal') {
-        return NextResponse.json({
-          ok: true,
-          processed: 0,
-          platform: queuedItem.platform,
-          message: `Publisher for '${queuedItem.platform}' returned null`,
-          debugEnv: {
-            LIVEJOURNAL_USERNAME_present: !!process.env.LIVEJOURNAL_USERNAME,
-            LIVEJOURNAL_PASSWORD_present: !!process.env.LIVEJOURNAL_PASSWORD,
-            lastLjError: (globalThis as any)._lastLjError || "No detailed error captured",
-          }
-        });
-      }
+      return NextResponse.json({
+        ok: true,
+        processed: 0,
+        platform: queuedItem.platform,
+        message: `Publisher for '${queuedItem.platform}' returned null`,
+      });
     }
   } catch (err: any) {
     console.error("❌ [Queue Cron] Exception:", err.message);
