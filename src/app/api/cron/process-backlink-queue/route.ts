@@ -193,34 +193,11 @@ export async function GET(request: Request) {
         .update({ status: "failed" })
         .eq("id", queuedItem.id);
 
-      if (queuedItem.platform === 'pastebin') {
-        return NextResponse.json({
-          ok: true,
-          processed: 0,
-          platform: queuedItem.platform,
-          message: `Publisher for '${queuedItem.platform}' returned null`,
-          debugEnv: {
-            PASTEBIN_API_KEY_present: !!(process.env.PASTEBIN_API_KEY || process.env.PASTEBIN_DEV_KEY),
-            PASTEBIN_API_KEY_preview: (process.env.PASTEBIN_API_KEY || process.env.PASTEBIN_DEV_KEY || "").slice(0, 6) + "...",
-          }
-        });
-      }
-
-      const siteUrl = process.env.WORDPRESS_SITE_URL;
-      const username = process.env.WORDPRESS_USERNAME;
-      const appPass = process.env.WORDPRESS_APP_PASSWORD || process.env.WORDPRESS_PASSWORD;
-      const token = process.env.WORDPRESS_ACCESS_TOKEN;
       return NextResponse.json({
         ok: true,
         processed: 0,
         platform: queuedItem.platform,
         message: `Publisher for '${queuedItem.platform}' returned null`,
-        debugEnv: {
-          WORDPRESS_SITE_URL: siteUrl || "(missing)",
-          WORDPRESS_USERNAME: username || "(missing)",
-          WORDPRESS_APP_PASSWORD_present: !!appPass,
-          WORDPRESS_ACCESS_TOKEN_present: !!token,
-        }
       });
     }
   } catch (err: any) {
