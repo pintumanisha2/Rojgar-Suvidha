@@ -147,8 +147,11 @@ export async function publishToWordPress(params: {
 
   // Method 2: Basic Auth (Username + Application Password)
   if (USERNAME && PASSWORD) {
+    const cleanPass = PASSWORD.replace(/\s+/g, "");
+    const authHeader = "Basic " + Buffer.from(`${USERNAME}:${cleanPass}`).toString("base64");
+
+    // Try WP v2 API
     try {
-      const authHeader = "Basic " + Buffer.from(`${USERNAME}:${PASSWORD}`).toString("base64");
       const res = await fetch(`https://${cleanSite}/wp-json/wp/v2/posts`, {
         method: "POST",
         headers: {
@@ -164,11 +167,35 @@ export async function publishToWordPress(params: {
       });
       const data = await res.json();
       if (res.ok && data?.link) {
-        console.log(`✅ [WordPress Publisher] Published via Basic Auth: ${data.link}`);
+        console.log(`✅ [WordPress Publisher] Published via Basic Auth v2: ${data.link}`);
         return data.link;
       }
     } catch (err: any) {
-      console.warn("⚠️ [WordPress Publisher] Basic Auth post error:", err.message);
+      console.warn("⚠️ [WordPress Publisher] Basic Auth v2 error:", err.message);
+    }
+
+    // Try WP.com v1.1 API with Basic Auth
+    try {
+      const res = await fetch(`https://public-api.wordpress.com/rest/v1.1/sites/${cleanSite}/posts/new`, {
+        method: "POST",
+        headers: {
+          "Authorization": authHeader,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: `${params.title} — Recruitment 2026`,
+          content: contentHtml,
+          status: "publish",
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      if (res.ok && data?.URL) {
+        console.log(`✅ [WordPress Publisher] Published via Basic Auth v1.1: ${data.URL}`);
+        return data.URL;
+      }
+    } catch (err: any) {
+      console.warn("⚠️ [WordPress Publisher] Basic Auth v1.1 error:", err.message);
     }
   }
 
