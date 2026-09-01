@@ -16,6 +16,7 @@ import { createClient } from "@supabase/supabase-js";
 import { publishToBlogger } from "@/lib/backlink-publishers/blogger";
 import { publishToMedium } from "@/lib/backlink-publishers/medium";
 import { publishToPinterest } from "@/lib/backlink-publishers/pinterest";
+import { publishToTelegraph } from "@/lib/backlink-publishers/telegraph";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -73,6 +74,13 @@ export async function GET(request: Request) {
 
     if (queuedItem.platform === "blogger") {
       publishedUrl = await publishToBlogger({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "telegraph") {
+      publishedUrl = await publishToTelegraph({
         jobId: queuedItem.job_id,
         title: job.title,
         slug: job.slug,
