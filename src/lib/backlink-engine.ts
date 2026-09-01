@@ -52,11 +52,12 @@ export async function enqueuePostApprovalBacklinks(
     // 6 platform records — status 'queued' — cron processes 1 per 15 mins (safe drip)
     const platforms = [
       { platform: "blogger",   anchor: pickAnchor(0) },
-      { platform: "telegraph", anchor: pickAnchor(1) },
-      { platform: "wordpress", anchor: pickAnchor(2) },
-      { platform: "github",    anchor: pickAnchor(3) },
-      { platform: "devto",     anchor: pickAnchor(4) },
-      { platform: "hashnode",  anchor: pickAnchor(5) },
+      { platform: "github",    anchor: pickAnchor(1) },
+      { platform: "gitlab",    anchor: pickAnchor(2) },
+      { platform: "wordpress", anchor: pickAnchor(3) },
+      { platform: "telegraph", anchor: pickAnchor(4) },
+      { platform: "devto",     anchor: pickAnchor(5) },
+      { platform: "tumblr",    anchor: pickAnchor(6) },
     ];
 
     const insertRecords: BacklinkRecord[] = platforms.map((p) => ({
