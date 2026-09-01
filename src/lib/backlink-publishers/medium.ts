@@ -10,11 +10,18 @@
  *   MEDIUM_INTEGRATION_TOKEN — From medium.com → Settings → Security & Apps → Integration Tokens
  */
 
-const MEDIUM_TOKEN = process.env.MEDIUM_INTEGRATION_TOKEN;
+// ⚠️ DO NOT use module-level constants for env vars in Next.js! Read at runtime inside functions.
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
-const GEMINI_KEY = process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY;
+
+function getMediumEnv() {
+  return {
+    MEDIUM_TOKEN: process.env.MEDIUM_INTEGRATION_TOKEN,
+    GEMINI_KEY: process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY,
+  };
+}
 
 async function getMediumUserId(): Promise<string | null> {
+  const { MEDIUM_TOKEN } = getMediumEnv();
   if (!MEDIUM_TOKEN) return null;
   try {
     const res = await fetch("https://api.medium.com/v1/me", {
@@ -29,6 +36,7 @@ async function getMediumUserId(): Promise<string | null> {
 }
 
 async function generateMediumContent(title: string, slug: string): Promise<{ body: string; tags: string[] }> {
+  const { GEMINI_KEY } = getMediumEnv();
   const jobUrl = `${BASE_URL}/job/${slug}`;
   const defaultBody = `# ${title}
 
@@ -95,6 +103,7 @@ export async function publishToMedium(params: {
   slug: string;
   category?: string;
 }): Promise<string | null> {
+  const { MEDIUM_TOKEN } = getMediumEnv();
   if (!MEDIUM_TOKEN) {
     console.log("ℹ️ [Medium Publisher] MEDIUM_INTEGRATION_TOKEN not set — skipping.");
     return null;
