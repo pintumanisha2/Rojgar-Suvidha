@@ -187,6 +187,7 @@ export async function GET(request: Request) {
             TUMBLR_BLOG_NAME: process.env.TUMBLR_BLOG_NAME || "NOT_SET",
             TUMBLR_CONSUMER_KEY_present: !!process.env.TUMBLR_CONSUMER_KEY,
             TUMBLR_CONSUMER_SECRET_present: !!process.env.TUMBLR_CONSUMER_SECRET,
+            lastTumblrError: (globalThis as any)._lastTumblrError || "No detailed error captured",
           }
         });
       }

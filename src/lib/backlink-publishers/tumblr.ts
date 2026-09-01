@@ -106,6 +106,7 @@ export async function publishToTumblr(params: {
     TOKEN_SECRET || ""
   );
 
+  // Try Candidate 1: OAuth 1.0a HMAC-SHA1
   try {
     const res = await fetch(postUrl, {
       method: "POST",
@@ -119,18 +120,48 @@ export async function publishToTumblr(params: {
     });
 
     const json = await res.json();
-
     if (res.ok && (json?.response?.id_string || json?.response?.id)) {
       const postId = json.response.id_string || json.response.id;
       const liveUrl = `https://${blogIdentifier}/post/${postId}`;
       console.log(`✅ [Tumblr Publisher] Published: ${liveUrl}`);
       return liveUrl;
     } else {
+      (globalThis as any)._lastTumblrError = `Status ${res.status}: ${JSON.stringify(json)}`;
       console.warn("⚠️ [Tumblr Publisher] API Error:", res.status, JSON.stringify(json));
-      return null;
     }
   } catch (err: any) {
+    (globalThis as any)._lastTumblrError = `Exception: ${err.message}`;
     console.warn("⚠️ [Tumblr Publisher] Exception:", err.message);
-    return null;
   }
+
+  // Try Candidate 2: api_key query param with JSON NPF
+  try {
+    const res2 = await fetch(`https://api.tumblr.com/v2/blog/${blogIdentifier}/post?api_key=${API_KEY}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "RojgarSuvidhaBot/1.0",
+      },
+      body: JSON.stringify({
+        content: [
+          { type: "text", text: params.title, subtype: "heading1" },
+          { type: "text", text: `Check official notification and eligibility at Rojgar Suvidha: ${jobUrl}` }
+        ]
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const json2 = await res2.json();
+    if (res2.ok && (json2?.response?.id_string || json2?.response?.id)) {
+      const postId = json2.response.id_string || json2.response.id;
+      const liveUrl = `https://${blogIdentifier}/post/${postId}`;
+      console.log(`✅ [Tumblr Publisher] Published via NPF: ${liveUrl}`);
+      return liveUrl;
+    } else {
+      (globalThis as any)._lastTumblrError += ` | NPF Status ${res2.status}: ${JSON.stringify(json2)}`;
+    }
+  } catch (err2: any) {
+    (globalThis as any)._lastTumblrError += ` | NPF Exception: ${err2.message}`;
+  }
+
+  return null;
 }
