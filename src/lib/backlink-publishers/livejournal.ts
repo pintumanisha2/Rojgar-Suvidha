@@ -77,9 +77,11 @@ export async function publishToLivejournal(params: {
     // success
     // url
     // http://username.livejournal.com/1234.html
-    if (res.ok && lines[0] === "success") {
-      const urlIndex = lines.indexOf("url");
-      const liveUrl = urlIndex !== -1 && lines[urlIndex + 1] ? lines[urlIndex + 1].trim() : `https://${USERNAME}.livejournal.com`;
+    const urlIdx = lines.indexOf("url");
+    const hasSuccess = lines.includes("success") || lines[0] === "success";
+
+    if (res.ok && urlIdx !== -1 && lines[urlIdx + 1] && hasSuccess) {
+      const liveUrl = lines[urlIdx + 1].trim();
       console.log(`✅ [LiveJournal Publisher] Published: ${liveUrl}`);
       return liveUrl;
     } else {
