@@ -13,31 +13,46 @@
  *   GEMINI_API_KEY           — (already set)
  */
 
-const BLOGGER_BLOG_ID = process.env.BLOGGER_BLOG_ID;
-const BLOGGER_CLIENT_ID = process.env.BLOGGER_CLIENT_ID;
-const BLOGGER_CLIENT_SECRET = process.env.BLOGGER_CLIENT_SECRET;
-const BLOGGER_REFRESH_TOKEN = process.env.BLOGGER_REFRESH_TOKEN;
+// ⚠️ DO NOT use module-level constants for env vars in Next.js!
+// They get evaluated at BUILD TIME and are undefined. Always read at runtime inside functions.
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
-const GEMINI_KEY = process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY;
+const BLOGGER_BLOG_URL = "https://rojgarsuvidhaa.blogspot.com";
+
+// Runtime env getter (evaluated fresh each time — never cached)
+function getBloggerCredentials() {
+  return {
+    BLOG_ID: process.env.BLOGGER_BLOG_ID,
+    CLIENT_ID: process.env.BLOGGER_CLIENT_ID,
+    CLIENT_SECRET: process.env.BLOGGER_CLIENT_SECRET,
+    REFRESH_TOKEN: process.env.BLOGGER_REFRESH_TOKEN,
+    GEMINI_KEY: process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY,
+  };
+}
+
 
 /**
  * Get fresh Google OAuth access token using Refresh Token
  */
 async function getBloggerAccessToken(): Promise<string | null> {
-  if (!BLOGGER_CLIENT_ID || !BLOGGER_CLIENT_SECRET || !BLOGGER_REFRESH_TOKEN) return null;
+  const { CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN } = getBloggerCredentials();
+  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+    console.warn("⚠️ [Blogger] Missing credentials:", { CLIENT_ID: !!CLIENT_ID, CLIENT_SECRET: !!CLIENT_SECRET, REFRESH_TOKEN: !!REFRESH_TOKEN });
+    return null;
+  }
   try {
     const res = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: BLOGGER_CLIENT_ID,
-        client_secret: BLOGGER_CLIENT_SECRET,
-        refresh_token: BLOGGER_REFRESH_TOKEN,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        refresh_token: REFRESH_TOKEN,
         grant_type: "refresh_token",
       }).toString(),
       signal: AbortSignal.timeout(10000),
     });
     const json = await res.json();
+    if (!json.access_token) console.warn("⚠️ [Blogger] Token response error:", JSON.stringify(json));
     return json.access_token || null;
   } catch (err: any) {
     console.warn("⚠️ [Blogger] Failed to get access token:", err.message);
@@ -49,11 +64,11 @@ async function getBloggerAccessToken(): Promise<string | null> {
  * Generate a 200-word unique teaser using Gemini AI
  * (0% duplicate content — never copies from main blog)
  */
-async function generateBloggerTeaser(title: string, slug: string): Promise<string> {
+async function generateBloggerTeaser(title: string, slug: string, geminiKey?: string): Promise<string> {
   const jobUrl = `${BASE_URL}/job/${slug}`;
   const defaultHtml = `<p>A new government recruitment notification has been published for <strong>${title}</strong>. Eligible candidates can check complete details including eligibility, vacancy breakdown, application fee, and last date at <a href="${jobUrl}" rel="canonical">Rojgar Suvidha</a>.</p><p>Visit the official portal now to read the complete notification and apply online before the last date.</p>`;
 
-  if (!GEMINI_KEY) return defaultHtml;
+  if (!geminiKey) return defaultHtml;
 
   const prompt = `Write a 180-200 word unique, engaging blog teaser in English about this government job notification: "${title}".
 
@@ -66,7 +81,7 @@ Rules:
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,8 +119,9 @@ export async function publishToBlogger(params: {
   slug: string;
   category?: string;
 }): Promise<string | null> {
-  if (!BLOGGER_BLOG_ID || !BLOGGER_CLIENT_ID || !BLOGGER_CLIENT_SECRET || !BLOGGER_REFRESH_TOKEN) {
-    console.log("ℹ️ [Blogger Publisher] Credentials not set — skipping Blogger post.");
+  const { BLOG_ID, GEMINI_KEY } = getBloggerCredentials();
+  if (!BLOG_ID) {
+    console.warn("⚠️ [Blogger Publisher] BLOGGER_BLOG_ID not set.");
     return null;
   }
 
@@ -113,7 +129,7 @@ export async function publishToBlogger(params: {
   if (!accessToken) return null;
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
-  const teaserHtml = await generateBloggerTeaser(params.title, params.slug);
+  const teaserHtml = await generateBloggerTeaser(params.title, params.slug, GEMINI_KEY);
   const anchorText = pickAnchorText(params.slug);
 
   const categoryLabels: Record<string, string> = {
@@ -147,7 +163,7 @@ ${teaserHtml}
 
   try {
     const res = await fetch(
-      `https://www.googleapis.com/blogger/v3/blogs/${BLOGGER_BLOG_ID}/posts/`,
+      `https://www.googleapis.com/blogger/v3/blogs/${BLOG_ID}/posts/`,
       {
         method: "POST",
         headers: {
