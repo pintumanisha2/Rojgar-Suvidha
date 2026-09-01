@@ -1,14 +1,22 @@
 /**
- * PINTEREST PINS API — REAL AUTO-PUBLISHER (DA-94)
+ * ═══════════════════════════════════════════════════════════════════
+ * PINTEREST PINS API v5 — REAL AUTO-PUBLISHER (DA-94)
+ * ═══════════════════════════════════════════════════════════════════
+ * Publishes visual job banner pins to official Pinterest Board (DA-94)
  *
- * Required ENV vars (add to Vercel):
+ * Required ENV vars (in Vercel):
  *   PINTEREST_ACCESS_TOKEN  — From developers.pinterest.com
  *   PINTEREST_BOARD_ID      — Your official board ID
  */
 
-const PINTEREST_TOKEN = process.env.PINTEREST_ACCESS_TOKEN;
-const PINTEREST_BOARD_ID = process.env.PINTEREST_BOARD_ID;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
+
+function getPinterestCredentials() {
+  return {
+    TOKEN: process.env.PINTEREST_ACCESS_TOKEN?.trim(),
+    BOARD_ID: process.env.PINTEREST_BOARD_ID?.trim(),
+  };
+}
 
 const ANCHOR_TEXTS = [
   "Sarkari Naukri 2026 — Apply Now on Rojgar Suvidha",
@@ -24,8 +32,10 @@ export async function publishToPinterest(params: {
   category?: string;
   bannerUrl?: string;
 }): Promise<string | null> {
-  if (!PINTEREST_TOKEN || !PINTEREST_BOARD_ID) {
-    console.log("ℹ️ [Pinterest Publisher] Credentials not set — skipping.");
+  const { TOKEN, BOARD_ID } = getPinterestCredentials();
+
+  if (!TOKEN || !BOARD_ID) {
+    console.log("ℹ️ [Pinterest Publisher] PINTEREST_ACCESS_TOKEN or PINTEREST_BOARD_ID not set — skipping.");
     return null;
   }
 
@@ -41,11 +51,11 @@ export async function publishToPinterest(params: {
     const res = await fetch("https://api.pinterest.com/v5/pins", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${PINTEREST_TOKEN}`,
+        "Authorization": `Bearer ${TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        board_id: PINTEREST_BOARD_ID,
+        board_id: BOARD_ID,
         title: pinTitle,
         description: `${description}\n\n${jobUrl}`,
         link: jobUrl,
