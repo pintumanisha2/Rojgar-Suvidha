@@ -7,7 +7,10 @@
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
-const GITHUB_TOKEN = process.env.GITHUB_BACKLINK_TOKEN || process.env.GITHUB_TOKEN;
+
+function getGithubToken(): string | undefined {
+  return (process.env.GITHUB_BACKLINK_TOKEN || process.env.GITHUB_TOKEN)?.trim();
+}
 
 /**
  * Publish a satellite markdown page to GitHub Gists (DA-96)
@@ -35,15 +38,22 @@ Eligible candidates across India can check the complete eligibility details, vac
 *This is an automated educational summary. For official notifications, visit [Rojgar Suvidha](${jobUrl}).*
 `.trim();
 
-  const fileName = `${params.slug.slice(0, 40)}-recruitment-2026.md`;
+  // Sanitize filename for GitHub Gist
+  const safeSlug = params.slug.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 35);
+  const fileName = `${safeSlug}-recruitment-2026.md`;
+
+  const token = getGithubToken();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "User-Agent": "RojgarSuvidhaBot/1.0",
+    "Accept": "application/vnd.github.v3+json",
   };
 
-  if (GITHUB_TOKEN) {
-    headers["Authorization"] = `token ${GITHUB_TOKEN}`;
+  if (token) {
+    headers["Authorization"] = token.startsWith("bearer ") || token.startsWith("Bearer ")
+      ? token
+      : `token ${token}`;
   }
 
   try {
@@ -59,7 +69,7 @@ Eligible candidates across India can check the complete eligibility details, vac
           },
         },
       }),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(15000),
     });
     const json = await res.json();
 
@@ -67,7 +77,7 @@ Eligible candidates across India can check the complete eligibility details, vac
       console.log(`✅ [GitHub Publisher] Published Gist: ${json.html_url}`);
       return json.html_url;
     } else {
-      console.warn("⚠️ [GitHub Publisher] API Error:", JSON.stringify(json));
+      console.warn("⚠️ [GitHub Publisher] API Error:", res.status, JSON.stringify(json));
       return null;
     }
   } catch (err: any) {
