@@ -77,7 +77,14 @@ export async function publishToTumblr(params: {
     return null;
   }
 
-  const cleanBlog = BLOG_NAME.replace(/\.tumblr\.com$/, "").trim();
+  const cleanBlog = BLOG_NAME
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\.tumblr\.com\//, "")
+    .replace(/\.tumblr\.com\/?$/, "")
+    .replace(/\/+$/, "")
+    .replace(/^@/, "")
+    .trim();
+
   const blogIdentifier = `${cleanBlog}.tumblr.com`;
   const postUrl = `https://api.tumblr.com/v2/blog/${blogIdentifier}/post`;
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
