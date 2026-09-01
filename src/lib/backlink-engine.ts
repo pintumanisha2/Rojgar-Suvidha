@@ -53,7 +53,7 @@ export async function enqueuePostApprovalBacklinks(
     const platforms = [
       { platform: "blogger",   anchor: pickAnchor(0) },
       { platform: "telegraph", anchor: pickAnchor(1) },
-      { platform: "medium",    anchor: pickAnchor(2) },
+      { platform: "wordpress", anchor: pickAnchor(2) },
       { platform: "pinterest", anchor: pickAnchor(3) },
       { platform: "reddit",    anchor: pickAnchor(4) },
     ];
