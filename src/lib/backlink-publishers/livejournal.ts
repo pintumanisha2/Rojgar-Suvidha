@@ -83,10 +83,12 @@ export async function publishToLivejournal(params: {
       console.log(`✅ [LiveJournal Publisher] Published: ${liveUrl}`);
       return liveUrl;
     } else {
+      (globalThis as any)._lastLjError = `Status ${res.status}: ${responseText}`;
       console.warn("⚠️ [LiveJournal Publisher] API Error:", responseText);
       return null;
     }
   } catch (err: any) {
+    (globalThis as any)._lastLjError = `Exception: ${err.message}`;
     console.warn("⚠️ [LiveJournal Publisher] Exception:", err.message);
     return null;
   }
