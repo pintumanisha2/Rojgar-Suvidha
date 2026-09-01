@@ -5,9 +5,9 @@
  * Publishes satellite posts to Tumblr (DA-86)
  *
  * Required ENV vars (in Vercel):
- *   TUMBLR_BLOG_NAME   — e.g. "rojgarsuvidha" (or rojgarsuvidha.tumblr.com)
- *   TUMBLR_CONSUMER_KEY — API key from tumblr.com/oauth/apps
- *   TUMBLR_OAUTH_TOKEN  — OAuth access token (or Bearer Token)
+ *   TUMBLR_BLOG_NAME       — e.g. "rojgarsuvidha" (or rojgarsuvidha.tumblr.com)
+ *   TUMBLR_CONSUMER_KEY    — API key from tumblr.com/oauth/apps
+ *   TUMBLR_CONSUMER_SECRET — Consumer Secret key
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
@@ -16,6 +16,7 @@ function getTumblrCredentials() {
   return {
     BLOG_NAME: process.env.TUMBLR_BLOG_NAME?.trim(),
     API_KEY: (process.env.TUMBLR_CONSUMER_KEY || process.env.TUMBLR_API_KEY)?.trim(),
+    SECRET: (process.env.TUMBLR_CONSUMER_SECRET || process.env.TUMBLR_SECRET_KEY)?.trim(),
     TOKEN: (process.env.TUMBLR_OAUTH_TOKEN || process.env.TUMBLR_ACCESS_TOKEN)?.trim(),
   };
 }
@@ -48,37 +49,43 @@ export async function publishToTumblr(params: {
     <p>📢 <em>Join Telegram <a href="https://t.me/govermentform">@govermentform</a> for instant sarkari job alerts.</em></p>
   `.trim();
 
-  const authHeader = TOKEN ? `Bearer ${TOKEN}` : `OAuth consumer_key="${API_KEY}"`;
+  // Try candidate URLs and auth formats for maximum Tumblr API compatibility
+  const candidateAuths = [
+    { headers: { "Authorization": TOKEN ? `Bearer ${TOKEN}` : `OAuth consumer_key="${API_KEY}"` }, url: `https://api.tumblr.com/v2/blog/${blogIdentifier}/post` },
+    { headers: { "Authorization": `OAuth consumer_key="${API_KEY}"` }, url: `https://api.tumblr.com/v2/blog/${blogIdentifier}/post?api_key=${API_KEY}` },
+  ];
 
-  try {
-    const res = await fetch(`https://api.tumblr.com/v2/blog/${blogIdentifier}/post`, {
-      method: "POST",
-      headers: {
-        "Authorization": authHeader,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "RojgarSuvidhaBot/1.0",
-      },
-      body: new URLSearchParams({
-        type: "text",
-        title: `${params.title} — Recruitment 2026`,
-        body: bodyHtml,
-        tags: "sarkari naukri,govt jobs,recruitment 2026,rojgar suvidha",
-      }).toString(),
-      signal: AbortSignal.timeout(15000),
-    });
-    const json = await res.json();
+  for (const authCandidate of candidateAuths) {
+    try {
+      const res = await fetch(authCandidate.url, {
+        method: "POST",
+        headers: {
+          ...authCandidate.headers,
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "RojgarSuvidhaBot/1.0",
+        },
+        body: new URLSearchParams({
+          type: "text",
+          title: `${params.title} — Recruitment 2026`,
+          body: bodyHtml,
+          tags: "sarkari naukri,govt jobs,recruitment 2026,rojgar suvidha",
+        }).toString(),
+        signal: AbortSignal.timeout(15000),
+      });
+      const json = await res.json();
 
-    if (res.ok && (json?.response?.id_string || json?.response?.id)) {
-      const postId = json.response.id_string || json.response.id;
-      const liveUrl = `https://${blogIdentifier}/post/${postId}`;
-      console.log(`✅ [Tumblr Publisher] Published: ${liveUrl}`);
-      return liveUrl;
-    } else {
-      console.warn("⚠️ [Tumblr Publisher] API Error:", JSON.stringify(json));
-      return null;
+      if (res.ok && (json?.response?.id_string || json?.response?.id)) {
+        const postId = json.response.id_string || json.response.id;
+        const liveUrl = `https://${blogIdentifier}/post/${postId}`;
+        console.log(`✅ [Tumblr Publisher] Published: ${liveUrl}`);
+        return liveUrl;
+      } else {
+        console.warn("⚠️ [Tumblr Publisher] API Error candidate:", JSON.stringify(json));
+      }
+    } catch (err: any) {
+      console.warn("⚠️ [Tumblr Publisher] Exception candidate:", err.message);
     }
-  } catch (err: any) {
-    console.warn("⚠️ [Tumblr Publisher] Exception:", err.message);
-    return null;
   }
+
+  return null;
 }
