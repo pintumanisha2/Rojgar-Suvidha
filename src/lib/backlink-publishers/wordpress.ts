@@ -145,67 +145,52 @@ export async function publishToWordPress(params: {
     }
   }
 
-  // Method 2: Basic Auth (Username + Application Password)
+  // Method 2: Basic Auth & XML-RPC (Username + Application Password)
   if (USERNAME && PASSWORD) {
     const cleanPass = PASSWORD.replace(/\s+/g, "");
-    const authHeader = "Basic " + Buffer.from(`${USERNAME}:${cleanPass}`).toString("base64");
 
-    // Try WP v2 API
-    try {
-      const res = await fetch(`https://${cleanSite}/wp-json/wp/v2/posts`, {
-        method: "POST",
-        headers: {
-          "Authorization": authHeader,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: `${params.title} — Recruitment 2026`,
-          content: contentHtml,
-          status: "publish",
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const data = await res.json();
-      if (res.ok && data?.link) {
-        console.log(`✅ [WordPress Publisher] Published via Basic Auth v2: ${data.link}`);
-        return data.link;
+    // Candidate usernames (email, handle prefix, site slug)
+    const candidateUsernames = Array.from(new Set([
+      USERNAME,
+      USERNAME.includes("@") ? USERNAME.split("@")[0] : USERNAME,
+      cleanSite.split(".")[0],
+    ]));
+
+    for (const uName of candidateUsernames) {
+      const authHeader = "Basic " + Buffer.from(`${uName}:${cleanPass}`).toString("base64");
+
+      // Try WP.com v1.1 API with Basic Auth
+      try {
+        const res = await fetch(`https://public-api.wordpress.com/rest/v1.1/sites/${cleanSite}/posts/new`, {
+          method: "POST",
+          headers: {
+            "Authorization": authHeader,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: `${params.title} — Recruitment 2026`,
+            content: contentHtml,
+            status: "publish",
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const data = await res.json();
+        if (res.ok && data?.URL) {
+          console.log(`✅ [WordPress Publisher] Published via Basic Auth v1.1 (${uName}): ${data.URL}`);
+          return data.URL;
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ [WordPress Publisher] Basic Auth v1.1 (${uName}) error:`, err.message);
       }
-    } catch (err: any) {
-      console.warn("⚠️ [WordPress Publisher] Basic Auth v2 error:", err.message);
-    }
 
-    // Try WP.com v1.1 API with Basic Auth
-    try {
-      const res = await fetch(`https://public-api.wordpress.com/rest/v1.1/sites/${cleanSite}/posts/new`, {
-        method: "POST",
-        headers: {
-          "Authorization": authHeader,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: `${params.title} — Recruitment 2026`,
-          content: contentHtml,
-          status: "publish",
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const data = await res.json();
-      if (res.ok && data?.URL) {
-        console.log(`✅ [WordPress Publisher] Published via Basic Auth v1.1: ${data.URL}`);
-        return data.URL;
-      }
-    } catch (err: any) {
-      console.warn("⚠️ [WordPress Publisher] Basic Auth v1.1 error:", err.message);
-    }
-
-    // Method 3: XML-RPC (Always enabled on WordPress.com hosted sites)
-    try {
-      const xmlPayload = `<?xml version="1.0"?>
+      // Try XML-RPC (Always enabled on WordPress.com hosted sites)
+      try {
+        const xmlPayload = `<?xml version="1.0"?>
 <methodCall>
   <methodName>wp.newPost</methodName>
   <params>
     <param><value><int>1</int></value></param>
-    <param><value><string>${escapeXml(USERNAME)}</string></value></param>
+    <param><value><string>${escapeXml(uName)}</string></value></param>
     <param><value><string>${escapeXml(cleanPass)}</string></value></param>
     <param>
       <value>
@@ -219,23 +204,22 @@ export async function publishToWordPress(params: {
   </params>
 </methodCall>`.trim();
 
-      const xmlRes = await fetch(`https://${cleanSite}/xmlrpc.php`, {
-        method: "POST",
-        headers: { "Content-Type": "text/xml" },
-        body: xmlPayload,
-        signal: AbortSignal.timeout(15000),
-      });
-      const xmlText = await xmlRes.text();
-      const postIdMatch = xmlText.match(/<string>(\d+)<\/string>/) || xmlText.match(/<integer>(\d+)<\/integer>/);
-      if (xmlRes.ok && postIdMatch) {
-        const liveUrl = `https://${cleanSite}/?p=${postIdMatch[1]}`;
-        console.log(`✅ [WordPress Publisher] Published via XML-RPC: ${liveUrl}`);
-        return liveUrl;
-      } else {
-        console.warn("⚠️ [WordPress Publisher] XML-RPC response:", xmlText.slice(0, 200));
+        const xmlRes = await fetch(`https://${cleanSite}/xmlrpc.php`, {
+          method: "POST",
+          headers: { "Content-Type": "text/xml" },
+          body: xmlPayload,
+          signal: AbortSignal.timeout(15000),
+        });
+        const xmlText = await xmlRes.text();
+        const postIdMatch = xmlText.match(/<string>(\d+)<\/string>/) || xmlText.match(/<integer>(\d+)<\/integer>/);
+        if (xmlRes.ok && postIdMatch) {
+          const liveUrl = `https://${cleanSite}/?p=${postIdMatch[1]}`;
+          console.log(`✅ [WordPress Publisher] Published via XML-RPC (${uName}): ${liveUrl}`);
+          return liveUrl;
+        }
+      } catch (xmlErr: any) {
+        console.warn(`⚠️ [WordPress Publisher] XML-RPC (${uName}) error:`, xmlErr.message);
       }
-    } catch (xmlErr: any) {
-      console.warn("⚠️ [WordPress Publisher] XML-RPC error:", xmlErr.message);
     }
   }
 
