@@ -3,18 +3,16 @@
  * HASHNODE API (DA-86) — REAL AUTO-PUBLISHER
  * ═══════════════════════════════════════════════════════════════════
  * Publishes satellite articles to Hashnode (DA-86) via GraphQL API
- *
- * Required ENV var (in Vercel):
- *   HASHNODE_API_KEY — From hashnode.com → Account Settings → Developer
  */
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
+const DEFAULT_HASHNODE_KEY = "3589d29f-eea0-4975-a3b6-40aac62fe693";
 
 let cachedPubId: string | null = null;
 
 function getHashnodeCredentials() {
   return {
-    API_KEY: process.env.HASHNODE_API_KEY?.trim(),
+    API_KEY: (process.env.HASHNODE_API_KEY || DEFAULT_HASHNODE_KEY).trim(),
     PUBLICATION_ID: process.env.HASHNODE_PUBLICATION_ID?.trim(),
   };
 }
@@ -38,10 +36,11 @@ async function fetchPublicationId(apiKey: string): Promise<string | null> {
             me {
               id
               username
-              publications(first: 1) {
+              publications(first: 5) {
                 edges {
                   node {
                     id
+                    title
                   }
                 }
               }
@@ -49,12 +48,13 @@ async function fetchPublicationId(apiKey: string): Promise<string | null> {
           }
         `,
       }),
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(12000),
     });
     const json = await res.json();
-    const pubId = json?.data?.me?.publications?.edges?.[0]?.node?.id;
+    const pubId = json?.data?.me?.publications?.edges?.[0]?.node?.id || json?.data?.me?.id;
     if (pubId) {
       cachedPubId = pubId;
+      console.log(`✅ [Hashnode Publisher] Found Publication ID: ${pubId}`);
       return cachedPubId;
     }
     console.warn("⚠️ [Hashnode Publisher] fetchPublicationId response:", JSON.stringify(json));
@@ -131,6 +131,7 @@ Read the official notification PDF, eligibility breakdown, and access the direct
       headers: {
         "Authorization": API_KEY,
         "Content-Type": "application/json",
+        "User-Agent": "RojgarSuvidhaBot/1.0",
       },
       body: JSON.stringify({ query, variables }),
       signal: AbortSignal.timeout(15000),
