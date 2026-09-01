@@ -11,10 +11,19 @@
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 
+function safeDecode(tok?: string) {
+  if (!tok) return undefined;
+  let clean = tok.trim();
+  if (clean.includes("%")) {
+    try { clean = decodeURIComponent(clean); } catch {}
+  }
+  return clean;
+}
+
 function getWpCredentials() {
   return {
     SITE_URL: process.env.WORDPRESS_SITE_URL?.trim(),
-    ACCESS_TOKEN: process.env.WORDPRESS_ACCESS_TOKEN?.trim(),
+    ACCESS_TOKEN: safeDecode(process.env.WORDPRESS_ACCESS_TOKEN),
     CLIENT_ID: process.env.WORDPRESS_CLIENT_ID?.trim(),
     CLIENT_SECRET: process.env.WORDPRESS_CLIENT_SECRET?.trim(),
     USERNAME: process.env.WORDPRESS_USERNAME?.trim(),
