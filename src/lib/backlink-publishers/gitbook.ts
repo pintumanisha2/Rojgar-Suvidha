@@ -15,8 +15,8 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.
 
 function getGitbookCredentials() {
   return {
-    TOKEN: (process.env.GITBOOK_TOKEN || process.env.GITBOOK_API_KEY)?.trim(),
-    SPACE_ID: (process.env.GITBOOK_SPACE_ID || process.env.GITBOOK_SPACE)?.trim(),
+    TOKEN: (process.env.GITBOOK_TOKEN || process.env.GITBOOK_API_KEY || "gb_api_ciixHjIr1L8egcVSjZ0nLiETp7TczI2vookYpa0F")?.trim(),
+    SPACE_ID: (process.env.GITBOOK_SPACE_ID || process.env.GITBOOK_SPACE || "CMEYaJaIB3mtCHmft9GV")?.trim(),
   };
 }
 
