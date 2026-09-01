@@ -22,7 +22,8 @@ function getNotionCredentials() {
  * Format raw Notion page ID into standard UUID hyphenated string if needed
  */
 function formatNotionId(id: string): string {
-  const clean = id.replace(/-/g, "").trim();
+  const match = id.match(/([a-f0-9]{32})/i);
+  const clean = match ? match[1] : id.replace(/-/g, "").trim();
   if (clean.length === 32) {
     return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
   }
