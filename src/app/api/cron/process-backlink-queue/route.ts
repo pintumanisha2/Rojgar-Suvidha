@@ -20,6 +20,8 @@ import { publishToTelegraph } from "@/lib/backlink-publishers/telegraph";
 import { publishToWordPress } from "@/lib/backlink-publishers/wordpress";
 import { publishToGithub } from "@/lib/backlink-publishers/github";
 import { publishToDevto } from "@/lib/backlink-publishers/devto";
+import { publishToHashnode } from "@/lib/backlink-publishers/hashnode";
+import { publishToGitlab } from "@/lib/backlink-publishers/gitlab";
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -105,6 +107,20 @@ export async function GET(request: Request) {
       });
     } else if (queuedItem.platform === "devto") {
       publishedUrl = await publishToDevto({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "hashnode") {
+      publishedUrl = await publishToHashnode({
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+      });
+    } else if (queuedItem.platform === "gitlab") {
+      publishedUrl = await publishToGitlab({
         jobId: queuedItem.job_id,
         title: job.title,
         slug: job.slug,
