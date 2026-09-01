@@ -70,15 +70,11 @@ export async function publishToLivejournal(params: {
       signal: AbortSignal.timeout(15000),
     });
 
-    const responseText = await res.text();
-    const lines = responseText.split("\n");
+    const lines = responseText.split("\n").map((l) => l.trim());
 
-    // LiveJournal flat interface returns line-by-line key/value format:
-    // success
-    // url
-    // http://username.livejournal.com/1234.html
+    // LiveJournal flat interface returns line-by-line key/value format
     const urlIdx = lines.indexOf("url");
-    const hasSuccess = lines.includes("success") || lines[0] === "success";
+    const hasSuccess = lines.includes("success") || lines[0] === "success" || lines.includes("OK");
 
     if (res.ok && urlIdx !== -1 && lines[urlIdx + 1] && hasSuccess) {
       const liveUrl = lines[urlIdx + 1].trim();
