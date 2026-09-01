@@ -89,17 +89,19 @@ export async function publishToTelegraph(params: {
   ];
 
   try {
+    const paramsBody = new URLSearchParams({
+      access_token: token,
+      title: `${params.title.slice(0, 60)} — Rojgar Suvidha`,
+      author_name: "Rojgar Suvidha",
+      author_url: BASE_URL,
+      content: JSON.stringify(contentNodes),
+      return_content: "false",
+    });
+
     const res = await fetch("https://api.telegra.ph/createPage", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: token,
-        title: `${params.title.slice(0, 60)} — Rojgar Suvidha`,
-        author_name: "Rojgar Suvidha",
-        author_url: BASE_URL,
-        content: contentNodes,
-        return_content: false,
-      }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: paramsBody.toString(),
       signal: AbortSignal.timeout(12000),
     });
     const json = await res.json();
