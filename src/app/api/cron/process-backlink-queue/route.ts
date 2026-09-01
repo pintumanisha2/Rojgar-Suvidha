@@ -177,6 +177,20 @@ export async function GET(request: Request) {
         .update({ status: "failed" })
         .eq("id", queuedItem.id);
 
+      if (queuedItem.platform === 'tumblr') {
+        return NextResponse.json({
+          ok: true,
+          processed: 0,
+          platform: queuedItem.platform,
+          message: `Publisher for '${queuedItem.platform}' returned null`,
+          debugEnv: {
+            TUMBLR_BLOG_NAME: process.env.TUMBLR_BLOG_NAME || "NOT_SET",
+            TUMBLR_CONSUMER_KEY_present: !!process.env.TUMBLR_CONSUMER_KEY,
+            TUMBLR_CONSUMER_SECRET_present: !!process.env.TUMBLR_CONSUMER_SECRET,
+          }
+        });
+      }
+
       const siteUrl = process.env.WORDPRESS_SITE_URL;
       const username = process.env.WORDPRESS_USERNAME;
       const appPass = process.env.WORDPRESS_APP_PASSWORD || process.env.WORDPRESS_PASSWORD;
