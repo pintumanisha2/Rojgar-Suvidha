@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { sendTelegramBacklinksExcelReport } from "./backlink-exporter";
+
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -29,7 +31,8 @@ export interface BacklinkRecord {
 export async function enqueuePostApprovalBacklinks(
   jobId: string,
   title: string,
-  slug: string
+  slug: string,
+  category?: string
 ) {
   try {
     const supabase = getSupabaseClient();
@@ -38,6 +41,9 @@ export async function enqueuePostApprovalBacklinks(
     console.log(`🚀 [Backlink Engine] Queuing post-approval backlinks for Job ID: ${jobId} (${slug})`);
 
     const liveJobUrl = `${BASE_URL}/job/${slug}`;
+    const categoryUrl = `${BASE_URL}/${category || "latest-jobs"}`;
+    const toolUrl = `${BASE_URL}/resume-builder`;
+    const homeUrl = BASE_URL;
 
     // Anchor text pool — diversity matrix (White-Hat best practice):
     // 40% Brand | 25% CTA | 15% Naked URL | 10% Keyword+Brand | 10% Generic
@@ -80,15 +86,21 @@ export async function enqueuePostApprovalBacklinks(
 
     console.log(`📍 [Backlink Engine] Selected platforms for job ${jobId.slice(0, 8)}: ${selectedPlatforms.join(", ")}`);
 
+    // Multi-Page Link Distribution Matrix (Job Article: 3, Category Hub: 1, Tool/Home: 1)
+    const targetPageTypes = ["Job Article", "Job Article", "Job Article", "Category Pillar", "Utility Tool"];
+    const targetUrls = [liveJobUrl, liveJobUrl, liveJobUrl, categoryUrl, (hashSeed % 2 === 0 ? toolUrl : homeUrl)];
+
     const platforms = selectedPlatforms.map((platform, i) => ({
       platform,
       anchor: pickAnchor(i),
+      targetUrl: targetUrls[i],
+      pageType: targetPageTypes[i],
     }));
 
     const insertRecords: BacklinkRecord[] = platforms.map((p) => ({
       job_id: jobId,
       platform: p.platform,
-      backlink_url: liveJobUrl, // placeholder; updated with real URL when cron publishes
+      backlink_url: p.targetUrl, // target page URL placeholder; updated with real live backlink URL when cron publishes
       anchor_text: p.anchor,
       status: "queued",         // ← QUEUED state — cron will publish & update to 'published'
     }));
@@ -153,19 +165,46 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
     if (publishedCount === 0) {
       messageLines.push(`ℹ️ No new blogs were published today.`);
     } else {
-      // Fetch backlinks for each job
+      // Fetch backlinks for each job with full metadata for Excel export
       const jobIds = todayJobs.map((j) => j.id);
+      const jobsById: Record<string, { title: string; slug: string }> = {};
+      todayJobs.forEach((j) => { jobsById[j.id] = { title: j.title, slug: j.slug }; });
+
       const { data: backlinksData } = await supabase
         .from("backlinks_log")
-        .select("job_id, platform, backlink_url")
-        .in("job_id", jobIds);
+        .select("job_id, platform, backlink_url, anchor_text, status, created_at")
+        .in("job_id", jobIds)
+        .order("created_at", { ascending: false });
 
       const backlinksByJob: Record<string, any[]> = {};
+      const allBacklinksToExport: Array<{
+        created_at?: string;
+        job_title: string;
+        slug: string;
+        platform: string;
+        backlink_url: string;
+        anchor_text: string;
+        status: string;
+      }> = [];
+
       if (backlinksData) {
         totalBacklinksCount = backlinksData.length;
         backlinksData.forEach((b) => {
           if (!backlinksByJob[b.job_id]) backlinksByJob[b.job_id] = [];
           backlinksByJob[b.job_id].push(b);
+
+          const jobInfo = jobsById[b.job_id];
+          if (jobInfo) {
+            allBacklinksToExport.push({
+              created_at: b.created_at,
+              job_title: jobInfo.title,
+              slug: jobInfo.slug,
+              platform: b.platform,
+              backlink_url: b.backlink_url,
+              anchor_text: b.anchor_text || "Rojgar Suvidha",
+              status: b.status || "Published",
+            });
+          }
         });
       }
 
@@ -195,26 +234,31 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
       if (todayJobs.length > 15) {
         messageLines.push(`... and ${todayJobs.length - 15} more blogs published today.`);
       }
-    }
 
-    messageLines.push(`------------------------------------------`);
-    messageLines.push(`🚀 *All systems operational — 0 errors detected.*`);
+      // 3. Send Telegram text message & attached Excel document
+      if (BOT_TOKEN && ADMIN_CHAT_ID) {
+        // Send main Markdown report text
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: ADMIN_CHAT_ID,
+            text: messageLines.join("\n"),
+            parse_mode: "Markdown",
+            disable_web_page_preview: true,
+          }),
+        });
+        console.log(`✅ Sent Daily 9 PM Executive Text Report to Telegram Admin (${ADMIN_CHAT_ID})`);
 
-    const fullMessage = messageLines.join("\n");
-
-    // Send Telegram message to Admin ID
-    if (BOT_TOKEN && ADMIN_CHAT_ID) {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: ADMIN_CHAT_ID,
-          text: fullMessage,
-          parse_mode: "Markdown",
-          disable_web_page_preview: true,
-        }),
-      });
-      console.log(`✅ Sent Daily 9 PM Executive Report to Telegram Admin (${ADMIN_CHAT_ID})`);
+        // Send attached Daily Excel (.csv) Document
+        if (allBacklinksToExport.length > 0) {
+          await sendTelegramBacklinksExcelReport(
+            BOT_TOKEN,
+            ADMIN_CHAT_ID,
+            allBacklinksToExport
+          );
+        }
+      }
     }
 
     return { success: true, publishedCount, backlinksCount: totalBacklinksCount };

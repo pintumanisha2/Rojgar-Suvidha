@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Link2, ExternalLink, RefreshCw, CheckCircle2, ShieldCheck, Sparkles, Filter, BarChart3 } from "lucide-react";
+import { Link2, ExternalLink, RefreshCw, CheckCircle2, ShieldCheck, Sparkles, Filter, BarChart3, Send } from "lucide-react";
 
 export default function AdminBacklinksPage() {
   const [backlinks, setBacklinks] = useState<any[]>([]);
@@ -10,6 +10,7 @@ export default function AdminBacklinksPage() {
   const [filterPlatform, setFilterPlatform] = useState<string>("all");
   const [triggeringJobId, setTriggeringJobId] = useState<string | null>(null);
   const [triggerMsg, setTriggerMsg] = useState<string | null>(null);
+  const [processingItem, setProcessingItem] = useState(false);
 
   const fetchBacklinks = async () => {
     setLoading(true);
@@ -66,6 +67,26 @@ export default function AdminBacklinksPage() {
     setTimeout(() => setTriggerMsg(null), 5000);
   };
 
+  const handleProcessOneItem = async () => {
+    setProcessingItem(true);
+    setTriggerMsg("⏳ Processing 1 queued backlink from database...");
+    try {
+      const res = await fetch("/api/cron/process-backlink-queue");
+      const data = await res.json();
+      if (data.ok && data.processed > 0) {
+        setTriggerMsg(`✅ Published 1 backlink to ${data.platform || "platform"}! Live URL: ${data.url}`);
+        fetchBacklinks();
+      } else {
+        setTriggerMsg(`ℹ️ ${data.message || "Queue is currently empty or no items processed"}`);
+      }
+    } catch (e: any) {
+      setTriggerMsg(`❌ Failed: ${e.message}`);
+    } finally {
+      setProcessingItem(false);
+      setTimeout(() => setTriggerMsg(null), 8000);
+    }
+  };
+
   const filteredBacklinks = backlinks.filter((b) =>
     filterPlatform === "all" ? true : b.platform === filterPlatform
   );
@@ -97,6 +118,13 @@ export default function AdminBacklinksPage() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={handleProcessOneItem}
+            disabled={processingItem}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+          >
+            <Send className={`w-4 h-4 ${processingItem ? "animate-spin" : ""}`} /> {processingItem ? "Publishing..." : "Publish 1 Now"}
+          </button>
           <button
             onClick={fetchBacklinks}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all"

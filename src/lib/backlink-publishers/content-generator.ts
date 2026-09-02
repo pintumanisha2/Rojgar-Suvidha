@@ -28,34 +28,22 @@ interface ContentResult {
   tags?: string[];
 }
 
-function getGeminiKey(): string | undefined {
-  return (
-    process.env.GEMINI_API_KEY_1 ||
-    process.env.GEMINI_API_KEY_2 ||
-    process.env.GEMINI_API_KEY
-  );
-}
+import { callGeminiWithRotation } from "@/lib/gemini-rotator";
 
 /**
- * Call Gemini Flash Lite to generate unique content
+ * Call Gemini AI using rotator engine to generate unique content
  */
 async function callGemini(prompt: string): Promise<string | null> {
-  const key = getGeminiKey();
-  if (!key) return null;
-
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        signal: AbortSignal.timeout(25000),
-      }
-    );
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
-  } catch {
+    const text = await callGeminiWithRotation({
+      prompt,
+      temperature: 0.7,
+      maxOutputTokens: 2048,
+      timeoutMs: 15000,
+    });
+    return text?.trim() || null;
+  } catch (err: any) {
+    console.warn("⚠️ [Content Generator] Gemini rotator warning:", err?.message || err);
     return null;
   }
 }

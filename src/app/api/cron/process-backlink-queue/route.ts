@@ -27,6 +27,9 @@ import { publishToPastebin } from "@/lib/backlink-publishers/pastebin";
 import { publishToNotion } from "@/lib/backlink-publishers/notion";
 import { publishToLivejournal } from "@/lib/backlink-publishers/livejournal";
 import { publishToGitbook } from "@/lib/backlink-publishers/gitbook";
+import { syncBacklinkToGoogleSheet } from "@/lib/backlink-exporter";
+
+
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -36,10 +39,14 @@ function getSupabase() {
 }
 
 export async function GET(request: Request) {
-  // Security: only allow Vercel Cron (or internal calls with secret)
+  // Security: only allow Vercel Cron, Bearer secret, or query param key
   const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
+  const url = new URL(request.url);
+  const keyParam = url.searchParams.get("key");
+
+  const cronSecret = process.env.CRON_SECRET || "rojgarsuvidha_auto_blog_2026";
+  if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}` && keyParam !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -202,6 +209,39 @@ export async function GET(request: Request) {
         .eq("id", queuedItem.id);
 
       console.log(`✅ [Queue Cron] Published ${queuedItem.platform} backlink for job '${job.title}': ${publishedUrl}`);
+
+      // Detect target page type based on queued placeholder URL
+      let pageType: "Job Article" | "Category Pillar" | "State Hub" | "Utility Tool" | "Homepage" = "Job Article";
+      let targetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`;
+
+      if (queuedItem.backlink_url) {
+        if (queuedItem.backlink_url.includes("/resume-builder") || queuedItem.backlink_url.includes("/eligibility") || queuedItem.backlink_url.includes("/e-suvidha")) {
+          pageType = "Utility Tool";
+          targetUrl = queuedItem.backlink_url;
+        } else if (queuedItem.backlink_url.includes("/state/")) {
+          pageType = "State Hub";
+          targetUrl = queuedItem.backlink_url;
+        } else if (queuedItem.backlink_url.includes("/latest-jobs") || queuedItem.backlink_url.includes("/sarkari-result") || queuedItem.backlink_url.includes("/admit-card")) {
+          pageType = "Category Pillar";
+          targetUrl = queuedItem.backlink_url;
+        } else if (queuedItem.backlink_url === process.env.NEXT_PUBLIC_BASE_URL || queuedItem.backlink_url === "https://www.rojgarsuvidha.com") {
+          pageType = "Homepage";
+          targetUrl = queuedItem.backlink_url;
+        }
+      }
+
+      // Real-time Auto-Sync to Google Sheet (Method 1 Multi-Tab)
+      syncBacklinkToGoogleSheet({
+        type: "backlink",
+        page_type: pageType,
+        job_title: job.title,
+        target_url: targetUrl,
+        platform: queuedItem.platform,
+        backlink_url: publishedUrl,
+        anchor_text: queuedItem.anchor_text || "Rojgar Suvidha",
+        status: "Published",
+      }).catch((e) => console.warn("⚠️ Google Sheet background sync note:", e.message || e));
+
       return NextResponse.json({ ok: true, processed: 1, platform: queuedItem.platform, url: publishedUrl });
     } else {
       await supabase
