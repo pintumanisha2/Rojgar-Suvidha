@@ -29,7 +29,95 @@ import { publishToLivejournal } from "@/lib/backlink-publishers/livejournal";
 import { publishToGitbook } from "@/lib/backlink-publishers/gitbook";
 import { syncBacklinkToGoogleSheet } from "@/lib/backlink-exporter";
 
+// ─── PLATFORM TIER MAP ───────────────────────────────────────────────────────
+const PLATFORM_TIER: Record<string, string> = {
+  blogger: "DA-95 · Tier 1",
+  wordpress: "DA-92 · Tier 1",
+  github: "DA-96 · Tier 1",
+  devto: "DA-85 · Tier 2",
+  hashnode: "DA-82 · Tier 2",
+  medium: "DA-95 · Tier 1",
+  telegraph: "DA-78 · Tier 2",
+  gitlab: "DA-90 · Tier 1",
+  notion: "DA-90 · Tier 1",
+  gitbook: "DA-79 · Tier 2",
+  livejournal: "DA-89 · Tier 1",
+  pastebin: "DA-65 · Tier 3",
+  tumblr: "DA-98 · Tier 1",
+  pinterest: "DA-92 · Tier 1",
+};
 
+/**
+ * Send an instant real-time Telegram notification to the admin
+ * when a backlink is published or fails. Fires and forgets.
+ */
+async function notifyTelegram(opts: {
+  success: boolean;
+  jobTitle: string;
+  platform: string;
+  targetUrl: string;
+  publishedUrl?: string | null;
+  anchorText?: string;
+  queueRemaining: number;
+}): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
+  if (!token) return;
+
+  // IST = UTC+5:30
+  const now = new Date();
+  const istTime = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  const hours = istTime.getUTCHours();
+  const minutes = istTime.getUTCMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 || 12;
+  const dateStr = istTime.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" });
+  const istLabel = `${h12}:${minutes} ${ampm} IST (${dateStr})`;
+
+  const tierLabel = PLATFORM_TIER[opts.platform] || opts.platform.toUpperCase();
+  const jobShort = opts.jobTitle.length > 60 ? opts.jobTitle.slice(0, 57) + "..." : opts.jobTitle;
+
+  let message: string;
+  if (opts.success && opts.publishedUrl) {
+    message = [
+      `🔗 <b>Backlink Published!</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `📌 <b>Post:</b> ${jobShort}`,
+      `🌐 <b>Platform:</b> ${opts.platform.toUpperCase()} (${tierLabel})`,
+      `🕐 <b>Time:</b> ${istLabel}`,
+      `🎯 <b>Target:</b> <a href="${opts.targetUrl}">${opts.targetUrl.replace("https://www.rojgarsuvidha.com", "") || "/"}</a>`,
+      `🔗 <b>Live URL:</b> <a href="${opts.publishedUrl}">${opts.publishedUrl.slice(0, 60)}...</a>`,
+      `📝 <b>Anchor:</b> ${opts.anchorText || "Rojgar Suvidha"}`,
+      `⏳ <b>Queue Remaining:</b> ${opts.queueRemaining} backlinks`,
+    ].join("\n");
+  } else {
+    message = [
+      `⚠️ <b>Backlink Failed</b>`,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `📌 <b>Post:</b> ${jobShort}`,
+      `🌐 <b>Platform:</b> ${opts.platform.toUpperCase()} (${tierLabel})`,
+      `🕐 <b>Time:</b> ${istLabel}`,
+      `❌ <b>Reason:</b> Publisher returned null (credentials missing or API error)`,
+      `⏭️ <b>Next run:</b> in ~15 min`,
+    ].join("\n");
+  }
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (e: any) {
+    console.warn("⚠️ [Queue Cron] Telegram notify error (non-fatal):", e.message);
+  }
+}
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -253,12 +341,43 @@ export async function GET(request: Request) {
         status: "Published",
       }).catch((e) => console.warn("⚠️ Google Sheet background sync note:", e.message || e));
 
+      // Count remaining queued items for the notification
+      const { count: remainingCount } = await supabase
+        .from("backlinks_log")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "queued");
+
+      // 🔔 Real-time Telegram notification — fires instantly
+      notifyTelegram({
+        success: true,
+        jobTitle: job.title,
+        platform: queuedItem.platform,
+        targetUrl,
+        publishedUrl,
+        anchorText: queuedItem.anchor_text || "Rojgar Suvidha",
+        queueRemaining: remainingCount ?? 0,
+      }).catch(() => {});
+
       return NextResponse.json({ ok: true, processed: 1, platform: queuedItem.platform, url: publishedUrl });
     } else {
       await supabase
         .from("backlinks_log")
         .update({ status: "failed" })
         .eq("id", queuedItem.id);
+
+      // 🔔 Failure Telegram notification
+      const { count: remainingCount } = await supabase
+        .from("backlinks_log")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "queued");
+
+      notifyTelegram({
+        success: false,
+        jobTitle: job.title,
+        platform: queuedItem.platform,
+        targetUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`,
+        queueRemaining: remainingCount ?? 0,
+      }).catch(() => {});
 
       return NextResponse.json({
         ok: true,

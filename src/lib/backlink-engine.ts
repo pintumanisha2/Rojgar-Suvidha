@@ -185,10 +185,10 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
       const jobsById: Record<string, { title: string; slug: string }> = {};
       todayJobs.forEach((j) => { jobsById[j.id] = { title: j.title, slug: j.slug }; });
 
-      // Select backlinks; include target_url if table has it
+      // Select backlinks; include target_url and published_at if table has them
       const { data: backlinksData } = await supabase
         .from("backlinks_log")
-        .select("job_id, platform, backlink_url, anchor_text, status, created_at")
+        .select("job_id, platform, backlink_url, anchor_text, status, created_at, published_at, target_url")
         .in("job_id", jobIds)
         .order("created_at", { ascending: false });
 
@@ -264,9 +264,21 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
             const target = l.target_url || (l.backlink_url?.includes("rojgarsuvidha.com") ? l.backlink_url : liveJobUrl);
             const anchor = l.anchor_text || "Rojgar Suvidha";
 
+            // Convert created_at or published_at to IST time for display
+            const rawTs = l.published_at || l.created_at;
+            let istTimeLabel = "";
+            if (rawTs) {
+              const tsDate = new Date(rawTs);
+              const istDate = new Date(tsDate.getTime() + 5.5 * 60 * 60 * 1000);
+              const hh = istDate.getUTCHours();
+              const mm = istDate.getUTCMinutes().toString().padStart(2, "0");
+              const ampm = hh >= 12 ? "PM" : "AM";
+              istTimeLabel = ` | 🕐 ${hh % 12 || 12}:${mm} ${ampm} IST`;
+            }
+
             if (isLive) {
               messageLines.push(`      • *${platformName}:* ✅ ${l.backlink_url}`);
-              messageLines.push(`        ↳ _Anchor:_ "${anchor}" | _Target:_ ${target}`);
+              messageLines.push(`        ↳ _Anchor:_ "${anchor}"${istTimeLabel} | _Target:_ ${target}`);
             } else {
               messageLines.push(`      • *${platformName}:* ⏳ Pending Drip (15-min queue)`);
               messageLines.push(`        ↳ _Anchor:_ "${anchor}" | _Target:_ ${target}`);
@@ -275,6 +287,7 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
         }
         messageLines.push(``);
       });
+
 
       if (todayJobs.length > 10) {
         messageLines.push(`... and ${todayJobs.length - 10} more posts detailed in attached Excel document.`);
