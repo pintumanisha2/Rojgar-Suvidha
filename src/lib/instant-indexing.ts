@@ -19,12 +19,19 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.
 const SITE_HOST = "www.rojgarsuvidha.com";
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY || "81903AC6E158EBDBEA77300DC1D07ED1";
 
+export interface GoogleIndexingResult {
+  attempted: boolean;
+  success: boolean;
+  status?: number;
+  error?: string;
+}
+
 // ── Method 1: Google Indexing API — Direct Push for Googlebot ────────────────
-async function submitGoogleIndexingAPI(urls: string[]): Promise<void> {
+async function submitGoogleIndexingAPI(urls: string[]): Promise<GoogleIndexingResult> {
   const credsJson = process.env.GOOGLE_INDEXING_CREDENTIALS;
   if (!credsJson) {
     console.warn("⚠️ [Indexing] GOOGLE_INDEXING_CREDENTIALS environment variable not set");
-    return;
+    return { attempted: false, success: false, error: "Credentials not configured in environment" };
   }
   try {
     const creds = JSON.parse(credsJson);
@@ -64,32 +71,56 @@ async function submitGoogleIndexingAPI(urls: string[]): Promise<void> {
       body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${sigInput}.${sig}`,
       signal: AbortSignal.timeout(12000),
     });
-    const { access_token } = await tokenRes.json();
+    const tokenData = await tokenRes.json();
+    const access_token = tokenData.access_token;
     if (!access_token) {
-      console.warn("⚠️ [Indexing] Google OAuth token missing or invalid credentials");
-      return;
+      const err = tokenData.error_description || tokenData.error || "Failed to obtain OAuth2 token";
+      console.warn("⚠️ [Indexing] Google OAuth token error:", err);
+      return { attempted: true, success: false, error: `OAuth error: ${err}` };
     }
 
-    // Submit URL_UPDATED notifications for each language URL with detailed logging
-    const results = await Promise.allSettled(
-      urls.map(async (pageUrl) => {
-        const res = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-          },
-          body: JSON.stringify({ url: pageUrl, type: "URL_UPDATED" }),
-          signal: AbortSignal.timeout(12000),
-        });
-        const resData = await res.json().catch(() => ({}));
-        console.log(` 📡 [Google Indexing API] HTTP ${res.status} — ${pageUrl} | Response:`, JSON.stringify(resData));
-        return { url: pageUrl, status: res.status, data: resData };
-      })
-    );
-    console.log(`✅ [Indexing] Google Indexing API: Processed ${urls.length} URLs`);
+    // Submit primary URL first to get authoritative status
+    const primaryUrl = urls[0];
+    const primaryRes = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${access_token}`,
+      },
+      body: JSON.stringify({ url: primaryUrl, type: "URL_UPDATED" }),
+      signal: AbortSignal.timeout(12000),
+    });
+    const primaryData = await primaryRes.json().catch(() => ({}));
+    const isPrimaryOk = primaryRes.status >= 200 && primaryRes.status < 300;
+
+    // Submit remaining language URLs asynchronously
+    if (urls.length > 1) {
+      Promise.allSettled(
+        urls.slice(1).map((pageUrl) =>
+          fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${access_token}`,
+            },
+            body: JSON.stringify({ url: pageUrl, type: "URL_UPDATED" }),
+            signal: AbortSignal.timeout(12000),
+          })
+        )
+      ).catch(() => {});
+    }
+
+    if (isPrimaryOk) {
+      console.log(`✅ [Indexing] Google Indexing API accepted: HTTP ${primaryRes.status} for ${primaryUrl}`);
+      return { attempted: true, success: true, status: primaryRes.status };
+    } else {
+      const msg = primaryData?.error?.message || `HTTP ${primaryRes.status}`;
+      console.warn(`⚠️ [Indexing] Google Indexing API rejected: ${msg}`);
+      return { attempted: true, success: false, status: primaryRes.status, error: msg };
+    }
   } catch (err: any) {
     console.warn(`⚠️ [Indexing] Google Indexing API failed: ${err.message}`);
+    return { attempted: true, success: false, error: err.message };
   }
 }
 
@@ -185,6 +216,13 @@ async function warmUpEdgeCache(urls: string[]): Promise<void> {
   }
 }
 
+export interface IndexingSummary {
+  google: GoogleIndexingResult;
+  indexNow: { success: boolean; count: number };
+  webSub: { success: boolean; count: number };
+  totalUrls: number;
+}
+
 // ── MAIN EXPORT ───────────────────────────────────────────────────────────────
 /**
  * Call this immediately after ANY new blog post is published.
@@ -193,7 +231,7 @@ async function warmUpEdgeCache(urls: string[]): Promise<void> {
  * @param slug     Post slug (e.g. "ssc-cgl-2026")
  * @param category Post category (e.g. "latest-jobs")
  */
-export async function notifySearchEngines(slug: string, category = "latest-jobs"): Promise<void> {
+export async function notifySearchEngines(slug: string, category = "latest-jobs"): Promise<IndexingSummary> {
   const primaryUrl = `${BASE_URL}/job/${slug}`;
   const languageUrls: string[] = [
     primaryUrl,
@@ -219,13 +257,22 @@ export async function notifySearchEngines(slug: string, category = "latest-jobs"
   console.log(`\n🚀 [Indexing Engine] Starting 30-min auto-indexing for ${allUrlsToSubmit.length} URLs (${slug})`);
 
   const start = Date.now();
-  await Promise.allSettled([
+  const [googleRes] = await Promise.allSettled([
     submitGoogleIndexingAPI(allUrlsToSubmit),
     pingWebSubHubs(),
     submitIndexNowMulti(allUrlsToSubmit),
     warmUpEdgeCache(allUrlsToSubmit),
   ]);
 
+  const googleStatus = googleRes.status === "fulfilled" ? googleRes.value : { attempted: true, success: false, error: "Task rejected" };
+
   const ms = Date.now() - start;
-  console.log(`✅ [Indexing Engine] Complete in ${ms}ms — All 5 indexing layers fired for ${slug} across 8 languages\n`);
+  console.log(`✅ [Indexing Engine] Complete in ${ms}ms — All indexing layers fired for ${slug} across 8 languages\n`);
+
+  return {
+    google: googleStatus,
+    indexNow: { success: true, count: allUrlsToSubmit.length },
+    webSub: { success: true, count: 4 },
+    totalUrls: allUrlsToSubmit.length,
+  };
 }

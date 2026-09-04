@@ -37,12 +37,19 @@ function getCategoryBadge(category: string): string {
   }
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 /**
  * Broadcast job alert to Telegram Channel / Group
  */
 export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolean> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  // Always target public Telegram channel (@govermentform / TELEGRAM_CHANNEL_ID), not admin personal chat ID
+  // Target public Telegram channel (@govermentform / TELEGRAM_CHANNEL_ID)
   const channelId = process.env.TELEGRAM_CHANNEL_ID || "@govermentform";
 
   if (!botToken) {
@@ -52,28 +59,28 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
 
   const jobUrl = `${BASE_URL}/job/${job.slug}`;
   const categoryBadge = getCategoryBadge(job.category);
-  const postsText = job.totalPosts ? `👥 *Total Vacancies:* ${job.totalPosts}` : null;
-  const lastDateText = job.lastDate ? `📅 *Last Date:* ${job.lastDate}` : null;
-  const stateText = job.stateCode && job.stateCode !== "ALL" ? `🏛️ *State:* ${job.stateCode}` : `🌐 *Jurisdiction:* All India`;
+  const postsText = job.totalPosts ? `👥 <b>Total Vacancies:</b> ${escapeHtml(job.totalPosts)}` : null;
+  const lastDateText = job.lastDate ? `📅 <b>Last Date:</b> ${escapeHtml(job.lastDate)}` : null;
+  const stateText = job.stateCode && job.stateCode !== "ALL" ? `🏛️ <b>State:</b> ${escapeHtml(job.stateCode)}` : `🌐 <b>Jurisdiction:</b> All India`;
 
   const lines = [
-    `🚨 *NEW SARKARI NOTIFICATION 2026*`,
+    `🚨 <b>NEW SARKARI NOTIFICATION 2026</b>`,
     "",
-    `🔥 *${job.title.trim()}*`,
+    `🔥 <b>${escapeHtml(job.title.trim())}</b>`,
     "",
-    `📌 *Category:* ${categoryBadge}`,
+    `📌 <b>Category:</b> ${escapeHtml(categoryBadge)}`,
     ...(postsText ? [postsText] : []),
     ...(lastDateText ? [lastDateText] : []),
     stateText,
-    "🟢 *Status:* Verified Update Live",
+    "🟢 <b>Status:</b> Verified Update Live",
     "",
-    `🔗 *Direct Apply Link & Complete Details:*`,
-    jobUrl,
+    `🔗 <b>Direct Apply Link & Complete Details:</b>`,
+    `<a href="${jobUrl}">${jobUrl}</a>`,
     "",
-    `📢 *Join Official Channel:* ${channelId}`,
+    `📢 <b>Join Official Channel:</b> ${escapeHtml(channelId)}`,
   ];
 
-  const text = lines.join("\n");
+  const htmlText = lines.join("\n");
 
   try {
     // If bannerUrl is present, send as photo with caption
@@ -85,14 +92,17 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
         body: JSON.stringify({
           chat_id: channelId,
           photo: photoUrl,
-          caption: text.slice(0, 1024), // Telegram caption max 1024 chars
-          parse_mode: "Markdown",
+          caption: htmlText.slice(0, 1024), // Telegram caption max 1024 chars
+          parse_mode: "HTML",
         }),
       });
 
       if (res.ok) {
         console.log(`✅ [Telegram Auto-Poster] Photo post published successfully to Telegram channel ${channelId}`);
         return true;
+      } else {
+        const photoErr = await res.json().catch(() => ({}));
+        console.warn(`⚠️ [Telegram Auto-Poster] Photo post failed (${res.status}), trying text fallback:`, JSON.stringify(photoErr));
       }
     }
 
@@ -102,18 +112,18 @@ export async function sendTelegramPost(job: BroadcastJobPayload): Promise<boolea
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: channelId,
-        text,
-        parse_mode: "Markdown",
+        text: htmlText,
+        parse_mode: "HTML",
         disable_web_page_preview: false,
       }),
     });
 
     if (res.ok) {
-      console.log("✅ [Telegram Auto-Poster] Text post published successfully to Telegram channel");
+      console.log(`✅ [Telegram Auto-Poster] Text post published successfully to Telegram channel ${channelId}`);
       return true;
     } else {
       const errData = await res.json().catch(() => ({}));
-      console.warn("⚠️ [Telegram Auto-Poster] Telegram API failed:", errData);
+      console.warn("⚠️ [Telegram Auto-Poster] Telegram API failed:", JSON.stringify(errData));
       return false;
     }
   } catch (err: any) {

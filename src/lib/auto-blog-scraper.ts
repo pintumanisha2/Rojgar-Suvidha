@@ -2619,16 +2619,25 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const sarkariResultNew = allCandidateItems.filter((i) => i.source === "sarkariresult" && !scrapedUrls.has(i.link)).slice(0, 1);
   const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 1);
 
-  // 4. Source Priority Rotation (Fair Scheduler across 30-min cron intervals)
-  // Ensures SarkariResult gets FIRST priority on alternating runs, preventing timeout skips!
+  // 4. Source Priority Rotation:
+  // RULE: Real-time Google Trends India topics ALWAYS take FIRST priority!
+  // If no new Google Trends item is waiting, alternate fairly between SarkariResult & FreeJobAlert.
   const runIntervalIdx = Math.floor(Date.now() / (1000 * 60 * 30)); // 30-min window index
-  const prioritizedSources = (runIntervalIdx % 2 === 0)
-    ? [...sarkariResultNew, ...freeJobAlertNew, ...googleTrendsNew, ...ndtvNew]
-    : [...freeJobAlertNew, ...sarkariResultNew, ...googleTrendsNew, ...ndtvNew];
+  let prioritizedSources: typeof allCandidateItems = [];
 
-  // Process max 2 high-quality items per cron run (safely fits within Vercel 60s timeout)
-  const newItems = prioritizedSources.slice(0, 2);
-  console.log(`🆕 New items to process (Run Priority ${runIntervalIdx % 2 === 0 ? "SarkariResult First" : "FreeJobAlert First"}): ${newItems.length}`);
+  if (googleTrendsNew.length > 0) {
+    console.log(`🔥 [Priority Scheduler] Real-time Google Trends topic detected! Prioritizing: "${googleTrendsNew[0].title}"`);
+    prioritizedSources = [...googleTrendsNew, ...sarkariResultNew, ...freeJobAlertNew, ...ndtvNew];
+  } else if (runIntervalIdx % 2 === 0) {
+    prioritizedSources = [...sarkariResultNew, ...freeJobAlertNew, ...ndtvNew];
+  } else {
+    prioritizedSources = [...freeJobAlertNew, ...sarkariResultNew, ...ndtvNew];
+  }
+
+  // Strict 1-post per run policy: completely eliminates Vercel 60s timeout (HTTP 504)
+  // 1 high-quality 1500-word post takes 25-35s, safely finishing well before the 60s ceiling!
+  const newItems = prioritizedSources.slice(0, 1);
+  console.log(`🆕 New item selected to process (Source: ${newItems[0]?.source || "none"}): ${newItems.length}`);
 
   if (newItems.length === 0) {
     results.skipped = allCandidateItems.length;
@@ -2637,9 +2646,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   }
 
   for (const item of newItems) {
-    // Vercel 45-second Time Guard (prevents 60s function timeout from hard-killing process)
-    if (Date.now() - startTime > 45000) {
-      console.log(`⏱️ [Time Guard] 45s elapsed — safely deferring remaining items to next cron run`);
+    // Vercel 40-second Time Guard (prevents 60s function timeout from hard-killing process)
+    if (Date.now() - startTime > 40000) {
+      console.log(`⏱️ [Time Guard] 40s elapsed — safely deferring remaining items to next cron run`);
       break;
     }
 

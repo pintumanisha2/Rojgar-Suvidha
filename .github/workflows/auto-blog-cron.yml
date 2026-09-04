@@ -31,7 +31,7 @@ jobs:
             --retry 2 \
             --retry-delay 10 \
             -X GET \
-            "https://www.rojgarsuvidha.com/api/auto-blog/cron?key=${{ secrets.CRON_SECRET }}")
+            "https://www.rojgarsuvidha.com/api/auto-blog/cron?key=${{ secrets.CRON_SECRET || 'rojgarsuvidha_auto_blog_2026' }}")
 
           echo "HTTP Status: $HTTP_STATUS"
           echo "Response: $(cat /tmp/response.txt)"
