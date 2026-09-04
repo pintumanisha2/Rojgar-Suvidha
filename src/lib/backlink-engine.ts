@@ -187,6 +187,9 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
         status: string;
       }> = [];
 
+      let livePublishedCount = 0;
+      let queuedCount = 0;
+
       if (backlinksData) {
         totalBacklinksCount = backlinksData.length;
         backlinksData.forEach((b) => {
@@ -195,38 +198,53 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
 
           const jobInfo = jobsById[b.job_id];
           if (jobInfo) {
+            const isLive = b.status === "published" && b.backlink_url && !b.backlink_url.includes("rojgarsuvidha.com");
+            if (isLive) livePublishedCount++;
+            else if (b.status === "queued") queuedCount++;
+
             allBacklinksToExport.push({
               created_at: b.created_at,
               job_title: jobInfo.title,
               slug: jobInfo.slug,
               platform: b.platform,
-              backlink_url: b.backlink_url,
+              backlink_url: isLive ? b.backlink_url : "⏳ Pending Publication (In 15-min Drip Queue)",
               anchor_text: b.anchor_text || "Rojgar Suvidha",
-              status: b.status || "Published",
+              status: isLive ? "Published Live" : b.status === "failed" ? "Failed" : "In Drip Queue",
             });
           }
         });
       }
 
-      messageLines.push(`🔗 *Total Backlinks Generated Today:* ${totalBacklinksCount}`);
+      // Sort export list: Published Live first, then queued
+      allBacklinksToExport.sort((a, b) => {
+        if (a.status === "Published Live" && b.status !== "Published Live") return -1;
+        if (a.status !== "Published Live" && b.status === "Published Live") return 1;
+        return 0;
+      });
+
+      messageLines.push(`🔗 *Live Published Backlinks Today:* ${livePublishedCount}`);
+      messageLines.push(`⏳ *Backlinks In Queue (Dripping every 15 min):* ${queuedCount}`);
       messageLines.push(`------------------------------------------`);
-      messageLines.push(`📰 *PUBLISHED BLOGS & BACKLINKS BREAKDOWN:*`);
+      messageLines.push(`📰 *TODAY'S POSTS & LIVE BACKLINKS:*`);
       messageLines.push(``);
 
       todayJobs.slice(0, 15).forEach((job, idx) => {
         const liveJobUrl = `${BASE_URL}/job/${job.slug}`;
         const links = backlinksByJob[job.id] || [];
+        const liveLinks = links.filter((l) => l.status === "published" && l.backlink_url && !l.backlink_url.includes("rojgarsuvidha.com"));
+        const pendingPlatforms = links.filter((l) => l.status === "queued").map((l) => l.platform);
 
         messageLines.push(`${idx + 1}. 📌 *${job.title}*`);
-        messageLines.push(`   🌐 *Live URL:* ${liveJobUrl}`);
-        if (links.length > 0) {
-          messageLines.push(`   🔗 *Backlinks (${links.length}):*`);
-          links.forEach((l) => {
+        messageLines.push(`   🌐 *Target Post:* ${liveJobUrl}`);
+        if (liveLinks.length > 0) {
+          messageLines.push(`   ✅ *Live Backlinks (${liveLinks.length}):*`);
+          liveLinks.forEach((l) => {
             const platformName = l.platform.charAt(0).toUpperCase() + l.platform.slice(1);
             messageLines.push(`      • *${platformName}:* ${l.backlink_url}`);
           });
-        } else {
-          messageLines.push(`   🔗 *Backlinks:* Processing queue...`);
+        }
+        if (pendingPlatforms.length > 0) {
+          messageLines.push(`   ⏳ *Drip Queue (${pendingPlatforms.length}):* ${pendingPlatforms.join(", ")}`);
         }
         messageLines.push(``);
       });
