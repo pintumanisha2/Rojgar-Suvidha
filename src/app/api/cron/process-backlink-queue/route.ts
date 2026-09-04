@@ -142,11 +142,33 @@ export async function GET(request: Request) {
   if (!supabase) return NextResponse.json({ ok: false, reason: "No Supabase connection" });
 
   try {
-    // 1. Pick ONE queued backlink (oldest first)
-    const { data: queuedItem, error: fetchErr } = await supabase
+    // 1. Filter by platform if specified, else prioritize connected platforms
+    const platformParam = url.searchParams.get("platform");
+    const CONNECTED_PLATFORMS = [
+      "blogger",
+      "github",
+      "gitlab",
+      "wordpress",
+      "telegraph",
+      "devto",
+      "pastebin",
+      "notion",
+      "livejournal",
+      "gitbook",
+    ];
+
+    let dbQuery = supabase
       .from("backlinks_log")
       .select("id, job_id, platform, backlink_url, anchor_text")
-      .eq("status", "queued")
+      .eq("status", "queued");
+
+    if (platformParam) {
+      dbQuery = dbQuery.eq("platform", platformParam.toLowerCase());
+    } else {
+      dbQuery = dbQuery.in("platform", CONNECTED_PLATFORMS);
+    }
+
+    const { data: queuedItem, error: fetchErr } = await dbQuery
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
