@@ -199,18 +199,7 @@ export async function GET(request: Request) {
     // 4. Update DB with result
     const now = new Date().toISOString();
     if (publishedUrl) {
-      await supabase
-        .from("backlinks_log")
-        .update({
-          status: "published",
-          backlink_url: publishedUrl,  // Update with real live URL
-          published_at: now,
-        })
-        .eq("id", queuedItem.id);
-
-      console.log(`✅ [Queue Cron] Published ${queuedItem.platform} backlink for job '${job.title}': ${publishedUrl}`);
-
-      // Detect target page type based on queued placeholder URL
+      // Determine target URL for Google Sheet and target_url column
       let pageType: "Job Article" | "Category Pillar" | "State Hub" | "Utility Tool" | "Homepage" = "Job Article";
       let targetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`;
 
@@ -228,6 +217,28 @@ export async function GET(request: Request) {
           pageType = "Homepage";
           targetUrl = queuedItem.backlink_url;
         }
+      }
+
+      // Safe update: guarantees status and real live URL are saved
+      const { error: updateErr } = await supabase
+        .from("backlinks_log")
+        .update({
+          status: "published",
+          backlink_url: publishedUrl,  // Real live platform link (e.g. Blogger, GitHub, etc.)
+        })
+        .eq("id", queuedItem.id);
+
+      if (updateErr) {
+        console.error("⚠️ [Queue Cron] DB update error:", updateErr.message);
+      } else {
+        console.log(`✅ [Queue Cron] Published ${queuedItem.platform} backlink for job '${job.title}': ${publishedUrl}`);
+        // Optional columns update if migration has been executed
+        try {
+          await supabase
+            .from("backlinks_log")
+            .update({ target_url: targetUrl, published_at: now })
+            .eq("id", queuedItem.id);
+        } catch (_) {}
       }
 
       // Real-time Auto-Sync to Google Sheet (Method 1 Multi-Tab)

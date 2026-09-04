@@ -99,19 +99,35 @@ export async function syncBacklinkToGoogleSheet(payload: BacklinkExportPayload):
   }
 }
 
-/**
- * 2. Generate UTF-8 BOM CSV String (Natively opens in Excel with proper formatting)
- */
-export function generateBacklinksCsvString(backlinks: Array<{
+export interface BacklinkCsvRecord {
   created_at?: string;
   job_title: string;
   slug: string;
+  target_url?: string;
+  page_type?: string;
   platform: string;
   backlink_url: string;
   anchor_text: string;
   status: string;
-}>): string {
-  const headers = ["S.No", "Date (IST)", "Time (IST)", "Job Title", "Target URL", "Platform", "Tier / DA", "Live Backlink URL", "Anchor Text", "Status"];
+}
+
+/**
+ * 2. Generate UTF-8 BOM CSV String (Natively opens in Excel with proper formatting)
+ */
+export function generateBacklinksCsvString(backlinks: BacklinkCsvRecord[]): string {
+  const headers = [
+    "S.No",
+    "Date (IST)",
+    "Time (IST)",
+    "Job Title",
+    "Targeted Website URL",
+    "Target Page Type",
+    "Platform",
+    "Tier / DA",
+    "Live Platform Backlink URL",
+    "Anchor Text",
+    "Publication Status"
+  ];
   
   const escapeCsv = (str: string) => {
     if (!str) return '""';
@@ -123,8 +139,17 @@ export function generateBacklinksCsvString(backlinks: Array<{
     const dateObj = item.created_at ? new Date(item.created_at) : new Date();
     const dateStr = dateObj.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
     const timeStr = dateObj.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
-    const targetUrl = item.slug ? `${BASE_URL}/job/${item.slug}` : BASE_URL;
+    const targetUrl = item.target_url || (item.slug ? `${BASE_URL}/job/${item.slug}` : BASE_URL);
     const tierStr = PLATFORM_TIERS[item.platform?.toLowerCase()] || "High DA";
+
+    // Detect page type
+    let pageType = item.page_type;
+    if (!pageType) {
+      if (targetUrl.includes("/resume-builder")) pageType = "Utility Tool";
+      else if (targetUrl.includes("/latest-jobs") || targetUrl.includes("/sarkari-result")) pageType = "Category Pillar";
+      else if (targetUrl.includes("/job/")) pageType = "Job Article";
+      else pageType = "Homepage";
+    }
 
     return [
       idx + 1,
@@ -132,11 +157,12 @@ export function generateBacklinksCsvString(backlinks: Array<{
       escapeCsv(timeStr),
       escapeCsv(item.job_title),
       escapeCsv(targetUrl),
+      escapeCsv(pageType),
       escapeCsv(item.platform?.toUpperCase() || ""),
       escapeCsv(tierStr),
       escapeCsv(item.backlink_url),
       escapeCsv(item.anchor_text || "Rojgar Suvidha"),
-      escapeCsv(item.status || "Published"),
+      escapeCsv(item.status || "In Drip Queue"),
     ].join(",");
   });
 
@@ -150,15 +176,7 @@ export function generateBacklinksCsvString(backlinks: Array<{
 export async function sendTelegramBacklinksExcelReport(
   botToken: string,
   chatId: string,
-  backlinks: Array<{
-    created_at?: string;
-    job_title: string;
-    slug: string;
-    platform: string;
-    backlink_url: string;
-    anchor_text: string;
-    status: string;
-  }>,
+  backlinks: BacklinkCsvRecord[],
   customTitle?: string
 ): Promise<boolean> {
   if (!botToken || !chatId) {

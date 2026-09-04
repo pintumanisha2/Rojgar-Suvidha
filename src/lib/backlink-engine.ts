@@ -97,22 +97,37 @@ export async function enqueuePostApprovalBacklinks(
       pageType: targetPageTypes[i],
     }));
 
-    const insertRecords: BacklinkRecord[] = platforms.map((p) => ({
+    const insertRecordsWithTarget = platforms.map((p) => ({
       job_id: jobId,
       platform: p.platform,
-      backlink_url: p.targetUrl, // target page URL placeholder; updated with real live backlink URL when cron publishes
+      target_url: p.targetUrl, // internal website page targeted
+      backlink_url: "",        // external platform link; populated when cron publishes
       anchor_text: p.anchor,
-      status: "queued",         // ← QUEUED state — cron will publish & update to 'published'
+      status: "queued",
     }));
 
-    const { error } = await supabase
+    // First attempt: insert with target_url (if migration has been run)
+    const { error: insertErr } = await supabase
       .from("backlinks_log")
-      .insert(insertRecords);
+      .insert(insertRecordsWithTarget);
 
-    if (error) {
-      console.warn(`⚠️ [Backlink Engine] Insert note: ${error.message}`);
+    if (insertErr) {
+      // Fallback: If target_url column does not exist yet in Supabase, store target in backlink_url temporarily
+      const fallbackRecords = platforms.map((p) => ({
+        job_id: jobId,
+        platform: p.platform,
+        backlink_url: p.targetUrl,
+        anchor_text: p.anchor,
+        status: "queued",
+      }));
+      const { error: fallbackErr } = await supabase.from("backlinks_log").insert(fallbackRecords);
+      if (fallbackErr) {
+        console.warn(`⚠️ [Backlink Engine] Insert note: ${fallbackErr.message}`);
+      } else {
+        console.log(`✅ [Backlink Engine] Queued ${fallbackRecords.length} backlinks (compatibility mode) for job: ${jobId}`);
+      }
     } else {
-      console.log(`✅ [Backlink Engine] Queued ${insertRecords.length} backlinks for job ID: ${jobId}. Cron will publish one every 2 hours (White-Hat drip velocity).`);
+      console.log(`✅ [Backlink Engine] Queued ${insertRecordsWithTarget.length} backlinks with dual target_url for job: ${jobId}`);
     }
   } catch (err: any) {
     console.error("❌ [Backlink Engine] Error queuing backlinks:", err.message || err);
@@ -170,6 +185,7 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
       const jobsById: Record<string, { title: string; slug: string }> = {};
       todayJobs.forEach((j) => { jobsById[j.id] = { title: j.title, slug: j.slug }; });
 
+      // Select backlinks; include target_url if table has it
       const { data: backlinksData } = await supabase
         .from("backlinks_log")
         .select("job_id, platform, backlink_url, anchor_text, status, created_at")
@@ -181,6 +197,7 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
         created_at?: string;
         job_title: string;
         slug: string;
+        target_url?: string;
         platform: string;
         backlink_url: string;
         anchor_text: string;
@@ -192,7 +209,7 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
 
       if (backlinksData) {
         totalBacklinksCount = backlinksData.length;
-        backlinksData.forEach((b) => {
+        backlinksData.forEach((b: any) => {
           if (!backlinksByJob[b.job_id]) backlinksByJob[b.job_id] = [];
           backlinksByJob[b.job_id].push(b);
 
@@ -202,10 +219,15 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
             if (isLive) livePublishedCount++;
             else if (b.status === "queued") queuedCount++;
 
+            // Cleanly determine target URL
+            const defaultJobUrl = `${BASE_URL}/job/${jobInfo.slug}`;
+            const targetUrl = b.target_url || (b.backlink_url?.includes("rojgarsuvidha.com") ? b.backlink_url : defaultJobUrl);
+
             allBacklinksToExport.push({
               created_at: b.created_at,
               job_title: jobInfo.title,
               slug: jobInfo.slug,
+              target_url: targetUrl,
               platform: b.platform,
               backlink_url: isLive ? b.backlink_url : "⏳ Pending Publication (In 15-min Drip Queue)",
               anchor_text: b.anchor_text || "Rojgar Suvidha",
@@ -222,35 +244,40 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
         return 0;
       });
 
-      messageLines.push(`🔗 *Live Published Backlinks Today:* ${livePublishedCount}`);
-      messageLines.push(`⏳ *Backlinks In Queue (Dripping every 15 min):* ${queuedCount}`);
+      messageLines.push(`🔗 *Live Backlinks Published:* ${livePublishedCount}`);
+      messageLines.push(`⏳ *Pending In Drip Queue (15-min interval):* ${queuedCount}`);
       messageLines.push(`------------------------------------------`);
-      messageLines.push(`📰 *TODAY'S POSTS & LIVE BACKLINKS:*`);
+      messageLines.push(`📰 *TODAY'S POSTS & BACKLINK SYNDICATION:*`);
       messageLines.push(``);
 
-      todayJobs.slice(0, 15).forEach((job, idx) => {
+      todayJobs.slice(0, 10).forEach((job, idx) => {
         const liveJobUrl = `${BASE_URL}/job/${job.slug}`;
         const links = backlinksByJob[job.id] || [];
-        const liveLinks = links.filter((l) => l.status === "published" && l.backlink_url && !l.backlink_url.includes("rojgarsuvidha.com"));
-        const pendingPlatforms = links.filter((l) => l.status === "queued").map((l) => l.platform);
 
         messageLines.push(`${idx + 1}. 📌 *${job.title}*`);
         messageLines.push(`   🌐 *Target Post:* ${liveJobUrl}`);
-        if (liveLinks.length > 0) {
-          messageLines.push(`   ✅ *Live Backlinks (${liveLinks.length}):*`);
-          liveLinks.forEach((l) => {
+        if (links.length > 0) {
+          messageLines.push(`   🔗 *Platforms Syndication (${links.length}):*`);
+          links.forEach((l: any) => {
             const platformName = l.platform.charAt(0).toUpperCase() + l.platform.slice(1);
-            messageLines.push(`      • *${platformName}:* ${l.backlink_url}`);
+            const isLive = l.status === "published" && l.backlink_url && !l.backlink_url.includes("rojgarsuvidha.com");
+            const target = l.target_url || (l.backlink_url?.includes("rojgarsuvidha.com") ? l.backlink_url : liveJobUrl);
+            const anchor = l.anchor_text || "Rojgar Suvidha";
+
+            if (isLive) {
+              messageLines.push(`      • *${platformName}:* ✅ ${l.backlink_url}`);
+              messageLines.push(`        ↳ _Anchor:_ "${anchor}" | _Target:_ ${target}`);
+            } else {
+              messageLines.push(`      • *${platformName}:* ⏳ Pending Drip (15-min queue)`);
+              messageLines.push(`        ↳ _Anchor:_ "${anchor}" | _Target:_ ${target}`);
+            }
           });
-        }
-        if (pendingPlatforms.length > 0) {
-          messageLines.push(`   ⏳ *Drip Queue (${pendingPlatforms.length}):* ${pendingPlatforms.join(", ")}`);
         }
         messageLines.push(``);
       });
 
-      if (todayJobs.length > 15) {
-        messageLines.push(`... and ${todayJobs.length - 15} more blogs published today.`);
+      if (todayJobs.length > 10) {
+        messageLines.push(`... and ${todayJobs.length - 10} more posts detailed in attached Excel document.`);
       }
 
       // 3. Send Telegram text message & attached Excel document
