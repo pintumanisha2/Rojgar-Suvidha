@@ -12,23 +12,22 @@ function getGithubToken(): string | undefined {
   return (process.env.GITHUB_BACKLINK_TOKEN || process.env.GITHUB_TOKEN)?.trim();
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Publish a satellite markdown page to GitHub Gists (DA-96)
  * Returns live Gist URL or null on failure.
  */
-export async function publishToGithub(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
+export async function publishToGithub(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
 
   // Generate unique Markdown content for GitHub Gist
   let mdContent: string;
   try {
     const { generatePlatformContent } = await import("./content-generator");
-    const result = await generatePlatformContent("github", params.title, params.slug);
+    const result = await generatePlatformContent("github", params);
     mdContent = result.body;
   } catch {
     mdContent = `# ${params.title} — Recruitment 2026\n\nA new government recruitment notification has been published.\n\n## Apply Online\n\n- [Rojgar Suvidha — Direct Apply Link](${jobUrl})\n- [Telegram Alerts @govermentform](https://t.me/govermentform)\n\n*For official details, visit [Rojgar Suvidha](${jobUrl}).*`;

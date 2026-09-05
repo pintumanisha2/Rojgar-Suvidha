@@ -186,7 +186,7 @@ export async function GET(request: Request) {
     // 2. Fetch job details for this backlink
     const { data: job } = await supabase
       .from("jobs")
-      .select("title, slug, category")
+      .select("id, title, slug, category, short_info, meta_description, important_dates, blog_content")
       .eq("id", queuedItem.job_id)
       .maybeSingle();
 
@@ -196,107 +196,103 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: true, processed: 0, message: "Job not found" });
     }
 
+    // Extract rich recruitment facts for high-authority, factual backlink content
+    const extractFacts = (j: typeof job) => {
+      let totalPosts: string | null = null;
+      let lastDate: string | null = null;
+      let company: string | null = null;
+      let applicationFee: string | null = null;
+      let qualification: string | null = null;
+
+      // 1. From Title bracket e.g. [30 Posts], [1500 Posts], [District Wise]
+      const bracketMatch = j.title?.match(/^\[([^\]]+)\]/);
+      if (bracketMatch) {
+        const bText = bracketMatch[1].trim();
+        if (/posts|vacancy|vacancies|district/i.test(bText)) {
+          totalPosts = bText;
+        }
+      }
+
+      // 2. From important_dates array
+      if (Array.isArray(j.important_dates)) {
+        const ld = j.important_dates.find((d: any) => /last date|closing/i.test(d?.label || ""));
+        if (ld?.value) lastDate = ld.value;
+      }
+
+      // 3. From blog_content table text
+      if (j.blog_content) {
+        const clean = j.blog_content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+        const orgMatch = clean.match(/Organization\s+([A-Za-z0-9\s,\-\(\)\.\/]{3,60}?)(?:Post Name|Total Vacanc|Last Date|Application Fee|Qualification)/i);
+        if (orgMatch && !company) company = orgMatch[1].trim();
+
+        const vacMatch = clean.match(/Total Vacanc(?:y|ies)\s+([A-Za-z0-9\s,\-\(\)\.\/]{2,40}?)(?:Last Date|Application Fee|Qualification|Salary|Pay Scale)/i);
+        if (vacMatch && !totalPosts) totalPosts = vacMatch[1].trim();
+
+        const dateMatch = clean.match(/Last Date to Apply\s+([A-Za-z0-9\s,\-\(\)\.\/]{4,40}?)(?:Application Fee|Qualification|Salary|Pay Scale|Selection Process)/i);
+        if (dateMatch && !lastDate) lastDate = dateMatch[1].trim();
+
+        const feeMatch = clean.match(/Application Fee\s+([A-Za-z0-9\s,\-\(\)\.\/:\u20B9]{3,60}?)(?:Salary|Pay Scale|Selection Process|Qualification|Important|Age Limit)/i);
+        if (feeMatch && !applicationFee) applicationFee = feeMatch[1].trim();
+
+        const qualMatch = clean.match(/Qualification\s+([A-Za-z0-9\s,\-\(\)\.\/]{3,60}?)(?:Age Limit|Selection Process|Important|Last Date|How to Apply)/i);
+        if (qualMatch && !qualification) qualification = qualMatch[1].trim();
+      }
+
+      // 4. Fallback search in short_info
+      if (!lastDate && j.short_info) {
+        const m = j.short_info.match(/last date[^\.\,;]+/i);
+        if (m) lastDate = m[0].trim();
+      }
+
+      return { totalPosts, lastDate, company, applicationFee, qualification };
+    };
+
+    const facts = extractFacts(job);
+    const jobPayload = {
+      jobId: queuedItem.job_id,
+      title: job.title,
+      slug: job.slug,
+      category: job.category,
+      totalPosts: facts.totalPosts,
+      qualification: facts.qualification,
+      lastDate: facts.lastDate,
+      applicationFee: facts.applicationFee,
+      company: facts.company,
+      shortInfo: job.short_info,
+    };
+
     // 3. Publish to the right platform
     let publishedUrl: string | null = null;
 
     if (queuedItem.platform === "blogger") {
-      publishedUrl = await publishToBlogger({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToBlogger(jobPayload);
     } else if (queuedItem.platform === "telegraph") {
-      publishedUrl = await publishToTelegraph({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToTelegraph(jobPayload);
     } else if (queuedItem.platform === "wordpress") {
-      publishedUrl = await publishToWordPress({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToWordPress(jobPayload);
     } else if (queuedItem.platform === "github") {
-      publishedUrl = await publishToGithub({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToGithub(jobPayload);
     } else if (queuedItem.platform === "devto") {
-      publishedUrl = await publishToDevto({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToDevto(jobPayload);
     } else if (queuedItem.platform === "hashnode") {
-      publishedUrl = await publishToHashnode({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToHashnode(jobPayload);
     } else if (queuedItem.platform === "gitlab") {
-      publishedUrl = await publishToGitlab({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToGitlab(jobPayload);
     } else if (queuedItem.platform === "tumblr") {
-      publishedUrl = await publishToTumblr({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToTumblr(jobPayload);
     } else if (queuedItem.platform === "pastebin") {
-      publishedUrl = await publishToPastebin({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToPastebin(jobPayload);
     } else if (queuedItem.platform === "notion") {
-      publishedUrl = await publishToNotion({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToNotion(jobPayload);
     } else if (queuedItem.platform === "livejournal") {
-      publishedUrl = await publishToLivejournal({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToLivejournal(jobPayload);
     } else if (queuedItem.platform === "gitbook") {
-      publishedUrl = await publishToGitbook({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToGitbook(jobPayload);
     } else if (queuedItem.platform === "medium") {
-      publishedUrl = await publishToMedium({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToMedium(jobPayload);
     } else if (queuedItem.platform === "pinterest") {
-      publishedUrl = await publishToPinterest({
-        jobId: queuedItem.job_id,
-        title: job.title,
-        slug: job.slug,
-        category: job.category,
-      });
+      publishedUrl = await publishToPinterest(jobPayload);
     } else {
       // Platform not yet implemented (reddit, tumblr) — mark as pending for future
       await supabase

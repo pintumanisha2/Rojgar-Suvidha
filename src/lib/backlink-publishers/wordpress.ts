@@ -68,34 +68,32 @@ async function getWpAccessToken(): Promise<string | null> {
   return null;
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Generate unique 250-300 word article for WordPress via centralized content generator
  */
-async function generateWpContent(title: string, slug: string, _geminiKey?: string): Promise<string> {
-  const jobUrl = `${BASE_URL}/job/${slug}`;
-  const defaultHtml = `<p>A new recruitment notification has been announced for <strong>${title}</strong>. Candidates searching for government vacancies in India can check the complete eligibility details, selection process, and application procedure.</p><p>For full details, official notification PDF, and direct apply link, visit <a href="${jobUrl}" rel="dofollow"><strong>Rojgar Suvidha — Official Notification</strong></a>.</p>`;
+async function generateWpContent(params: JobDetailsPayload): Promise<string> {
+  const jobUrl = `${BASE_URL}/job/${params.slug}`;
+  const defaultHtml = `<p>A new recruitment notification has been announced for <strong>${params.title}</strong>. Candidates searching for government vacancies in India can check the complete eligibility details, selection process, and application procedure.</p><p>For full details, official notification PDF, and direct apply link, visit <a href="${jobUrl}" rel="dofollow"><strong>Rojgar Suvidha — Official Notification</strong></a>.</p>`;
 
   try {
     const { generatePlatformContent } = await import("./content-generator");
-    const result = await generatePlatformContent("wordpress", title, slug);
+    const result = await generatePlatformContent("wordpress", params);
     return result.body || defaultHtml;
   } catch {
     return defaultHtml;
   }
 }
 
-
 /**
  * Publish a post to WordPress.com via REST API
  * Returns live WordPress post URL or null on failure.
  */
-export async function publishToWordPress(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
-  const { SITE_URL, USERNAME, PASSWORD, GEMINI_KEY } = getWpCredentials();
+export async function publishToWordPress(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
+  const { SITE_URL, USERNAME, PASSWORD } = getWpCredentials();
 
   if (!SITE_URL) {
     console.log("ℹ️ [WordPress Publisher] WORDPRESS_SITE_URL not set — skipping.");
@@ -104,7 +102,7 @@ export async function publishToWordPress(params: {
 
   const token = await getWpAccessToken();
   const cleanSite = (SITE_URL || "").trim().replace(/^https?:\/\//, "").replace(/\/+$/, "").trim();
-  const contentHtml = await generateWpContent(params.title, params.slug, GEMINI_KEY);
+  const contentHtml = await generateWpContent(params);
 
   // Method 1: OAuth Bearer Token
   if (token) {

@@ -30,6 +30,81 @@ function formatNotionId(id: string): string {
   return id;
 }
 
+function markdownToNotionBlocks(md: string, jobUrl: string): any[] {
+  const blocks: any[] = [];
+  const lines = md.split("\n");
+
+  for (let i = 0; i < lines.length && blocks.length < 80; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    if (line.startsWith("# ")) {
+      blocks.push({
+        object: "block",
+        type: "heading_1",
+        heading_1: {
+          rich_text: [{ text: { content: line.replace(/^#\s+/, "").slice(0, 200) } }],
+        },
+      });
+    } else if (line.startsWith("## ")) {
+      blocks.push({
+        object: "block",
+        type: "heading_2",
+        heading_2: {
+          rich_text: [{ text: { content: line.replace(/^##\s+/, "").slice(0, 200) } }],
+        },
+      });
+    } else if (line.startsWith("### ")) {
+      blocks.push({
+        object: "block",
+        type: "heading_3",
+        heading_3: {
+          rich_text: [{ text: { content: line.replace(/^###\s+/, "").slice(0, 200) } }],
+        },
+      });
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      blocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [{ text: { content: line.replace(/^[-*]\s+/, "").slice(0, 1000) } }],
+        },
+      });
+    } else if (/^\d+\.\s+/.test(line)) {
+      blocks.push({
+        object: "block",
+        type: "numbered_list_item",
+        numbered_list_item: {
+          rich_text: [{ text: { content: line.replace(/^\d+\.\s+/, "").slice(0, 1000) } }],
+        },
+      });
+    } else {
+      blocks.push({
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [{ text: { content: line.slice(0, 1000) } }],
+        },
+      });
+    }
+  }
+
+  // Add prominent Apply Online Callout Box
+  blocks.push({
+    object: "block",
+    type: "callout",
+    callout: {
+      icon: { type: "emoji", emoji: "📌" },
+      rich_text: [
+        { text: { content: "Official Notification & Direct Apply Link: " } },
+        { text: { content: "Rojgar Suvidha Portal", link: { url: jobUrl } } },
+      ],
+    },
+  });
+
+  return blocks;
+}
+
 /**
  * Publish a satellite post to Notion (DA-90)
  * Returns live Notion Page URL or null on failure.
@@ -39,6 +114,13 @@ export async function publishToNotion(params: {
   title: string;
   slug: string;
   category?: string;
+  totalPosts?: string | null;
+  qualification?: string | null;
+  ageLimit?: string | null;
+  lastDate?: string | null;
+  applicationFee?: string | null;
+  selectionProcess?: string | null;
+  company?: string | null;
 }): Promise<string | null> {
   const { API_KEY, PAGE_ID } = getNotionCredentials();
 
@@ -49,6 +131,18 @@ export async function publishToNotion(params: {
 
   const parentId = formatNotionId(PAGE_ID);
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
+
+  // Generate full rich Markdown content
+  let mdContent = `# ${params.title} — Recruitment 2026\n\nA new government recruitment notification has been published.\n\n## Official Portal\n\nApply online and check full eligibility at [Rojgar Suvidha](${jobUrl}).`;
+  try {
+    const { generatePlatformContent } = await import("./content-generator");
+    const result = await generatePlatformContent("notion", params);
+    if (result.body) mdContent = result.body;
+  } catch (e: any) {
+    console.warn("⚠️ [Notion Publisher] Content generation note:", e.message);
+  }
+
+  const childrenBlocks = markdownToNotionBlocks(mdContent, jobUrl);
 
   try {
     const res = await fetch("https://api.notion.com/v1/pages", {
@@ -70,69 +164,7 @@ export async function publishToNotion(params: {
             },
           ],
         },
-        children: [
-        {
-            object: "block",
-            type: "heading_2",
-            heading_2: {
-              rich_text: [{ text: { content: `${params.title} (Recruitment 2026)` } }],
-            },
-          },
-          ...(await (async () => {
-            let introText = "A new government job recruitment notification has been released across India. Candidates searching for latest sarkari naukri alerts can check complete qualification details, age limits, and online application procedures.";
-            try {
-              const { generatePlatformContent } = await import("./content-generator");
-              const result = await generatePlatformContent("notion", params.title, params.slug);
-              // Extract first non-empty line from markdown as intro
-              const firstPara = result.plainText.split("\n").find(l => l.trim().length > 50);
-              if (firstPara) introText = firstPara.trim().slice(0, 600);
-            } catch { /* use default */ }
-            return [{
-              object: "block",
-              type: "paragraph",
-              paragraph: {
-                rich_text: [{ text: { content: introText } }],
-              },
-            }];
-          })()),
-          {
-            object: "block",
-            type: "callout",
-            callout: {
-              icon: { type: "emoji", emoji: "📌" },
-              rich_text: [
-                {
-                  text: { content: "Direct Application Portal: " },
-                },
-                {
-                  text: {
-                    content: "Rojgar Suvidha — Official Notification & Apply Online",
-                    link: { url: jobUrl },
-                  },
-                },
-              ],
-            },
-          },
-          {
-            object: "block",
-            type: "paragraph",
-            paragraph: {
-              rich_text: [
-                {
-                  text: {
-                    content: "📢 Join Telegram @govermentform for instant alerts: ",
-                  },
-                },
-                {
-                  text: {
-                    content: "t.me/govermentform",
-                    link: { url: "https://t.me/govermentform" },
-                  },
-                },
-              ],
-            },
-          },
-        ],
+        children: childrenBlocks,
       }),
       signal: AbortSignal.timeout(15000),
     });

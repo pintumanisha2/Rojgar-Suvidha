@@ -33,16 +33,15 @@ async function getTelegraphAccessToken(): Promise<string | null> {
   }
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Publish a satellite backlink page to Telegra.ph (DA-88)
  * Returns live Telegra.ph URL or null on failure.
  */
-export async function publishToTelegraph(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
+export async function publishToTelegraph(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
   const token = await getTelegraphAccessToken();
   if (!token) return null;
 
@@ -52,7 +51,7 @@ export async function publishToTelegraph(params: {
   let uniqueContent: string | null = null;
   try {
     const { generatePlatformContent } = await import("./content-generator");
-    const result = await generatePlatformContent("telegraph", params.title, params.slug);
+    const result = await generatePlatformContent("telegraph", params);
     uniqueContent = result.body;
   } catch {
     uniqueContent = null;

@@ -20,16 +20,15 @@ function getGitbookCredentials() {
   };
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Publish a satellite documentation page to GitBook (DA-92)
  * Returns live GitBook page URL or null on failure.
  */
-export async function publishToGitbook(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
+export async function publishToGitbook(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
   const { TOKEN, SPACE_ID } = getGitbookCredentials();
 
   if (!TOKEN || !SPACE_ID) {

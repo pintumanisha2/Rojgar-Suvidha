@@ -18,16 +18,15 @@ function getDevtoCredentials() {
   };
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Publish a satellite article to Dev.to (DA-85)
  * Returns live Dev.to URL or null on failure.
  */
-export async function publishToDevto(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
+export async function publishToDevto(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
   const { API_KEY } = getDevtoCredentials();
 
   if (!API_KEY) {
@@ -41,7 +40,7 @@ export async function publishToDevto(params: {
   let mdBody: string;
   try {
     const { generatePlatformContent } = await import("./content-generator");
-    const result = await generatePlatformContent("devto", params.title, params.slug);
+    const result = await generatePlatformContent("devto", params);
     mdBody = `---
 title: ${result.title}
 published: true

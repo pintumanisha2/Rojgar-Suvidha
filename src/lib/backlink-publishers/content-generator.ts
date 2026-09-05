@@ -34,6 +34,19 @@ interface ContentResult {
   tags?: string[];
 }
 
+export interface JobDetailsPayload {
+  title: string;
+  slug: string;
+  category?: string;
+  totalPosts?: string | null;
+  qualification?: string | null;
+  ageLimit?: string | null;
+  lastDate?: string | null;
+  applicationFee?: string | null;
+  selectionProcess?: string | null;
+  company?: string | null;
+}
+
 import { callGeminiWithRotation } from "@/lib/gemini-rotator";
 
 async function callGemini(prompt: string): Promise<string | null> {
@@ -51,17 +64,96 @@ async function callGemini(prompt: string): Promise<string | null> {
   }
 }
 
+async function callGroq(prompt: string): Promise<string | null> {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey || groqApiKey.includes("REPLACE")) return null;
+
+  const models = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "qwen/qwen3.6-27b"];
+
+  for (const model of models) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1500,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const data = await res.json();
+      let text = data?.choices?.[0]?.message?.content?.trim();
+      if (text) {
+        // Strip out reasoning/thinking tokens (e.g. <think>...</think> from Qwen/DeepSeek)
+        text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+        // Strip markdown code fences if wrapped in ```html or ```markdown
+        text = text.replace(/^```(?:html|markdown|md)?\s*\n/i, "").replace(/\n```\s*$/i, "").trim();
+        if (text) {
+          console.log(`✅ [Content Generator] Generated high-quality content via Groq ${model}`);
+          return text;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`⚠️ [Content Generator] Groq ${model} error:`, err.message);
+    }
+  }
+  return null;
+}
+
 function randAngle(): number {
   return Math.floor(Math.random() * 3);
 }
 
 export async function generatePlatformContent(
   platform: ContentPlatform,
-  title: string,
-  slug: string
+  jobInput: JobDetailsPayload | string,
+  slugArg?: string
 ): Promise<ContentResult> {
+  let title = "";
+  let slug = "";
+  let totalPosts: string | null = null;
+  let qualification: string | null = null;
+  let ageLimit: string | null = null;
+  let lastDate: string | null = null;
+  let applicationFee: string | null = null;
+  let selectionProcess: string | null = null;
+  let company: string | null = null;
+
+  if (typeof jobInput === "string") {
+    title = jobInput;
+    slug = slugArg || "";
+  } else {
+    title = jobInput.title;
+    slug = jobInput.slug;
+    totalPosts = jobInput.totalPosts || null;
+    qualification = jobInput.qualification || null;
+    ageLimit = jobInput.ageLimit || null;
+    lastDate = jobInput.lastDate || null;
+    applicationFee = jobInput.applicationFee || null;
+    selectionProcess = jobInput.selectionProcess || null;
+    company = jobInput.company || null;
+  }
+
   const jobUrl = `${BASE_URL}/job/${slug}`;
   const angle = randAngle();
+
+  const factsBlock = `
+RECRUITMENT FACTS (MUST INCLUDE THESE REAL DETAILS IN THE CONTENT):
+- Official Post Name: ${title}
+${company ? `- Department/Organization: ${company}` : ""}
+${totalPosts ? `- Total Vacancies: ${totalPosts}` : ""}
+${qualification ? `- Required Qualification: ${qualification}` : ""}
+${ageLimit ? `- Age Limit: ${ageLimit}` : ""}
+${lastDate ? `- Last Date to Apply: ${lastDate}` : ""}
+${applicationFee ? `- Application Fee: ${applicationFee}` : ""}
+${selectionProcess ? `- Selection Process: ${selectionProcess}` : ""}
+- Official Apply Link: ${jobUrl}
+`;
 
   const antiAiInstruction = `
 
@@ -147,7 +239,7 @@ CRITICAL WRITING RULES (must follow strictly):
     gitlab: gitlabAngles,
   };
 
-  const selectedPrompt = promptSets[platform][angle] + antiAiInstruction;
+  const selectedPrompt = `${promptSets[platform][angle]}\n\n${factsBlock}\n\n${antiAiInstruction}`;
 
   const isHtmlPlatform = ["blogger", "wordpress", "telegraph", "livejournal"].includes(platform);
   const isMarkdown = ["github", "gitlab", "devto", "notion", "gitbook"].includes(platform);
@@ -159,47 +251,79 @@ CRITICAL WRITING RULES (must follow strictly):
     generatedBody = null;
   }
 
+  // Groq AI Failover (LLaMA-3.3-70B) — triggers whenever Gemini quota is exhausted or slow
+  if (!generatedBody) {
+    console.log(`ℹ️ [Content Generator] Gemini quota unavailable. Generating rich content via Groq LLaMA-3.3-70B for ${platform}...`);
+    try {
+      generatedBody = await callGroq(selectedPrompt);
+    } catch {
+      generatedBody = null;
+    }
+  }
+
   const jobShortTitle = title.split(" ").slice(0, 6).join(" ");
 
+  const factsTableHtml = `
+<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; margin: 15px 0; border: 1px solid #e2e8f0; font-family: sans-serif; font-size: 14px;">
+  <thead style="background: #f8fafc;">
+    <tr><th colspan="2" style="text-align: left; padding: 10px; font-size: 15px; color: #1e293b;">📌 Recruitment Highlights</th></tr>
+  </thead>
+  <tbody>
+    ${company ? `<tr><td style="font-weight: bold; width: 35%; color: #475569;">Organization</td><td>${company}</td></tr>` : ""}
+    <tr><td style="font-weight: bold; color: #475569;">Post Name</td><td>${title}</td></tr>
+    ${totalPosts ? `<tr><td style="font-weight: bold; color: #475569;">Total Vacancies</td><td><strong style="color: #2563eb;">${totalPosts}</strong></td></tr>` : ""}
+    ${qualification ? `<tr><td style="font-weight: bold; color: #475569;">Qualification</td><td>${qualification}</td></tr>` : ""}
+    ${lastDate ? `<tr><td style="font-weight: bold; color: #475569;">Last Date to Apply</td><td><strong style="color: #dc2626;">${lastDate}</strong></td></tr>` : ""}
+    ${applicationFee ? `<tr><td style="font-weight: bold; color: #475569;">Application Fee</td><td>${applicationFee}</td></tr>` : ""}
+    <tr><td style="font-weight: bold; color: #475569;">Direct Apply Link</td><td><a href="${jobUrl}" rel="nofollow ugc" style="color: #2563eb; font-weight: bold;">Click Here to Apply Online</a></td></tr>
+  </tbody>
+</table>`;
+
+  const factsMdTable = `
+| Key Detail | Information |
+| :--- | :--- |
+${company ? `| **Organization** | ${company} |\n` : ""}| **Post Name** | ${title} |
+${totalPosts ? `| **Total Vacancies** | **${totalPosts}** |\n` : ""}${qualification ? `| **Qualification** | ${qualification} |\n` : ""}${lastDate ? `| **Last Date** | **${lastDate}** |\n` : ""}${applicationFee ? `| **Application Fee** | ${applicationFee} |\n` : ""}| **Official Link** | [Apply on Rojgar Suvidha](${jobUrl}) |
+`;
+
   const fallbackHtml = `<h2>${jobShortTitle} — Recruitment 2026</h2>
-<p>A fresh recruitment notification has been released that many government job aspirants have been waiting for. This is one of those opportunities where the pay scale, job stability, and career progression make it genuinely worth applying — especially if you meet the eligibility criteria.</p>
-<p>Government jobs in India remain one of the most sought-after career paths, particularly for candidates from non-metro cities. This particular notification comes with decent vacancies and a structured selection process.</p>
-<p>For the complete official notification, eligibility breakdown, application fee structure, and direct apply link — visit <a href="${jobUrl}" rel="nofollow ugc"><strong>Rojgar Suvidha — Official Details</strong></a>. Do not wait till the last day to apply.</p>
-<p>📢 Follow <a href="https://t.me/govermentform">@govermentform on Telegram</a> for instant alerts when new notifications drop.</p>`;
+<p>A fresh recruitment notification has been officially announced. For candidates looking for stable government career opportunities in India, this recruitment offers structured career progression, competitive pay scales, and verified job security.</p>
+${factsTableHtml}
+<p>Candidates are strongly advised to check all eligibility criteria including educational qualifications, age relaxation rules, and document requirements before submitting their application.</p>
+<p>For the complete official notification PDF, detailed syllabus, and direct apply link — visit <a href="${jobUrl}" rel="nofollow ugc"><strong>Rojgar Suvidha — Official Notification & Apply Online</strong></a>. Do not wait till the closing hours to apply.</p>
+<p>📢 Join <a href="https://t.me/govermentform">@govermentform on Telegram</a> for instant recruitment notifications, admit cards, and exam alerts.</p>`;
 
   const fallbackMd = `# ${jobShortTitle} — 2026 Recruitment
 
 A new government recruitment notification has been released. If you have been preparing for a stable government career, this is worth a serious look.
 
-## What You Need to Know
+## Key Recruitment Highlights
 
-This recruitment comes from a reputed organization and offers a structured selection process. The number of vacancies, combined with the official pay scale, makes it competitive but achievable for well-prepared candidates.
+${factsMdTable}
 
-## How to Apply
+## Step-by-Step Application Guide
 
-1. Visit the official portal linked below
-2. Register or log in with your OTR or existing credentials
-3. Fill the application form carefully — double-check all details before submitting
-4. Upload required documents (photo, signature, certificates)
-5. Pay the application fee and submit before the deadline
+1. Visit the official portal linked below.
+2. Register with your basic details or log in if you already have an active profile.
+3. Fill out the application form carefully and verify your personal details and qualifications.
+4. Upload all mandatory documents (scanned photograph, signature, and educational certificates).
+5. Complete the fee payment (if applicable) and download the confirmation receipt.
 
-## Official Notification and Apply Link
+## Official Links & Resources
 
-Full details and apply online: [Rojgar Suvidha](${jobUrl})
-
-Telegram alerts: [Join @govermentform](https://t.me/govermentform)`;
+- 🔗 **Full Notification & Apply Online:** [Rojgar Suvidha Portal](${jobUrl})
+- 📢 **Instant Telegram Job Alerts:** [Join @govermentform](https://t.me/govermentform)`;
 
   const fallbackPlain = `${jobShortTitle} — Government Recruitment 2026
 
-If you have been looking for a solid government job opportunity, this one is worth checking out. The notification has been released with official vacancy details, eligibility criteria, and application process outlined clearly.
+A new government recruitment notification has been announced. Check official vacancy details, eligibility criteria, and application procedure outlined below:
 
-Don't wait too long — government job deadlines are strict and the last few days always see a surge in applications, which can cause form submission issues.
+${company ? `Organization: ${company}\n` : ""}Post: ${title}
+${totalPosts ? `Total Vacancies: ${totalPosts}\n` : ""}${lastDate ? `Last Date to Apply: ${lastDate}\n` : ""}${applicationFee ? `Application Fee: ${applicationFee}\n` : ""}
+Direct Apply Link & Official Notification:
+${jobUrl}
 
-Key things to check: educational qualification, age limit, application fee for your category, and the selection process stages.
-
-Full information and direct apply link: ${jobUrl}
-
-For daily job alerts: t.me/govermentform`;
+Daily Sarkari Alerts on Telegram: https://t.me/govermentform`;
 
   const body = generatedBody ||
     (isHtmlPlatform ? fallbackHtml : isMarkdown ? fallbackMd : fallbackPlain);

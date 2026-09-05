@@ -18,16 +18,15 @@ function getLiveJournalCredentials() {
   };
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Publish a satellite post to LiveJournal (DA-89)
  * Returns live LiveJournal post URL or null on failure.
  */
-export async function publishToLivejournal(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
+export async function publishToLivejournal(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
   const { USERNAME, PASSWORD } = getLiveJournalCredentials();
 
   if (!USERNAME || !PASSWORD) {
@@ -41,7 +40,7 @@ export async function publishToLivejournal(params: {
   let eventHtml: string;
   try {
     const { generatePlatformContent } = await import("./content-generator");
-    const result = await generatePlatformContent("livejournal", params.title, params.slug);
+    const result = await generatePlatformContent("livejournal", params);
     eventHtml = result.body;
   } catch {
     eventHtml = `<h2>${params.title} — Recruitment 2026</h2><p>A new government job notification has been released! Check complete eligibility and apply at <a href="${jobUrl}">Rojgar Suvidha</a>.</p><p>📢 <em>Join <a href="https://t.me/govermentform">@govermentform</a> on Telegram for daily job alerts.</em></p>`;

@@ -60,23 +60,24 @@ async function getBloggerAccessToken(): Promise<string | null> {
   }
 }
 
+import type { JobDetailsPayload } from "./content-generator";
+
 /**
  * Generate a 400-500 word unique Blogger article using centralized content generator
  * (0% duplicate content across all platforms — unique angle per platform)
  */
-async function generateBloggerContent(title: string, slug: string): Promise<string> {
-  const jobUrl = `${BASE_URL}/job/${slug}`;
-  const defaultHtml = `<p>A new government recruitment notification has been published for <strong>${title}</strong>. Eligible candidates can check complete eligibility, vacancy breakdown, application fee, and last date at <a href="${jobUrl}" rel="nofollow ugc">Rojgar Suvidha</a>.</p><p>Visit the official portal now to read the complete notification and apply online before the last date.</p>`;
+async function generateBloggerContent(params: JobDetailsPayload): Promise<string> {
+  const jobUrl = `${BASE_URL}/job/${params.slug}`;
+  const defaultHtml = `<p>A new government recruitment notification has been published for <strong>${params.title}</strong>. Eligible candidates can check complete eligibility, vacancy breakdown, application fee, and last date at <a href="${jobUrl}" rel="nofollow ugc">Rojgar Suvidha</a>.</p><p>Visit the official portal now to read the complete notification and apply online before the last date.</p>`;
 
   try {
     const { generatePlatformContent } = await import("./content-generator");
-    const result = await generatePlatformContent("blogger", title, slug);
+    const result = await generatePlatformContent("blogger", params);
     return result.body || defaultHtml;
   } catch {
     return defaultHtml;
   }
 }
-
 
 /**
  * Pick a random anchor text from the diversity matrix
@@ -94,13 +95,10 @@ function pickAnchorText(slug: string): string {
  * Publish a real satellite post to Blogger via the Blogger API v3
  * Returns the live Blogspot post URL or null on failure.
  */
-export async function publishToBlogger(params: {
-  jobId: string;
-  title: string;
-  slug: string;
-  category?: string;
-}): Promise<string | null> {
-  const { BLOG_ID, GEMINI_KEY } = getBloggerCredentials();
+export async function publishToBlogger(
+  params: JobDetailsPayload & { jobId: string }
+): Promise<string | null> {
+  const { BLOG_ID } = getBloggerCredentials();
   if (!BLOG_ID) {
     console.warn("⚠️ [Blogger Publisher] BLOGGER_BLOG_ID not set.");
     return null;
@@ -110,9 +108,8 @@ export async function publishToBlogger(params: {
   if (!accessToken) return null;
 
   const jobUrl = `${BASE_URL}/job/${params.slug}`;
-  const teaserHtml = await generateBloggerContent(params.title, params.slug);
+  const teaserHtml = await generateBloggerContent(params);
   const anchorText = pickAnchorText(params.slug);
-
 
   const categoryLabels: Record<string, string> = {
     "latest-jobs": "Sarkari Naukri",
@@ -129,12 +126,19 @@ export async function publishToBlogger(params: {
 
 ${teaserHtml}
 
-<h3>Quick Details</h3>
-<ul>
-<li><strong>Category:</strong> ${catLabel}</li>
-<li><strong>Portal:</strong> <a href="${jobUrl}" rel="canonical">${anchorText}</a></li>
-<li><strong>Updated:</strong> ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</li>
-</ul>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:20px 0;">
+  <h3 style="margin-top:0;color:#1e293b;">📌 Important Recruitment Details</h3>
+  <ul style="line-height:1.8;padding-left:20px;color:#334155;">
+    <li><strong>Department/Organization:</strong> ${params.company || "Government Organization"}</li>
+    <li><strong>Job Category:</strong> ${catLabel}</li>
+    ${params.totalPosts ? `<li><strong>Total Vacancies:</strong> <span style="color:#2563eb;font-weight:bold;">${params.totalPosts}</span></li>` : ""}
+    ${params.qualification ? `<li><strong>Required Qualification:</strong> ${params.qualification}</li>` : ""}
+    ${params.lastDate ? `<li><strong>Last Date to Apply:</strong> <span style="color:#dc2626;font-weight:bold;">${params.lastDate}</span></li>` : ""}
+    ${params.applicationFee ? `<li><strong>Application Fee:</strong> ${params.applicationFee}</li>` : ""}
+    <li><strong>Official Apply Portal:</strong> <a href="${jobUrl}" rel="canonical" style="color:#2563eb;font-weight:bold;">${anchorText}</a></li>
+    <li><strong>Updated on:</strong> ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</li>
+  </ul>
+</div>
 
 <p><strong>📢 Subscribe to <a href="https://t.me/govermentform">@govermentform</a> on Telegram for instant alerts.</strong></p>
 
