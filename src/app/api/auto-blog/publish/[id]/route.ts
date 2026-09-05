@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { waitUntil } from "@vercel/functions";
 import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
+import { notifySearchEngines } from "@/lib/instant-indexing";
+import { enqueuePostApprovalBacklinks } from "@/lib/backlink-engine";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -275,15 +277,21 @@ export async function POST(
       }).catch((e) => console.warn("Auto-translation failed:", e));
     }
 
-    // 6. Full instant indexing — guaranteed via waitUntil (never cancelled by Vercel)
-    if (postStatus === "active") {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
+    // 5.1. Queue Post-Approval Backlinks
+    if (postStatus === "active" && newJobId) {
       waitUntil(
-        fetch(`${baseUrl}/api/admin/index-now`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug, category }),
-        }).catch((e) => console.warn("Instant indexing fire failed:", e))
+        enqueuePostApprovalBacklinks(newJobId, title, slug, category).catch((e) =>
+          console.warn("Backlink enqueue error:", e)
+        )
+      );
+    }
+
+    // 6. Full instant indexing — guaranteed direct execution via waitUntil
+    if (postStatus === "active" && slug) {
+      waitUntil(
+        notifySearchEngines(slug, category).catch((e) =>
+          console.warn("Instant indexing fire failed:", e)
+        )
       );
     }
 

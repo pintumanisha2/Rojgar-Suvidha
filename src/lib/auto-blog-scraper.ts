@@ -2094,7 +2094,7 @@ CRITICAL JSON SYNTAX RULE
 ================================================================================
 
 {
-  "title": "High-CTR Discover Title — format: '[Vacancies/Key Asset] Exam/Job Name 2026: Actionable Asset (e.g. Cut Off Marks & Direct PDF Link)' — MUST start with key highlight in brackets if available (e.g. '[1590 Posts] SSC Stenographer Final Result 2026 Out: Download PDF & Cut Off')",
+  "title": "High-CTR Google Search Title — format: 'Exam/Job Name 2026: Actionable Details (Vacancies/Highlight in parentheses)'. CRITICAL SEO RULE: MUST start with the EXACT primary search keyword at index 0 (e.g. 'SSC Stenographer Final Result 2026 Out: Download PDF & Cut Off Marks (1,590 Posts)' or 'RRB NTPC Recruitment 2026: Apply Online for 11,558 Posts'). NEVER put brackets or numbers at the beginning of the title; the primary search keyword must be at the very front for Google ranking.",
   "metaDesc": "150-160 chars exactly — MUST start with primary keyword + year. Key facts in middle. End with action CTA like 'Direct Link Here' or 'Check Now at Rojgar Suvidha'. NEVER start with 'Looking for'.",
   "primaryKeyword": "main keyword phrase (e.g. 'SSC MTS Result 2026')",
   "tag": "short display tag (e.g. 'Railway Jobs' / 'SSC Result' / 'Admit Card')",
@@ -2400,15 +2400,36 @@ function generateAiTopicBannerUrl(title: string, category: string, stateCode?: s
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=1200&height=630&model=flux&nologo=true`;
 }
 
-// ── Slug Generator ────────────────────────────────────────────────────────────
-function generateSlug(title: string): string {
-  return title
+// ── SEO Title Normalizer (Front-loads primary search keyword) ────────────────
+export function normalizeSeoTitle(title: string): string {
+  if (!title) return "";
+  const match = title.match(/^\[([^\]]+)\]\s*(.*)$/);
+  if (match) {
+    const bracketInfo = match[1].trim();
+    const mainTitle = match[2].trim();
+    if (mainTitle.toLowerCase().includes(bracketInfo.toLowerCase())) {
+      return mainTitle;
+    }
+    return `${mainTitle} (${bracketInfo})`;
+  }
+  return title;
+}
+
+// ── Slug Generator (Clean, keyword-first, word-boundary safe) ─────────────────
+export function generateSlug(title: string): string {
+  const cleanTitle = title.replace(/^\[[^\]]+\]\s*/, "");
+  const base = cleanTitle
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
-    .trim()
-    .slice(0, 80);
+    .trim();
+
+  if (base.length <= 65) return base.replace(/-+$/, "");
+
+  const trimmed = base.slice(0, 65);
+  const lastHyphen = trimmed.lastIndexOf("-");
+  return (lastHyphen > 30 ? trimmed.slice(0, lastHyphen) : trimmed).replace(/-+$/, "");
 }
 
 // ── Google Trends India (geo=IN) Scraper ──────────────────────────────────────
@@ -2573,6 +2594,41 @@ export async function cleanupStaleDrafts(): Promise<number> {
   }
 }
 
+// ── Search Demand Scorer (Prioritizes viral topics, filters 1-post micro-jobs) ──
+function calculateSearchDemandScore(item: { title: string; source: string; feedCategory?: string }): number {
+  let score = 0;
+  const title = item.title.toLowerCase();
+
+  // 1. Google Trends India is absolute #1 priority (real-time viral spike)
+  if (item.source === "google_trends") score += 2000;
+
+  // 2. High-intent categories (Results, Admit Cards, Answer Keys have 10x viral traffic velocity)
+  if (/result|merit|scorecard|allotment|rank\s*card/i.test(title) || item.feedCategory === "results") score += 600;
+  if (/admit\s*card|hall\s*ticket|call\s*letter/i.test(title) || item.feedCategory === "admit-card") score += 500;
+  if (/answer\s*key|objection/i.test(title) || item.feedCategory === "answer-key") score += 400;
+
+  // 3. National / High-interest mega exams (highest Google search volume in India)
+  const megaExams = /ssc|upsc|rrb|railway|ibps|sbi|police|nda|cds|army|navy|airforce|neet|jee|gate|ugc\s*net|ctet|tet|bpsc|uppsc|mpsc|hpsc|rpsc|sub\s*inspector|constable|patwari|anganwadi|assistant/i;
+  if (megaExams.test(title)) score += 350;
+
+  // 4. Vacancy count weighting
+  const postMatch = title.match(/(\d+[\d,]*)\s*(?:posts?|vacanc|openings?)/i);
+  if (postMatch) {
+    const count = parseInt(postMatch[1].replace(/,/g, ""), 10);
+    if (count >= 1000) score += 400;
+    else if (count >= 300) score += 250;
+    else if (count >= 50) score += 150;
+    else if (count < 10 && !megaExams.test(title)) score -= 500; // Heavily penalize micro-jobs (<10 posts)
+  }
+
+  // 5. Heavily penalize obscure walk-ins, single-post niche research jobs (0 search volume)
+  if (/walkin|walk-in|jrf|project\s*associate|project\s*assistant|young\s*professional|consultant|data\s*entry\s*operator\s*\(1\)/i.test(title) && !megaExams.test(title)) {
+    score -= 400;
+  }
+
+  return score;
+}
+
 export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const startTime = Date.now();
   console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
@@ -2613,31 +2669,20 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Candidate selection per source
-  const googleTrendsNew = allCandidateItems.filter((i) => i.source === "google_trends" && !scrapedUrls.has(i.link)).slice(0, 1);
-  const freeJobAlertNew = allCandidateItems.filter((i) => i.source === "freejobalert" && !scrapedUrls.has(i.link)).slice(0, 1);
-  const sarkariResultNew = allCandidateItems.filter((i) => i.source === "sarkariresult" && !scrapedUrls.has(i.link)).slice(0, 1);
-  const ndtvNew = allCandidateItems.filter((i) => i.source === "ndtv" && !scrapedUrls.has(i.link)).slice(0, 1);
+  // 3. Filter unscraped items and sort by real-time search demand score
+  // RULE: Exclude zero-search 1-5 post micro-jobs, rank viral exams/results #1
+  const unscrapedCandidates = allCandidateItems.filter((i) => !scrapedUrls.has(i.link));
 
-  // 4. Source Priority Rotation:
-  // RULE: Real-time Google Trends India topics ALWAYS take FIRST priority!
-  // If no new Google Trends item is waiting, alternate fairly between SarkariResult & FreeJobAlert.
-  const runIntervalIdx = Math.floor(Date.now() / (1000 * 60 * 30)); // 30-min window index
-  let prioritizedSources: typeof allCandidateItems = [];
-
-  if (googleTrendsNew.length > 0) {
-    console.log(`🔥 [Priority Scheduler] Real-time Google Trends topic detected! Prioritizing: "${googleTrendsNew[0].title}"`);
-    prioritizedSources = [...googleTrendsNew, ...sarkariResultNew, ...freeJobAlertNew, ...ndtvNew];
-  } else if (runIntervalIdx % 2 === 0) {
-    prioritizedSources = [...sarkariResultNew, ...freeJobAlertNew, ...ndtvNew];
-  } else {
-    prioritizedSources = [...freeJobAlertNew, ...sarkariResultNew, ...ndtvNew];
-  }
+  const sortedCandidates = unscrapedCandidates
+    .filter((i) => calculateSearchDemandScore(i) > -300)
+    .sort((a, b) => calculateSearchDemandScore(b) - calculateSearchDemandScore(a));
 
   // Strict 1-post per run policy: completely eliminates Vercel 60s timeout (HTTP 504)
-  // 1 high-quality 1500-word post takes 25-35s, safely finishing well before the 60s ceiling!
-  const newItems = prioritizedSources.slice(0, 1);
-  console.log(`🆕 New item selected to process (Source: ${newItems[0]?.source || "none"}): ${newItems.length}`);
+  const newItems = sortedCandidates.slice(0, 1);
+  if (newItems[0]) {
+    const topScore = calculateSearchDemandScore(newItems[0]);
+    console.log(`🔥 [Smart Demand Selector] Selected: "${newItems[0].title}" (Source: ${newItems[0].source}, DemandScore: ${topScore})`);
+  }
 
   if (newItems.length === 0) {
     results.skipped = allCandidateItems.length;
@@ -2773,7 +2818,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       }
 
       // Title & Link Status Alignment (Prevent false "Result Out" when link is Coming Soon)
-      let cleanedTitle = cleanCompetitorBrands(aiResult.title || item.title);
+      let cleanedTitle = normalizeSeoTitle(cleanCompetitorBrands(aiResult.title || item.title));
       if (applyStatus === "coming_soon" || !applyLink) {
         cleanedTitle = cleanedTitle
           .replace(/\b(Out Now|Released|Direct Link Available)\b/gi, "Notice Out")
@@ -2941,7 +2986,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   try {
     const summaryText = `⏰ <b>ROJGAR SUVIDHA AUTO-SCRAPER RUN COMPLETE</b> ⏰\n\n` +
       `<b>📊 Total Candidates Scanned:</b> ${allCandidateItems.length}\n` +
-      `<b>🆕 New Items Found & Processed:</b> ${newItems.length} (${freeJobAlertNew.length} Jobs, ${ndtvNew.length} News)\n` +
+      `<b>🆕 High-Demand Items Selected & Processed:</b> ${newItems.length} (Source: ${newItems[0]?.source || "none"})\n` +
       `<b>✅ Drafts Generated Successfully:</b> ${results.processed}\n` +
       `<b>❌ Errors:</b> ${results.errors.length}\n\n` +
       `<i>All new draft approval buttons have been sent above to your Telegram. Tap Approve on any post to publish live instantly!</i>`;

@@ -119,11 +119,23 @@ export async function generateMetadata(
   const currentYear = new Date().getFullYear().toString();
   const hasYear = job.title.includes("2024") || job.title.includes("2025") || job.title.includes("2026") || job.title.includes("2027");
   const baseTitle = hasYear ? job.title : `${job.title} ${currentYear}`;
-  // Use absolute title to bypass layout template (prevents double brand name)
-  // Max 65 chars for SERP — keep it clean
-  const cleanBase = baseTitle.slice(0, 55); // trim if very long
-  const titleStr = cleanBase.length <= 42
-    ? `${cleanBase} — Notification, Eligibility & Apply | Rojgar Suvidha`
+
+  // Front-load primary search keyword by moving bracket tags e.g. [11403 Posts] to end
+  const bracketMatch = baseTitle.match(/^\[([^\]]+)\]\s*(.*)$/);
+  const normTitle = bracketMatch
+    ? (bracketMatch[2].toLowerCase().includes(bracketMatch[1].toLowerCase()) ? bracketMatch[2].trim() : `${bracketMatch[2].trim()} (${bracketMatch[1].trim()})`)
+    : baseTitle;
+
+  // Safe word-boundary truncation for Google SERP: keep under 58 chars to leave room for brand
+  let cleanBase = normTitle;
+  if (normTitle.length > 55) {
+    const sub = normTitle.slice(0, 55);
+    const lastSpace = sub.lastIndexOf(" ");
+    cleanBase = (lastSpace > 25 ? sub.slice(0, lastSpace) : sub).replace(/[\s,:\-–|]+$/, "");
+  }
+
+  const titleStr = cleanBase.length <= 38
+    ? `${cleanBase} — Notification & Apply | Rojgar Suvidha`
     : `${cleanBase} | Rojgar Suvidha`;
   const title = { absolute: titleStr };
 
@@ -351,57 +363,105 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     ...(job.total_posts ? { totalJobOpenings: parseInt(String(job.total_posts).replace(/[^0-9]/g, "")) || undefined } : {}),
   };
 
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
+  // ── Clean short title for natural conversational FAQs ──
+  const cleanShortTitle = job.title.replace(/^\[[^\]]+\]\s*/, "").split(/[:\-–|]/)[0].trim();
+
+  let faqEntities: { "@type": string; name: string; acceptedAnswer: { "@type": string; text: string } }[] = [];
+
+  if (job.category === "results") {
+    faqEntities = [
       {
         "@type": "Question",
-        name: `How to apply for ${job.title}?`,
+        name: `How can I check the ${cleanShortTitle} result online?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `${job.title} ke liye aavedan karne ke liye official website par jaiye. Direct apply link aur step-by-step instructions ke liye Rojgar Suvidha par visit karein: ${BASE_URL}/job/${slug}. Online form fill karo, documents upload karo aur fee pay karo.`,
+          text: `Candidates can check their ${cleanShortTitle} result by visiting the official website or clicking the direct result link on Rojgar Suvidha (${BASE_URL}/job/${slug}). Keep your Roll Number and Date of Birth ready to access the merit list and scorecard.`,
         },
       },
       {
         "@type": "Question",
-        name: `What is the last date to apply for ${job.title}?`,
+        name: `What details are required to download the ${cleanShortTitle} scorecard?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `To download your ${cleanShortTitle} scorecard, enter your official Registration Number or Roll Number along with your Date of Birth / Password as provided on your admit card.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `Where can I find category-wise cutoff marks for ${cleanShortTitle}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Category-wise cutoff marks (UR, OBC, EWS, SC, ST) are released in the official notification. Complete cutoff analysis and direct PDF links are updated on Rojgar Suvidha (${BASE_URL}/job/${slug}).`,
+        },
+      },
+    ];
+  } else if (job.category === "admit-card") {
+    faqEntities = [
+      {
+        "@type": "Question",
+        name: `How to download ${cleanShortTitle} admit card online?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Visit the official examination portal or click the direct hall ticket link on Rojgar Suvidha (${BASE_URL}/job/${slug}). Log in using your Application Number and Date of Birth to download and print your call letter.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `What documents are mandatory with ${cleanShortTitle} hall ticket?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Candidates must carry a clear printed copy of the admit card, original valid Photo ID Proof (Aadhaar Card, Voter ID, PAN Card, or Driving License), and two recent passport-size photographs to the exam hall.`,
+        },
+      },
+    ];
+  } else {
+    // Default latest-jobs / recruitment FAQs
+    faqEntities = [
+      {
+        "@type": "Question",
+        name: `How to apply online for ${cleanShortTitle}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${cleanShortTitle} ke liye aavedan karne ke liye official portal ya Rojgar Suvidha ke direct link (${BASE_URL}/job/${slug}) par jayein. Form fill karein, documents upload karein aur fee submit karein.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `What is the last date to apply for ${cleanShortTitle}?`,
         acceptedAnswer: {
           "@type": "Answer",
           text: lastDate
-            ? `${job.title} ke liye apply karne ki last date ${lastDate} hai. Kisi bhi badlav ke liye Rojgar Suvidha check karte rahein ya official notification dekho.`
-            : `${job.title} ki last date ke liye official notification check karein. Rojgar Suvidha par real-time updates milenge.`,
+            ? `${cleanShortTitle} application deadline ${lastDate} hai. Closing date se pehle form submit karein.`
+            : `${cleanShortTitle} ki last date ke liye official notification dekhein ya Rojgar Suvidha check karein.`,
         },
       },
       {
         "@type": "Question",
-        name: `How many vacancies are there in ${job.title}?`,
+        name: `How many vacancies are announced for ${cleanShortTitle}?`,
         acceptedAnswer: {
           "@type": "Answer",
           text: job.total_posts
-            ? `${job.title} mein total ${job.total_posts} vacancies hain. Category-wise vacancy breakdown ke liye official notification dekho.`
-            : `${job.title} ki total vacancies ke liye official notification refer karein. Rojgar Suvidha par updated information milegi.`,
+            ? `Total ${job.total_posts} vacancies announce hui hain. Category-wise vacancy breakdown Rojgar Suvidha par available hai.`
+            : `Total vacancies ki jankari official notification PDF me di gayi hai. Rojgar Suvidha par updated breakdown dekhein.`,
         },
       },
       {
         "@type": "Question",
-        name: `What is the application fee for ${job.title}?`,
+        name: `What is the application fee for ${cleanShortTitle}?`,
         acceptedAnswer: {
           "@type": "Answer",
           text: job.app_fee_gen
-            ? `${job.title} ke liye General/OBC category ka application fee ₹${job.app_fee_gen} hai. SC/ST/Female candidates ke liye fee alag ho sakti hai — official notification confirm karein.`
-            : `${job.title} ki application fee ke liye official notification dekho. Fee Debit Card, Credit Card, Net Banking ya UPI se pay hoti hai.`,
+            ? `General/OBC candidates ke liye application fee ₹${job.app_fee_gen} hai. Reserved categories (SC/ST/Female) ke liye fee exemption official rules ke mutabiq hai.`
+            : `Application fee official notification ke anusaar lagu hoti hai. Online Debit Card, Net Banking ya UPI se pay kar sakte hain.`,
         },
       },
-      {
-        "@type": "Question",
-        name: `What is the eligibility for ${job.title}?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `${job.title} ke liye eligibility criteria mein educational qualification aur age limit shamil hain. Detailed eligibility, age relaxation aur reserved category benefits ke liye official notification aur Rojgar Suvidha ka full article padho: ${BASE_URL}/job/${slug}`,
-        },
-      },
-    ],
+    ];
+  }
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqEntities,
   };
 
   const isBreakingNews = job.category === "results" || job.category === "admit-card" || job.category === "news";
@@ -475,7 +535,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
       {/* JSON-LD Structured Data */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }} />
+      {(job.category === "latest-jobs" || job.category === "private-jobs") && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }} />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       {liveBlogPostingSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(liveBlogPostingSchema) }} />
