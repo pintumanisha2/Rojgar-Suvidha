@@ -115,12 +115,13 @@ export async function POST(req: Request) {
     }
 
     console.log(`🚀 [index-now route] Full instant indexing for slug: ${targetSlug}`);
-    await notifySearchEngines(targetSlug, targetCategory);
+    const summary = await notifySearchEngines(targetSlug, targetCategory);
 
     return NextResponse.json({
       success: true,
       slug: targetSlug,
-      message: `All 5 indexing layers fired for /job/${targetSlug}. Googlebot expected within 2–15 minutes.`,
+      summary,
+      message: `All 5 indexing layers fired for /job/${targetSlug}.`,
     });
   } catch (err: any) {
     console.error("Indexing API exception:", err);
