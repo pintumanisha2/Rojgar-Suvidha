@@ -852,10 +852,18 @@ async function fetchSarkariResultItems(): Promise<{
           else if (/admission|counselling/i.test(t)) detectedCat = "admission";
           else if (/syllabus/i.test(t)) detectedCat = "syllabus";
 
+          // If the link has an old year directory (e.g. /2025/, /2024/, /2023/)
+          let estimatedPubDate = new Date().toUTCString();
+          const oldYearMatch = link.match(/\/(202[0-5])\//);
+          if (oldYearMatch) {
+            // Mark as old year so freshness filter skips it immediately
+            estimatedPubDate = new Date(`${oldYearMatch[1]}-01-01T00:00:00Z`).toUTCString();
+          }
+
           secItems.push({
             title,
             link,
-            pubDate: new Date().toUTCString(),
+            pubDate: estimatedPubDate,
             description: title,
             feedCategory: detectedCat,
           });
@@ -936,6 +944,7 @@ async function fetchFullPage(url: string): Promise<{
   text: string;
   links: { href: string; text: string }[];
   rawHtml: string;
+  actualPubDate?: string | null;
 }> {
   const res = await fetch(url, {
     headers: {
@@ -1033,7 +1042,16 @@ async function fetchFullPage(url: string): Promise<{
 
   // Clean source text from competitor brand names beforehand
   const cleanedText = sanitizeSourceText(rawText.slice(0, 12000));
-  return { text: cleanedText, links, rawHtml: workingHtml.slice(0, 2000) };
+
+  // Extract actual publication / modification time from meta tags or text
+  const pubMatch = html.match(/<meta[^>]*property=["']article:published_time["'][^>]*content=["']([^"']+)["']/i);
+  const modMatch = html.match(/<meta[^>]*property=["']article:modified_time["'][^>]*content=["']([^"']+)["']/i);
+  const timeMatch = html.match(/<time[^>]*datetime=["']([^"']+)["']/i);
+  const textDateMatch = html.match(/(?:Post Date|Date \/ Update|Update Date|Updated on|Last Update)\s*:\s*([^<\n\r]+)/i);
+
+  const actualPubDate = modMatch?.[1] || pubMatch?.[1] || timeMatch?.[1] || textDateMatch?.[1] || null;
+
+  return { text: cleanedText, links, rawHtml: workingHtml.slice(0, 2000), actualPubDate };
 }
 
 // ── Fetch Government Education News (PIB + Google News RSS) ──────────────────
@@ -2785,10 +2803,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
     })
     .sort((a, b) => b.score - a.score);
 
-  // Strict 1-post per run policy: completely eliminates Vercel 60s timeout (HTTP 504)
-  const newItems = sortedCandidates.slice(0, 1);
+  // Batch policy: evaluate top 10 scored candidates, skip stale/duplicates, process 1 fresh post
+  const newItems = sortedCandidates.slice(0, 10);
   if (newItems[0]) {
-    console.log(`🔥 [Smart Demand Selector] Selected: "${newItems[0].title}" (Source: ${newItems[0].source}, DemandScore: ${newItems[0].score})`);
+    console.log(`🔥 [Smart Demand Selector] Top candidate: "${newItems[0].title}" (Source: ${newItems[0].source}, DemandScore: ${newItems[0].score})`);
   }
 
   if (newItems.length === 0) {
@@ -2877,6 +2895,31 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         const pageData = await fetchFullPage(item.link);
         pageText = pageData.text;
         links = pageData.links;
+
+        // ── VERIFIED 48-HOUR FRESHNESS GUARD ──────────────────────────────
+        // Check actual publish/modified date from page HTML metadata
+        const effectiveDateStr = pageData.actualPubDate || item.pubDate;
+        if (effectiveDateStr) {
+          const itemAgeMs = new Date(effectiveDateStr).getTime();
+          if (itemAgeMs > 0 && itemAgeMs < cutoffTime) {
+            const ageHrs = Math.round((Date.now() - itemAgeMs) / 3600000);
+            console.log(`🕐 [Stale Content Guard] SKIPPED stale item (${ageHrs}h old, published ${effectiveDateStr}): "${item.title.slice(0, 60)}"`);
+            staleSkipped.push({
+              title: item.title,
+              source: item.source,
+              ageLabel: `${ageHrs}h purana (${effectiveDateStr.slice(0, 10)})`
+            });
+            // Permanently log URL so it is NEVER checked or retried again
+            try {
+              await supabase.from("scraped_urls_log").upsert(
+                [{ url: item.link, title: item.title.slice(0, 200), reason: `stale: ${ageHrs}h old (${effectiveDateStr})` }],
+                { onConflict: "url" }
+              );
+            } catch (_) {}
+            results.skipped++;
+            continue; // Skip AI generation completely — move to next candidate in batch!
+          }
+        }
       }
 
       console.log(`   📄 Page/Facts extracted: ${pageText.split(" ").length} words, ${links.length} links`);
@@ -3122,10 +3165,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       results.processed++;
 
-      // ⏱️ 5-second gap between items in single run (fast & rate limit safe)
-      // Posts are naturally spaced out across 30-minute Vercel Cron intervals
-      if (newItems.indexOf(item) < newItems.length - 1) {
-        await sleep(5000);
+      // 🎯 Strict 1-post-per-run policy: process exactly 1 verified fresh post, then stop
+      if (results.processed >= 1) {
+        console.log(`🎯 [1-Post Target] Successfully drafted 1 fresh post: "${cleanedTitle}". Finishing run.`);
+        break;
       }
 
     } catch (err: any) {
