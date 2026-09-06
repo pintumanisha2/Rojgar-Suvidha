@@ -21,10 +21,10 @@ export function getGeminiApiKeys(): string[] {
 
 // Active verified Google Gemini models in 2026 REST API order of preference
 export const VALID_GEMINI_MODELS = [
-  "gemini-3.5-flash",
   "gemini-3.7-flash",
-  "gemini-flash-latest",
   "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
 ];
 
 export interface GeminiCallOptions {
