@@ -791,9 +791,9 @@ async function fetchRSSItems(): Promise<{
   return allItems;
 }
 
-// ── SarkariResult.com RSS Fetcher ─────────────────────────────────────────────
-// SarkariResult uses WordPress RSS — same format as FreeJobAlert
-// Their RSS has minimal content (title + link only), so we deep-read each page
+// ── SarkariResult.com Multi-Category HTML + RSS Crawler (Priority 1) ──────────
+// Crawls all main sections directly from HTML: Latest Jobs, Results, Admit Card,
+// Answer Key, Admission, Syllabus, and Homepage, plus RSS fallback.
 async function fetchSarkariResultItems(): Promise<{
   title: string; link: string; pubDate: string;
   description: string; feedCategory: string;
@@ -801,68 +801,135 @@ async function fetchSarkariResultItems(): Promise<{
   const allItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   const seen = new Set<string>();
 
-  for (const [feedCat, urls] of Object.entries(SARKARIRESULT_RSS_FEEDS)) {
-    for (const rssUrl of urls) {
-      try {
-        const res = await fetch(rssUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
-            "Accept": "application/rss+xml, application/xml, text/xml, */*",
-          },
-          signal: AbortSignal.timeout(15000),
-        });
-        if (!res.ok) { console.warn(`SarkariResult RSS [${feedCat}] ${rssUrl}: HTTP ${res.status}`); continue; }
-        const xml = await res.text();
-        if (!xml.includes("<item>")) { console.warn(`SarkariResult RSS [${feedCat}] ${rssUrl}: no <item> tags`); continue; }
+  const SARKARI_SECTIONS: { cat: string; url: string }[] = [
+    { cat: "latest-jobs", url: "https://www.sarkariresult.com/latestjob/" },
+    { cat: "results", url: "https://www.sarkariresult.com/result/" },
+    { cat: "admit-card", url: "https://www.sarkariresult.com/admitcard/" },
+    { cat: "answer-key", url: "https://www.sarkariresult.com/answerkey/" },
+    { cat: "admission", url: "https://www.sarkariresult.com/admission/" },
+    { cat: "syllabus", url: "https://www.sarkariresult.com/syllabus/" },
+    { cat: "latest-jobs", url: "https://www.sarkariresult.com/" }, // Homepage highlights
+  ];
 
-        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-        let match: RegExpExecArray | null;
-        let count = 0;
+  // 1. Parallel HTML Crawling across all SarkariResult sections
+  const htmlPromises = SARKARI_SECTIONS.map(async (sec) => {
+    try {
+      const res = await fetch(sec.url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) {
+        console.warn(`SarkariResult HTML [${sec.cat}] ${sec.url}: HTTP ${res.status}`);
+        return [];
+      }
+      const html = await res.text();
+      // Match post links in lists: <li><a href="...">Title</a></li>
+      const liRegex = /<li>\s*<a\s+[^>]*href=["'](https?:\/\/(?:www\.)?sarkariresult\.com\/[^\/"']+\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      let match: RegExpExecArray | null;
+      const secItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
 
-        while ((match = itemRegex.exec(xml)) !== null) {
-          const block = match[1];
-          const title =
-            block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
-            block.match(/<title>(.*?)<\/title>/)?.[1] || "";
-          const link =
-            block.match(/<link>(.*?)<\/link>/)?.[1] ||
-            block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
-          const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
-          const description =
-            block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
-            block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+      while ((match = liRegex.exec(html)) !== null && secItems.length < 25) {
+        let link = match[1].trim();
+        let title = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
-          // SarkariResult: detect feedCategory from title (since RSS is not categorized)
-          let detectedCat = feedCat;
-          if (feedCat === "latest-jobs") {
-            const t = title.toLowerCase();
-            if (/result|merit list|scorecard|cut.?off|selected candidates/.test(t)) detectedCat = "results";
-            else if (/admit card|hall ticket|call letter/.test(t)) detectedCat = "admit-card";
-            else if (/answer key/.test(t)) detectedCat = "answer-key";
-            else if (/admission|counselling/.test(t)) detectedCat = "admission";
-          }
+        if (
+          title.length > 5 &&
+          !link.includes("/feed") &&
+          !link.includes("/about-us") &&
+          !link.includes("/contact") &&
+          !link.includes("/terms") &&
+          !link.includes("/privacy") &&
+          !link.includes("/disclaimer")
+        ) {
+          let detectedCat = sec.cat;
+          const t = title.toLowerCase();
+          if (/result|merit list|scorecard|cut.?off|selected candidates/i.test(t)) detectedCat = "results";
+          else if (/admit card|hall ticket|call letter/i.test(t)) detectedCat = "admit-card";
+          else if (/answer key|objection/i.test(t)) detectedCat = "answer-key";
+          else if (/admission|counselling/i.test(t)) detectedCat = "admission";
+          else if (/syllabus/i.test(t)) detectedCat = "syllabus";
 
-          // Deduplicate (SarkariResult sends same item across multiple feeds)
-          const linkKey = link.trim();
-          if (title && linkKey && !seen.has(linkKey)) {
-            seen.add(linkKey);
-            allItems.push({
-              title: title.trim(), link: linkKey,
-              pubDate: pubDate.trim(), description: description.trim(),
-              feedCategory: detectedCat,
-            });
-            count++;
-          }
+          secItems.push({
+            title,
+            link,
+            pubDate: new Date().toUTCString(),
+            description: title,
+            feedCategory: detectedCat,
+          });
         }
-        console.log(`📡 SarkariResult RSS [${feedCat}] from ${rssUrl}: ${count} items`);
-        break; // Got items from this URL — skip fallback
-      } catch (e: any) {
-        console.warn(`SarkariResult RSS [${feedCat}] ${rssUrl} failed: ${e.message}`);
+      }
+      return secItems;
+    } catch (err: any) {
+      console.warn(`SarkariResult HTML [${sec.cat}] ${sec.url} failed:`, err.message);
+      return [];
+    }
+  });
+
+  const sectionResults = await Promise.allSettled(htmlPromises);
+  for (const r of sectionResults) {
+    if (r.status === "fulfilled") {
+      for (const item of r.value) {
+        if (!seen.has(item.link)) {
+          seen.add(item.link);
+          allItems.push(item);
+        }
       }
     }
   }
 
-  return allItems; // Empty is OK — FreeJobAlert is the primary source
+  // 2. Supplementary: RSS Feed fallback
+  try {
+    const rssRes = await fetch("https://www.sarkariresult.com/feed/", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (rssRes.ok) {
+      const xml = await rssRes.text();
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+      let match: RegExpExecArray | null;
+      while ((match = itemRegex.exec(xml)) !== null) {
+        const block = match[1];
+        const title =
+          block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+          block.match(/<title>(.*?)<\/title>/)?.[1] || "";
+        const link =
+          block.match(/<link>(.*?)<\/link>/)?.[1] ||
+          block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+        const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || new Date().toUTCString();
+        const description =
+          block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
+          block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+
+        const linkKey = link.trim();
+        if (title && linkKey && !seen.has(linkKey)) {
+          seen.add(linkKey);
+          let detectedCat = "latest-jobs";
+          const t = title.toLowerCase();
+          if (/result|merit|scorecard/i.test(t)) detectedCat = "results";
+          else if (/admit card|hall ticket/i.test(t)) detectedCat = "admit-card";
+          else if (/answer key/i.test(t)) detectedCat = "answer-key";
+          else if (/admission/i.test(t)) detectedCat = "admission";
+
+          allItems.push({
+            title: title.trim(),
+            link: linkKey,
+            pubDate: pubDate.trim(),
+            description: description.trim(),
+            feedCategory: detectedCat,
+          });
+        }
+      }
+    }
+  } catch (_) { /* RSS silent fallback */ }
+
+  console.log(`🌐 [SarkariResult Crawler] Extracted total ${allItems.length} live items across all categories.`);
+  return allItems;
 }
 
 async function fetchFullPage(url: string): Promise<{
@@ -2600,8 +2667,15 @@ function calculateSearchDemandScore(item: { title: string; source: string; feedC
   let score = 0;
   const title = item.title.toLowerCase();
 
-  // 1. Google Trends India is absolute #1 priority (real-time viral spike)
-  if (item.source === "google_trends") score += 2000;
+  // ── USER-MANDATED SOURCE PRIORITY ORDER ──────────────────────────────────────
+  // Priority 1: SarkariResult.com — always picked first if any fresh item exists
+  if (item.source === "sarkariresult") score += 5000;
+  // Priority 2: FreeJobAlert.com — high volume notification feeds
+  else if (item.source === "freejobalert") score += 3000;
+  // Priority 3: Google Trends India — real-time viral spikes
+  else if (item.source === "google_trends") score += 2000;
+  // Priority 4: NDTV Education News
+  else if (item.source === "ndtv") score += 1000;
 
   // 2. High-intent categories (Results, Admit Cards, Answer Keys have 10x viral traffic velocity)
   if (/result|merit|scorecard|allotment|rank\s*card/i.test(title) || item.feedCategory === "results") score += 600;
