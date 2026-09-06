@@ -171,14 +171,14 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
     });
 
     let messageLines: string[] = [
-      `📊 *ROJGAR SUVIDHA DAILY EXECUTIVE REPORT*`,
-      `📅 *Date:* ${dateFormatted} (9:00 PM IST)`,
-      `------------------------------------------`,
-      `✅ *Total Blogs Published Today:* ${publishedCount}`,
+      `📊 <b>ROJGAR SUVIDHA DAILY EXECUTIVE REPORT</b>`,
+      `📅 <b>Date:</b> ${dateFormatted} (9:00 PM IST)`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `✅ <b>Total Blogs Published Today:</b> ${publishedCount}`,
     ];
 
     if (publishedCount === 0) {
-      messageLines.push(`ℹ️ No new blogs were published today.`);
+      messageLines.push(`ℹ️ Aaj koi naya blog publish nahi hua.`);
     } else {
       // Fetch backlinks for each job with full metadata for Excel export
       const jobIds = todayJobs.map((j) => j.id);
@@ -206,6 +206,7 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
 
       let livePublishedCount = 0;
       let queuedCount = 0;
+      let failedCount = 0;
 
       if (backlinksData) {
         totalBacklinksCount = backlinksData.length;
@@ -215,8 +216,11 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
 
           const jobInfo = jobsById[b.job_id];
           if (jobInfo) {
-            const isLive = b.status === "published" && b.backlink_url && !b.backlink_url.includes("rojgarsuvidha.com");
+            const isLive = b.status === "published" && b.backlink_url
+              && !b.backlink_url.includes("rojgarsuvidha.com")
+              && b.backlink_url.startsWith("http");
             if (isLive) livePublishedCount++;
+            else if (b.status === "failed") failedCount++;
             else if (b.status === "queued") queuedCount++;
 
             // Cleanly determine target URL
@@ -229,7 +233,7 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
               slug: jobInfo.slug,
               target_url: targetUrl,
               platform: b.platform,
-              backlink_url: isLive ? b.backlink_url : "⏳ Pending Publication (In 15-min Drip Queue)",
+              backlink_url: isLive ? b.backlink_url : "Pending (15-min Drip Queue)",
               anchor_text: b.anchor_text || "Rojgar Suvidha",
               status: isLive ? "Published Live" : b.status === "failed" ? "Failed" : "In Drip Queue",
             });
@@ -244,27 +248,31 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
         return 0;
       });
 
-      messageLines.push(`🔗 *Live Backlinks Published:* ${livePublishedCount}`);
-      messageLines.push(`⏳ *Pending In Drip Queue (15-min interval):* ${queuedCount}`);
-      messageLines.push(`------------------------------------------`);
-      messageLines.push(`📰 *TODAY'S POSTS & BACKLINK SYNDICATION:*`);
+      messageLines.push(`🔗 <b>Live Backlinks Published:</b> ${livePublishedCount}`);
+      messageLines.push(`⏳ <b>In Drip Queue (15-min):</b> ${queuedCount}`);
+      if (failedCount > 0) messageLines.push(`❌ <b>Failed:</b> ${failedCount}`);
+      messageLines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      messageLines.push(`📰 <b>TODAY'S POSTS &amp; BACKLINKS:</b>`);
       messageLines.push(``);
 
-      todayJobs.slice(0, 10).forEach((job, idx) => {
+      todayJobs.slice(0, 15).forEach((job, idx) => {
         const liveJobUrl = `${BASE_URL}/job/${job.slug}`;
         const links = backlinksByJob[job.id] || [];
+        const liveLinks = links.filter((l: any) =>
+          l.status === "published" && l.backlink_url
+          && !l.backlink_url.includes("rojgarsuvidha.com")
+          && l.backlink_url.startsWith("http")
+        );
+        const pendingLinks = links.filter((l: any) => l.status === "queued");
+        const titleShort = job.title.length > 55 ? job.title.slice(0, 52) + "..." : job.title;
 
-        messageLines.push(`${idx + 1}. 📌 *${job.title}*`);
-        messageLines.push(`   🌐 *Target Post:* ${liveJobUrl}`);
-        if (links.length > 0) {
-          messageLines.push(`   🔗 *Platforms Syndication (${links.length}):*`);
-          links.forEach((l: any) => {
-            const platformName = l.platform.charAt(0).toUpperCase() + l.platform.slice(1);
-            const isLive = l.status === "published" && l.backlink_url && !l.backlink_url.includes("rojgarsuvidha.com");
-            const target = l.target_url || (l.backlink_url?.includes("rojgarsuvidha.com") ? l.backlink_url : liveJobUrl);
-            const anchor = l.anchor_text || "Rojgar Suvidha";
+        messageLines.push(`${idx + 1}. 📌 <b>${titleShort}</b>`);
+        messageLines.push(`   🌐 <a href="${liveJobUrl}">👆 Click: Live Blog Post</a>`);
 
-            // Convert created_at or published_at to IST time for display
+        if (liveLinks.length > 0) {
+          messageLines.push(`   🔗 <b>Published Backlinks (${liveLinks.length}):</b>`);
+          liveLinks.forEach((l: any) => {
+            const platform = (l.platform.charAt(0).toUpperCase() + l.platform.slice(1));
             const rawTs = l.published_at || l.created_at;
             let istTimeLabel = "";
             if (rawTs) {
@@ -273,42 +281,52 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
               const hh = istDate.getUTCHours();
               const mm = istDate.getUTCMinutes().toString().padStart(2, "0");
               const ampm = hh >= 12 ? "PM" : "AM";
-              istTimeLabel = ` | 🕐 ${hh % 12 || 12}:${mm} ${ampm} IST`;
+              istTimeLabel = ` (${hh % 12 || 12}:${mm} ${ampm} IST)`;
             }
-
-            if (isLive) {
-              messageLines.push(`      • *${platformName}:* ✅ ${l.backlink_url}`);
-              messageLines.push(`        ↳ _Anchor:_ "${anchor}"${istTimeLabel} | _Target:_ ${target}`);
-            } else {
-              messageLines.push(`      • *${platformName}:* ⏳ Pending Drip (15-min queue)`);
-              messageLines.push(`        ↳ _Anchor:_ "${anchor}" | _Target:_ ${target}`);
-            }
+            messageLines.push(`      • <b>${platform}</b>${istTimeLabel}: ✅ <a href="${l.backlink_url}">👆 Open ${platform} Link</a>`);
           });
+        }
+
+        if (pendingLinks.length > 0) {
+          messageLines.push(`   ⏳ <b>Queue mein:</b> ${pendingLinks.map((l: any) => l.platform.toUpperCase()).join(", ")}`);
         }
         messageLines.push(``);
       });
 
 
-      if (todayJobs.length > 10) {
-        messageLines.push(`... and ${todayJobs.length - 10} more posts detailed in attached Excel document.`);
+      if (todayJobs.length > 15) {
+        messageLines.push(`<i>... aur ${todayJobs.length - 15} more posts hain — attached Excel sheet mein dekho.</i>`);
       }
 
-      // 3. Send Telegram text message & attached Excel document
+      // 3. Send Telegram HTML messages (split at 4000 chars to stay under 4096 limit)
       if (BOT_TOKEN && ADMIN_CHAT_ID) {
-        // Send main Markdown report text
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: ADMIN_CHAT_ID,
-            text: messageLines.join("\n"),
-            parse_mode: "Markdown",
-            disable_web_page_preview: true,
-          }),
-        });
-        console.log(`✅ Sent Daily 9 PM Executive Text Report to Telegram Admin (${ADMIN_CHAT_ID})`);
+        const chunks: string[] = [];
+        let current = "";
+        for (const line of messageLines) {
+          if ((current + "\n" + line).length > 4000) {
+            chunks.push(current.trim());
+            current = line;
+          } else {
+            current = current ? current + "\n" + line : line;
+          }
+        }
+        if (current.trim()) chunks.push(current.trim());
 
-        // Send attached Daily Excel (.csv) Document
+        for (let i = 0; i < chunks.length; i++) {
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: ADMIN_CHAT_ID,
+              text: chunks[i],
+              parse_mode: "HTML",
+              disable_web_page_preview: true,
+            }),
+          });
+        }
+        console.log(`✅ Sent Daily 9 PM Executive HTML Report to Telegram Admin (${ADMIN_CHAT_ID})`);
+
+        // Send Excel CSV file with all clickable links
         if (allBacklinksToExport.length > 0) {
           await sendTelegramBacklinksExcelReport(
             BOT_TOKEN,
