@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { broadcastJobAlert } from "@/lib/social-publisher";
 import { notifySearchEngines } from "@/lib/instant-indexing";
 import { enqueuePostApprovalBacklinks } from "@/lib/backlink-engine";
+import { syncBlogPublishedToGoogleSheet } from "@/lib/backlink-exporter";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -283,6 +284,20 @@ export async function POST(
         enqueuePostApprovalBacklinks(newJobId, title, slug, category).catch((e) =>
           console.warn("Backlink enqueue error:", e)
         )
+      );
+
+      // 5.2. Real-time Sync to Google Sheet (Blogs Published tab)
+      waitUntil(
+        syncBlogPublishedToGoogleSheet({
+          title,
+          category,
+          state: stateCode || "ALL India",
+          total_posts: totalPosts || draft.total_posts || "-",
+          last_date: lastDate || draft.last_date || "-",
+          live_url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${slug}`,
+          source: draft.source_site || "auto",
+          quality_score: draft.quality_score || "-",
+        }).catch((e) => console.warn("Google Sheet blog sync failed:", e))
       );
     }
 

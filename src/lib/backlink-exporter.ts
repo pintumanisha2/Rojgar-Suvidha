@@ -99,6 +99,125 @@ export async function syncBacklinkToGoogleSheet(payload: BacklinkExportPayload):
   }
 }
 
+export interface CronSummaryPayload {
+  processed: number;
+  errors: number;
+  stale_skipped: number;
+  duplicate_skipped: number;
+  micro_job_skipped: number;
+  total_scanned: number;
+  duration: number | string;
+}
+
+export interface SkipLogItem {
+  title: string;
+  source: string;
+  reason: string;
+  age_hrs?: number | string;
+  existing_url?: string;
+}
+
+export interface BlogPublishedExportPayload {
+  title: string;
+  category: string;
+  state?: string;
+  total_posts?: string | number | null;
+  last_date?: string | null;
+  live_url: string;
+  source?: string;
+  quality_score?: number | string | null;
+}
+
+/**
+ * Real-time Sync Cron Run Summary to "Daily Summary" tab in Google Sheet
+ */
+export async function syncCronSummaryToGoogleSheet(payload: CronSummaryPayload): Promise<boolean> {
+  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim();
+  if (!webhookUrl) return false;
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "cron_summary",
+        ...payload,
+      }),
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (res.ok || res.status === 302 || res.status === 200) {
+      console.log("✅ [Google Sheet Sync] Successfully pushed cron summary to Google Sheet");
+      return true;
+    }
+    return false;
+  } catch (err: any) {
+    console.warn("⚠️ [Google Sheet Sync] Failed to sync cron summary:", err.message);
+    return false;
+  }
+}
+
+/**
+ * Real-time Sync Skip Log items to "Skip Log" tab in Google Sheet
+ */
+export async function syncSkipLogToGoogleSheet(items: SkipLogItem[]): Promise<boolean> {
+  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim();
+  if (!webhookUrl || !items.length) return false;
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "skip_log",
+        items,
+      }),
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (res.ok || res.status === 302 || res.status === 200) {
+      console.log(`✅ [Google Sheet Sync] Successfully pushed ${items.length} skip items to Google Sheet`);
+      return true;
+    }
+    return false;
+  } catch (err: any) {
+    console.warn("⚠️ [Google Sheet Sync] Failed to sync skip log:", err.message);
+    return false;
+  }
+}
+
+/**
+ * Real-time Sync Approved & Published Blog to "Blogs Published" tab in Google Sheet
+ */
+export async function syncBlogPublishedToGoogleSheet(payload: BlogPublishedExportPayload): Promise<boolean> {
+  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim();
+  if (!webhookUrl) return false;
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "blog_published",
+        ...payload,
+      }),
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (res.ok || res.status === 302 || res.status === 200) {
+      console.log(`✅ [Google Sheet Sync] Successfully pushed published blog to Google Sheet: ${payload.title}`);
+      return true;
+    }
+    return false;
+  } catch (err: any) {
+    console.warn("⚠️ [Google Sheet Sync] Failed to sync published blog:", err.message);
+    return false;
+  }
+}
+
 export interface BacklinkCsvRecord {
   created_at?: string;
   job_title: string;

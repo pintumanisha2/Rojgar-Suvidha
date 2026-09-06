@@ -22,6 +22,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { sendAdminDraftApprovalAlert, sendTelegramAdminErrorAlert, sendTelegramAdminSummaryDigest } from "./social-publisher";
 import { callGeminiWithRotation } from "./gemini-rotator";
+import { syncCronSummaryToGoogleSheet, syncSkipLogToGoogleSheet } from "./backlink-exporter";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
@@ -2741,6 +2742,40 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
     }
     emptyMsg += `\n⏱️ <b>Duration:</b> ${runDuration}s | Next run ~30 min`;
     try { await sendTelegramAdminSummaryDigest(emptyMsg); } catch (_) {}
+
+    // 📊 Sync to Google Sheet Master Dashboard
+    try {
+      syncCronSummaryToGoogleSheet({
+        processed: 0,
+        errors: results.errors.length,
+        stale_skipped: staleSkipped.length,
+        duplicate_skipped: 0,
+        micro_job_skipped: microJobSkipped.length,
+        total_scanned: allCandidateItems.length,
+        duration: runDuration,
+      }).catch(() => {});
+
+      if (staleSkipped.length > 0 || microJobSkipped.length > 0) {
+        const skipItems = [
+          ...staleSkipped.map((s) => ({
+            title: s.title,
+            source: s.source,
+            reason: "🕐 Stale (>48h)",
+            age_hrs: s.ageLabel,
+            existing_url: "-",
+          })),
+          ...microJobSkipped.map((m) => ({
+            title: m.title,
+            source: m.source,
+            reason: `📉 Low Demand (${m.score})`,
+            age_hrs: "-",
+            existing_url: "-",
+          })),
+        ];
+        syncSkipLogToGoogleSheet(skipItems).catch(() => {});
+      }
+    } catch (_) {}
+
     return results;
   }
 
@@ -3125,6 +3160,47 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
     summaryText += `⏱️ <b>Duration:</b> ${runDuration}s | Next run ~30 min`;
 
     await sendTelegramAdminSummaryDigest(summaryText);
+
+    // 📊 Sync to Google Sheet Master Dashboard
+    try {
+      syncCronSummaryToGoogleSheet({
+        processed: results.processed,
+        errors: results.errors.length,
+        stale_skipped: staleSkipped.length,
+        duplicate_skipped: duplicateSkipped.length,
+        micro_job_skipped: microJobSkipped.length,
+        total_scanned: allCandidateItems.length,
+        duration: runDuration,
+      }).catch(() => {});
+
+      const allSkipItems = [
+        ...staleSkipped.map((s) => ({
+          title: s.title,
+          source: s.source,
+          reason: "🕐 Stale (>48h)",
+          age_hrs: s.ageLabel,
+          existing_url: "-",
+        })),
+        ...duplicateSkipped.map((d) => ({
+          title: d.title,
+          source: d.source,
+          reason: "🔁 Duplicate (Already on Site)",
+          age_hrs: "-",
+          existing_url: `/job/${d.existingSlug}`,
+        })),
+        ...microJobSkipped.map((m) => ({
+          title: m.title,
+          source: m.source,
+          reason: `📉 Low Demand (${m.score})`,
+          age_hrs: "-",
+          existing_url: "-",
+        })),
+      ];
+
+      if (allSkipItems.length > 0) {
+        syncSkipLogToGoogleSheet(allSkipItems).catch(() => {});
+      }
+    } catch (_) {}
   } catch (e: any) {
     console.warn("⚠️ Summary digest notification failed:", e.message);
   }
