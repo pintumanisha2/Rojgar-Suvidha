@@ -29,6 +29,11 @@ import { publishToLivejournal } from "@/lib/backlink-publishers/livejournal";
 import { publishToGitbook } from "@/lib/backlink-publishers/gitbook";
 import { syncBacklinkToGoogleSheet } from "@/lib/backlink-exporter";
 
+// Required for Vercel Cron — max 60s execution, no caching
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // ─── PLATFORM TIER MAP ───────────────────────────────────────────────────────
 const PLATFORM_TIER: Record<string, string> = {
   blogger: "DA-95 · Tier 1",
