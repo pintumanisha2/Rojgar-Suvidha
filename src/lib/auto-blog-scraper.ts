@@ -2669,24 +2669,78 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
-  // 3. Filter unscraped items and sort by real-time search demand score
-  // RULE: Exclude zero-search 1-5 post micro-jobs, rank viral exams/results #1
-  const unscrapedCandidates = allCandidateItems.filter((i) => !scrapedUrls.has(i.link));
+  // ── FIX 1: 48-Hour Freshness Filter ─────────────────────────────────────────
+  // RULE: Koi bhi article jo 48 ghante se zyada purana ho → skip (stale content)
+  // Reason: Purana content already rank kar chuka hota hai dusri sites par
+  const MAX_AGE_HOURS = 48;
+  const cutoffTime = Date.now() - MAX_AGE_HOURS * 60 * 60 * 1000;
+  const staleSkipped: { title: string; source: string; ageLabel: string }[] = [];
+  const alreadyScrapedCount = allCandidateItems.filter((i) => scrapedUrls.has(i.link)).length;
 
-  const sortedCandidates = unscrapedCandidates
-    .filter((i) => calculateSearchDemandScore(i) > -300)
-    .sort((a, b) => calculateSearchDemandScore(b) - calculateSearchDemandScore(a));
+  // ── FIX 2: Track skip reasons for Telegram report ───────────────────────────
+  const microJobSkipped: { title: string; source: string; score: number }[] = [];
+  const duplicateSkipped: { title: string; source: string; existingSlug: string }[] = [];
+  const processedItems: { title: string; source: string; slug?: string }[] = [];
+
+  // 3. Filter unscraped + fresh items
+  const unscrapedCandidates = allCandidateItems.filter((i) => {
+    if (scrapedUrls.has(i.link)) return false; // Already processed URL
+    if (i.pubDate) {
+      const itemAgeMs = new Date(i.pubDate).getTime();
+      if (itemAgeMs > 0 && itemAgeMs < cutoffTime) {
+        const ageHrs = Math.round((Date.now() - itemAgeMs) / 3600000);
+        staleSkipped.push({ title: i.title, source: i.source, ageLabel: `${ageHrs}h purana` });
+        console.log(`🕐 [Freshness] SKIPPED stale item (${ageHrs}h old): "${i.title.slice(0, 60)}"`);
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Sort and score — micro-jobs get negative scores
+  const allScoredCandidates = unscrapedCandidates.map((i) => ({ ...i, score: calculateSearchDemandScore(i) }));
+  const sortedCandidates = allScoredCandidates
+    .filter((i) => {
+      if (i.score <= -300) {
+        microJobSkipped.push({ title: i.title, source: i.source, score: i.score });
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.score - a.score);
 
   // Strict 1-post per run policy: completely eliminates Vercel 60s timeout (HTTP 504)
   const newItems = sortedCandidates.slice(0, 1);
   if (newItems[0]) {
-    const topScore = calculateSearchDemandScore(newItems[0]);
-    console.log(`🔥 [Smart Demand Selector] Selected: "${newItems[0].title}" (Source: ${newItems[0].source}, DemandScore: ${topScore})`);
+    console.log(`🔥 [Smart Demand Selector] Selected: "${newItems[0].title}" (Source: ${newItems[0].source}, DemandScore: ${newItems[0].score})`);
   }
 
   if (newItems.length === 0) {
     results.skipped = allCandidateItems.length;
     console.log("✨ All caught up — no new posts");
+    // Send Telegram report even when nothing to process
+    const runDuration = Math.round((Date.now() - startTime) / 1000);
+    const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const hh = nowIST.getUTCHours(); const mm = nowIST.getUTCMinutes().toString().padStart(2, "0");
+    const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
+    const istLabel = `${h12}:${mm} ${ampm} IST`;
+    let emptyMsg = `⏰ <b>AUTO-BLOG CRON (${istLabel})</b>\n━━━━━━━━━━━━━━━━━━━━━\n`;
+    emptyMsg += `✅ <b>Processed:</b> 0\n`;
+    emptyMsg += `📊 <b>Scanned:</b> ${allCandidateItems.length} items | Already done: ${alreadyScrapedCount}\n`;
+    if (staleSkipped.length > 0) {
+      emptyMsg += `\n🕐 <b>Stale (48h+ old) — Skipped ${staleSkipped.length}:</b>\n`;
+      staleSkipped.slice(0, 5).forEach((s) => {
+        emptyMsg += `   • ${s.title.slice(0, 55)} (${s.source}) — ${s.ageLabel}\n`;
+      });
+    }
+    if (microJobSkipped.length > 0) {
+      emptyMsg += `\n❌ <b>Micro-job / Low-demand — Skipped ${microJobSkipped.length}:</b>\n`;
+      microJobSkipped.slice(0, 3).forEach((s) => {
+        emptyMsg += `   • ${s.title.slice(0, 55)} (Score: ${s.score})\n`;
+      });
+    }
+    emptyMsg += `\n⏱️ <b>Duration:</b> ${runDuration}s | Next run ~30 min`;
+    try { await sendTelegramAdminSummaryDigest(emptyMsg); } catch (_) {}
     return results;
   }
 
@@ -2743,7 +2797,25 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       console.log(`   📊 Category: ${category} | State: ${stateCode || "ALL (Central)"} | Apply: ${applyStatus} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
 
-      // 6. Generate blog with Gemini
+      // ── FIX 3: Early Duplicate Exit BEFORE calling Gemini ──────────────────────
+      // Saves Gemini API quota + prevents duplicate drafts from different sources
+      const roughTitle = cleanCompetitorBrands(item.title);
+      const earlyDupeCheck = await findMatchingExistingJob(roughTitle, category, supabase);
+      if (earlyDupeCheck) {
+        console.log(`🔁 [Pre-Gemini Dedup] SKIPPED — Already on site: /job/${earlyDupeCheck.slug} | New title: "${item.title.slice(0, 60)}"`);
+        duplicateSkipped.push({ title: item.title, source: item.source, existingSlug: earlyDupeCheck.slug });
+        // Log URL so it doesn't retry
+        try {
+          await supabase.from("scraped_urls_log").upsert(
+            [{ url: item.link, title: roughTitle.slice(0, 200), reason: `duplicate: /job/${earlyDupeCheck.slug}` }],
+            { onConflict: "url" }
+          );
+        } catch (_) { /* silent */ }
+        results.skipped++;
+        continue; // Skip Gemini call entirely — save quota
+      }
+
+      // 6. Generate blog with Gemini (only if no early duplicate found)
       console.log(`   🤖 Calling Gemini AI...`);
       const aiResult = await generateBlogDraft({
         rawText: pageText,
@@ -2904,10 +2976,16 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       inserted = data;
       console.log(`   ✅ Draft saved: ID = ${inserted.id}`);
 
-      // 9. Log scraped URL (prevent duplicate)
+      // 9. Log scraped URL + title (prevent duplicate — FIX 4: title bhi save karo)
       try {
-        await supabase.from("scraped_urls_log").upsert([{ url: item.link }], { onConflict: "url" });
+        await supabase.from("scraped_urls_log").upsert(
+          [{ url: item.link, title: cleanedTitle.slice(0, 200), reason: "processed" }],
+          { onConflict: "url" }
+        );
       } catch (_) { /* silent */ }
+
+      // Track processed item for final Telegram report
+      processedItems.push({ title: cleanedTitle, source: item.source, slug });
 
       // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
       if (inserted?.id) {
@@ -2982,14 +3060,69 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
   console.log(`\n📊 Scraper complete: ${results.processed} processed | ${results.skipped} skipped | ${results.errors.length} errors\n`);
 
-  // Send Admin Summary Digest on Telegram
+  // ── FIX 4: Detailed Telegram Cron Run Report ─────────────────────────────────
+  // Har 30-min cron run ke baad pura breakdown bhejo — processed, skipped, stale, duplicates
   try {
-    const summaryText = `⏰ <b>ROJGAR SUVIDHA AUTO-SCRAPER RUN COMPLETE</b> ⏰\n\n` +
-      `<b>📊 Total Candidates Scanned:</b> ${allCandidateItems.length}\n` +
-      `<b>🆕 High-Demand Items Selected & Processed:</b> ${newItems.length} (Source: ${newItems[0]?.source || "none"})\n` +
-      `<b>✅ Drafts Generated Successfully:</b> ${results.processed}\n` +
-      `<b>❌ Errors:</b> ${results.errors.length}\n\n` +
-      `<i>All new draft approval buttons have been sent above to your Telegram. Tap Approve on any post to publish live instantly!</i>`;
+    const runDuration = Math.round((Date.now() - startTime) / 1000);
+    const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const hh = nowIST.getUTCHours();
+    const mm = nowIST.getUTCMinutes().toString().padStart(2, "0");
+    const ampm = hh >= 12 ? "PM" : "AM";
+    const h12 = hh % 12 || 12;
+    const istLabel = `${h12}:${mm} ${ampm} IST`;
+
+    let summaryText = `⏰ <b>AUTO-BLOG CRON (${istLabel})</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+    // ✅ Processed
+    if (processedItems.length > 0) {
+      summaryText += `\n✅ <b>Processed (${processedItems.length}):</b>\n`;
+      processedItems.forEach((p) => {
+        const link = p.slug ? ` → <a href="${BASE_URL}/job/${p.slug}">View Post</a>` : "";
+        summaryText += `   • "${p.title.slice(0, 60)}" (${p.source})${link}\n`;
+      });
+      summaryText += `\n<i>👆 Approve karo upar bheje gaye draft button se!</i>\n`;
+    } else {
+      summaryText += `\n✅ <b>Processed:</b> 0 (koi naya item nahi tha)\n`;
+    }
+
+    // ❌ Errors
+    if (results.errors.length > 0) {
+      summaryText += `\n❌ <b>Errors (${results.errors.length}):</b>\n`;
+      results.errors.slice(0, 3).forEach((e) => {
+        summaryText += `   • ${e.slice(0, 80)}\n`;
+      });
+    }
+
+    // 🔁 Duplicate skipped (cross-source)
+    if (duplicateSkipped.length > 0) {
+      summaryText += `\n🔁 <b>Already on Site — Skipped (${duplicateSkipped.length}):</b>\n`;
+      duplicateSkipped.forEach((d) => {
+        summaryText += `   • "${d.title.slice(0, 55)}" (${d.source})\n     → <a href="${BASE_URL}/job/${d.existingSlug}">/job/${d.existingSlug}</a>\n`;
+      });
+    }
+
+    // 🕐 Stale (48h+ old)
+    if (staleSkipped.length > 0) {
+      summaryText += `\n🕐 <b>Stale Content — Skipped (${staleSkipped.length}):</b>\n`;
+      staleSkipped.slice(0, 5).forEach((s) => {
+        summaryText += `   • "${s.title.slice(0, 55)}" (${s.source}) — ${s.ageLabel}\n`;
+      });
+      if (staleSkipped.length > 5) summaryText += `   ... aur ${staleSkipped.length - 5} more\n`;
+    }
+
+    // ❌ Micro-job low demand
+    if (microJobSkipped.length > 0) {
+      summaryText += `\n📉 <b>Low-Demand/Micro-job — Skipped (${microJobSkipped.length}):</b>\n`;
+      microJobSkipped.slice(0, 3).forEach((m) => {
+        summaryText += `   • "${m.title.slice(0, 55)}" (Score: ${m.score})\n`;
+      });
+      if (microJobSkipped.length > 3) summaryText += `   ... aur ${microJobSkipped.length - 3} more\n`;
+    }
+
+    // 📊 Summary stats
+    summaryText += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    summaryText += `📊 <b>Total scanned:</b> ${allCandidateItems.length} | Already done: ${alreadyScrapedCount}\n`;
+    summaryText += `⏱️ <b>Duration:</b> ${runDuration}s | Next run ~30 min`;
 
     await sendTelegramAdminSummaryDigest(summaryText);
   } catch (e: any) {
