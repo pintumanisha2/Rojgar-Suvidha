@@ -144,8 +144,13 @@ export async function sendDailyExecutiveReport(): Promise<{ success: boolean; pu
     const supabase = getSupabaseClient();
     if (!supabase) return { success: false, publishedCount: 0, backlinksCount: 0 };
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    // Calculate start of today in Indian Standard Time (IST: UTC+5:30)
+    // 00:00:00 IST is 18:30:00 UTC of previous day
+    const nowMs = Date.now();
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(nowMs + istOffsetMs);
+    const todayStartIST = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate(), 0, 0, 0, 0));
+    const todayStart = new Date(todayStartIST.getTime() - istOffsetMs);
 
     // 1. Fetch all jobs created/published today
     const { data: todayJobs, error: jobsErr } = await supabase
