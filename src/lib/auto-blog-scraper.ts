@@ -98,9 +98,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Falls back to combined text only if title is ambiguous
 function detectCategory(title: string, content: string): BlogCategory {
   const t = title.toLowerCase();
-  const combined = (title + " " + content).toLowerCase();
 
-  // ── TITLE-ONLY checks (highest confidence) ──────────────────────────────
+  // ── TITLE-ONLY checks (highest confidence — TITLE IS THE SOURCE OF TRUTH) ──
   // Results — specific result keywords in title
   if (/\bresult\b|merit list|scorecard|cut-?off mark|selected candidates|rank list|final result|result out|result declared/.test(t))
     return "results";
@@ -121,11 +120,16 @@ function detectCategory(title: string, content: string): BlogCategory {
   if (/recruitment|vacancy|apply online|online form|job notification|\bnoti(?:fication)?\b|\bvacancy\b|\bpost\b.*202[456]/.test(t))
     return "latest-jobs";
 
-  // ── CONTENT-BASED fallback (lower confidence — only if title is ambiguous) ─
-  if (/\bresult\b|merit list|scorecard/.test(combined)) return "results";
-  if (/admit card|hall ticket/.test(combined)) return "admit-card";
-  if (/answer key|objection window/.test(combined)) return "answer-key";
-  if (/\bcounselling\b|seat allot/.test(combined)) return "admission";
+  // ── CONTENT-BASED fallback — ONLY for admit-card/answer-key (NOT for 'result'!) ──
+  // ❌ REMOVED: content-based 'result' check — SarkariResult.com pages ALWAYS
+  //    contain the word 'result' in navigation, footer, and site branding!
+  //    e.g. Bank of Baroda Latest Job post was being classified as 'results' because
+  //    the SarkariResult.com page had 'result' in header/footer.
+  // ✅ KEPT: Only very specific, low-noise content patterns that won't fire on SR pages
+  const c = content.toLowerCase();
+  if (/admit card|hall ticket/.test(c)) return "admit-card";
+  if (/answer key|objection window/.test(c)) return "answer-key";
+  if (/\bcounselling\b|seat allot/.test(c)) return "admission";
 
   // ── News detection (only if explicitly news-like — no job keywords) ────
   if (/postponed|cancelled|rescheduled|syllabus change|age limit change|new rule/.test(t) &&
@@ -134,6 +138,7 @@ function detectCategory(title: string, content: string): BlogCategory {
 
   return "latest-jobs"; // Safe default — job posts are highest volume
 }
+
 
 // ── State Code Detection (Auto-detect State vs All India) ─────────────────
 // RULE: State detection is TITLE-FIRST. Body content is only used as secondary
@@ -3028,6 +3033,18 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       } else if (item.source === "ndtv") {
         // NDTV articles don't have application forms — cap at news level
         if (category === "latest-jobs") category = "news";
+      } else if (item.source === "sarkariresult") {
+        // ✅ FIX: SarkariResult pages ALWAYS contain word 'result' in site branding.
+        // Trust the feedCategory from HTML crawler (latest-jobs, results, admit-card etc.)
+        // ONLY override if title-based detection gave a strong specific signal.
+        // If title says 'result/admit card/answer key' → trust title detection.
+        // If title is generic (bank, recruitment, apply) → trust feedCategory from SR HTML crawler.
+        const titleBasedStrong = /\bresult\b|merit list|scorecard|admit card|hall ticket|answer key|counselling/.test(item.title.toLowerCase());
+        if (!titleBasedStrong && item.feedCategory) {
+          // Title was ambiguous — feedCategory from SR HTML crawler is more reliable
+          category = item.feedCategory as BlogCategory;
+        }
+        if (category === "news") category = "latest-jobs"; // SR doesn't publish pure news
       } else {
         // FreeJobAlert: if category feed is known, trust it over detection
         if (item.feedCategory && item.feedCategory !== "latest-jobs") {
