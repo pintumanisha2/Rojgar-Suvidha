@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { notifySearchEngines } from "@/lib/instant-indexing";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 const SITE_HOST = "www.rojgarsuvidha.com";
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY || "81903AC6E158EBDBEA77300DC1D07ED1";

@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Initialize admin client with service role key to perform deletion of auth users
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = "force-dynamic";
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key";
+  return createClient(url, key);
+}
 
 export async function POST(req: Request) {
   try {
+    const supabaseAdmin = getAdminClient();
     const { userId, accessToken } = await req.json();
 
     if (!userId || !accessToken) {

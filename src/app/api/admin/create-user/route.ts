@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
 
     // Initialize Supabase admin client (we use the Anon key here since we just want to signUp a user, 
     // it will work if signups are enabled in Supabase, without modifying the browser session)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co");
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
     if (!serviceRoleKey) {

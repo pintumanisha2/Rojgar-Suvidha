@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 
 const BASE_URL = "https://www.rojgarsuvidha.com";

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { runAutoBlogScraper } from "@/lib/auto-blog-scraper";
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
   try {
     // Verify admin session via Supabase auth cookie
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"),
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 /**
  * ═══════════════════════════════════════════════════════════════════
  * EXPIRED JOB LIFECYCLE TRANSITION CRON — Runs daily at 12:00 AM

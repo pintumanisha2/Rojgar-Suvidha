@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 
 // ── DEPRECATED: This endpoint was used for Razorpay payments ──

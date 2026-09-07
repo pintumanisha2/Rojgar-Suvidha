@@ -5,8 +5,8 @@ import Link from "next/link";
 import CalendarPrintHeader from "@/components/calendar/CalendarPrintHeader";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"),
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key")
 );
 
 export const revalidate = 60; // Cache for 1 minute
