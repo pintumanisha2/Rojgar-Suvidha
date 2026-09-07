@@ -93,39 +93,48 @@ function getSupabaseAdmin() {
 // ── Sleep helper (avoid rate limiting) ───────────────────────────────────────
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// ── Title Sanitizer for Category Detection ──────────────────────────────────
+// Strips competitor brand names and trailing domains so brand names like
+// 'Sarkari Result' or '- sarkariresult.com' never trigger the 'results' category!
+function cleanTitleForCategory(raw: string): string {
+  if (!raw) return "";
+  return raw
+    .replace(/[-|–•]\s*sarkari\s*result(?:\.com)?\s*$/i, "")
+    .replace(/sarkari\s*result(?:\.com)?/gi, "")
+    .replace(/free\s*job\s*alert(?:\.com)?/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // ── Category Detection v2 — Title-First, Strict Priority ─────────────────────
 // Uses TITLE-ONLY matching first (source titles are always accurate)
 // Falls back to combined text only if title is ambiguous
 function detectCategory(title: string, content: string): BlogCategory {
-  const t = title.toLowerCase();
+  const cleanedTitle = cleanTitleForCategory(title);
+  const t = cleanedTitle.toLowerCase();
 
-  // ── TITLE-ONLY checks (highest confidence — TITLE IS THE SOURCE OF TRUTH) ──
-  // Results — specific result keywords in title
-  if (/\bresult\b|merit list|scorecard|cut-?off mark|selected candidates|rank list|final result|result out|result declared/.test(t))
-    return "results";
-
-  // Admit Card — specific keywords in title
+  // ── Admit Card — specific keywords in title
   if (/admit card|hall ticket|call letter|e-admit|city intimation|interview letter/.test(t))
     return "admit-card";
 
-  // Answer Key — specific keywords in title
+  // ── Answer Key — specific keywords in title
   if (/answer key|answer sheet|provisional answer|final answer|objection window|raise objection/.test(t))
     return "answer-key";
 
-  // Admission / Counselling — specific keywords in title
+  // ── Admission / Counselling — specific keywords in title
   if (/\bcounselling\b|\bcounseling\b|seat allot|allotment result|admission open|college admission|merit list.*admission/.test(t))
     return "admission";
 
-  // Latest Jobs — recruitment/vacancy in title
-  if (/recruitment|vacancy|apply online|online form|job notification|\bnoti(?:fication)?\b|\bvacancy\b|\bpost\b.*202[456]/.test(t))
+  // ── Latest Jobs — recruitment/vacancy/online form/post in title
+  if (/recruitment|vacancy|apply online|online form|job notification|\bnoti(?:fication)?\b|\bvacancy\b|\bpost\b|\bposts\b|apprentice|officer|clerk|constable|sub inspector|teacher|professor|assistant/i.test(t) &&
+      !/\bresult\b|merit list|scorecard|cut-?off mark/.test(t))
     return "latest-jobs";
 
-  // ── CONTENT-BASED fallback — ONLY for admit-card/answer-key (NOT for 'result'!) ──
-  // ❌ REMOVED: content-based 'result' check — SarkariResult.com pages ALWAYS
-  //    contain the word 'result' in navigation, footer, and site branding!
-  //    e.g. Bank of Baroda Latest Job post was being classified as 'results' because
-  //    the SarkariResult.com page had 'result' in header/footer.
-  // ✅ KEPT: Only very specific, low-noise content patterns that won't fire on SR pages
+  // ── Results — specific result keywords in title
+  if (/\bresult\b|merit list|scorecard|cut-?off mark|selected candidates|rank list|final result|result out|result declared/.test(t))
+    return "results";
+
+  // ── CONTENT-BASED fallback — ONLY for admit-card/answer-key/admission (NEVER 'result'!)
   const c = content.toLowerCase();
   if (/admit card|hall ticket/.test(c)) return "admit-card";
   if (/answer key|objection window/.test(c)) return "answer-key";
@@ -848,13 +857,7 @@ async function fetchSarkariResultItems(): Promise<{
           const isOldYear = /\/201[0-9]\//.test(linkKey) || /\/202[0-5]\//.test(linkKey);
           if (title && linkKey && !isOldYear && !seen.has(linkKey)) {
             seen.add(linkKey);
-            let detectedCat = "latest-jobs";
-            const t = title.toLowerCase();
-            if (/result|merit|scorecard/i.test(t)) detectedCat = "results";
-            else if (/admit card|hall ticket/i.test(t)) detectedCat = "admit-card";
-            else if (/answer key/i.test(t)) detectedCat = "answer-key";
-            else if (/admission/i.test(t)) detectedCat = "admission";
-            else if (/syllabus/i.test(t)) detectedCat = "syllabus";
+            const detectedCat = detectCategory(title, description);
 
             allItems.push({
               title: title.trim(),
@@ -914,12 +917,13 @@ async function fetchSarkariResultItems(): Promise<{
           !link.includes("/disclaimer")
         ) {
           let detectedCat = sec.cat;
-          const t = title.toLowerCase();
-          if (/result|merit list|scorecard|cut.?off|selected candidates/i.test(t)) detectedCat = "results";
-          else if (/admit card|hall ticket|call letter/i.test(t)) detectedCat = "admit-card";
-          else if (/answer key|objection/i.test(t)) detectedCat = "answer-key";
-          else if (/admission|counselling/i.test(t)) detectedCat = "admission";
-          else if (/syllabus/i.test(t)) detectedCat = "syllabus";
+          // Only refine if detectCategory finds a more specific category (e.g. admit-card or answer-key)
+          const refinedCat = detectCategory(title, "");
+          if (sec.cat === "latest-jobs" && refinedCat !== "latest-jobs" && refinedCat !== "results") {
+            detectedCat = refinedCat;
+          } else if (sec.cat !== "latest-jobs") {
+            detectedCat = sec.cat;
+          }
 
           secItems.push({
             title,
@@ -1165,8 +1169,8 @@ function cleanCompetitorBrands(str: string): string {
     .replace(/freejobales(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/fja(?:\.com)?/gi, "Rojgar Suvidha")
     // SarkariResult
+    .replace(/sarkari\s*result(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/sarkari\s*result\s*®/gi, "Rojgar Suvidha")
-    .replace(/sarkariresult(?:\.com)?/gi, "Rojgar Suvidha")
     .replace(/www\.sarkariresult\.com/gi, "www.rojgarsuvidha.com")
     .replace(/WWW\.SARKARIRESULT\.COM/g, "www.rojgarsuvidha.com")
     .replace(/SARKARI RESULT®/g, "Rojgar Suvidha")
@@ -2561,12 +2565,7 @@ async function fetchGoogleTrendsItems(): Promise<{ title: string; link: string; 
       const description = descMatch ? descMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/gi, "$1").replace(/<[^>]+>/g, "").trim() : "";
 
       if (title && jobEducationRegex.test(title)) {
-        let feedCategory = "news";
-        if (/result|merit|cutoff|scorecard/i.test(title)) feedCategory = "results";
-        else if (/admit|hall\s*ticket|call\s*letter/i.test(title)) feedCategory = "admit-card";
-        else if (/answer\s*key|objection/i.test(title)) feedCategory = "answer-key";
-        else if (/admission|counselling|counseling|allotment/i.test(title)) feedCategory = "admission";
-        else if (/recruitment|vacancy|apply|post/i.test(title)) feedCategory = "latest-jobs";
+        const feedCategory = detectCategory(title, description);
 
         items.push({
           title,
@@ -3034,20 +3033,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         // NDTV articles don't have application forms — cap at news level
         if (category === "latest-jobs") category = "news";
       } else if (item.source === "sarkariresult") {
-        // ✅ FIX: SarkariResult pages ALWAYS contain word 'result' in site branding.
-        // Trust the feedCategory from HTML crawler (latest-jobs, results, admit-card etc.)
-        // ONLY override if title-based detection gave a strong specific signal.
-        // If title says 'result/admit card/answer key' → trust title detection.
-        // If title is generic (bank, recruitment, apply) → trust feedCategory from SR HTML crawler.
-        const titleBasedStrong = /\bresult\b|merit list|scorecard|admit card|hall ticket|answer key|counselling/.test(item.title.toLowerCase());
-        if (!titleBasedStrong && item.feedCategory) {
-          // Title was ambiguous — feedCategory from SR HTML crawler is more reliable
-          category = item.feedCategory as BlogCategory;
-        }
-        if (category === "news") category = "latest-jobs"; // SR doesn't publish pure news
+        // detectCategory already sanitized the title and assigned the category.
+        // Never allow 'news' for SarkariResult posts.
+        if (category === "news") category = "latest-jobs";
       } else {
-        // FreeJobAlert: if category feed is known, trust it over detection
-        if (item.feedCategory && item.feedCategory !== "latest-jobs") {
+        // FreeJobAlert: if category feed is specific, trust it over generic detection
+        if (item.feedCategory && item.feedCategory !== "latest-jobs" && category === "latest-jobs") {
           category = item.feedCategory as BlogCategory;
         }
         if (category === "news") category = "latest-jobs";
