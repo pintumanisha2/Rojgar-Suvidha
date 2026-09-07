@@ -801,6 +801,64 @@ async function fetchSarkariResultItems(): Promise<{
   const allItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   const seen = new Set<string>();
 
+  // 1. PRIMARY: SarkariResult RSS Feeds (Page 1 + Page 2) — Authoritative Ground-Truth pubDates
+  const rssUrls = [
+    "https://www.sarkariresult.com/feed/",
+    "https://www.sarkariresult.com/feed/?paged=2"
+  ];
+  for (const rssUrl of rssUrls) {
+    try {
+      const rssRes = await fetch(rssUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
+          "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (rssRes.ok) {
+        const xml = await rssRes.text();
+        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+        let match: RegExpExecArray | null;
+        while ((match = itemRegex.exec(xml)) !== null) {
+          const block = match[1];
+          const title =
+            block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+            block.match(/<title>(.*?)<\/title>/)?.[1] || "";
+          const link =
+            block.match(/<link>(.*?)<\/link>/)?.[1] ||
+            block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
+          const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+          const description =
+            block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
+            block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+
+          const linkKey = link.trim();
+          // Filter out old year URLs in RSS too
+          const isOldYear = /\/(201\d|202[0-5])\//.test(linkKey) || /-(201\d|202[0-5])\//.test(linkKey);
+          if (title && linkKey && !isOldYear && !seen.has(linkKey)) {
+            seen.add(linkKey);
+            let detectedCat = "latest-jobs";
+            const t = title.toLowerCase();
+            if (/result|merit|scorecard/i.test(t)) detectedCat = "results";
+            else if (/admit card|hall ticket/i.test(t)) detectedCat = "admit-card";
+            else if (/answer key/i.test(t)) detectedCat = "answer-key";
+            else if (/admission/i.test(t)) detectedCat = "admission";
+            else if (/syllabus/i.test(t)) detectedCat = "syllabus";
+
+            allItems.push({
+              title: title.trim(),
+              link: linkKey,
+              pubDate: pubDate.trim(),
+              description: description.trim(),
+              feedCategory: detectedCat,
+            });
+          }
+        }
+      }
+    } catch (_) { /* RSS silent fallback */ }
+  }
+
+  // 2. SUPPLEMENTARY: HTML Crawling across sections for deep links
   const SARKARI_SECTIONS: { cat: string; url: string }[] = [
     { cat: "latest-jobs", url: "https://www.sarkariresult.com/latestjob/" },
     { cat: "results", url: "https://www.sarkariresult.com/result/" },
@@ -808,10 +866,8 @@ async function fetchSarkariResultItems(): Promise<{
     { cat: "answer-key", url: "https://www.sarkariresult.com/answerkey/" },
     { cat: "admission", url: "https://www.sarkariresult.com/admission/" },
     { cat: "syllabus", url: "https://www.sarkariresult.com/syllabus/" },
-    { cat: "latest-jobs", url: "https://www.sarkariresult.com/" }, // Homepage highlights
   ];
 
-  // 1. Parallel HTML Crawling across all SarkariResult sections
   const htmlPromises = SARKARI_SECTIONS.map(async (sec) => {
     try {
       const res = await fetch(sec.url, {
@@ -831,12 +887,15 @@ async function fetchSarkariResultItems(): Promise<{
       let match: RegExpExecArray | null;
       const secItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
 
-      while ((match = liRegex.exec(html)) !== null && secItems.length < 25) {
+      while ((match = liRegex.exec(html)) !== null && secItems.length < 20) {
         let link = match[1].trim();
         let title = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
+        // Discard any archive / old year URLs (e.g. 2025, 2024, 2023, 2022)
+        const isOldYear = /\/(201\d|202[0-5])\//.test(link) || /-(201\d|202[0-5])\//.test(link);
         if (
           title.length > 5 &&
+          !isOldYear &&
           !link.includes("/feed") &&
           !link.includes("/about-us") &&
           !link.includes("/contact") &&
@@ -852,18 +911,10 @@ async function fetchSarkariResultItems(): Promise<{
           else if (/admission|counselling/i.test(t)) detectedCat = "admission";
           else if (/syllabus/i.test(t)) detectedCat = "syllabus";
 
-          // If the link has an old year directory (e.g. /2025/, /2024/, /2023/)
-          let estimatedPubDate = new Date().toUTCString();
-          const oldYearMatch = link.match(/\/(202[0-5])\//);
-          if (oldYearMatch) {
-            // Mark as old year so freshness filter skips it immediately
-            estimatedPubDate = new Date(`${oldYearMatch[1]}-01-01T00:00:00Z`).toUTCString();
-          }
-
           secItems.push({
             title,
             link,
-            pubDate: estimatedPubDate,
+            pubDate: "", // Keep empty so page-level article:published_time is authoritative
             description: title,
             feedCategory: detectedCat,
           });
@@ -887,54 +938,6 @@ async function fetchSarkariResultItems(): Promise<{
       }
     }
   }
-
-  // 2. Supplementary: RSS Feed fallback
-  try {
-    const rssRes = await fetch("https://www.sarkariresult.com/feed/", {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
-        "Accept": "application/rss+xml, application/xml, text/xml, */*",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (rssRes.ok) {
-      const xml = await rssRes.text();
-      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-      let match: RegExpExecArray | null;
-      while ((match = itemRegex.exec(xml)) !== null) {
-        const block = match[1];
-        const title =
-          block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
-          block.match(/<title>(.*?)<\/title>/)?.[1] || "";
-        const link =
-          block.match(/<link>(.*?)<\/link>/)?.[1] ||
-          block.match(/<guid[^>]*>(.*?)<\/guid>/)?.[1] || "";
-        const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || new Date().toUTCString();
-        const description =
-          block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
-          block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
-
-        const linkKey = link.trim();
-        if (title && linkKey && !seen.has(linkKey)) {
-          seen.add(linkKey);
-          let detectedCat = "latest-jobs";
-          const t = title.toLowerCase();
-          if (/result|merit|scorecard/i.test(t)) detectedCat = "results";
-          else if (/admit card|hall ticket/i.test(t)) detectedCat = "admit-card";
-          else if (/answer key/i.test(t)) detectedCat = "answer-key";
-          else if (/admission/i.test(t)) detectedCat = "admission";
-
-          allItems.push({
-            title: title.trim(),
-            link: linkKey,
-            pubDate: pubDate.trim(),
-            description: description.trim(),
-            feedCategory: detectedCat,
-          });
-        }
-      }
-    }
-  } catch (_) { /* RSS silent fallback */ }
 
   console.log(`🌐 [SarkariResult Crawler] Extracted total ${allItems.length} live items across all categories.`);
   return allItems;
@@ -2682,7 +2685,7 @@ export async function cleanupStaleDrafts(): Promise<number> {
 }
 
 // ── Search Demand Scorer (Prioritizes viral topics, filters 1-post micro-jobs) ──
-function calculateSearchDemandScore(item: { title: string; source: string; feedCategory?: string }): number {
+function calculateSearchDemandScore(item: { title: string; source: string; feedCategory?: string; pubDate?: string }): number {
   let score = 0;
   const title = item.title.toLowerCase();
 
@@ -2695,6 +2698,19 @@ function calculateSearchDemandScore(item: { title: string; source: string; feedC
   else if (item.source === "google_trends") score += 2000;
   // Priority 4: NDTV Education News
   else if (item.source === "ndtv") score += 1000;
+
+  // ── FRESHNESS BOOST (Breaking News published in last 24-48h gets top priority) ─
+  if (item.pubDate) {
+    const pubTime = new Date(item.pubDate).getTime();
+    if (pubTime > 0) {
+      const ageHours = (Date.now() - pubTime) / (3600 * 1000);
+      if (ageHours >= 0 && ageHours <= 24) {
+        score += 2500; // Super fresh breaking post (<24h)
+      } else if (ageHours > 24 && ageHours <= 48) {
+        score += 1200; // Fresh post (24-48h)
+      }
+    }
+  }
 
   // 2. High-intent categories (Results, Admit Cards, Answer Keys have 10x viral traffic velocity)
   if (/result|merit|scorecard|allotment|rank\s*card/i.test(title) || item.feedCategory === "results") score += 600;
@@ -2912,7 +2928,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
             // Permanently log URL so it is NEVER checked or retried again
             try {
               await supabase.from("scraped_urls_log").upsert(
-                [{ url: item.link, title: item.title.slice(0, 200), reason: `stale: ${ageHrs}h old (${effectiveDateStr})` }],
+                [{ url: item.link }],
                 { onConflict: "url" }
               );
             } catch (_) {}
@@ -2960,7 +2976,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         // Log URL so it doesn't retry
         try {
           await supabase.from("scraped_urls_log").upsert(
-            [{ url: item.link, title: roughTitle.slice(0, 200), reason: `duplicate: /job/${earlyDupeCheck.slug}` }],
+            [{ url: item.link }],
             { onConflict: "url" }
           );
         } catch (_) { /* silent */ }
@@ -3014,7 +3030,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         qualityCheck.issues.forEach(issue => console.warn(`   ❌ ${issue}`));
         console.warn(`   → Skipping. URL logged so it won't retry with same broken source.`);
         await supabase.from("scraped_urls_log").upsert(
-          [{ url: item.link, reason: `quality_fail: ${qualityCheck.issues[0]}` }],
+          [{ url: item.link }],
           { onConflict: "url" }
         );
         results.errors.push(`Quality rejected: ${item.title.slice(0, 50)} — ${qualityCheck.issues.join(" | ")}`);
@@ -3129,10 +3145,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       inserted = data;
       console.log(`   ✅ Draft saved: ID = ${inserted.id}`);
 
-      // 9. Log scraped URL + title (prevent duplicate — FIX 4: title bhi save karo)
+      // 9. Log scraped URL (prevent duplicate processing)
       try {
         await supabase.from("scraped_urls_log").upsert(
-          [{ url: item.link, title: cleanedTitle.slice(0, 200), reason: "processed" }],
+          [{ url: item.link }],
           { onConflict: "url" }
         );
       } catch (_) { /* silent */ }
