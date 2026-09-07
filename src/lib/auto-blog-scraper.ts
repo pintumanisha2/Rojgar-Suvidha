@@ -2699,15 +2699,19 @@ function calculateSearchDemandScore(item: { title: string; source: string; feedC
   // Priority 4: NDTV Education News
   else if (item.source === "ndtv") score += 1000;
 
-  // ── FRESHNESS BOOST (Breaking News published in last 24-48h gets top priority) ─
+  // ── FRESHNESS BOOST (Breaking News published in last 30-60 mins gets top priority) ─
   if (item.pubDate) {
     const pubTime = new Date(item.pubDate).getTime();
     if (pubTime > 0) {
-      const ageHours = (Date.now() - pubTime) / (3600 * 1000);
-      if (ageHours >= 0 && ageHours <= 24) {
-        score += 2500; // Super fresh breaking post (<24h)
-      } else if (ageHours > 24 && ageHours <= 48) {
-        score += 1200; // Fresh post (24-48h)
+      const ageMinutes = (Date.now() - pubTime) / (60 * 1000);
+      if (ageMinutes >= 0 && ageMinutes <= 30) {
+        score += 5000; // Ultra-fresh live breaking (<30m)
+      } else if (ageMinutes > 30 && ageMinutes <= 60) {
+        score += 3500; // Recent (<1h)
+      } else if (ageMinutes > 60 && ageMinutes <= 360) {
+        score += 2000; // Today fresh (<6h)
+      } else if (ageMinutes > 360 && ageMinutes <= 1440) {
+        score += 1000; // Same day (<24h)
       }
     }
   }
@@ -2790,26 +2794,82 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   // ── FIX 2: Track skip reasons for Telegram report ───────────────────────────
   const microJobSkipped: { title: string; source: string; score: number }[] = [];
   const duplicateSkipped: { title: string; source: string; existingSlug: string }[] = [];
-  const processedItems: { title: string; source: string; slug?: string }[] = [];
+  const processedItems: { title: string; source: string; slug?: string; ageLabel?: string }[] = [];
 
-  // 3. Filter unscraped + fresh items
-  const unscrapedCandidates = allCandidateItems.filter((i) => {
-    if (scrapedUrls.has(i.link)) return false; // Already processed URL
-    if (i.pubDate) {
-      const itemAgeMs = new Date(i.pubDate).getTime();
-      if (itemAgeMs > 0 && itemAgeMs < cutoffTime) {
-        const ageHrs = Math.round((Date.now() - itemAgeMs) / 3600000);
-        staleSkipped.push({ title: i.title, source: i.source, ageLabel: `${ageHrs}h purana` });
-        console.log(`🕐 [Freshness] SKIPPED stale item (${ageHrs}h old): "${i.title.slice(0, 60)}"`);
-        return false;
-      }
+  // ── RECENT 30-MINUTE SLIDING WINDOW & CHRONOLOGICAL SORTER ──────────────────
+  // User Requirement: Har 30 minute me crawl hai, to jo bhi post pichle 30 minute ke
+  // andar aayi ho (chahe SarkariResult, FreeJobAlert ya Google News se ho) — use sabse
+  // pehle pick karo!
+  const nowMs = Date.now();
+
+  interface CandidateItem {
+    title: string;
+    link: string;
+    pubDate: string;
+    description: string;
+    source: string;
+    feedCategory: string;
+    pubTimestamp: number;
+    ageMinutes: number;
+    recencyTier: number;
+    score: number;
+  }
+
+  const unscrapedCandidates: CandidateItem[] = [];
+
+  for (const rawItem of allCandidateItems) {
+    if (scrapedUrls.has(rawItem.link)) continue; // Already processed URL
+
+    let pubTimestamp = rawItem.pubDate ? new Date(rawItem.pubDate).getTime() : 0;
+    if (isNaN(pubTimestamp) || pubTimestamp <= 0) {
+      pubTimestamp = 0;
+    } else if (pubTimestamp > nowMs + 10 * 60 * 1000) {
+      // Clock drift safety clamp (up to 10m in future)
+      pubTimestamp = nowMs;
     }
-    return true;
-  });
 
-  // Sort and score — micro-jobs get negative scores
-  const allScoredCandidates = unscrapedCandidates.map((i) => ({ ...i, score: calculateSearchDemandScore(i) }));
-  const sortedCandidates = allScoredCandidates
+    // 48-Hour Hard Stale Guard
+    if (pubTimestamp > 0 && pubTimestamp < cutoffTime) {
+      const ageHrs = Math.round((nowMs - pubTimestamp) / 3600000);
+      staleSkipped.push({ title: rawItem.title, source: rawItem.source, ageLabel: `${ageHrs}h purana` });
+      continue;
+    }
+
+    const ageMs = pubTimestamp > 0 ? nowMs - pubTimestamp : Infinity;
+    const ageMinutes = pubTimestamp > 0 ? Math.max(0, Math.round(ageMs / 60000)) : 999999;
+
+    // Recency Tiers (Har 30 minute cron ke liye Real-Time Bucketing):
+    // Tier 1: <= 30 minutes (Live Breaking — published during this active 30-min crawl window!)
+    // Tier 2: 31 to 60 minutes (Recent 1 hour)
+    // Tier 3: 1h to 6 hours (Today morning/afternoon fresh)
+    // Tier 4: 6h to 24 hours (Same day backlog)
+    // Tier 5: 24h to 48 hours (Yesterday backlog)
+    let recencyTier = 5;
+    if (ageMinutes <= 30) recencyTier = 1;
+    else if (ageMinutes <= 60) recencyTier = 2;
+    else if (ageMinutes <= 360) recencyTier = 3;
+    else if (ageMinutes <= 1440) recencyTier = 4;
+    else if (ageMinutes <= 2880) recencyTier = 5;
+
+    const score = calculateSearchDemandScore({ ...rawItem, pubDate: rawItem.pubDate });
+
+    unscrapedCandidates.push({
+      ...rawItem,
+      pubTimestamp,
+      ageMinutes,
+      recencyTier,
+      score,
+    });
+  }
+
+  // ── STRICT RECENCY-FIRST SORTING HIERARCHY ─────────────────────────────────
+  // RULE 1: Recency Tier comes FIRST (Tier 1 < Tier 2 < Tier 3 < Tier 4 < Tier 5).
+  //         A post published 10 minutes ago ALWAYS beats a 5-hour-old post!
+  // RULE 2: Within the SAME tier, sort by pubTimestamp DESC (newest down to the minute).
+  // RULE 3: If timestamps are within 5 minutes of each other, tie-break by Source Priority:
+  //         SarkariResult (+5000) > FreeJobAlert (+3000) > Google News (+2000) > NDTV (+1000).
+  // RULE 4: Micro-jobs (score <= -300) are filtered out.
+  const sortedCandidates = unscrapedCandidates
     .filter((i) => {
       if (i.score <= -300) {
         microJobSkipped.push({ title: i.title, source: i.source, score: i.score });
@@ -2817,12 +2877,26 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       }
       return true;
     })
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      // 1. Recency Tier (Tier 1 < Tier 2 < Tier 3...)
+      if (a.recencyTier !== b.recencyTier) {
+        return a.recencyTier - b.recencyTier;
+      }
+      // 2. Exact publish timestamp (within same tier, newer published item wins if >5m apart)
+      if (a.pubTimestamp > 0 && b.pubTimestamp > 0 && Math.abs(a.pubTimestamp - b.pubTimestamp) > 5 * 60 * 1000) {
+        return b.pubTimestamp - a.pubTimestamp;
+      }
+      // 3. Source priority & demand score tie-breaker
+      return b.score - a.score;
+    });
 
   // Batch policy: evaluate top 10 scored candidates, skip stale/duplicates, process 1 fresh post
   const newItems = sortedCandidates.slice(0, 10);
   if (newItems[0]) {
-    console.log(`🔥 [Smart Demand Selector] Top candidate: "${newItems[0].title}" (Source: ${newItems[0].source}, DemandScore: ${newItems[0].score})`);
+    const ageTag = newItems[0].ageMinutes < 999999
+      ? `${newItems[0].ageMinutes}m ago (Tier ${newItems[0].recencyTier})`
+      : "Unknown age";
+    console.log(`🔥 [Real-Time Recency Selector] Top candidate: "${newItems[0].title}" (Source: ${newItems[0].source}, Age: ${ageTag}, DemandScore: ${newItems[0].score})`);
   }
 
   if (newItems.length === 0) {
@@ -3154,16 +3228,21 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       } catch (_) { /* silent */ }
 
       // Track processed item for final Telegram report
-      processedItems.push({ title: cleanedTitle, source: item.source, slug });
+      const candidateAgeMin = (item as any).ageMinutes ?? 999999;
+      const ageLabel = candidateAgeMin < 999999
+        ? (candidateAgeMin <= 60 ? `${candidateAgeMin}m ago` : `${Math.round(candidateAgeMin / 60)}h ago`)
+        : "Live";
+
+      processedItems.push({ title: cleanedTitle, source: item.source, slug, ageLabel });
 
       // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
       if (inserted?.id) {
         const sourceTag = existingJobMatch
-          ? "🔄 Existing Job Update"
-          : item.source === "google_trends" ? "🔥 Google Trends"
-          : item.source === "sarkariresult" ? "🌐 SarkariResult.com"
-          : item.source === "freejobalert" ? "📰 FreeJobAlert.com"
-          : null;
+          ? `🔄 Existing Job Update (${ageLabel})`
+          : item.source === "sarkariresult" ? `🌐 SarkariResult (${ageLabel})`
+          : item.source === "freejobalert" ? `📰 FreeJobAlert (${ageLabel})`
+          : item.source === "google_trends" ? `🔥 Google News (${ageLabel})`
+          : `📰 ${item.source} (${ageLabel})`;
 
         sendAdminDraftApprovalAlert({
           id: inserted.id,
@@ -3247,7 +3326,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
       summaryText += `\n✅ <b>Processed (${processedItems.length}):</b>\n`;
       processedItems.forEach((p) => {
         const link = p.slug ? ` → <a href="${BASE_URL}/job/${p.slug}">View Post</a>` : "";
-        summaryText += `   • "${p.title.slice(0, 60)}" (${p.source})${link}\n`;
+        const ageTag = (p as any).ageLabel ? ` • ${(p as any).ageLabel}` : "";
+        summaryText += `   • "${p.title.slice(0, 60)}" (${p.source}${ageTag})${link}\n`;
       });
       summaryText += `\n<i>👆 Approve karo upar bheje gaye draft button se!</i>\n`;
     } else {
