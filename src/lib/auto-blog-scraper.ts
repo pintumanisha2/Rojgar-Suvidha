@@ -815,12 +815,11 @@ async function fetchSarkariResultItems(): Promise<{
   const allItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   const seen = new Set<string>();
 
-  // 1. PRIMARY: SarkariResult RSS Feeds (Page 1 + Page 2) — Authoritative Ground-Truth pubDates
-  // ✅ Added Google News as guaranteed fallback for SarkariResult
+  // 1. PRIMARY: SarkariResult Direct RSS Feeds (Page 1 + Page 2)
+  // Direct URLs prevent 504 Gateway Time-out caused by Google News RSS proxy links
   const rssUrls = [
     "https://www.sarkariresult.com/feed/",
     "https://www.sarkariresult.com/feed/?paged=2",
-    "https://news.google.com/rss/search?q=site:sarkariresult.com+2026&hl=en-IN&gl=IN&ceid=IN:en",
   ];
   const rssFetchTexts = await Promise.allSettled(
     rssUrls.map((u) =>
