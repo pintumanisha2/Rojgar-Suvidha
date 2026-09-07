@@ -3434,3 +3434,147 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
   return results;
 }
+
+/**
+ * Force processes a specific post by title and link, runs AI generation with correct
+ * category detection, saves draft, and immediately sends Telegram approval alert.
+ */
+export async function forceProcessSpecificItem(item: {
+  title: string;
+  link: string;
+  source: string;
+  forcedCategory?: BlogCategory;
+}): Promise<{ success: boolean; draftId?: string; error?: string; title?: string; category?: string }> {
+  console.log(`\n🚀 [Force Process] Starting: ${item.title} (${item.source})`);
+  const supabase = getSupabaseAdmin();
+  try {
+    let pageText = "";
+    let links: { href: string; text: string }[] = [];
+
+    if (item.source === "google_trends") {
+      const facts = await fetchGoogleNewsFacts(item.title);
+      pageText = facts.text;
+      links = facts.links;
+    } else {
+      const pageData = await fetchFullPage(item.link);
+      pageText = pageData.text;
+      links = pageData.links;
+    }
+
+    const category: BlogCategory = item.forcedCategory || detectCategory(item.title, pageText);
+    const stateCode = item.source === "ndtv" ? null : detectStateCode(item.title, pageText);
+    const { status: applyStatus, link: applyLink } = item.source === "ndtv" ? { status: "unknown" as ApplyStatus, link: null } : detectApplyStatus(pageText, links);
+    const { lastDate, totalPosts, appFeeGen, appFeeRes, officialLink, notificationLink, ageLimit, education } =
+      item.source === "ndtv"
+        ? { lastDate: null, totalPosts: null, appFeeGen: null, appFeeRes: null, officialLink: item.link, notificationLink: null, ageLimit: null, education: null }
+        : extractPageData(pageText, links);
+
+    console.log(`   📊 Category: ${category} | State: ${stateCode || "Central"} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
+
+    const aiResult = await generateBlogDraft({
+      rawText: pageText,
+      category,
+      applyStatus,
+      applyLink,
+      officialLink,
+      lastDate,
+      totalPosts,
+      appFeeGen,
+      appFeeRes,
+      ageLimit,
+      education,
+      sourceTitle: item.title,
+    });
+
+    const rawBlogHtml = aiResult.blogHtml || "";
+    if (typeof rawBlogHtml !== "string" || !rawBlogHtml.trim()) {
+      throw new Error("AI returned empty blogHtml");
+    }
+
+    const blogHtmlFinal = stripH1FromBlog(cleanCompetitorBrands(rawBlogHtml));
+    const qualityCheck = validateBlogQuality(blogHtmlFinal, category, pageText);
+    const cleanedTitle = normalizeSeoTitle(cleanCompetitorBrands(aiResult.title || item.title));
+    const baseSlug = generateSlug(cleanedTitle);
+    const slug = await getUniqueSlug(baseSlug, supabase);
+    const startDateVal = aiResult.startDate || "";
+    const qualVal = aiResult.qualification || aiResult.eligibility || "";
+    const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(lastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}`;
+    const finalDatesObj = aiResult.important_dates;
+
+    const draftPayload: any = {
+      source_url: item.link,
+      source_title: item.title,
+      source_site: item.source,
+      apply_link: aiResult.applyLink || applyLink || null,
+      apply_status: aiResult.applyStatus || applyStatus,
+      official_link: aiResult.officialLink || officialLink || null,
+      notification_link: notificationLink || null,
+      last_date: aiResult.lastDate || lastDate || null,
+      total_posts: aiResult.totalPosts || totalPosts || null,
+      app_fee_gen: aiResult.appFeeGen || appFeeGen || null,
+      app_fee_res: aiResult.appFeeRes || appFeeRes || null,
+      state_code: stateCode || null,
+      banner_url: autoBannerUrl,
+      category,
+      generated_title: cleanedTitle,
+      generated_slug: slug,
+      generated_html: blogHtmlFinal,
+      generated_meta: cleanCompetitorBrands(aiResult.metaDesc || ""),
+      generated_tags: aiResult.tag ? [cleanCompetitorBrands(aiResult.tag)] : [],
+      primary_keyword: cleanCompetitorBrands(aiResult.primaryKeyword || ""),
+      short_description: cleanCompetitorBrands(aiResult.shortInfo || ""),
+      important_dates: typeof finalDatesObj === "string" ? finalDatesObj : JSON.stringify(finalDatesObj || null),
+      form_documents: Array.isArray(aiResult.form_documents) ? aiResult.form_documents : null,
+      form_fees_structure: aiResult.form_fees_structure ? JSON.stringify(aiResult.form_fees_structure) : null,
+      extracted_text: JSON.stringify({
+        raw_preview: pageText.slice(0, 1500),
+        form_documents: aiResult.form_documents || null,
+        form_fees_structure: aiResult.form_fees_structure || null,
+      }),
+      status: "pending_review",
+    };
+
+    let { data, error: insertError } = await supabase
+      .from("auto_blog_drafts")
+      .insert([draftPayload])
+      .select("id")
+      .single();
+
+    if (insertError) {
+      const fallbackPayload = { ...draftPayload };
+      delete fallbackPayload.important_dates;
+      delete fallbackPayload.notification_link;
+      delete fallbackPayload.state_code;
+      delete fallbackPayload.banner_url;
+      delete fallbackPayload.form_documents;
+      delete fallbackPayload.form_fees_structure;
+      const retry = await supabase.from("auto_blog_drafts").insert([fallbackPayload]).select("id").single();
+      data = retry.data;
+      insertError = retry.error;
+    }
+
+    if (insertError || !data?.id) throw new Error(`Supabase insert: ${insertError?.message || "No ID returned"}`);
+    const draftId = data.id;
+    console.log(`   ✅ Draft saved: ID = ${draftId}`);
+
+    // Send Telegram approval alert
+    await sendAdminDraftApprovalAlert({
+      id: draftId,
+      title: cleanCompetitorBrands(aiResult.title || item.title),
+      category: category,
+      stateCode: stateCode || null,
+      totalPosts: aiResult.totalPosts || totalPosts || null,
+      lastDate: aiResult.lastDate || lastDate || null,
+      bannerUrl: autoBannerUrl,
+      sourceTag: `🌐 SarkariResult (Re-generated)`,
+      qualityScore: qualityCheck.score ?? null,
+      sourceUrl: item.link || null,
+    });
+
+    console.log(`   📱 Telegram approval alert sent for: ${cleanedTitle}`);
+    return { success: true, draftId, title: cleanedTitle, category };
+  } catch (err: any) {
+    console.error(`   ❌ Force process failed:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
