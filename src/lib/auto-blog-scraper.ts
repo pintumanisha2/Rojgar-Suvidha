@@ -802,23 +802,29 @@ async function fetchSarkariResultItems(): Promise<{
   const seen = new Set<string>();
 
   // 1. PRIMARY: SarkariResult RSS Feeds (Page 1 + Page 2) — Authoritative Ground-Truth pubDates
+  // ✅ Added Google News as guaranteed fallback for SarkariResult
   const rssUrls = [
     "https://www.sarkariresult.com/feed/",
-    "https://www.sarkariresult.com/feed/?paged=2"
+    "https://www.sarkariresult.com/feed/?paged=2",
+    "https://news.google.com/rss/search?q=site:sarkariresult.com+2026&hl=en-IN&gl=IN&ceid=IN:en",
   ];
-  for (const rssUrl of rssUrls) {
-    try {
-      const rssRes = await fetch(rssUrl, {
+  const rssFetchTexts = await Promise.allSettled(
+    rssUrls.map((u) =>
+      fetch(u, {
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; RojgarSuvidhaBot/1.0; +https://www.rojgarsuvidha.com)",
           "Accept": "application/rss+xml, application/xml, text/xml, */*",
         },
         signal: AbortSignal.timeout(8000),
-      });
-      if (rssRes.ok) {
-        const xml = await rssRes.text();
-        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-        let match: RegExpExecArray | null;
+      }).then((r) => (r.ok ? r.text() : Promise.reject()))
+    )
+  );
+  for (const fetchRes of rssFetchTexts) {
+    if (fetchRes.status !== "fulfilled" || !fetchRes.value || fetchRes.value.length < 100) continue;
+    try {
+      const xml = fetchRes.value;
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+      let match: RegExpExecArray | null;
         while ((match = itemRegex.exec(xml)) !== null) {
           const block = match[1];
           const title =
@@ -833,8 +839,8 @@ async function fetchSarkariResultItems(): Promise<{
             block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
 
           const linkKey = link.trim();
-          // Filter out old year URLs in RSS too
-          const isOldYear = /\/(201\d|202[0-5])\//.test(linkKey) || /-(201\d|202[0-5])\//.test(linkKey);
+          // ✅ FIX: Only block STANDALONE year directory /2024/ NOT slugs containing year like rrb-07-2025/
+          const isOldYear = /\/201[0-9]\//.test(linkKey) || /\/202[0-5]\//.test(linkKey);
           if (title && linkKey && !isOldYear && !seen.has(linkKey)) {
             seen.add(linkKey);
             let detectedCat = "latest-jobs";
@@ -853,9 +859,8 @@ async function fetchSarkariResultItems(): Promise<{
               feedCategory: detectedCat,
             });
           }
-        }
       }
-    } catch (_) { /* RSS silent fallback */ }
+    } catch (_) { /* silent */ }
   }
 
   // 2. SUPPLEMENTARY: HTML Crawling across sections for deep links
@@ -891,8 +896,8 @@ async function fetchSarkariResultItems(): Promise<{
         let link = match[1].trim();
         let title = match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
-        // Discard any archive / old year URLs (e.g. 2025, 2024, 2023, 2022)
-        const isOldYear = /\/(201\d|202[0-5])\//.test(link) || /-(201\d|202[0-5])\//.test(link);
+        // ✅ FIX: Only block STANDALONE year directory /2024/ NOT slugs containing year like rrb-07-2025/
+        const isOldYear = /\/201[0-9]\//.test(link) || /\/202[0-5]\//.test(link);
         if (
           title.length > 5 &&
           !isOldYear &&
@@ -2963,9 +2968,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   }
 
   for (const item of newItems) {
-    // Vercel 40-second Time Guard (prevents 60s function timeout from hard-killing process)
-    if (Date.now() - startTime > 40000) {
-      console.log(`⏱️ [Time Guard] 40s elapsed — safely deferring remaining items to next cron run`);
+    // Vercel 55-second Time Guard (increased from 40s — more time for SarkariResult fetch + Gemini)
+    if (Date.now() - startTime > 55000) {
+      console.log(`⏱️ [Time Guard] 55s elapsed — safely deferring remaining items to next cron run`);
       break;
     }
 
