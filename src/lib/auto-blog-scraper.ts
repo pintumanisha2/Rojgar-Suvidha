@@ -2620,48 +2620,105 @@ async function fetchGoogleNewsFacts(keyword: string): Promise<{ text: string; li
   }
 }
 
-// ── Existing Job Matcher (Prevents Duplicates & Updates Existing Posts) ──────
-async function findMatchingExistingJob(title: string, category: string, supabase: any): Promise<{ id: string; slug: string; title: string } | null> {
+// ── Core Token Extractor & Acronym Normalizer ─────────────────────────────────
+export function extractCoreJobTokens(rawTitle: string): Set<string> {
+  let t = rawTitle
+    .toLowerCase()
+    .replace(/sarkari\s*result(?:\.com)?/gi, "")
+    .replace(/free\s*job\s*alert(?:\.com)?/gi, "")
+    .replace(/rojgar\s*suvidha(?:\.com)?/gi, "")
+    .replace(/https?:\/\/\S+/gi, "");
+
+  // Normalize common exam acronyms so full forms match abbreviations
+  t = t
+    .replace(/\bstate eligibility test\b/gi, "set")
+    .replace(/\bcombined higher secondary level\b/gi, "chsl")
+    .replace(/\bcombined graduate level\b/gi, "cgl")
+    .replace(/\bnon technical popular categories\b/gi, "ntpc")
+    .replace(/\b10\+2\b/gi, "chsl");
+
+  t = t.replace(/[^\w\s]/g, " ");
+
+  const stopWords = new Set([
+    "recruitment", "online", "apply", "form", "notification", "posts", "post", "vacancies", "vacancy",
+    "out", "released", "dates", "date", "check", "here", "announced", "download", "pdf", "link",
+    "direct", "merit", "list", "scorecard", "marks", "result", "admit", "card", "hall", "ticket",
+    "for", "the", "and", "with", "from", "all", "new", "latest", "notice", "schedule", "exam",
+    "examination", "status", "eligibility", "details", "update", "updates", "2024", "2025", "2026", "2027",
+    "tier", "cbt", "phase", "stage", "ug", "pg", "as", "per", "in", "at", "by", "to", "is", "of", "com"
+  ]);
+
+  const tokens = t
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !stopWords.has(w) && !/^\d+$/.test(w));
+
+  return new Set(tokens);
+}
+
+export function areJobTitlesDuplicate(titleA: string, titleB: string): boolean {
+  const setA = extractCoreJobTokens(titleA);
+  const setB = extractCoreJobTokens(titleB);
+  if (setA.size === 0 || setB.size === 0) return false;
+
+  let matches = 0;
+  for (const a of setA) {
+    if (setB.has(a)) matches++;
+  }
+  const minSize = Math.min(setA.size, setB.size);
+  const ratio = matches / minSize;
+
+  if (minSize === 1) {
+    const onlyA = Array.from(setA)[0];
+    const onlyB = Array.from(setB)[0];
+    return onlyA === onlyB && onlyA.length >= 4;
+  }
+
+  return matches >= 2 && ratio >= 0.65;
+}
+
+// ── Existing Job or Draft Matcher (Checks BOTH jobs & auto_blog_drafts) ───────
+async function findMatchingExistingJobOrDraft(
+  title: string,
+  category: string,
+  supabase: any
+): Promise<{ id: string; slug?: string; title: string; matchType: "job" | "draft" } | null> {
   try {
-    const cleanTokens = title
-      .toLowerCase()
-      .replace(/[^\w\s]/g, "")
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !["recruitment", "online", "apply", "form", "notification", "posts", "out", "released", "dates", "check", "here"].includes(w));
+    const cleanTokens = extractCoreJobTokens(title);
+    if (cleanTokens.size === 0) return null;
 
-    if (cleanTokens.length < 2) return null;
-
+    // 1. Check published jobs on website (last 200 posts)
     const { data: jobs } = await supabase
       .from("jobs")
       .select("id, title, slug, category, created_at")
       .eq("category", category)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(200);
 
-    if (!jobs || jobs.length === 0) return null;
-
-    for (const j of jobs) {
-      const jTokens = new Set(
-        j.title
-          .toLowerCase()
-          .replace(/[^\w\s]/g, "")
-          .split(/\s+/)
-          .filter((w: string) => w.length > 2)
-      );
-
-      let matches = 0;
-      for (const token of cleanTokens) {
-        if (jTokens.has(token)) matches++;
+    for (const j of jobs || []) {
+      if (areJobTitlesDuplicate(title, j.title)) {
+        console.log(`🎯 [Dedup Guard] Matched published job: "${j.title}" (ID: ${j.id}) with: "${title}"`);
+        return { id: j.id, slug: j.slug, title: j.title, matchType: "job" };
       }
+    }
 
-      const matchRatio = matches / cleanTokens.length;
-      if (matchRatio >= 0.70 && matches >= 2) {
-        console.log(`🎯 [Duplicate Protection] Found existing job match: "${j.title}" (ID: ${j.id}, Slug: ${j.slug}) for new title: "${title}"`);
-        return { id: j.id, slug: j.slug, title: j.title };
+    // 2. Check auto_blog_drafts (pending_review or published in last 200 drafts)
+    const { data: drafts } = await supabase
+      .from("auto_blog_drafts")
+      .select("id, generated_title, source_title, category, status, scraped_at")
+      .in("status", ["pending_review", "published"])
+      .order("scraped_at", { ascending: false })
+      .limit(200);
+
+    for (const d of drafts || []) {
+      const draftTitle = d.generated_title || d.source_title || "";
+      if (areJobTitlesDuplicate(title, draftTitle)) {
+        console.log(`🎯 [Dedup Guard] Matched existing draft (${d.status}): "${draftTitle}" (ID: ${d.id}) with: "${title}"`);
+        return { id: d.id, title: draftTitle, matchType: "draft" };
       }
     }
   } catch (e: any) {
-    console.warn("⚠️ Existing job matcher warning:", e.message);
+    console.warn("⚠️ Existing job/draft matcher warning:", e.message);
   }
   return null;
 }
@@ -3054,11 +3111,10 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // ── FIX 3: Early Duplicate Exit BEFORE calling Gemini ──────────────────────
       // Saves Gemini API quota + prevents duplicate drafts from different sources
-      const roughTitle = cleanCompetitorBrands(item.title);
-      const earlyDupeCheck = await findMatchingExistingJob(roughTitle, category, supabase);
+      const earlyDupeCheck = await findMatchingExistingJobOrDraft(item.title, category, supabase);
       if (earlyDupeCheck) {
-        console.log(`🔁 [Pre-Gemini Dedup] SKIPPED — Already on site: /job/${earlyDupeCheck.slug} | New title: "${item.title.slice(0, 60)}"`);
-        duplicateSkipped.push({ title: item.title, source: item.source, existingSlug: earlyDupeCheck.slug });
+        console.log(`🔁 [Pre-Gemini Dedup] SKIPPED — Already exists (${earlyDupeCheck.matchType}): "${earlyDupeCheck.title}" | New title: "${item.title.slice(0, 60)}"`);
+        duplicateSkipped.push({ title: item.title, source: item.source, existingSlug: earlyDupeCheck.slug || earlyDupeCheck.id });
         // Log URL so it doesn't retry
         try {
           await supabase.from("scraped_urls_log").upsert(
@@ -3152,18 +3208,26 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
           .replace(/\b(Out|Released)\b/gi, "Date Announced");
       }
 
-      // 9. Generate slug & check for matching existing job (Duplicate Prevention)
-      const existingJobMatch = await findMatchingExistingJob(cleanedTitle, category, supabase);
+      // 9. Post-AI Duplicate Check (Matches against published jobs & drafts)
+      const existingJobMatch = await findMatchingExistingJobOrDraft(cleanedTitle, category, supabase);
+      if (existingJobMatch) {
+        console.log(`🔁 [Post-AI Dedup Guard] SKIPPED — Already exists (${existingJobMatch.matchType}): "${existingJobMatch.title}". Discarding duplicate draft & skipping Telegram alert.`);
+        duplicateSkipped.push({ title: item.title, source: item.source, existingSlug: existingJobMatch.slug || existingJobMatch.id });
+        try {
+          await supabase.from("scraped_urls_log").upsert(
+            [{ url: item.link }],
+            { onConflict: "url" }
+          );
+        } catch (_) {}
+        results.skipped++;
+        continue; // Do NOT insert duplicate draft! Do NOT send Telegram alert!
+      }
 
-      const baseSlug = existingJobMatch ? existingJobMatch.slug : generateSlug(cleanedTitle);
-      const slug = existingJobMatch ? existingJobMatch.slug : await getUniqueSlug(baseSlug, supabase);
+      const baseSlug = generateSlug(cleanedTitle);
+      const slug = await getUniqueSlug(baseSlug, supabase);
       const startDateVal = aiResult.startDate || "";
       const qualVal = aiResult.qualification || aiResult.eligibility || "";
       const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}`;
-
-      if (existingJobMatch) {
-        console.log(`🎯 [Duplicate Protection] Match found! Draft will UPDATE existing job ID: ${existingJobMatch.id} (URL: /job/${existingJobMatch.slug})`);
-      }
 
       // 10. Save draft to Supabase
       const draftPayload: any = {
@@ -3193,8 +3257,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         form_fees_structure: aiResult.form_fees_structure ? JSON.stringify(aiResult.form_fees_structure) : null,
         extracted_text: JSON.stringify({
           raw_preview: pageText.slice(0, 1500),
-          existing_job_id: existingJobMatch ? existingJobMatch.id : null,
-          existing_job_slug: existingJobMatch ? existingJobMatch.slug : null,
+          existing_job_id: null,
+          existing_job_slug: null,
           form_documents: aiResult.form_documents || null,
           form_fees_structure: aiResult.form_fees_structure || null,
         }),
@@ -3249,9 +3313,8 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
 
       // 10. Private Telegram approval notification to Admin (with 1-click Approve button)
       if (inserted?.id) {
-        const sourceTag = existingJobMatch
-          ? `🔄 Existing Job Update (${ageLabel})`
-          : item.source === "sarkariresult" ? `🌐 SarkariResult (${ageLabel})`
+        const sourceTag =
+          item.source === "sarkariresult" ? `🌐 SarkariResult (${ageLabel})`
           : item.source === "freejobalert" ? `📰 FreeJobAlert (${ageLabel})`
           : item.source === "google_trends" ? `🔥 Google News (${ageLabel})`
           : `📰 ${item.source} (${ageLabel})`;
@@ -3555,6 +3618,14 @@ export async function forceProcessSpecificItem(item: {
     if (insertError || !data?.id) throw new Error(`Supabase insert: ${insertError?.message || "No ID returned"}`);
     const draftId = data.id;
     console.log(`   ✅ Draft saved: ID = ${draftId}`);
+
+    // Permanently record in scraped_urls_log so future cron runs will not re-crawl
+    try {
+      await supabase.from("scraped_urls_log").upsert(
+        [{ url: item.link }],
+        { onConflict: "url" }
+      );
+    } catch (_) {}
 
     // Send Telegram approval alert
     await sendAdminDraftApprovalAlert({
