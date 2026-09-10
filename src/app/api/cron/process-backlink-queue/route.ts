@@ -66,7 +66,7 @@ async function notifyTelegram(opts: {
   queueRemaining: number;
 }): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID || "6681095051";
+  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID || "6681095051";
   if (!token) return;
 
   // IST = UTC+5:30
@@ -83,18 +83,31 @@ async function notifyTelegram(opts: {
   const jobShort = opts.jobTitle.length > 60 ? opts.jobTitle.slice(0, 57) + "..." : opts.jobTitle;
 
   let message: string;
+  let replyMarkup: any = undefined;
+
   if (opts.success && opts.publishedUrl) {
     message = [
-      `🔗 <b>Backlink Published!</b>`,
+      `🔗 <b>Backlink Published & Live!</b>`,
       `━━━━━━━━━━━━━━━━━━━━━`,
-      `📌 <b>Post:</b> ${jobShort}`,
+      `📌 <b>Job:</b> ${jobShort}`,
       `🌐 <b>Platform:</b> ${opts.platform.toUpperCase()} (${tierLabel})`,
       `🕐 <b>Time:</b> ${istLabel}`,
-      `🎯 <b>Target:</b> <a href="${opts.targetUrl}">${opts.targetUrl.replace("https://www.rojgarsuvidha.com", "") || "/"}</a>`,
-      `🔗 <b>Live URL:</b> <a href="${opts.publishedUrl}">${opts.publishedUrl.slice(0, 60)}...</a>`,
-      `📝 <b>Anchor:</b> ${opts.anchorText || "Rojgar Suvidha"}`,
+      `📝 <b>Anchor Text:</b> ${opts.anchorText || "Rojgar Suvidha"}`,
+      `🎯 <b>Target:</b> <a href="${opts.targetUrl}">${opts.targetUrl}</a>`,
+      `🔗 <b>Live URL:</b> <a href="${opts.publishedUrl}">${opts.publishedUrl}</a>`,
       `⏳ <b>Queue Remaining:</b> ${opts.queueRemaining} backlinks`,
+      `━━━━━━━━━━━━━━━━━━━━━`,
+      `👇 <b>Click below to review immediately:</b>`,
     ].join("\n");
+
+    replyMarkup = {
+      inline_keyboard: [
+        [
+          { text: "🔎 Review Live Backlink", url: opts.publishedUrl },
+          { text: "🌐 Target Job Page", url: opts.targetUrl },
+        ],
+      ],
+    };
   } else {
     message = [
       `⚠️ <b>Backlink Failed</b>`,
@@ -108,17 +121,22 @@ async function notifyTelegram(opts: {
   }
 
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
         text: message,
         parse_mode: "HTML",
-        disable_web_page_preview: true,
+        disable_web_page_preview: false,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
       signal: AbortSignal.timeout(8000),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn("⚠️ [Queue Cron] Telegram notify returned non-200:", res.status, errText);
+    }
   } catch (e: any) {
     console.warn("⚠️ [Queue Cron] Telegram notify error (non-fatal):", e.message);
   }
@@ -359,38 +377,50 @@ export async function GET(request: Request) {
           })
           .eq("id", queuedItem.id);
 
-        syncBacklinkToGoogleSheet({
-          type: "backlink",
-          page_type: pageType,
-          job_title: job.title,
-          target_url: targetUrl,
-          platform: queuedItem.platform,
-          backlink_url: publishedUrl,
-          anchor_text: queuedItem.anchor_text || "Rojgar Suvidha",
-          status: "Published",
-        }).catch((e) => console.warn("⚠️ Google Sheet background sync note:", e.message || e));
+        try {
+          await syncBacklinkToGoogleSheet({
+            type: "backlink",
+            page_type: pageType,
+            job_title: job.title,
+            target_url: targetUrl,
+            platform: queuedItem.platform,
+            backlink_url: publishedUrl,
+            anchor_text: queuedItem.anchor_text || "Rojgar Suvidha",
+            status: "Published",
+          });
+        } catch (e: any) {
+          console.warn("⚠️ Google Sheet background sync note:", e.message || e);
+        }
 
-        notifyTelegram({
-          success: true,
-          jobTitle: job.title,
-          platform: queuedItem.platform,
-          targetUrl,
-          publishedUrl,
-          anchorText: queuedItem.anchor_text || "Rojgar Suvidha",
-          queueRemaining: Math.max(0, queuedItems.length - i - 1),
-        }).catch(() => {});
+        try {
+          await notifyTelegram({
+            success: true,
+            jobTitle: job.title,
+            platform: queuedItem.platform,
+            targetUrl,
+            publishedUrl,
+            anchorText: queuedItem.anchor_text || "Rojgar Suvidha",
+            queueRemaining: Math.max(0, queuedItems.length - i - 1),
+          });
+        } catch (e: any) {
+          console.warn("⚠️ Telegram notification note:", e.message || e);
+        }
 
         results.push({ id: queuedItem.id, platform: queuedItem.platform, success: true, url: publishedUrl });
       } else {
         await supabase.from("backlinks_log").update({ status: "failed" }).eq("id", queuedItem.id);
 
-        notifyTelegram({
-          success: false,
-          jobTitle: job.title,
-          platform: queuedItem.platform,
-          targetUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`,
-          queueRemaining: Math.max(0, queuedItems.length - i - 1),
-        }).catch(() => {});
+        try {
+          await notifyTelegram({
+            success: false,
+            jobTitle: job.title,
+            platform: queuedItem.platform,
+            targetUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`,
+            queueRemaining: Math.max(0, queuedItems.length - i - 1),
+          });
+        } catch (e: any) {
+          console.warn("⚠️ Telegram notification note:", e.message || e);
+        }
 
         results.push({ id: queuedItem.id, platform: queuedItem.platform, success: false, error: "Publisher returned null" });
       }
