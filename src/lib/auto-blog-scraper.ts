@@ -814,11 +814,13 @@ async function fetchSarkariResultItems(): Promise<{
   const allItems: { title: string; link: string; pubDate: string; description: string; feedCategory: string }[] = [];
   const seen = new Set<string>();
 
-  // 1. PRIMARY: SarkariResult Direct RSS Feeds (Page 1 + Page 2)
-  // Direct URLs prevent 504 Gateway Time-out caused by Google News RSS proxy links
+  // 1. PRIMARY: SarkariResult Direct RSS Feeds (Pages 1 to 4 = 40 latest posts)
+  // Direct URLs cover all categories: Jobs, Results, Admit Cards, Answer Keys, Admissions
   const rssUrls = [
     "https://www.sarkariresult.com/feed/",
     "https://www.sarkariresult.com/feed/?paged=2",
+    "https://www.sarkariresult.com/feed/?paged=3",
+    "https://www.sarkariresult.com/feed/?paged=4",
   ];
   const rssFetchTexts = await Promise.allSettled(
     rssUrls.map((u) =>
