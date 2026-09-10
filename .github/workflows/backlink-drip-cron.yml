@@ -30,7 +30,7 @@ jobs:
             --retry 2 \
             --retry-delay 5 \
             -X GET \
-            "https://www.rojgarsuvidha.com/api/cron/process-backlink-queue?key=${{ secrets.CRON_SECRET || 'rojgarsuvidha_auto_blog_2026' }}")
+            "https://www.rojgarsuvidha.com/api/cron/process-backlink-queue?key=${{ secrets.CRON_SECRET || 'rojgarsuvidha_auto_blog_2026' }}&batch=2")
 
           echo "HTTP Status: $HTTP_STATUS"
           echo "Response: $(cat /tmp/response.txt)"

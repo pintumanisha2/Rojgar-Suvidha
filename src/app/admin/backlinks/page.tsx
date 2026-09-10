@@ -10,7 +10,10 @@ export default function AdminBacklinksPage() {
   const [filterPlatform, setFilterPlatform] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [triggerMsg, setTriggerMsg] = useState<string | null>(null);
-  const [processingItem, setProcessingItem] = useState(false);
+  const [processingBatch, setProcessingBatch] = useState(false);
+  const [autoDraining, setAutoDraining] = useState(false);
+  const [drainProgress, setDrainProgress] = useState<{ processed: number; remaining: number }>({ processed: 0, remaining: 0 });
+  const stopDrainRef = { current: false };
 
   const fetchBacklinks = async () => {
     setLoading(true);
@@ -65,27 +68,71 @@ export default function AdminBacklinksPage() {
     } catch (e: any) {
       setTriggerMsg(`❌ Error: ${e.message}`);
     }
-    setTimeout(() => setTriggerMsg(null), 5000);
+    setTimeout(() => setTriggerMsg(null), 6000);
   };
 
-  const handleProcessOneItem = async () => {
-    setProcessingItem(true);
-    setTriggerMsg("⏳ Processing 1 queued backlink from database...");
+  const handleProcessBatch = async (batchSize: number = 1, platform?: string) => {
+    setProcessingBatch(true);
+    setTriggerMsg(`⏳ Processing ${batchSize} queued backlink(s)${platform ? ` for ${platform}` : ""}...`);
     try {
-      const res = await fetch("/api/cron/process-backlink-queue");
+      const pParam = platform && platform !== "all" ? `&platform=${platform}` : "";
+      const res = await fetch(`/api/cron/process-backlink-queue?key=rojgarsuvidha_auto_blog_2026&batch=${batchSize}${pParam}`);
       const data = await res.json();
       if (data.ok && data.processed > 0) {
-        setTriggerMsg(`✅ Published 1 backlink to ${data.platform || "platform"}! Live URL: ${data.url}`);
+        const platforms = data.results?.filter((r: any) => r.success).map((r: any) => r.platform).join(", ") || data.platform;
+        setTriggerMsg(`✅ Successfully published ${data.processed} backlink(s) to [${platforms}]! (Remaining queue: ${data.queueRemaining})`);
         fetchBacklinks();
+      } else if (data.ok && data.processed === 0 && data.totalAttempted > 0) {
+        setTriggerMsg(`⚠️ Attempted ${data.totalAttempted} items but publishers returned null. Check platform credentials.`);
       } else {
         setTriggerMsg(`ℹ️ ${data.message || "Queue is currently empty or no items processed"}`);
       }
     } catch (e: any) {
       setTriggerMsg(`❌ Failed: ${e.message}`);
     } finally {
-      setProcessingItem(false);
+      setProcessingBatch(false);
+      setTimeout(() => setTriggerMsg(null), 10000);
+    }
+  };
+
+  const startAutoDrain = async () => {
+    setAutoDraining(true);
+    stopDrainRef.current = false;
+    let totalProcessed = 0;
+    setTriggerMsg("🚀 Auto-Drain started: continuously publishing queued backlinks in safe 3-item batches...");
+
+    try {
+      while (!stopDrainRef.current) {
+        const res = await fetch("/api/cron/process-backlink-queue?key=rojgarsuvidha_auto_blog_2026&batch=3");
+        const data = await res.json();
+
+        if (!data.ok || data.totalAttempted === 0 || data.queueRemaining === 0) {
+          setTriggerMsg(`🎉 Auto-Drain complete! Total ${totalProcessed + (data.processed || 0)} backlinks published live.`);
+          break;
+        }
+
+        totalProcessed += data.processed || 0;
+        setDrainProgress({ processed: totalProcessed, remaining: data.queueRemaining });
+        setTriggerMsg(`⚡ Auto-Drain running... Published ${totalProcessed} links. ${data.queueRemaining} remaining in queue.`);
+        await fetchBacklinks();
+
+        // Safe breathing room between batches
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    } catch (err: any) {
+      setTriggerMsg(`⚠️ Auto-drain stopped: ${err.message}`);
+    } finally {
+      setAutoDraining(false);
+      fetchBacklinks();
       setTimeout(() => setTriggerMsg(null), 8000);
     }
+  };
+
+  const stopAutoDrain = () => {
+    stopDrainRef.current = true;
+    setAutoDraining(false);
+    setTriggerMsg("⏸️ Auto-Drain paused.");
+    setTimeout(() => setTriggerMsg(null), 4000);
   };
 
   const filteredBacklinks = backlinks.filter((b) => {
@@ -132,25 +179,54 @@ export default function AdminBacklinksPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <button
-            onClick={handleProcessOneItem}
-            disabled={processingItem}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+            onClick={() => handleProcessBatch(1, filterPlatform)}
+            disabled={processingBatch || autoDraining}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+            title="Publish exactly 1 queued backlink right now"
           >
-            <Send className={`w-4 h-4 ${processingItem ? "animate-spin" : ""}`} /> {processingItem ? "Publishing..." : "Publish 1 Now"}
+            <Send className={`w-3.5 h-3.5 ${processingBatch ? "animate-spin" : ""}`} />
+            Publish 1 Now
           </button>
+
+          <button
+            onClick={() => handleProcessBatch(3, filterPlatform)}
+            disabled={processingBatch || autoDraining}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+            title="Publish a batch of 3 queued backlinks safely"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Batch (3 Now)
+          </button>
+
+          <button
+            onClick={autoDraining ? stopAutoDrain : startAutoDrain}
+            disabled={processingBatch}
+            className={`flex items-center gap-1.5 px-3.5 py-2 ${
+              autoDraining
+                ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
+                : "bg-amber-600 hover:bg-amber-700 text-white"
+            } disabled:opacity-50 text-xs font-bold rounded-xl shadow-md transition-all`}
+            title={autoDraining ? "Click to pause Auto-Drain" : "Continuously drain all queued backlinks until empty"}
+          >
+            <Globe className={`w-3.5 h-3.5 ${autoDraining ? "animate-spin" : ""}`} />
+            {autoDraining ? `Pause Auto-Drain (${drainProgress.remaining} left)` : `Auto-Drain All (${queuedCount})`}
+          </button>
+
           <button
             onClick={fetchBacklinks}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl transition-all"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
+
           <button
             onClick={triggerDailyReport}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
+            title="Send daily 9 PM executive report with Excel attachment to Telegram"
           >
-            <Sparkles className="w-4 h-4" /> Trigger Telegram 9 PM Report
+            <BarChart3 className="w-3.5 h-3.5" /> 9 PM Report
           </button>
         </div>
       </div>

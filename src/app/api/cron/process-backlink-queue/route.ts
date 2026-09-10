@@ -139,7 +139,13 @@ export async function GET(request: Request) {
   const keyParam = url.searchParams.get("key");
 
   const cronSecret = process.env.CRON_SECRET || "rojgarsuvidha_auto_blog_2026";
-  if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}` && keyParam !== cronSecret) {
+  const origin = request.headers.get("origin") || "";
+  const referer = request.headers.get("referer") || "";
+  const isInternalAdmin =
+    (origin.includes("rojgarsuvidha.com") || origin.includes("localhost") ||
+     referer.includes("/admin/backlinks"));
+
+  if (!isVercelCron && !isInternalAdmin && cronSecret && authHeader !== `Bearer ${cronSecret}` && keyParam !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -147,8 +153,11 @@ export async function GET(request: Request) {
   if (!supabase) return NextResponse.json({ ok: false, reason: "No Supabase connection" });
 
   try {
-    // 1. Filter by platform if specified, else prioritize connected platforms
+    // 1. Batch limit & platform filter (defaults to 2 for natural, steady velocity)
+    const batchParam = url.searchParams.get("batch") || url.searchParams.get("limit");
+    const batchLimit = Math.min(Math.max(parseInt(batchParam || "2", 10) || 2, 1), 5);
     const platformParam = url.searchParams.get("platform");
+
     const CONNECTED_PLATFORMS = [
       "blogger",
       "github",
@@ -173,244 +182,240 @@ export async function GET(request: Request) {
       dbQuery = dbQuery.in("platform", CONNECTED_PLATFORMS);
     }
 
-    const { data: queuedItem, error: fetchErr } = await dbQuery
+    const { data: queuedItems, error: fetchErr } = await dbQuery
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(batchLimit);
 
     if (fetchErr) {
       console.error("⚠️ [Queue Cron] DB fetch error:", fetchErr.message);
       return NextResponse.json({ ok: false, error: fetchErr.message });
     }
 
-    if (!queuedItem) {
+    if (!queuedItems || queuedItems.length === 0) {
       console.log("ℹ️ [Queue Cron] No queued backlinks to process right now.");
       return NextResponse.json({ ok: true, processed: 0, message: "Queue empty" });
     }
 
-    // 2. Fetch job details for this backlink
-    const { data: job } = await supabase
-      .from("jobs")
-      .select("id, title, slug, category, short_info, meta_description, important_dates, blog_content")
-      .eq("id", queuedItem.job_id)
-      .maybeSingle();
+    const results: Array<{
+      id: string;
+      platform: string;
+      success: boolean;
+      url?: string | null;
+      error?: string;
+    }> = [];
 
-    if (!job) {
-      // Job was deleted — mark backlink as failed
-      await supabase.from("backlinks_log").update({ status: "failed" }).eq("id", queuedItem.id);
-      return NextResponse.json({ ok: true, processed: 0, message: "Job not found" });
-    }
+    // Process each queued item in the batch
+    for (let i = 0; i < queuedItems.length; i++) {
+      const queuedItem = queuedItems[i];
 
-    // Extract rich recruitment facts for high-authority, factual backlink content
-    const extractFacts = (j: typeof job) => {
-      let totalPosts: string | null = null;
-      let lastDate: string | null = null;
-      let company: string | null = null;
-      let applicationFee: string | null = null;
-      let qualification: string | null = null;
+      // Delay between items in a batch to avoid API throttling
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
 
-      // 1. From Title bracket e.g. [30 Posts], [1500 Posts], [District Wise]
-      const bracketMatch = j.title?.match(/^\[([^\]]+)\]/);
-      if (bracketMatch) {
-        const bText = bracketMatch[1].trim();
-        if (/posts|vacancy|vacancies|district/i.test(bText)) {
-          totalPosts = bText;
+      // Fetch job details
+      const { data: job } = await supabase
+        .from("jobs")
+        .select("id, title, slug, category, short_info, meta_description, important_dates, blog_content")
+        .eq("id", queuedItem.job_id)
+        .maybeSingle();
+
+      if (!job) {
+        await supabase.from("backlinks_log").update({ status: "failed" }).eq("id", queuedItem.id);
+        results.push({ id: queuedItem.id, platform: queuedItem.platform, success: false, error: "Job not found" });
+        continue;
+      }
+
+      // Extract rich recruitment facts
+      const extractFacts = (j: typeof job) => {
+        let totalPosts: string | null = null;
+        let lastDate: string | null = null;
+        let company: string | null = null;
+        let applicationFee: string | null = null;
+        let qualification: string | null = null;
+
+        const bracketMatch = j.title?.match(/^\[([^\]]+)\]/);
+        if (bracketMatch) {
+          const bText = bracketMatch[1].trim();
+          if (/posts|vacancy|vacancies|district/i.test(bText)) {
+            totalPosts = bText;
+          }
         }
-      }
 
-      // 2. From important_dates array
-      if (Array.isArray(j.important_dates)) {
-        const ld = j.important_dates.find((d: any) => /last date|closing/i.test(d?.label || ""));
-        if (ld?.value) lastDate = ld.value;
-      }
-
-      // 3. From blog_content table text
-      if (j.blog_content) {
-        const clean = j.blog_content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-
-        const orgMatch = clean.match(/Organization\s+([A-Za-z0-9\s,\-\(\)\.\/]{3,60}?)(?:Post Name|Total Vacanc|Last Date|Application Fee|Qualification)/i);
-        if (orgMatch && !company) company = orgMatch[1].trim();
-
-        const vacMatch = clean.match(/Total Vacanc(?:y|ies)\s+([A-Za-z0-9\s,\-\(\)\.\/]{2,40}?)(?:Last Date|Application Fee|Qualification|Salary|Pay Scale)/i);
-        if (vacMatch && !totalPosts) totalPosts = vacMatch[1].trim();
-
-        const dateMatch = clean.match(/Last Date to Apply\s+([A-Za-z0-9\s,\-\(\)\.\/]{4,40}?)(?:Application Fee|Qualification|Salary|Pay Scale|Selection Process)/i);
-        if (dateMatch && !lastDate) lastDate = dateMatch[1].trim();
-
-        const feeMatch = clean.match(/Application Fee\s+([A-Za-z0-9\s,\-\(\)\.\/:\u20B9]{3,60}?)(?:Salary|Pay Scale|Selection Process|Qualification|Important|Age Limit)/i);
-        if (feeMatch && !applicationFee) applicationFee = feeMatch[1].trim();
-
-        const qualMatch = clean.match(/Qualification\s+([A-Za-z0-9\s,\-\(\)\.\/]{3,60}?)(?:Age Limit|Selection Process|Important|Last Date|How to Apply)/i);
-        if (qualMatch && !qualification) qualification = qualMatch[1].trim();
-      }
-
-      // 4. Fallback search in short_info
-      if (!lastDate && j.short_info) {
-        const m = j.short_info.match(/last date[^\.\,;]+/i);
-        if (m) lastDate = m[0].trim();
-      }
-
-      return { totalPosts, lastDate, company, applicationFee, qualification };
-    };
-
-    const facts = extractFacts(job);
-    const jobPayload = {
-      jobId: queuedItem.job_id,
-      title: job.title,
-      slug: job.slug,
-      category: job.category,
-      totalPosts: facts.totalPosts,
-      qualification: facts.qualification,
-      lastDate: facts.lastDate,
-      applicationFee: facts.applicationFee,
-      company: facts.company,
-      shortInfo: job.short_info,
-    };
-
-    // 3. Publish to the right platform
-    let publishedUrl: string | null = null;
-
-    if (queuedItem.platform === "blogger") {
-      publishedUrl = await publishToBlogger(jobPayload);
-    } else if (queuedItem.platform === "telegraph") {
-      publishedUrl = await publishToTelegraph(jobPayload);
-    } else if (queuedItem.platform === "wordpress") {
-      publishedUrl = await publishToWordPress(jobPayload);
-    } else if (queuedItem.platform === "github") {
-      publishedUrl = await publishToGithub(jobPayload);
-    } else if (queuedItem.platform === "devto") {
-      publishedUrl = await publishToDevto(jobPayload);
-    } else if (queuedItem.platform === "hashnode") {
-      publishedUrl = await publishToHashnode(jobPayload);
-    } else if (queuedItem.platform === "gitlab") {
-      publishedUrl = await publishToGitlab(jobPayload);
-    } else if (queuedItem.platform === "tumblr") {
-      publishedUrl = await publishToTumblr(jobPayload);
-    } else if (queuedItem.platform === "pastebin") {
-      publishedUrl = await publishToPastebin(jobPayload);
-    } else if (queuedItem.platform === "notion") {
-      publishedUrl = await publishToNotion(jobPayload);
-    } else if (queuedItem.platform === "livejournal") {
-      publishedUrl = await publishToLivejournal(jobPayload);
-    } else if (queuedItem.platform === "gitbook") {
-      publishedUrl = await publishToGitbook(jobPayload);
-    } else if (queuedItem.platform === "medium") {
-      publishedUrl = await publishToMedium(jobPayload);
-    } else if (queuedItem.platform === "pinterest") {
-      publishedUrl = await publishToPinterest(jobPayload);
-    } else {
-      // Platform not yet implemented (reddit, tumblr) — mark as pending for future
-      await supabase
-        .from("backlinks_log")
-        .update({ status: "failed" })
-        .eq("id", queuedItem.id);
-      return NextResponse.json({ ok: true, processed: 0, message: `Platform '${queuedItem.platform}' not yet implemented` });
-    }
-
-    // 4. Update DB with result
-    const now = new Date().toISOString();
-    if (publishedUrl) {
-      // Determine target URL for Google Sheet and target_url column
-      let pageType: "Job Article" | "Category Pillar" | "State Hub" | "Utility Tool" | "Homepage" = "Job Article";
-      let targetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`;
-
-      if (queuedItem.backlink_url) {
-        if (queuedItem.backlink_url.includes("/resume-builder") || queuedItem.backlink_url.includes("/eligibility") || queuedItem.backlink_url.includes("/e-suvidha")) {
-          pageType = "Utility Tool";
-          targetUrl = queuedItem.backlink_url;
-        } else if (queuedItem.backlink_url.includes("/state/")) {
-          pageType = "State Hub";
-          targetUrl = queuedItem.backlink_url;
-        } else if (queuedItem.backlink_url.includes("/latest-jobs") || queuedItem.backlink_url.includes("/sarkari-result") || queuedItem.backlink_url.includes("/admit-card")) {
-          pageType = "Category Pillar";
-          targetUrl = queuedItem.backlink_url;
-        } else if (queuedItem.backlink_url === process.env.NEXT_PUBLIC_BASE_URL || queuedItem.backlink_url === "https://www.rojgarsuvidha.com") {
-          pageType = "Homepage";
-          targetUrl = queuedItem.backlink_url;
+        if (Array.isArray(j.important_dates)) {
+          const ld = j.important_dates.find((d: any) => /last date|closing/i.test(d?.label || ""));
+          if (ld?.value) lastDate = ld.value;
         }
+
+        if (j.blog_content) {
+          const clean = j.blog_content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+          const orgMatch = clean.match(/Organization\s+([A-Za-z0-9\s,\-\(\)\.\/]{3,60}?)(?:Post Name|Total Vacanc|Last Date|Application Fee|Qualification)/i);
+          if (orgMatch && !company) company = orgMatch[1].trim();
+
+          const vacMatch = clean.match(/Total Vacanc(?:y|ies)\s+([A-Za-z0-9\s,\-\(\)\.\/]{2,40}?)(?:Last Date|Application Fee|Qualification|Salary|Pay Scale)/i);
+          if (vacMatch && !totalPosts) totalPosts = vacMatch[1].trim();
+
+          const dateMatch = clean.match(/Last Date to Apply\s+([A-Za-z0-9\s,\-\(\)\.\/]{4,40}?)(?:Application Fee|Qualification|Salary|Pay Scale|Selection Process)/i);
+          if (dateMatch && !lastDate) lastDate = dateMatch[1].trim();
+
+          const feeMatch = clean.match(/Application Fee\s+([A-Za-z0-9\s,\-\(\)\.\/:\u20B9]{3,60}?)(?:Salary|Pay Scale|Selection Process|Qualification|Important|Age Limit)/i);
+          if (feeMatch && !applicationFee) applicationFee = feeMatch[1].trim();
+
+          const qualMatch = clean.match(/Qualification\s+([A-Za-z0-9\s,\-\(\)\.\/]{3,60}?)(?:Age Limit|Selection Process|Important|Last Date|How to Apply)/i);
+          if (qualMatch && !qualification) qualification = qualMatch[1].trim();
+        }
+
+        if (!lastDate && j.short_info) {
+          const m = j.short_info.match(/last date[^\.\,;]+/i);
+          if (m) lastDate = m[0].trim();
+        }
+
+        return { totalPosts, lastDate, company, applicationFee, qualification };
+      };
+
+      const facts = extractFacts(job);
+      const jobPayload = {
+        jobId: queuedItem.job_id,
+        title: job.title,
+        slug: job.slug,
+        category: job.category,
+        totalPosts: facts.totalPosts,
+        qualification: facts.qualification,
+        lastDate: facts.lastDate,
+        applicationFee: facts.applicationFee,
+        company: facts.company,
+        shortInfo: job.short_info,
+      };
+
+      let publishedUrl: string | null = null;
+
+      try {
+        if (queuedItem.platform === "blogger") {
+          publishedUrl = await publishToBlogger(jobPayload);
+        } else if (queuedItem.platform === "telegraph") {
+          publishedUrl = await publishToTelegraph(jobPayload);
+        } else if (queuedItem.platform === "wordpress") {
+          publishedUrl = await publishToWordPress(jobPayload);
+        } else if (queuedItem.platform === "github") {
+          publishedUrl = await publishToGithub(jobPayload);
+        } else if (queuedItem.platform === "devto") {
+          publishedUrl = await publishToDevto(jobPayload);
+        } else if (queuedItem.platform === "hashnode") {
+          publishedUrl = await publishToHashnode(jobPayload);
+        } else if (queuedItem.platform === "gitlab") {
+          publishedUrl = await publishToGitlab(jobPayload);
+        } else if (queuedItem.platform === "tumblr") {
+          publishedUrl = await publishToTumblr(jobPayload);
+        } else if (queuedItem.platform === "pastebin") {
+          publishedUrl = await publishToPastebin(jobPayload);
+        } else if (queuedItem.platform === "notion") {
+          publishedUrl = await publishToNotion(jobPayload);
+        } else if (queuedItem.platform === "livejournal") {
+          publishedUrl = await publishToLivejournal(jobPayload);
+        } else if (queuedItem.platform === "gitbook") {
+          publishedUrl = await publishToGitbook(jobPayload);
+        } else if (queuedItem.platform === "medium") {
+          publishedUrl = await publishToMedium(jobPayload);
+        } else if (queuedItem.platform === "pinterest") {
+          publishedUrl = await publishToPinterest(jobPayload);
+        } else {
+          await supabase.from("backlinks_log").update({ status: "failed" }).eq("id", queuedItem.id);
+          results.push({ id: queuedItem.id, platform: queuedItem.platform, success: false, error: "Platform not supported" });
+          continue;
+        }
+      } catch (pubErr: any) {
+        console.error(`⚠️ [Queue Cron] Publisher error for ${queuedItem.platform}:`, pubErr.message);
       }
 
-      // Safe update: guarantees status and real live URL are saved
-      const { error: updateErr } = await supabase
-        .from("backlinks_log")
-        .update({
-          status: "published",
-          backlink_url: publishedUrl,  // Real live platform link (e.g. Blogger, GitHub, etc.)
-        })
-        .eq("id", queuedItem.id);
+      const now = new Date().toISOString();
+      if (publishedUrl) {
+        let pageType: "Job Article" | "Category Pillar" | "State Hub" | "Utility Tool" | "Homepage" = "Job Article";
+        let targetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`;
 
-      if (updateErr) {
-        console.error("⚠️ [Queue Cron] DB update error:", updateErr.message);
+        if (queuedItem.backlink_url) {
+          if (queuedItem.backlink_url.includes("/resume-builder") || queuedItem.backlink_url.includes("/eligibility") || queuedItem.backlink_url.includes("/e-suvidha")) {
+            pageType = "Utility Tool";
+            targetUrl = queuedItem.backlink_url;
+          } else if (queuedItem.backlink_url.includes("/state/")) {
+            pageType = "State Hub";
+            targetUrl = queuedItem.backlink_url;
+          } else if (queuedItem.backlink_url.includes("/latest-jobs") || queuedItem.backlink_url.includes("/sarkari-result") || queuedItem.backlink_url.includes("/admit-card")) {
+            pageType = "Category Pillar";
+            targetUrl = queuedItem.backlink_url;
+          } else if (queuedItem.backlink_url === process.env.NEXT_PUBLIC_BASE_URL || queuedItem.backlink_url === "https://www.rojgarsuvidha.com") {
+            pageType = "Homepage";
+            targetUrl = queuedItem.backlink_url;
+          }
+        }
+
+        await supabase
+          .from("backlinks_log")
+          .update({
+            status: "published",
+            backlink_url: publishedUrl,
+            target_url: targetUrl,
+            published_at: now,
+          })
+          .eq("id", queuedItem.id);
+
+        syncBacklinkToGoogleSheet({
+          type: "backlink",
+          page_type: pageType,
+          job_title: job.title,
+          target_url: targetUrl,
+          platform: queuedItem.platform,
+          backlink_url: publishedUrl,
+          anchor_text: queuedItem.anchor_text || "Rojgar Suvidha",
+          status: "Published",
+        }).catch((e) => console.warn("⚠️ Google Sheet background sync note:", e.message || e));
+
+        notifyTelegram({
+          success: true,
+          jobTitle: job.title,
+          platform: queuedItem.platform,
+          targetUrl,
+          publishedUrl,
+          anchorText: queuedItem.anchor_text || "Rojgar Suvidha",
+          queueRemaining: Math.max(0, queuedItems.length - i - 1),
+        }).catch(() => {});
+
+        results.push({ id: queuedItem.id, platform: queuedItem.platform, success: true, url: publishedUrl });
       } else {
-        console.log(`✅ [Queue Cron] Published ${queuedItem.platform} backlink for job '${job.title}': ${publishedUrl}`);
-        // Optional columns update if migration has been executed
-        try {
-          await supabase
-            .from("backlinks_log")
-            .update({ target_url: targetUrl, published_at: now })
-            .eq("id", queuedItem.id);
-        } catch (_) {}
+        await supabase.from("backlinks_log").update({ status: "failed" }).eq("id", queuedItem.id);
+
+        notifyTelegram({
+          success: false,
+          jobTitle: job.title,
+          platform: queuedItem.platform,
+          targetUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`,
+          queueRemaining: Math.max(0, queuedItems.length - i - 1),
+        }).catch(() => {});
+
+        results.push({ id: queuedItem.id, platform: queuedItem.platform, success: false, error: "Publisher returned null" });
       }
-
-      // Real-time Auto-Sync to Google Sheet (Method 1 Multi-Tab)
-      syncBacklinkToGoogleSheet({
-        type: "backlink",
-        page_type: pageType,
-        job_title: job.title,
-        target_url: targetUrl,
-        platform: queuedItem.platform,
-        backlink_url: publishedUrl,
-        anchor_text: queuedItem.anchor_text || "Rojgar Suvidha",
-        status: "Published",
-      }).catch((e) => console.warn("⚠️ Google Sheet background sync note:", e.message || e));
-
-      // Count remaining queued items for the notification
-      const { count: remainingCount } = await supabase
-        .from("backlinks_log")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "queued");
-
-      // 🔔 Real-time Telegram notification — fires instantly
-      notifyTelegram({
-        success: true,
-        jobTitle: job.title,
-        platform: queuedItem.platform,
-        targetUrl,
-        publishedUrl,
-        anchorText: queuedItem.anchor_text || "Rojgar Suvidha",
-        queueRemaining: remainingCount ?? 0,
-      }).catch(() => {});
-
-      return NextResponse.json({ ok: true, processed: 1, platform: queuedItem.platform, url: publishedUrl });
-    } else {
-      await supabase
-        .from("backlinks_log")
-        .update({ status: "failed" })
-        .eq("id", queuedItem.id);
-
-      // 🔔 Failure Telegram notification
-      const { count: remainingCount } = await supabase
-        .from("backlinks_log")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "queued");
-
-      notifyTelegram({
-        success: false,
-        jobTitle: job.title,
-        platform: queuedItem.platform,
-        targetUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com"}/job/${job.slug}`,
-        queueRemaining: remainingCount ?? 0,
-      }).catch(() => {});
-
-      return NextResponse.json({
-        ok: true,
-        processed: 0,
-        platform: queuedItem.platform,
-        message: `Publisher for '${queuedItem.platform}' returned null`,
-      });
     }
+
+    // Count remaining queued items
+    const { count: remainingCount } = await supabase
+      .from("backlinks_log")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "queued");
+
+    const successCount = results.filter((r) => r.success).length;
+
+    return NextResponse.json({
+      ok: true,
+      processed: successCount,
+      totalAttempted: queuedItems.length,
+      platform: queuedItems.length === 1 ? queuedItems[0].platform : "multi",
+      url: queuedItems.length === 1 ? results[0]?.url : undefined,
+      results,
+      queueRemaining: remainingCount ?? 0,
+    });
   } catch (err: any) {
     console.error("❌ [Queue Cron] Exception:", err.message);
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
 }
+
