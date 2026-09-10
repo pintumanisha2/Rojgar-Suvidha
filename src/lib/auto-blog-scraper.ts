@@ -61,7 +61,6 @@ const CATEGORY_RSS_FEEDS: Record<string, string[]> = {
 const SARKARIRESULT_RSS_FEEDS: Record<string, string[]> = {
   "latest-jobs": [
     "https://www.sarkariresult.com/feed/",  // All posts — SarkariResult RSS main
-    "https://news.google.com/rss/search?q=site:sarkariresult.com&hl=en-IN&gl=IN&ceid=IN:en", // Google News RSS fallback
   ],
   "results": [
     "https://www.sarkariresult.com/feed/",
@@ -2687,13 +2686,12 @@ async function findMatchingExistingJobOrDraft(
     const cleanTokens = extractCoreJobTokens(title);
     if (cleanTokens.size === 0) return null;
 
-    // 1. Check published jobs on website (last 200 posts)
+    // 1. Check published jobs on website (last 300 posts across all categories)
     const { data: jobs } = await supabase
       .from("jobs")
       .select("id, title, slug, category, created_at")
-      .eq("category", category)
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(300);
 
     for (const j of jobs || []) {
       if (areJobTitlesDuplicate(title, j.title)) {
@@ -2702,17 +2700,17 @@ async function findMatchingExistingJobOrDraft(
       }
     }
 
-    // 2. Check auto_blog_drafts (pending_review or published in last 200 drafts)
+    // 2. Check auto_blog_drafts (pending_review or published in last 500 drafts)
     const { data: drafts } = await supabase
       .from("auto_blog_drafts")
       .select("id, generated_title, source_title, category, status, scraped_at")
       .in("status", ["pending_review", "published"])
       .order("scraped_at", { ascending: false })
-      .limit(200);
+      .limit(500);
 
     for (const d of drafts || []) {
       const draftTitle = d.generated_title || d.source_title || "";
-      if (areJobTitlesDuplicate(title, draftTitle)) {
+      if (areJobTitlesDuplicate(title, draftTitle) || areJobTitlesDuplicate(title, d.source_title || "")) {
         console.log(`🎯 [Dedup Guard] Matched existing draft (${d.status}): "${draftTitle}" (ID: ${d.id}) with: "${title}"`);
         return { id: d.id, title: draftTitle, matchType: "draft" };
       }
@@ -2844,8 +2842,12 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
     return { ...results, errors: ["No candidate items fetched from any source"] };
   }
 
-  // 2. Get already-scraped URLs
-  const { data: scrapedLog } = await supabase.from("scraped_urls_log").select("url");
+  // 2. Get already-scraped URLs (latest 5000 to prevent 1000-row cap cutoff)
+  const { data: scrapedLog } = await supabase
+    .from("scraped_urls_log")
+    .select("url")
+    .order("scraped_at", { ascending: false })
+    .limit(5000);
   const scrapedUrls = new Set((scrapedLog || []).map((r: any) => r.url));
 
   // ── FIX 1: 48-Hour Freshness Filter ─────────────────────────────────────────
