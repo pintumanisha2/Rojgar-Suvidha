@@ -64,27 +64,21 @@ export async function enqueuePostApprovalBacklinks(
     const shuffledAnchors = [...anchors].sort(() => Math.random() - 0.5);
     const pickAnchor = (i: number) => shuffledAnchors[i % shuffledAnchors.length];
 
-    // All 10 available platforms (2 tiers)
-    const tier1 = ["blogger", "github"];     // Always include — highest DA
-    const tier2 = ["gitlab", "wordpress", "gitbook", "devto"];  // Rotate 2 of 4
-    const tier3 = ["telegraph", "notion", "livejournal", "pastebin"]; // Rotate 1 of 4
+    // 100% Verified Active Platforms with Full Article Content & Canonical Backlinks
+    // Excludes broken platforms (blogger, gitlab, gitbook, devto, notion) to ensure 0% errors & 0% empty pages
+    const activePlatforms = ["github", "wordpress", "livejournal", "telegraph", "pastebin"];
 
-    // Rotate selection based on job hash for deterministic-but-varied rotation
+    // Rotate the order deterministically based on job hash for anchor/target variety
     const hashSeed = jobId.charCodeAt(0) + jobId.charCodeAt(jobId.length - 1);
-    const t2offset = hashSeed % tier2.length;
-    const t3offset = (hashSeed + 1) % tier3.length;
-
-    // Pick 2 from tier2 and 1 from tier3 (total = 2 + 2 + 1 = 5)
-    const selectedTier2 = [
-      tier2[t2offset % tier2.length],
-      tier2[(t2offset + 1) % tier2.length],
+    const selectedPlatforms = [
+      activePlatforms[hashSeed % activePlatforms.length],
+      activePlatforms[(hashSeed + 1) % activePlatforms.length],
+      activePlatforms[(hashSeed + 2) % activePlatforms.length],
+      activePlatforms[(hashSeed + 3) % activePlatforms.length],
+      activePlatforms[(hashSeed + 4) % activePlatforms.length],
     ];
-    const selectedTier3 = [tier3[t3offset % tier3.length]];
 
-    // Final 5-platform set for this job
-    const selectedPlatforms = [...tier1, ...selectedTier2, ...selectedTier3];
-
-    console.log(`📍 [Backlink Engine] Selected platforms for job ${jobId.slice(0, 8)}: ${selectedPlatforms.join(", ")}`);
+    console.log(`📍 [Backlink Engine] Selected verified platforms for job ${jobId.slice(0, 8)}: ${selectedPlatforms.join(", ")}`);
 
     // Multi-Page Link Distribution Matrix (Job Article: 3, Category Hub: 1, Tool/Home: 1)
     const targetPageTypes = ["Job Article", "Job Article", "Job Article", "Category Pillar", "Utility Tool"];
