@@ -40,10 +40,10 @@ export async function POST(request: Request) {
   // 1. Find SarkariResult URLs logged in last N hours
   const { data: loggedUrls, error: fetchError } = await supabase
     .from("scraped_urls_log")
-    .select("url, created_at")
+    .select("url, scraped_at")
     .like("url", "%sarkariresult.com%")
-    .gte("created_at", since)
-    .order("created_at", { ascending: false });
+    .gte("scraped_at", since)
+    .order("scraped_at", { ascending: false });
 
   if (fetchError) {
     return NextResponse.json({ error: fetchError.message }, { status: 500 });
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       hours,
       since,
       urlsToDelete: count,
-      urls: loggedUrls?.map(u => ({ url: u.url, logged_at: u.created_at })) || [],
+      urls: loggedUrls?.map(u => ({ url: u.url, logged_at: u.scraped_at })) || [],
     });
   }
 
