@@ -252,6 +252,7 @@ export interface DraftNotificationPayload {
   sourceTag?: string | null;
   qualityScore?: number | null;
   sourceUrl?: string | null;  // Original source URL for cross-checking
+  autoPublishAt?: string | null; // ISO timestamp — set only for SarkariResult (45 min auto-publish)
 }
 
 /**
@@ -277,6 +278,22 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
       : `\n🔴 *Content Quality: ${draft.qualityScore}/100* — LOW — Review carefully!`)
     : "";
 
+  // Auto-publish info — only for SarkariResult (45-min timer)
+  const autoPublishLine = draft.autoPublishAt
+    ? (() => {
+        const d = new Date(draft.autoPublishAt);
+        const hh = d.getUTCHours() + 5;
+        const mm = d.getUTCMinutes() + 30;
+        const totalMins = hh * 60 + mm;
+        const h12 = Math.floor(totalMins / 60) % 24;
+        const m = totalMins % 60;
+        const ampm = h12 >= 12 ? "PM" : "AM";
+        const h = h12 % 12 || 12;
+        const timeStr = `${h}:${String(m).padStart(2, "0")} ${ampm} IST`;
+        return `\n\u23f0 *Auto-Publish:* ${timeStr} (45 min) — *Reject karo agar galat hai*`;
+      })()
+    : `\n\u270b *Manual Approval Required*`;
+
   const sourceUrlLine = draft.sourceUrl
     ? `\n🔗 *Source URL:* ${draft.sourceUrl}`
     : "";
@@ -289,6 +306,7 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
     ...(postsText ? [postsText] : []),
     ...(lastDateText ? [lastDateText] : []),
     scoreText,
+    autoPublishLine,
     sourceUrlLine,
     "",
     `⚡ *Review or Approve in 1-Click below:*`,
@@ -310,6 +328,10 @@ export async function sendAdminDraftApprovalAlert(draft: DraftNotificationPayloa
         { text: "👁️ Review in Admin UI", url: reviewUrl },
         { text: "❌ Reject Draft", callback_data: `rej_${draft.id}` },
       ],
+      // SarkariResult auto-publish — show cancel button only when timer is active
+      ...(draft.autoPublishAt ? [[
+        { text: "🚫 Cancel Auto-Publish", callback_data: `cancel_auto_${draft.id}` },
+      ]] : []),
       ...(sourceUrlButton ? [sourceUrlButton] : []),
     ]
   };

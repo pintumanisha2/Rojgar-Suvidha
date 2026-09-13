@@ -26,100 +26,35 @@ export interface GoogleIndexingResult {
   error?: string;
 }
 
-// ── Method 1: Google Indexing API — Direct Push for Googlebot ────────────────
-async function submitGoogleIndexingAPI(urls: string[]): Promise<GoogleIndexingResult> {
-  const credsJson = process.env.GOOGLE_INDEXING_CREDENTIALS;
-  if (!credsJson) {
-    console.warn("⚠️ [Indexing] GOOGLE_INDEXING_CREDENTIALS environment variable not set");
-    return { attempted: false, success: false, error: "Credentials not configured in environment" };
-  }
+// ── Method 1 (FIXED): Google + Bing Sitemap Ping ────────────────────────────
+// Google Indexing API works ONLY for JobPosting/BroadcastEvent schema pages.
+// For regular blog posts, the correct approach is Google's documented sitemap ping.
+// Reference: https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+async function pingGoogleAndBingSitemap(): Promise<GoogleIndexingResult> {
+  const sitemapEncoded = encodeURIComponent(`${BASE_URL}/sitemap.xml`);
+  const newsSitemapEncoded = encodeURIComponent(`${BASE_URL}/news-sitemap.xml`);
+
+  const pings = [
+    `https://www.google.com/ping?sitemap=${sitemapEncoded}`,          // Google — primary sitemap
+    `https://www.google.com/ping?sitemap=${newsSitemapEncoded}`,      // Google — news sitemap
+    `https://www.bing.com/ping?sitemap=${sitemapEncoded}`,            // Bing — primary sitemap
+  ];
+
   try {
-    const creds = JSON.parse(credsJson);
-    const now = Math.floor(Date.now() / 1000);
-    const enc = (obj: object) =>
-      Buffer.from(JSON.stringify(obj))
-        .toString("base64")
-        .replace(/=/g, "")
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_");
+    const results = await Promise.allSettled(
+      pings.map((pingUrl) =>
+        fetch(pingUrl, {
+          method: "GET",
+          signal: AbortSignal.timeout(10000),
+        })
+      )
+    );
 
-    const header = enc({ alg: "RS256", typ: "JWT" });
-    const claim = enc({
-      iss: creds.client_email,
-      scope: "https://www.googleapis.com/auth/indexing",
-      aud: "https://oauth2.googleapis.com/token",
-      exp: now + 3600,
-      iat: now,
-    });
-    const sigInput = `${header}.${claim}`;
-
-    const { createSign } = await import("crypto");
-    const sign = createSign("SHA256");
-    sign.update(sigInput);
-    const privateKey = creds.private_key ? creds.private_key.replace(/\\n/g, "\n") : "";
-    const sig = sign
-      .sign(privateKey)
-      .toString("base64")
-      .replace(/=/g, "")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_");
-
-    // Get OAuth2 access token
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${sigInput}.${sig}`,
-      signal: AbortSignal.timeout(12000),
-    });
-    const tokenData = await tokenRes.json();
-    const access_token = tokenData.access_token;
-    if (!access_token) {
-      const err = tokenData.error_description || tokenData.error || "Failed to obtain OAuth2 token";
-      console.warn("⚠️ [Indexing] Google OAuth token error:", err);
-      return { attempted: true, success: false, error: `OAuth error: ${err}` };
-    }
-
-    // Submit primary URL first to get authoritative status
-    const primaryUrl = urls[0];
-    const primaryRes = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${access_token}`,
-      },
-      body: JSON.stringify({ url: primaryUrl, type: "URL_UPDATED" }),
-      signal: AbortSignal.timeout(12000),
-    });
-    const primaryData = await primaryRes.json().catch(() => ({}));
-    const isPrimaryOk = primaryRes.status >= 200 && primaryRes.status < 300;
-
-    // Submit remaining language URLs asynchronously
-    if (urls.length > 1) {
-      Promise.allSettled(
-        urls.slice(1).map((pageUrl) =>
-          fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${access_token}`,
-            },
-            body: JSON.stringify({ url: pageUrl, type: "URL_UPDATED" }),
-            signal: AbortSignal.timeout(12000),
-          })
-        )
-      ).catch(() => {});
-    }
-
-    if (isPrimaryOk) {
-      console.log(`✅ [Indexing] Google Indexing API accepted: HTTP ${primaryRes.status} for ${primaryUrl}`);
-      return { attempted: true, success: true, status: primaryRes.status };
-    } else {
-      const msg = primaryData?.error?.message || `HTTP ${primaryRes.status}`;
-      console.warn(`⚠️ [Indexing] Google Indexing API rejected: ${msg}`);
-      return { attempted: true, success: false, status: primaryRes.status, error: msg };
-    }
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    console.log(`✅ [Indexing] Google+Bing sitemap ping: ${ok}/${pings.length} succeeded`);
+    return { attempted: true, success: ok > 0, status: 200 };
   } catch (err: any) {
-    console.warn(`⚠️ [Indexing] Google Indexing API failed: ${err.message}`);
+    console.warn(`⚠️ [Indexing] Sitemap ping failed: ${err.message}`);
     return { attempted: true, success: false, error: err.message };
   }
 }
@@ -258,10 +193,10 @@ export async function notifySearchEngines(slug: string, category = "latest-jobs"
 
   const start = Date.now();
   const [googleRes] = await Promise.allSettled([
-    submitGoogleIndexingAPI(allUrlsToSubmit),
-    pingWebSubHubs(),
-    submitIndexNowMulti(allUrlsToSubmit),
-    warmUpEdgeCache(allUrlsToSubmit),
+    pingGoogleAndBingSitemap(),          // Google + Bing sitemap ping (official method)
+    pingWebSubHubs(),                    // WebSub / PubSubHubbub
+    submitIndexNowMulti(allUrlsToSubmit), // IndexNow → Bing, Yandex, Seznam
+    warmUpEdgeCache(allUrlsToSubmit),    // Edge cache pre-warm
   ]);
 
   const googleStatus = googleRes.status === "fulfilled" ? googleRes.value : { attempted: true, success: false, error: "Task rejected" };

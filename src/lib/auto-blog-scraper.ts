@@ -1853,12 +1853,57 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
     Example: "What is the last date to apply for [org] [post] 2026?" / "What is the age limit for [post]?"
     Answers: Conversational Hinglish, direct and accurate.
 
+15. VETAN AUR CAREER VIKAS (Salary & Career Path): <h2>Vetan Aur Career Vikas — 7th Pay Commission Breakdown</h2>
+    IMPORTANT: This section MUST be original and specific. Do NOT just repeat the pay scale from source.
+    Write a structured section with:
+
+    a) Pay Matrix Table (HTML table format):
+       - Identify the Pay Level from source (e.g., Level 4 = ₹25,500–₹81,100, Level 6 = ₹35,400–₹1,12,400, Level 7 = ₹44,900–₹1,42,400)
+       - Show: Pay Level | Entry Basic Pay | Annual Increment | Approx In-hand (after deductions)
+       - Add a note: "In-hand salary = Basic + DA + HRA + TA - NPS deduction (10%)"
+
+    b) Allowances breakdown (short):
+       - HRA: 8%/16%/24% of basic (based on city category X/Y/Z)
+       - DA: Current rate (update from general knowledge if known)
+       - Transport Allowance: ₹1,350–₹7,200/month (level-based)
+       - Medical: CGHS facility (cashless in empanelled hospitals)
+
+    c) Career Growth Path (2-3 short bullet points):
+       - After how many years → promotion to next level
+       - What is the highest post reachable from this entry level
+       - Example: "Level 4 → Level 5 (4 years) → Level 6 (8 years) → Gazetted Officer possible"
+
+    RULE: Only mention salary/pay level that is ACTUALLY in source. If exact pay level not found, write:
+    "Is post ki exact salary official notification se confirm karein — hum jaise hi update milti hai, yahan update kar denge."
+    DO NOT invent salary numbers.
+
+16. TAIYARI KE TIPS (Preparation Strategy): <h2>Is Exam Ki Taiyari Kaise Karein — Expert Strategy</h2>
+    IMPORTANT: This section MUST be specific to this exam type. NOT generic advice.
+    Write 5 specific preparation tips based on the post_type (${postType}) and source content:
+
+    Format: Numbered list with bold headings + 2-3 sentences explanation each.
+    Example structure:
+    <ol>
+      <li><strong>[Specific Tip Title]:</strong> [2-3 sentence specific advice]</li>
+    </ol>
+
+    Tips MUST cover:
+    1. Which specific books/study materials (name actual books — e.g., "SSC ke liye R.S. Aggarwal Math", "Lucent GK", "Kiran Publications" etc. based on exam type)
+    2. Exam pattern analysis — how many questions, sections, time, negative marking (based on THIS exam's selection process)
+    3. Time management strategy — how many months needed, daily study hours
+    4. Most common mistakes candidates make in THIS exam type — be specific
+    5. Free online resources — which YouTube channels, apps, or govt websites are useful for THIS category (e.g., "Railway: RRB official mock tests", "Police: State police official website mocks")
+
+    RULE: If source doesn't mention exam pattern → base it on the post_type (${postType}) from general knowledge.
+    Write in warm Hinglish tone — like a senior bhai/didi giving advice.
+
 LANGUAGE RULE FOR THIS CATEGORY:
 - Title (H1 — do NOT include in blogHtml, page template adds it): N/A
 - H2 headings: Pure English (for keyword ranking)
 - Table data, dates, numbers: English
 - Body paragraphs (Introduction, explanations): Hinglish (warm, clear)
 - FAQ Answers: Conversational Hinglish
+- Sections 15 & 16: Hinglish (warm, conversational — like talking to a friend)
 - NO pure Hindi/Devanagari text anywhere
 `;
   }
@@ -3267,6 +3312,11 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
           form_fees_structure: aiResult.form_fees_structure || null,
         }),
         status: "pending_review",
+        // SarkariResult posts → 45 min baad auto-publish
+        // FreeJobAlert / google_trends / ndtv → NULL = manual Admin approval only
+        auto_publish_at: item.source === "sarkariresult"
+          ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+          : null,
       };
 
       let inserted: any = null;
@@ -3286,6 +3336,7 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
         delete fallbackPayload.banner_url;
         delete fallbackPayload.form_documents;       // ✅ Sahi column name
         delete fallbackPayload.form_fees_structure;  // ✅ Sahi column name
+        // auto_publish_at intentionally kept — critical for SarkariResult auto-publish
         const retry = await supabase
           .from("auto_blog_drafts")
           .insert([fallbackPayload])
@@ -3334,6 +3385,9 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
           sourceTag,
           qualityScore: qualityCheck.score ?? null,
           sourceUrl: item.link || null,  // Original URL for admin cross-check
+          autoPublishAt: item.source === "sarkariresult"
+            ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+            : null,
         }).catch((e) => console.warn("Admin draft approval alert failed:", e));
       }
 

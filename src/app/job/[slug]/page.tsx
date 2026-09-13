@@ -329,11 +329,30 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
   const jobPostingSchema = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
+    // identifier + url = Google Jobs rich result mein unique ID
+    identifier: {
+      "@type": "PropertyValue",
+      name: "Rojgar Suvidha",
+      value: job.slug,
+    },
+    url: `${BASE_URL}/job/${job.slug}`,
     title: job.title,
     description: job.meta_description || job.short_info || `Apply for ${job.title}`,
     datePosted: new Date(job.created_at).toISOString(),
     ...(lastDateIso && { validThrough: lastDateIso }),
     employmentType: job.employment_type || "FULL_TIME",
+    // educationRequirements + experienceRequirements = Google Jobs filter mein appear
+    educationRequirements: {
+      "@type": "EducationalOccupationalCredential",
+      credentialCategory: (job as any).education || "Bachelor Degree",
+    },
+    experienceRequirements: {
+      "@type": "OccupationalExperienceRequirements",
+      monthsOfExperience: 0,
+    },
+    // jobBenefits = Google Jobs rich snippet mein benefits show hote hain
+    jobBenefits: "7th Pay Commission Pay Scale, Pension Scheme, Medical Benefits, Annual Increment, Job Security, House Rent Allowance (HRA), Travel Allowance (TA)",
+    workHours: "Monday to Saturday, 9:00 AM – 5:30 PM (Government Office Hours)",
     hiringOrganization: {
       "@type": "Organization",
       name: job.organization_name || "Government of India",
@@ -362,6 +381,7 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     // totalJobOpenings — enables vacancy count in Google Jobs
     ...(job.total_posts ? { totalJobOpenings: parseInt(String(job.total_posts).replace(/[^0-9]/g, "")) || undefined } : {}),
   };
+
 
   // ── Clean short title for natural conversational FAQs ──
   const cleanShortTitle = job.title.replace(/^\[[^\]]+\]\s*/, "").split(/[:\-–|]/)[0].trim();

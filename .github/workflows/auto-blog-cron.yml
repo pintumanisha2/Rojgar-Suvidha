@@ -43,6 +43,15 @@ jobs:
             exit 1
           fi
 
+      - name: 🚀 Auto-Publish Matured SarkariResult Drafts
+        if: always()
+        run: |
+          echo "🚀 Triggering auto-publisher at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          curl -s --max-time 60 \
+            "https://www.rojgarsuvidha.com/api/cron/auto-publisher?key=${{ secrets.CRON_SECRET || 'rojgarsuvidha_auto_blog_2026' }}"
+          echo ""
+          echo "Auto-publisher step complete."
+
       - name: 📊 Log Result
         if: always()
         run: |
