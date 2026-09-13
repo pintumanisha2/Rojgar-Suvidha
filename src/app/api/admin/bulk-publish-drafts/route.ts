@@ -5,7 +5,7 @@ import { notifySearchEngines } from "@/lib/instant-indexing";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 min — enough for bulk publish
+export const maxDuration = 60; // Vercel hobby plan max = 60s; call multiple times for large batches
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 
