@@ -2853,7 +2853,7 @@ function calculateSearchDemandScore(item: { title: string; source: string; feedC
   return score;
 }
 
-export async function runAutoBlogScraper(): Promise<ScraperResult> {
+export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResult> {
   const startTime = Date.now();
   console.log("\n🚀 Auto Blog Scraper v2 started:", new Date().toISOString());
   
@@ -3077,9 +3077,14 @@ export async function runAutoBlogScraper(): Promise<ScraperResult> {
   }
 
   for (const item of newItems) {
-    // Vercel 55-second Time Guard (increased from 40s — more time for SarkariResult fetch + Gemini)
-    if (Date.now() - startTime > 55000) {
-      console.log(`⏱️ [Time Guard] 55s elapsed — safely deferring remaining items to next cron run`);
+    // Hard process limit — safety valve for Vercel 60s timeout
+    if (results.processed >= processLimit) {
+      console.log(`⚡ [Process Limit] Reached limit of ${processLimit} items — deferring rest to next cron run`);
+      break;
+    }
+    // Vercel 40-second Time Guard (conservative — RSS fetch + startup takes ~15s)
+    if (Date.now() - startTime > 40000) {
+      console.log(`⏱️ [Time Guard] 40s elapsed — safely deferring remaining items to next cron run`);
       break;
     }
 
