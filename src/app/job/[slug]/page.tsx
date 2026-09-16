@@ -108,7 +108,7 @@ export async function generateMetadata(
   const { slug } = await params;
   const { data: job } = await supabase
     .from("jobs")
-    .select("title, short_info, meta_description, banner_url, category, state_code, created_at, updated_at, slug, total_posts, last_date, important_dates")
+    .select("title, short_info, meta_description, banner_url, category, state_code, created_at, updated_at, slug, important_dates")
     .eq("slug", slug)
     .single();
 
@@ -135,8 +135,8 @@ export async function generateMetadata(
   }
 
   // ── Extract last date for title suffix ───────────────────────────────────
-  let lastDateDisplay = job.last_date || "";
-  if (!lastDateDisplay && Array.isArray(job.important_dates)) {
+  let lastDateDisplay = "";
+  if (Array.isArray(job.important_dates)) {
     const ldObj = (job.important_dates as any[]).find((d: any) =>
       /last\s*date|closing|deadline/i.test(d?.label || "")
     );
@@ -152,7 +152,9 @@ export async function generateMetadata(
 
 
   // ── Build click-worthy SERP title with vacancy + deadline ────────────────
-  const vacancySuffix = job.total_posts ? ` — ${Number(String(job.total_posts).replace(/,/g, "")).toLocaleString("en-IN")} Posts` : "";
+  const postMatch = (job.title + " " + (job.short_info || "")).match(/(\d[\d,]*)\s*(?:posts?|vacanc(?:y|ies))/i);
+  const totalPosts = postMatch ? postMatch[1] : "";
+  const vacancySuffix = totalPosts ? ` — ${totalPosts} Posts` : "";
   const dateSuffix    = shortLastDate && job.category === "latest-jobs" ? ` | Last Date ${shortLastDate}` : "";
 
   let titleStr: string;
@@ -169,7 +171,7 @@ export async function generateMetadata(
   const title = { absolute: titleStr };
 
   // ── Description ──────────────────────────────────────────────────────────
-  const vacDesc = job.total_posts ? `${job.total_posts} vacancies. ` : "";
+  const vacDesc = totalPosts ? `${totalPosts} vacancies. ` : "";
   const dateDesc = lastDateDisplay ? `Last date: ${lastDateDisplay}. ` : "";
 
   const rawDescription = (job.meta_description || job.short_info || "").trim();
