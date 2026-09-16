@@ -1,7 +1,7 @@
 import { 
   Link as LinkIcon, Share2, 
   MessageCircle, Send, ChevronRight, 
-  BookOpen, Clock, CalendarDays, List
+  BookOpen, Clock, CalendarDays, List, ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -333,12 +333,9 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     articleSection: categoryLabel,
     inLanguage: "en",
     isAccessibleForFree: true,
-    image: {
-      "@type": "ImageObject",
-      url: bannerImage,
-      width: 1200,
-      height: 630,
-    },
+    image: [
+      bannerImage,
+    ],
   };
 
   let lastDate = "";
@@ -697,6 +694,32 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     <BookOpen className="w-3.5 h-3.5" />
                     {blogContent.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length} words
                   </span>
+                </div>
+
+                {/* ── 1-Click WhatsApp Share Bar (Viral Traffic Catalyst) ── */}
+                <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 shadow-sm">
+                  <div className="flex items-center gap-3 text-center sm:text-left">
+                    <div className="w-10 h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+                      <MessageCircle className="w-5 h-5 fill-current" />
+                    </div>
+                    <div>
+                      <p className="font-black text-xs sm:text-sm text-emerald-950 dark:text-emerald-200">
+                        WhatsApp Study Groups Me Share Karein!
+                      </p>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+                        Doston ko official notification aur direct apply link turant bhejein.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`🚨 *${job.title}*\n\n✅ Official Notification & Direct Link yahan dekhein:\n👉 ${BASE_URL}/job/${job.slug}\n\n_Apne sabhi doston aur groups me share karein!_`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-md hover:shadow-emerald-500/30 transition-all hover:scale-[1.02] shrink-0"
+                  >
+                    <span>WhatsApp Par Bhejo</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
 

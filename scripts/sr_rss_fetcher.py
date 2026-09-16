@@ -18,6 +18,9 @@ import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
+import ssl
+
+SSL_CTX = ssl._create_unverified_context()
 
 BASE_URL = os.environ.get("NEXT_PUBLIC_BASE_URL", "https://www.rojgarsuvidha.com")
 SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://kkfgdzaoukekhlijlfsw.supabase.co")
@@ -46,7 +49,7 @@ def fetch_url(url, timeout=20):
     }
     req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=SSL_CTX) as resp:
             return resp.read().decode("utf-8", errors="ignore")
     except Exception as e:
         log(f"Fetch error for {url}: {e}")
@@ -99,7 +102,7 @@ def get_scraped_urls():
     }
     req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10, context=SSL_CTX) as resp:
             data = json.loads(resp.read())
             urls = {row["url"] for row in data}
             log(f"Loaded {len(urls)} already-scraped SR URLs from Supabase")
@@ -126,7 +129,7 @@ def call_process_url_api(item, raw_html=""):
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     
     try:
-        with urllib.request.urlopen(req, timeout=65) as resp:
+        with urllib.request.urlopen(req, timeout=65, context=SSL_CTX) as resp:
             result = json.loads(resp.read())
             return result
     except urllib.error.HTTPError as e:
