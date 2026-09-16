@@ -9,7 +9,7 @@ import SaveJobButton from "@/components/ui/SaveJobButton";
 
 import { getJobStatusBadge } from "@/lib/jobStatusHelper";
 
-type StatusKey = "out" | "active" | "last" | "soon" | "new";
+type StatusKey = "out" | "active" | "last" | "soon" | "new" | "closing_soon" | "closing_today" | "closed";
 type TagType = "hot" | "new" | "urgent";
 
 interface JobItem {
@@ -17,6 +17,7 @@ interface JobItem {
   status: StatusKey;
   tag?: TagType;
   lastDate?: string;
+  applyStatus?: string;
   posts?: string;
   eligibility?: string;
   slug: string;
@@ -45,12 +46,16 @@ const sectionConfig = [
 ];
 
 const statusMap: Record<StatusKey, { label: string; dot: string; text: string; bg: string }> = {
-  out:    { label: "Out",     dot: "bg-emerald-500",  text: "text-emerald-700 dark:text-emerald-300",   bg: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-250/50 dark:border-emerald-800/30" },
-  active: { label: "Active",  dot: "bg-indigo-500",   text: "text-indigo-700 dark:text-indigo-300",     bg: "bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-250/50 dark:border-indigo-800/30" },
-  last:   { label: "Today!",  dot: "bg-red-500",    text: "text-red-700 dark:text-red-300",       bg: "bg-red-50 dark:bg-red-950/40 border border-red-250/50 dark:border-red-800/30" },
-  soon:   { label: "Closing", dot: "bg-amber-400", text: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50 dark:bg-amber-950/40 border border-amber-250/50 dark:border-amber-800/30" },
-  new:    { label: "New",     dot: "bg-purple-500", text: "text-purple-700 dark:text-purple-300", bg: "bg-purple-50 dark:bg-purple-950/40 border border-purple-250/50 dark:border-purple-800/30" },
+  out:           { label: "Out",           dot: "bg-emerald-500",                text: "text-emerald-700 dark:text-emerald-300",  bg: "bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-250/50 dark:border-emerald-800/30" },
+  active:        { label: "Active",        dot: "bg-indigo-500",                 text: "text-indigo-700 dark:text-indigo-300",    bg: "bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-250/50 dark:border-indigo-800/30" },
+  last:          { label: "Today!",        dot: "bg-red-500",                    text: "text-red-700 dark:text-red-300",          bg: "bg-red-50 dark:bg-red-950/40 border border-red-250/50 dark:border-red-800/30" },
+  soon:          { label: "Closing",       dot: "bg-amber-400",                  text: "text-amber-700 dark:text-amber-300",      bg: "bg-amber-50 dark:bg-amber-950/40 border border-amber-250/50 dark:border-amber-800/30" },
+  new:           { label: "New",           dot: "bg-purple-500",                 text: "text-purple-700 dark:text-purple-300",    bg: "bg-purple-50 dark:bg-purple-950/40 border border-purple-250/50 dark:border-purple-800/30" },
+  closing_soon:  { label: "Closing Soon",  dot: "bg-amber-500 animate-pulse",    text: "text-amber-700 dark:text-amber-300",      bg: "bg-amber-50 dark:bg-amber-950/40 border border-amber-250/50 dark:border-amber-800/30" },
+  closing_today: { label: "Today Last!",   dot: "bg-red-500 animate-pulse",      text: "text-red-700 dark:text-red-300",          bg: "bg-red-50 dark:bg-red-950/40 border border-red-250/50 dark:border-red-800/30" },
+  closed:        { label: "Closed",        dot: "bg-gray-400",                   text: "text-gray-500 dark:text-gray-400",        bg: "bg-gray-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700" },
 };
+
 
 function InlineTag({ tag }: { tag?: TagType }) {
   if (!tag) return null;
@@ -63,11 +68,11 @@ function InlineTag({ tag }: { tag?: TagType }) {
 export default async function MainContent({ stateCode }: { stateCode?: string }) {
   let query = supabase
     .from("jobs")
-    .select("title, slug, status, tag, category, short_info, important_dates, created_at, state_code")
+    .select("title, slug, status, tag, category, short_info, important_dates, created_at, state_code, last_date, apply_status")
     .neq("status", "draft")
     .neq("category", "news")
     .order("created_at", { ascending: false })
-    .limit(120); 
+    .limit(150); 
   
   if (stateCode) {
     query = query.or(`state_code.eq.${stateCode},state_code.is.null,state_code.eq.,state_code.ilike.%all%`);
@@ -93,26 +98,54 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
     });
   }
 
-  const sections = sectionConfig.map(conf => ({
-    ...conf,
-    items: (jobsByCategory[conf.id] || []).slice(0, 10).map(job => {
-      let lastDate = "";
-      if (Array.isArray(job.important_dates) && job.important_dates.length > 0) {
-        const ldObj = job.important_dates.find((d: any) => d?.label === "Last Date");
-        if (ldObj) lastDate = ldObj.value;
+  // State priority for sorting (lower = shown first)
+  const STATE_PRIORITY: Record<string, number> = {
+    today: 0, closing_today: 0,
+    urgent: 1, closing_soon: 1,
+    live: 2,
+    active: 3,
+    new: 4,
+    completed: 5,
+    soon: 5,
+    closed: 6,
+  };
+
+  const sections = sectionConfig.map(conf => {
+    const rawItems = (jobsByCategory[conf.id] || []).map((job: any) => {
+      // Prefer direct last_date column, fallback to important_dates array
+      let lastDate = job.last_date || "";
+      if (!lastDate && Array.isArray(job.important_dates)) {
+        const ldObj = job.important_dates.find((d: any) =>
+          /last\s*date|closing|deadline/i.test(d?.label || "")
+        );
+        if (ldObj) lastDate = ldObj.value || "";
       }
       return {
         title: job.title,
         status: job.status as StatusKey,
         tag: job.tag as TagType,
         lastDate,
+        applyStatus: job.apply_status || "",
         slug: job.slug,
         category: job.category,
         important_dates: job.important_dates,
         created_at: job.created_at,
       } as JobItem;
-    })
-  }));
+    });
+
+    // Sort: urgent/live/active first, closed last
+    rawItems.sort((a: JobItem, b: JobItem) => {
+      const stA = getJobStatusBadge({ category: a.category, lastDate: a.lastDate, important_dates: a.important_dates, created_at: a.created_at, status: a.status, apply_status: a.applyStatus });
+      const stB = getJobStatusBadge({ category: b.category, lastDate: b.lastDate, important_dates: b.important_dates, created_at: b.created_at, status: b.status, apply_status: b.applyStatus });
+      return (STATE_PRIORITY[stA.state] ?? 3) - (STATE_PRIORITY[stB.state] ?? 3);
+    });
+
+    // Limit: up to 8 non-closed + up to 2 closed = max 10 per section
+    const activeItems = rawItems.filter((it: JobItem) => it.status !== "closed").slice(0, 8);
+    const closedItems = rawItems.filter((it: JobItem) => it.status === "closed").slice(0, 2);
+
+    return { ...conf, items: [...activeItems, ...closedItems] };
+  });
 
   return (
     <section className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-5">
@@ -180,7 +213,9 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                     important_dates: item.important_dates,
                     created_at: item.created_at,
                     status: item.status,
+                    apply_status: item.applyStatus,
                   });
+                  const isClosed = st.state === "closed" || item.status === "closed";
 
                   const formattedDate = item.lastDate
                     ? `Last Date: ${item.lastDate}`
@@ -189,7 +224,7 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
                       : "";
 
                   return (
-                    <li key={i} className="relative">
+                    <li key={i} className={`relative${isClosed ? " opacity-50" : ""}`}>
                       <Link
                         href={`/job/${item.slug}`}
                         className="flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-850/50 transition-all group"

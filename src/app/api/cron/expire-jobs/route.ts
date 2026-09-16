@@ -1,15 +1,17 @@
 export const dynamic = "force-dynamic";
 /**
  * ═══════════════════════════════════════════════════════════════════
- * EXPIRED JOB LIFECYCLE TRANSITION CRON — Runs daily at 12:00 AM
+ * EXPIRED JOB LIFECYCLE TRANSITION CRON — Runs twice daily (IST)
  * ═══════════════════════════════════════════════════════════════════
- * - Finds all jobs where last_date < today AND status is still 'active'
- * - Appends an "Application Closed" banner to the top of blog_content
- * - NEVER 404s or deletes — preserves all accumulated SEO equity
- * - Sets status to 'closed' (still public, still indexable)
+ * FIXED: Reads last_date column directly (was wrongly reading tag field)
  *
- * SEO Benefit: Closed pages retain backlinks + rankings, show fresh
- * content banner, and push readers to Admit Card / Result links.
+ * Lifecycle states (automatic, no manual work needed):
+ *   active        → last_date > 5 days away
+ *   closing_soon  → last_date in 1–5 days (tag = "urgent")
+ *   closing_today → last_date = today     (tag = "urgent")
+ *   closed        → last_date < today     (banner prepended, SEO preserved)
+ *
+ * SEO: Pages stay live forever — zero 404s. All SEO equity preserved.
  */
 
 import { NextResponse } from "next/server";
@@ -17,24 +19,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 
-const CLOSED_BANNER_HTML = (title: string, category: string) => {
-  const nextStepUrl =
-    category === "results" ? `${BASE_URL}/results` :
-    category === "admit-card" ? `${BASE_URL}/admit-card` :
-    `${BASE_URL}/results`;
-  const nextStepLabel =
-    category === "results" ? "Check Merit List" :
-    category === "admit-card" ? "Download Admit Card" :
-    "Check Result & Admit Card";
-
-  return `<div style="background:#fff3cd;border:2px solid #ffc107;border-radius:12px;padding:20px 24px;margin-bottom:28px;text-align:center;">
-  <div style="font-size:2rem;margin-bottom:8px;">⏰</div>
-  <h3 style="color:#856404;font-size:1.1rem;font-weight:800;margin:0 0 8px;">Application Period Closed</h3>
-  <p style="color:#533f03;font-size:0.9rem;margin:0 0 14px;line-height:1.7;">The application window for <strong>${title}</strong> is now closed. If you have already applied, track your next steps below.</p>
-  <a href="${nextStepUrl}" style="display:inline-block;background:#ffc107;color:#000;font-weight:700;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:0.9rem;">${nextStepLabel} →</a>
-</div>`;
-};
-
+// ── Supabase client ───────────────────────────────────────────────────────────
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,6 +27,60 @@ function getSupabase() {
   return createClient(url, key);
 }
 
+// ── Date helpers ──────────────────────────────────────────────────────────────
+
+/** Parse any reasonable date string → ISO YYYY-MM-DD or null */
+function parseToISO(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const dmy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  } catch {}
+  return null;
+}
+
+/** Extract last date from important_dates JSON array */
+function extractLastDateFromJson(importantDates: any): string | null {
+  if (!Array.isArray(importantDates)) return null;
+  const ld = importantDates.find((d: any) =>
+    /last\s*date|closing|deadline|apply.*last|last.*apply/i.test(d?.label || "")
+  );
+  return ld ? parseToISO(ld.value) : null;
+}
+
+/** Days difference: positive = future, negative = past, 0 = today */
+function daysFromToday(isoDate: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(isoDate + "T00:00:00");
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+// ── Closed banner HTML ────────────────────────────────────────────────────────
+function closedBannerHtml(title: string, category: string, lastDateDisplay: string): string {
+  const nextUrl   = category === "results"    ? `${BASE_URL}/results`    :
+                    category === "admit-card" ? `${BASE_URL}/admit-card` :
+                    `${BASE_URL}/results`;
+  const nextLabel = category === "results"    ? "Check Merit List"        :
+                    category === "admit-card" ? "Download Admit Card"     :
+                    "Check Result & Admit Card";
+  return `<div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:12px;padding:20px 24px;margin-bottom:28px;text-align:center;">
+  <div style="font-size:1.8rem;margin-bottom:6px;">🔒</div>
+  <h3 style="color:#991b1b;font-size:1.05rem;font-weight:800;margin:0 0 8px;">Application Window Closed</h3>
+  <p style="color:#7f1d1d;font-size:0.88rem;margin:0 0 6px;line-height:1.65;">The last date to apply for <strong>${title}</strong> was <strong>${lastDateDisplay}</strong>. The application window is now closed.</p>
+  <p style="color:#7f1d1d;font-size:0.85rem;margin:0 0 14px;">If you had already applied, check your next steps below. New notifications are posted daily on Rojgar Suvidha.</p>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="${nextUrl}" style="display:inline-block;background:#dc2626;color:#fff;font-weight:700;padding:9px 20px;border-radius:8px;text-decoration:none;font-size:0.88rem;">${nextLabel} →</a>
+    <a href="${BASE_URL}/latest-jobs" style="display:inline-block;background:#1e40af;color:#fff;font-weight:700;padding:9px 20px;border-radius:8px;text-decoration:none;font-size:0.88rem;">New Jobs 2026 →</a>
+  </div>
+</div>`;
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
@@ -52,71 +91,91 @@ export async function GET(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ ok: false, reason: "No Supabase" });
 
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const todayISO = new Date().toISOString().split("T")[0];
 
   try {
-    // Find active jobs with a parseable last date that has passed
-    // We look for jobs with important_dates containing last_date < today
-    // OR tag/short_info containing a date pattern
-    const { data: activeJobs } = await supabase
+    const { data: jobs, error: fetchErr } = await supabase
       .from("jobs")
-      .select("id, title, slug, blog_content, category, status, tag")
-      .eq("status", "active")
+      .select("id, title, slug, blog_content, category, status, tag, last_date, important_dates")
+      .in("status", ["active", "closing_today", "closing_soon"])
       .not("blog_content", "is", null);
 
-    if (!activeJobs || activeJobs.length === 0) {
-      return NextResponse.json({ ok: true, expired: 0, checked: 0 });
+    if (fetchErr) {
+      console.error("❌ [Expire Cron] Fetch error:", fetchErr.message);
+      return NextResponse.json({ ok: false, error: fetchErr.message }, { status: 500 });
+    }
+    if (!jobs || jobs.length === 0) {
+      return NextResponse.json({ ok: true, message: "No active jobs to process", date: todayISO });
     }
 
-    let expiredCount = 0;
+    let closedCount = 0, urgentCount = 0, skippedCount = 0;
+    const errors: string[] = [];
 
-    for (const job of activeJobs) {
-      // Simple last-date heuristic: parse dates from tag field
-      // tag field format: "Last Date: 31 Aug 2026" or "last-date-2026-08-31"
-      let lastDateStr: string | null = null;
+    for (const job of jobs) {
+      try {
+        // Resolve last date — direct column first, fallback to important_dates JSON
+        const rawLastDate = job.last_date || extractLastDateFromJson(job.important_dates);
+        const isoLastDate = parseToISO(rawLastDate);
+        if (!isoLastDate) { skippedCount++; continue; }
 
-      if (job.tag && typeof job.tag === "string") {
-        // Extract date patterns like "2026-08-31" or "31 Aug 2026"
-        const isoMatch = job.tag.match(/(\d{4}-\d{2}-\d{2})/);
-        if (isoMatch) lastDateStr = isoMatch[1];
-      }
+        const days = daysFromToday(isoLastDate);
 
-      if (!lastDateStr) continue;
+        // ── CLOSED (days < 0) ─────────────────────────────────────────────────
+        if (days < 0) {
+          if (job.status === "closed") { skippedCount++; continue; }
+          if ((job.blog_content || "").includes("Application Window Closed")) {
+            if (job.status !== "closed") await supabase.from("jobs").update({ status: "closed" }).eq("id", job.id);
+            skippedCount++; continue;
+          }
+          const banner = closedBannerHtml(job.title, job.category || "latest-jobs", rawLastDate || isoLastDate);
+          const { error } = await supabase.from("jobs").update({
+            blog_content: banner + (job.blog_content || ""),
+            status: "closed",
+            tag: null,
+            updated_at: new Date().toISOString(),
+          }).eq("id", job.id);
+          if (!error) { closedCount++; console.log(`🔒 Closed: ${job.slug} (${Math.abs(days)}d ago)`); }
+          else errors.push(`${job.slug}: ${error.message}`);
+          continue;
+        }
 
-      const lastDate = new Date(lastDateStr);
-      const isExpired = !isNaN(lastDate.getTime()) && lastDateStr < today;
+        // ── CLOSING TODAY (days === 0) ─────────────────────────────────────────
+        if (days === 0) {
+          await supabase.from("jobs").update({ status: "closing_today", tag: "urgent", updated_at: new Date().toISOString() }).eq("id", job.id);
+          urgentCount++;
+          console.log(`⚡ Closing TODAY: ${job.slug}`);
+          continue;
+        }
 
-      if (!isExpired) continue;
+        // ── CLOSING SOON (days 1–5) ────────────────────────────────────────────
+        if (days <= 5) {
+          if (job.status !== "closing_soon" || job.tag !== "urgent") {
+            await supabase.from("jobs").update({ status: "closing_soon", tag: "urgent", updated_at: new Date().toISOString() }).eq("id", job.id);
+            urgentCount++;
+            console.log(`⏰ Closing soon (${days}d): ${job.slug}`);
+          } else skippedCount++;
+          continue;
+        }
 
-      // Check if banner is already prepended
-      if (job.blog_content?.includes("Application Period Closed")) continue;
+        // ── ACTIVE (days > 5) — reset if stuck in closing_soon ────────────────
+        if (job.status === "closing_soon" || job.status === "closing_today") {
+          await supabase.from("jobs").update({
+            status: "active",
+            tag: job.tag === "urgent" ? null : job.tag,
+            updated_at: new Date().toISOString(),
+          }).eq("id", job.id);
+        } else skippedCount++;
 
-      const banner = CLOSED_BANNER_HTML(job.title, job.category || "latest-jobs");
-      const updatedContent = banner + (job.blog_content || "");
-
-      const { error } = await supabase
-        .from("jobs")
-        .update({
-          blog_content: updatedContent,
-          status: "closed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", job.id);
-
-      if (!error) {
-        expiredCount++;
-        console.log(`✅ [Expire Cron] Marked as closed: ${job.slug} (Last Date: ${lastDateStr})`);
+      } catch (jobErr: any) {
+        errors.push(`${job.slug}: ${jobErr.message}`);
       }
     }
 
-    return NextResponse.json({
-      ok: true,
-      checked: activeJobs.length,
-      expired: expiredCount,
-      date: today,
-    });
+    console.log(`✅ [Expire Cron] Closed:${closedCount} Urgent:${urgentCount} Skipped:${skippedCount}`);
+    return NextResponse.json({ ok: true, date: todayISO, checked: jobs.length, closed: closedCount, urgent: urgentCount, skipped: skippedCount, ...(errors.length ? { errors } : {}) });
+
   } catch (err: any) {
-    console.error("❌ [Expire Cron] Error:", err.message);
+    console.error("❌ [Expire Cron] Fatal:", err.message);
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
 }

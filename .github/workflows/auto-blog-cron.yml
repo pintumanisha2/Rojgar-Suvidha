@@ -21,7 +21,25 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: 📡 Trigger Auto Blog Cron API
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🌐 Run SarkariResult RSS Fetcher (Bypasses Cloudflare)
+        run: |
+          echo "🌐 Running SarkariResult RSS fetcher at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          python3 scripts/sr_rss_fetcher.py
+        env:
+          NEXT_PUBLIC_BASE_URL: "https://www.rojgarsuvidha.com"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET || 'rojgarsuvidha_auto_blog_2026' }}
+
+      - name: 📡 Trigger Auto Blog Cron API (FreeJobAlert & Trends)
         id: trigger
         run: |
           echo "⏰ Triggering auto blog cron at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"

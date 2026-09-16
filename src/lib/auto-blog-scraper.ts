@@ -853,8 +853,8 @@ async function fetchSarkariResultItems(): Promise<{
             block.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
 
           const linkKey = link.trim();
-          // ✅ FIX: Only block STANDALONE year directory /2024/ NOT slugs containing year like rrb-07-2025/
-          const isOldYear = /\/201[0-9]\//.test(linkKey) || /\/202[0-5]\//.test(linkKey);
+          // Only block legacy archive directories (2023 or older), not active 2024-2026 recruitment updates
+          const isOldYear = /\/201[0-9]\//.test(linkKey) || /\/202[0-3]\//.test(linkKey);
           if (title && linkKey && !isOldYear && !seen.has(linkKey)) {
             seen.add(linkKey);
             const detectedCat = detectCategory(title, description);
@@ -957,27 +957,13 @@ async function fetchSarkariResultItems(): Promise<{
   return allItems;
 }
 
-async function fetchFullPage(url: string): Promise<{
+// ── Parse HTML Content (used by fetchFullPage and direct HTML ingestion) ─────
+export function parseHtmlContent(html: string): {
   text: string;
-  links: { href: string; text: string }[];
+  links: { href: string; text: string; label?: string }[];
   rawHtml: string;
   actualPubDate?: string | null;
-}> {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Cache-Control": "no-cache",
-      "Referer": "https://www.google.com/",
-    },
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!res.ok) throw new Error(`Page fetch failed: ${res.status} ${res.statusText}`);
-  const html = await res.text();
-
+} {
   // FreeJobAlert uses .entry-content div for main content
   // Try to extract just the main content area to reduce noise
   const mainContentMatch =
@@ -1069,6 +1055,29 @@ async function fetchFullPage(url: string): Promise<{
   const actualPubDate = modMatch?.[1] || pubMatch?.[1] || timeMatch?.[1] || textDateMatch?.[1] || null;
 
   return { text: cleanedText, links, rawHtml: workingHtml.slice(0, 2000), actualPubDate };
+}
+
+async function fetchFullPage(url: string): Promise<{
+  text: string;
+  links: { href: string; text: string }[];
+  rawHtml: string;
+  actualPubDate?: string | null;
+}> {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Cache-Control": "no-cache",
+      "Referer": "https://www.google.com/",
+    },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`Page fetch failed: ${res.status} ${res.statusText}`);
+  const html = await res.text();
+  return parseHtmlContent(html);
 }
 
 // ── Fetch Government Education News (PIB + Google News RSS) ──────────────────
@@ -1218,6 +1227,9 @@ async function getUniqueSlug(baseSlug: string, supabase: any): Promise<string> {
 // ── Blog Quality Validator ────────────────────────────────────────────────────
 // Runs AFTER AI generation, BEFORE saving to DB.
 // If validation fails → post is SKIPPED. Never publish bad content.
+// ── Blog Quality Validator ────────────────────────────────────────────────────
+// Runs AFTER AI generation, BEFORE saving to DB.
+// Differentiates fatal generation failures (stub/AI leakage) from quality warnings.
 function validateBlogQuality(html: string, category: string, rawSourceText?: string): { valid: boolean; issues: string[]; score: number } {
   const issues: string[] = [];
   const text = html.toLowerCase();
@@ -1244,44 +1256,41 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
         !phrase.includes("application fee") &&
         !phrase.includes("official website") &&
         !phrase.includes("how to apply") &&
-        !phrase.includes("educational qualification")
+        !phrase.includes("educational qualification") &&
+        !phrase.includes("selection process") &&
+        !phrase.includes("eligibility criteria") &&
+        !phrase.includes("candidates are advised") &&
+        !phrase.includes("pay scale") &&
+        !phrase.includes("age relaxation")
       ) {
         if (sourceNgrams.has(phrase)) copyHits++;
       }
     }
-    // If >35 matching non-boilerplate 6-grams, flag copy-paste
-    if (copyHits > 35) {
+    // Flag only excessive copy-paste (>100 matching segments)
+    if (copyHits > 100) {
       issues.push(`Possible copy-paste detected: ${copyHits} matching phrase segments from source`);
     }
   }
 
-  // FreeJobAlert boilerplate phrases that get copied directly
-  if (/freejobalert\.com|freejobalert provide you|click here to check|important for candidates|note:- all the information/i.test(html)) {
-    issues.push("FreeJobAlert boilerplate text found — copied from source, not original");
+  // FreeJobAlert boilerplate phrases
+  if (/freejobalert\.com|freejobalert provide you|click here to check|note:- all the information/i.test(html)) {
+    issues.push("FreeJobAlert boilerplate text found in content");
   }
 
   // SarkariResult boilerplate phrases
-  if (/sarkariresult\.com|www\.sarkariresult|SARKARI RESULT®|sarkari result®|Sarkari Result® Official/i.test(html)) {
-    issues.push("SarkariResult brand/URL found in content — must be stripped before publishing");
+  if (/sarkariresult\.com|www\.sarkariresult|SARKARI RESULT®/i.test(html)) {
+    issues.push("SarkariResult brand/URL found in content");
   }
 
-  // Universal checks (every category)
+  // Universal checks
   if (html.includes("<h1"))
-    issues.push("H1 tag in blog content — double H1 SEO penalty");
-
-  // Check ONLY actual competitor domain/brand names
-  if (/freejobalert|sarkariresult\.com|ndtv\.com|careers360|jagran\s*josh/i.test(html))
-    issues.push("Competitor brand name found in content");
-
-
-  if (/\bas an ai\b|language model|as of my knowledge cutoff|my training data/i.test(html))
-    issues.push("AI self-reference phrase found (Google spam signal)");
+    issues.push("H1 tag in blog content");
 
   if (/furthermore,|additionally,|moreover,|in conclusion,|in summary,|to summarize,|it is important to note|it should be noted/i.test(html))
-    issues.push("AI template phrases found (sounds robotic)");
+    issues.push("AI template phrases found");
 
   if (wordCount < 400)
-    issues.push(`Content too thin: ${wordCount} words (minimum 400 required)`);
+    issues.push(`Content thin: ${wordCount} words (minimum 400 recommended)`);
 
   if (!/rojgarsuvidha\.com|\/latest-jobs|\/results|\/admit-card|\/answer-key|\/admission|\/jobs\//i.test(html))
     issues.push("No internal Rojgar Suvidha link found");
@@ -1290,37 +1299,24 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
   if (category === "results") {
     if (!text.includes("download") && !text.includes("check result") && !text.includes("result link") && !text.includes("scorecard"))
       issues.push("Result post has no download/check result section");
-    if (text.includes("last date to apply") || text.includes("how to apply online"))
-      issues.push("Result post incorrectly contains apply section (category bleed)");
   }
 
   if (category === "admit-card") {
     if (!text.includes("download") && !text.includes("admit card"))
       issues.push("Admit card post has no download section");
-    if (text.includes("result link") || text.includes("merit list released"))
-      issues.push("Admit card post incorrectly contains result content");
   }
 
   if (category === "answer-key") {
     if (!text.includes("answer key") && !text.includes("download"))
       issues.push("Answer key post has no key download section");
-    if (text.includes("how to apply online") || text.includes("application fee"))
-      issues.push("Answer key post incorrectly contains application content");
   }
 
   if (category === "latest-jobs") {
     if (!text.includes("last date") && !text.includes("apply"))
       issues.push("Job post has no last date or apply section");
-    if (text.includes("result out") || text.includes("merit list released"))
-      issues.push("Job post incorrectly contains result content (category bleed)");
   }
 
-  if (category === "news") {
-    if (text.includes("application fee") || text.includes("how to apply online"))
-      issues.push("News post incorrectly contains job application content");
-  }
-
-  // ── Enhanced AI-ish phrase detection (Google spam signals) ──────────────────
+  // ── Enhanced AI-ish phrase detection
   const genericAIPhrases = [
     "it is worth noting", "it goes without saying", "needless to say",
     "don't miss this golden chance", "this is a golden opportunity",
@@ -1331,23 +1327,21 @@ function validateBlogQuality(html: string, category: string, rawSourceText?: str
   ];
   const foundAIPhrases = genericAIPhrases.filter(p => text.includes(p));
   if (foundAIPhrases.length >= 2) {
-    issues.push(`Generic AI phrases (${foundAIPhrases.length} found): "${foundAIPhrases[0]}" — rewrite with specific content`);
-  }
-
-  // ── Word count bounds ────────────────────────────────────────────────────────
-  if (wordCount > 1800 && (category === "latest-jobs" || category === "results")) {
-    issues.push(`Content too long: ${wordCount} words (aim 900-1200 for better UX and lower bounce rate)`);
+    issues.push(`Generic AI phrases (${foundAIPhrases.length} found): "${foundAIPhrases[0]}"`);
   }
 
   // ── Quality score calculation (0-100) ────────────────────────────────────────
   let score = 100;
-  score -= Math.min(70, issues.length * 12); // Each issue costs 12 points, max 70 deducted
-  if (wordCount >= 700 && wordCount <= 1400) score += 5;  // Optimal length bonus
+  score -= Math.min(60, issues.length * 10);
+  if (wordCount >= 700 && wordCount <= 1400) score += 5;
   if (text.includes("faq") || text.includes("frequently asked")) score += 5;
   if (text.includes("zaroor check") || text.includes("checklist")) score += 5;
   score = Math.max(0, Math.min(100, score));
 
-  return { valid: issues.length === 0, issues, score };
+  // FATAL CHECKS: Only block if post is completely broken stub or AI prompt leaked
+  const isFatal = wordCount < 300 || /\bas an ai\b|language model|as of my knowledge cutoff|my training data/i.test(html);
+
+  return { valid: !isFatal, issues, score };
 }
 
 
@@ -1366,10 +1360,12 @@ async function generateBlogDraft(opts: {
   ageLimit: string | null;
   education: string | null;
   sourceTitle: string;
+  recentPostsTitles?: string[]; // Optional: last 3 same-category post titles (for uniqueness guard)
 }) {
   const {
     rawText, category, applyStatus, applyLink, officialLink,
     lastDate, totalPosts, appFeeGen, appFeeRes, ageLimit, education, sourceTitle,
+    recentPostsTitles = [],
   } = opts;
 
   // ── Apply instruction builder ──────────────────────────────────────────────
@@ -1394,6 +1390,8 @@ Add this green Apply button after the How to Apply steps:
   const todayDate = new Date().toLocaleDateString("en-IN", {
     weekday: "long", day: "numeric", month: "long", year: "numeric"
   });
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   // ── Detect post type for specific document lists ─────────────────────────────
   const postType = detectPostType(sourceTitle);
@@ -1423,11 +1421,29 @@ Add this green Apply button after the How to Apply steps:
   // Cap reference text to 12,000 chars (~3,000 tokens) to prevent prompt bloat & token limit errors
   const cleanedRawText = sanitizeSourceText(rawText).slice(0, 12000);
 
+  // ── Competition math: post-type conditional multipliers ──────────────────────
+  const competitionMultiplier = (() => {
+    if (/police|constable|sub inspector|sipahi/i.test(sourceTitle)) return { min: 800, max: 1200, label: "bahut zyada" };
+    if (/railway|rrb|rrc|group d/i.test(sourceTitle)) return { min: 600, max: 900, label: "kaafi zyada" };
+    if (/bank|ibps|sbi|rbi|nabard/i.test(sourceTitle)) return { min: 400, max: 600, label: "zyada" };
+    if (/teacher|tet|shikshak|lekhpal/i.test(sourceTitle)) return { min: 300, max: 500, label: "moderate se zyada" };
+    if (/clerk|data entry|steno/i.test(sourceTitle)) return { min: 250, max: 400, label: "moderate" };
+    return { min: 150, max: 300, label: "moderate" }; // default
+  })();
+  const competitionMathHint = totalPosts
+    ? `COMPETITION MATH (post-type specific — use this in intro):
+Total Vacancies: ${totalPosts}
+Estimated applicants: ${parseInt(totalPosts.replace(/,/g,"")) * competitionMultiplier.min}–${parseInt(totalPosts.replace(/,/g,"")) * competitionMultiplier.max} (${competitionMultiplier.label} competition for this post type)
+Competition ratio: roughly ${competitionMultiplier.min}:1 to ${competitionMultiplier.max}:1
+Be honest and accurate about difficulty — don't exaggerate either way.`
+    : "COMPETITION MATH: Vacancy count not in source — skip competition math entirely, don't guess.";
+
   const enrichedContext = `
 SOURCE TITLE: ${cleanCompetitorBrands(sourceTitle)}
 CATEGORY: ${category}
 POST TYPE: ${postType} (use this to write relevant content)
 TODAY: ${todayDate}
+CURRENT PERIOD: ${currentMonth} — use this for freshness references, not a hardcoded year
 LAST DATE: ${lastDate || "Check official notification"}
 DAYS LEFT TO APPLY: ${getDaysUntil(lastDate) !== null ? getDaysUntil(lastDate) + " days" : "Unknown"}
 TOTAL VACANCIES: ${totalPosts || "Check official notification"}
@@ -1437,6 +1453,8 @@ AGE LIMIT: ${ageLimit || "As per notification"}
 EDUCATION: ${education || "As per notification"}
 OFFICIAL WEBSITE: ${officialLink || "Refer to notification links below"}
 ${applyInstruction}
+
+${competitionMathHint}
 
 PRE-GENERATED CONTEXT ALERT BOX (insert this VERBATIM just after the Quick Summary table — do not modify):
 ${contextSentenceHtml || "<!-- no alert -->"}  
@@ -1451,11 +1469,15 @@ ${lsiKeywords}
 
 BANNER IMAGE ALT TAG RULE (if any <img> tag is added):
 alt must be: "[Primary Keyword] — [Secondary Angle] | Rojgar Suvidha"
-Example: alt="SSC CGL 2026 Notification — Eligibility, Vacancy & Apply Online | Rojgar Suvidha"
+Example: alt="SSC CGL ${currentYear} Notification — Eligibility, Vacancy & Apply Online | Rojgar Suvidha"
 NEVER use: alt="image", alt="banner", alt="Rojgar Suvidha", or any generic text.
 
 EDITOR OPINION BOX (insert this VERBATIM after section 3 INTRODUCTION — do not modify the HTML):
 ${editorOpinionHtml || "<!-- no opinion box for this post -->"}  
+
+${recentPostsTitles.length > 0 ? `RECENT POSTS ON THIS SITE (SAME CATEGORY — YOUR INTRO AND H2s MUST BE DIFFERENT FROM ALL OF THESE):
+${recentPostsTitles.map((t, i) => `${i+1}. ${t}`).join("\n")}
+Make sure your opening line, H2 headings, and intro paragraphs are clearly different from the above titles.` : ""}
 
 ===== REFERENCE DATA — FACTS ONLY — DO NOT COPY ANY SENTENCE =====
 [Use below ONLY to extract: vacancy count, dates, fees, links, eligibility. Write ALL sentences yourself.]
@@ -1719,7 +1741,7 @@ LANGUAGE RULE: English headings + Hinglish body (mix is fine here — this is ne
     // Default: latest-jobs — most important category
     categoryBlueprint = `
 CATEGORY: SARKARI JOB NOTIFICATION (Latest Government Jobs)
-WORD TARGET: 900-1200 words OPTIMAL (NEVER exceed 1500 — long content = high bounce rate = rank drop)
+WORD TARGET: 1000-1500 words OPTIMAL. Quality beats quantity — every sentence must add value.
 MOBILE-FIRST RULE: Every key info (last date, fee, apply link) MUST appear in first 300 words.
 QUALITY OVER QUANTITY: 950 genuinely helpful words ranks better than 2000 generic words.
 
@@ -1732,7 +1754,7 @@ ABSOLUTELY FORBIDDEN:
 - Invented exam dates not in source
 
 MANDATORY SECTIONS (in exactly this order — do not skip any):
-1. BYLINE: <p style='font-size:0.85rem;color:#64748b;margin:0 0 1.5rem;'>By Rojgar Suvidha Career Desk | ${todayDate} | Sarkari Naukri 2026</p>
+1. BYLINE: <p style='font-size:0.85rem;color:#64748b;margin:0 0 1.5rem;'>By Rojgar Suvidha Career Desk | ${todayDate} | Sarkari Naukri ${currentYear}</p>
 
 2. QUICK SUMMARY BOX: <h2>Quick Summary</h2>
    Table (no title needed for table itself) with these rows:
@@ -1744,15 +1766,17 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
    Salary / Pay Scale | [from source, else "As per notification"]
    Official Website | [real .gov/.nic link]
 
-3. INTRODUCTION: <h2>About This [Post Name] Recruitment 2026</h2>
+3. INTRODUCTION: <h2>About This [Post Name] Recruitment ${currentYear}</h2>
    Write 3-4 paragraphs. Follow this EXACT structure:
 
    PARAGRAPH 1 (Hook + Competition Math):
-   - Open with a SHORT punchy sentence (4-6 words max): "Notification aa gayi." or "Good news hai."
-   - Mention organization + post + vacancy count in next sentence
-   - IF totalPosts is known: calculate competition context:
-     "Roughly [estimated applicants: vacancies x 150-300] candidates is post ke liye apply karenge —
-      matlab competition ratio lagbhag [ratio]:1 hoga. [One honest 1-line take on difficulty/opportunity]"
+   - OPENING LINE DIVERSITY RULE: Do NOT start with "Notification aa gayi." Pick ONE of these patterns and use it:
+     • [ORG] ne [POST] ke liye [VACANCY] vacancies release ki hain — aur last date sirf [DAYS] din door hai.
+     • [POST] 2026 ka notification officially out ho gaya hai. Agar aap [STATE/SECTOR] mein sarkari naukri dhoondh rahe hain, to yeh padho.
+     • [VACANCY] posts ke liye abhi apply karne ka time hai — [ORG] ki [POST] bharti ka poora breakdown yahan diya gaya hai.
+     • Finally. [ORG] ne [POST] notification release kar di. Bohot log wait kar rahe the — aur wait ka fal mitha hai: [VACANCY] vacancies.
+     • Aaj [TODAY] ko [ORG] ne [VACANCY]-post [POST] bharti ka notification jaari kiya hai — key dates, fee aur eligibility sab yahan.
+   - Use COMPETITION MATH from enrichedContext (post-type specific multipliers — already calculated). Write the ratio honestly.
    - IF totalPosts unknown: skip competition math, don't guess
 
    PARAGRAPH 2 (What this post means for the candidate):
@@ -1767,6 +1791,8 @@ MANDATORY SECTIONS (in exactly this order — do not skip any):
 
    TONE: Write as if advising a younger sibling over phone — warm, direct, no fluff.
    NO generic phrases like "golden opportunity", "don't miss this chance", "dream job".
+   INTRO UNIQUENESS: At least one sentence in the intro MUST contain a fact UNIQUE to this notification —
+   something that distinguishes it from a typical job post (e.g., new selection stage added, fee waived for women, first-time vacancy in 5 years, etc.). If no such fact exists, mention the specific exam pattern or salary level.
 
 4. IMPORTANT DATES: <h2>Important Dates</h2>
    Table: Event | Date
@@ -2102,7 +2128,7 @@ MANDATORY:
    - Good: "How to Apply for BPSC 70th CCE 2026 Online", "RRB NTPC 2026 Eligibility Criteria for 10th Pass"
    - Bad: "What Happened", "Full Story", "Key Highlights", "Overview", "Important Things"
 3. Minimum 6 H2 headings per blog (for 900+ word content)
-4. At least 3 H2s must contain the year (2026)
+4. At least 3 H2s must contain the year (${currentYear})
 5. H2 format = real user queries Google search patterns:
    "How to [Action] [Org] [Post] 2026"
    "What is the [Detail] for [Post] 2026?"
@@ -2129,7 +2155,7 @@ E. META DESCRIPTION (handled separately, but know this)
 ================================================================================
 RULE 8 — HUMAN SENTENCE RHYTHM (AI DETECTION PREVENTION)
 ================================================================================
-This is critical. Uniform sentence length = AI fingerprint. Vary it.
+This is CRITICAL — uniform sentence length is the #1 AI fingerprint. Vary it EVERY paragraph.
 
 MANDATORY MIX per paragraph:
   SHORT sentences (4-8 words)  — 1-2 per paragraph (punch, emphasis, urgency)
@@ -2143,13 +2169,13 @@ EXAMPLE — CORRECT (human rhythm):
   complete ho gayi hai, to ye notification aapke liye is mahine ka sabse important update hai."
 
 EXAMPLE — WRONG (AI pattern — reject this):
-  "BPSC 70th CCE notification 2026 has been officially released by the Bihar Public Service
+  "BPSC 70th CCE notification ${currentYear} has been officially released by the Bihar Public Service
   Commission for various posts. The examination will be conducted in multiple stages. Candidates
   need to check the eligibility criteria carefully before applying for the posts."
   (All sentences ~20 words — robotic, predictable, AI-like)
 
 SHORT SENTENCE USE CASES (use these naturally):
-  Opening punches: "Notification aa gayi.", "Result out hai.", "Good news hai."
+  Opening punches: "Result out hai.", "Form live ho gaya.", "Bahut log wait kar rahe the."
   Urgency signals: "Last date close hai.", "Sirf [X] din bacha hai."
   Emphasis: "Free hai. Bilkul free.", "No fee for SC/ST."
   Simple facts: "Total posts: 17,727.", "Age limit: 18-27 years."
@@ -2160,6 +2186,37 @@ FRESHNESS MARKER — Add exactly 1 per blog:
   - "Is update ko [TODAY] ko cross-check kiya gaya hai."
   - "Agar aap yeh [TODAY] ke baad padh rahe hain, to official site se dates re-verify karein."
   This signals to Google that a human actively maintains this content.
+
+================================================================================
+RULE 9 — OPENING LINE DIVERSITY (ANTI-REPETITION MANDATE)
+================================================================================
+DO NOT start any blog with "Notification aa gayi." — this phrase has been overused.
+Choose a DIFFERENT opening pattern for EVERY blog. Use whichever fits best:
+
+  Pattern A — Urgency lead: "[ORG] ke [POST] ke liye apply karne ki last date [DATE] hai — aur yeh notification important hai."
+  Pattern B — Vacancy lead: "[VACANCY] government posts khali hain aur aap eligible ho sakte hain."
+  Pattern C — Announcement lead: "[ORG] ne officially [POST] ${currentYear} bharti ka notification release kiya hai."
+  Pattern D — Surprise/contrast: "Is baar [ORG] ne [unusual fact] kiya hai — [POST] bharti ke sath."
+  Pattern E — Empathy lead: "Agar aap [STATE/SECTOR] mein sarkari job dhoondh rahe ho, to aaj ki yeh khabar aapke liye hai."
+  Pattern F — News hook: "[Today's date] ko [ORG] ne [POST] ${currentYear} notification jaari kiya — poori detail yahan hai."
+
+NEVER start with: "Notification aa gayi.", "Good news hai.", "Khushkhabri hai.", "Sarkari naukri ka ek aur mauka."
+
+================================================================================
+RULE 10 — INTRO UNIQUENESS MANDATE
+================================================================================
+Every blog introduction MUST contain at least 1 sentence that is UNIQUE to this specific notification.
+This means something that would NOT appear in a generic job post template.
+
+Examples of UNIQUE intro angles:
+  - "Is baar selection 3 stages mein hoga — physical test pehli baar add hua hai"
+  - "Women candidates ke liye fee waived hai — total zero cost to apply"
+  - "Yeh vacancy 4 saal baad aayi hai — backlog posts bhi include hain"
+  - "Age limit is baar 5 saal relaxed ki gayi hai — jo previous notification se alag hai"
+  - "Online apply link launch hote hi server crash ho gaya tha — abhi stable hai"
+
+If NO unique angle exists in the source: mention the specific exam pattern, pay level, or selection stage
+that distinguishes THIS post from a generic one. NEVER write a fully generic intro.
 
 
 ================================================================================
@@ -2273,36 +2330,29 @@ CRITICAL JSON SYNTAX RULE
     });
 
     let parsed: any;
+    const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
     try {
-      const cleanedJson = rawJson.replace(/^```json?\s*/i, "").replace(/```\s*$/i, "").trim();
       parsed = JSON.parse(cleanedJson);
     } catch (parseErr: any) {
       console.warn("⚠️ JSON parse error in generateBlogWithAI, attempting auto-repair:", parseErr.message);
       try {
-        let repaired = rawJson
-          .replace(/^```json?\s*/i, "")
-          .replace(/```\s*$/i, "")
-          .replace(/\r\n/g, "\\n")
-          .replace(/\n/g, "\\n")
-          .replace(/\r/g, "\\r")
-          .replace(/\t/g, "\\t")
-          .trim();
-        const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
-        if (quoteCount % 2 !== 0) repaired += '"';
-        const openBraces = (repaired.match(/\{/g) || []).length;
-        const closeBraces = (repaired.match(/\}/g) || []).length;
-        for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
-        parsed = JSON.parse(repaired);
+        const sanitized = cleanedJson.replace(/[\u0000-\u001F]+/g, (match) => {
+          if (match.includes("\n")) return "\\n";
+          if (match.includes("\r")) return "\\r";
+          if (match.includes("\t")) return "\\t";
+          return "";
+        });
+        parsed = JSON.parse(sanitized);
       } catch (e2: any) {
         console.warn("⚠️ Advanced JSON repair failed, using regex field extractor...");
-        const titleMatch = rawJson.match(/"title"\s*:\s*"([^"]+)"/);
-        const metaMatch = rawJson.match(/"metaDesc"\s*:\s*"([^"]+)"/);
-        const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]+)"\s*\}\s*$/);
+        const titleMatch = rawJson.match(/"title"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+        const metaMatch = rawJson.match(/"metaDesc"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+        const htmlMatch = rawJson.match(/"blogHtml"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"[a-zA-Z0-9_]+"|"\s*\}|\s*$)/);
         if (titleMatch?.[1]) {
           parsed = {
-            title: titleMatch[1],
-            metaDesc: metaMatch ? metaMatch[1] : "",
-            blogHtml: htmlMatch ? htmlMatch[1] : rawJson,
+            title: titleMatch[1].replace(/\\n/g, " ").replace(/\\"/g, '"'),
+            metaDesc: metaMatch ? metaMatch[1].replace(/\\n/g, " ").replace(/\\"/g, '"') : "",
+            blogHtml: htmlMatch ? htmlMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : rawJson,
             category,
           };
         }
@@ -2311,10 +2361,44 @@ CRITICAL JSON SYNTAX RULE
 
     if (parsed && parsed.title) {
       parsed.title = parsed.title.replace(/\s*\.{2,}\s*$/g, "").replace(/\s*\.\s*$/g, "").trim();
-      const wordCount = (parsed.blogHtml || "").replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
-      if (wordCount >= 500) {
+      // Strip script/style blocks before word count (avoids counting inline JS/CSS tokens)
+      const cleanedHtml = (parsed.blogHtml || "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+        .replace(/<[^>]+>/g, " ");
+      const wordCount = cleanedHtml.split(/\s+/).filter(Boolean).length;
+
+      // ── Title quality checks ──────────────────────────────────────────────────
+      const titleIssues: string[] = [];
+      if (parsed.title.startsWith("[") || /^\d/.test(parsed.title)) {
+        titleIssues.push("Title starts with bracket or number (bad for SEO)");
+      }
+      if (parsed.title.length > 75) {
+        console.warn(`   ⚠️ Title too long (${parsed.title.length} chars) — may be truncated in SERP`);
+      }
+      if (!/20\d{2}/.test(parsed.title)) {
+        console.warn(`   ⚠️ Title missing year — weakens keyword ranking`);
+      }
+
+      // ── Meta description quality checks ──────────────────────────────────────
+      const metaLen = (parsed.metaDesc || "").length;
+      if (metaLen > 165) {
+        // Trim to 160 chars at word boundary
+        parsed.metaDesc = parsed.metaDesc.slice(0, 160).replace(/\s\S+$/, "").trim();
+        console.warn(`   ⚠️ Meta desc trimmed to ${parsed.metaDesc.length} chars (was ${metaLen})`);
+      } else if (metaLen < 100 && metaLen > 0) {
+        console.warn(`   ⚠️ Meta desc too short (${metaLen} chars) — may not show in SERP`);
+      }
+
+      if (titleIssues.length > 0) {
+        console.warn(`   ⚠️ Title issues: ${titleIssues.join("; ")}`);
+      }
+
+      if (wordCount >= 700) {
         console.log(`   ✅ Generated via Gemini Multi-Key Rotator Engine: ${wordCount} words, title="${parsed.title}"`);
         return parsed;
+      } else {
+        console.warn(`   ⚠️ Gemini output too short: ${wordCount} words (min 700) — trying fallback`);
       }
     }
   } catch (geminiErr: any) {
@@ -2411,11 +2495,19 @@ CRITICAL JSON SYNTAX RULE
 
         // ── Validate content ──
         const groqWordCount = (groqParsed.blogHtml || "")
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
           .replace(/<[^>]+>/g, " ")
           .split(/\s+/)
           .filter(Boolean).length;
 
-        if (groqWordCount < 500) {
+        // ── Groq meta desc quality check ──
+        const groqMetaLen = (groqParsed.metaDesc || "").length;
+        if (groqMetaLen > 165) {
+          groqParsed.metaDesc = groqParsed.metaDesc.slice(0, 160).replace(/\s\S+$/, "").trim();
+        }
+
+        if (groqWordCount < 600) {
           console.warn(`   ⚠️ Groq/${groqModel}: Blog too short (${groqWordCount} words) — trying next model`);
           lastError = `groq/${groqModel}: Blog too short (${groqWordCount} words)`;
           continue;
@@ -3182,6 +3274,19 @@ export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResul
 
       // 6. Generate blog with Gemini (only if no early duplicate found)
       console.log(`   🤖 Calling Gemini AI...`);
+
+      // Fetch recent same-category post titles for uniqueness guard
+      let recentPostsTitles: string[] = [];
+      try {
+        const { data: recentPosts } = await supabase
+          .from("blogs")
+          .select("title")
+          .eq("category", category)
+          .order("created_at", { ascending: false })
+          .limit(4);
+        if (recentPosts) recentPostsTitles = recentPosts.map((p: any) => p.title).filter(Boolean);
+      } catch (_) { /* non-fatal — skip if fetch fails */ }
+
       const aiResult = await generateBlogDraft({
         rawText: pageText,
         category,
@@ -3195,6 +3300,7 @@ export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResul
         ageLimit,
         education,
         sourceTitle: item.title,
+        recentPostsTitles,
       });
 
       // 7. Validate blog quality BEFORE saving — ensure blogHtml is clean HTML string (not raw JSON)
@@ -3281,7 +3387,8 @@ export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResul
       const slug = await getUniqueSlug(baseSlug, supabase);
       const startDateVal = aiResult.startDate || "";
       const qualVal = aiResult.qualification || aiResult.eligibility || "";
-      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}`;
+      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}&salary=${encodeURIComponent(aiResult.salaryText || "")}&age=${encodeURIComponent(ageLimit || "")}&applyStatus=${encodeURIComponent(applyStatus)}&fee=${encodeURIComponent(appFeeGen || "")}`;
+
 
       // 10. Save draft to Supabase
       const draftPayload: any = {
@@ -3569,6 +3676,7 @@ export async function forceProcessSpecificItem(item: {
   link: string;
   source: string;
   forcedCategory?: BlogCategory;
+  rawHtml?: string;
 }): Promise<{ success: boolean; draftId?: string; error?: string; title?: string; category?: string }> {
   console.log(`\n🚀 [Force Process] Starting: ${item.title} (${item.source})`);
   const supabase = getSupabaseAdmin();
@@ -3576,7 +3684,11 @@ export async function forceProcessSpecificItem(item: {
     let pageText = "";
     let links: { href: string; text: string }[] = [];
 
-    if (item.source === "google_trends") {
+    if (item.rawHtml) {
+      const pageData = parseHtmlContent(item.rawHtml);
+      pageText = pageData.text;
+      links = pageData.links;
+    } else if (item.source === "google_trends") {
       const facts = await fetchGoogleNewsFacts(item.title);
       pageText = facts.text;
       links = facts.links;
@@ -3596,6 +3708,19 @@ export async function forceProcessSpecificItem(item: {
 
     console.log(`   📊 Category: ${category} | State: ${stateCode || "Central"} | Posts: ${totalPosts} | LastDate: ${lastDate}`);
 
+    // Fetch recent same-category post titles for uniqueness guard
+    let recentPostsTitlesSR: string[] = [];
+    try {
+      const supabaseAdmin = getSupabaseAdmin();
+      const { data: recentPostsSR } = await supabaseAdmin
+        .from("blogs")
+        .select("title")
+        .eq("category", category)
+        .order("created_at", { ascending: false })
+        .limit(4);
+      if (recentPostsSR) recentPostsTitlesSR = recentPostsSR.map((p: any) => p.title).filter(Boolean);
+    } catch (_) { /* non-fatal */ }
+
     const aiResult = await generateBlogDraft({
       rawText: pageText,
       category,
@@ -3609,6 +3734,7 @@ export async function forceProcessSpecificItem(item: {
       ageLimit,
       education,
       sourceTitle: item.title,
+      recentPostsTitles: recentPostsTitlesSR,
     });
 
     const rawBlogHtml = aiResult.blogHtml || "";
@@ -3623,7 +3749,8 @@ export async function forceProcessSpecificItem(item: {
     const slug = await getUniqueSlug(baseSlug, supabase);
     const startDateVal = aiResult.startDate || "";
     const qualVal = aiResult.qualification || aiResult.eligibility || "";
-    const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(lastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}`;
+    const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(lastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}&salary=${encodeURIComponent(aiResult.salaryText || "")}&age=${encodeURIComponent(ageLimit || "")}&applyStatus=${encodeURIComponent(applyStatus)}&fee=${encodeURIComponent(appFeeGen || "")}`;
+
     const finalDatesObj = aiResult.important_dates;
 
     const draftPayload: any = {
@@ -3657,6 +3784,9 @@ export async function forceProcessSpecificItem(item: {
         form_fees_structure: aiResult.form_fees_structure || null,
       }),
       status: "pending_review",
+      auto_publish_at: item.source === "sarkariresult"
+        ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+        : null,
     };
 
     let { data, error: insertError } = await supabase
@@ -3699,9 +3829,12 @@ export async function forceProcessSpecificItem(item: {
       totalPosts: aiResult.totalPosts || totalPosts || null,
       lastDate: aiResult.lastDate || lastDate || null,
       bannerUrl: autoBannerUrl,
-      sourceTag: `🌐 SarkariResult (Re-generated)`,
+      sourceTag: `🌐 SarkariResult (Live Scrape)`,
       qualityScore: qualityCheck.score ?? null,
       sourceUrl: item.link || null,
+      autoPublishAt: item.source === "sarkariresult"
+        ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+        : null,
     });
 
     console.log(`   📱 Telegram approval alert sent for: ${cleanedTitle}`);

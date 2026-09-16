@@ -8,48 +8,53 @@ import { SOCIAL_LINKS } from '@/lib/socialConfig';
 
 // SEO-rich keyword links for internal linking
 const quickLinks = [
-  { href: "/latest-jobs", label: "Latest Sarkari Naukri 2025" },
-  { href: "/results", label: "Sarkari Result 2025" },
-  { href: "/admit-card", label: "Admit Card Download" },
-  { href: "/answer-key", label: "Answer Key 2025" },
-  { href: "/admission", label: "University Admission 2025" },
+  { href: "/latest-jobs", label: "Latest Sarkari Naukri 2026" },
+  { href: "/results", label: "Sarkari Result 2026" },
+  { href: "/admit-card", label: "Admit Card Download 2026" },
+  { href: "/answer-key", label: "Answer Key 2026" },
+  { href: "/admission", label: "University Admission 2026" },
   { href: "/news", label: "Govt Job News Today" },
-  // { href: "/private-jobs", label: "Private Jobs India" },
+  { href: "/age-calculator", label: "Sarkari Age Calculator" },
   { href: "/apply-for-me", label: "Apply For Me Service" },
   { href: "/track-application", label: "Track Application" },
 ];
 
 const jobsByCategory = [
-  { href: "/jobs/ssc", label: "SSC Jobs 2025" },
-  { href: "/jobs/railway", label: "Railway Jobs 2025" },
-  { href: "/jobs/banking", label: "Bank Jobs 2025" },
-  { href: "/jobs/upsc", label: "UPSC Jobs 2025" },
-  { href: "/jobs/police", label: "Police Jobs 2025" },
-  { href: "/jobs/defence", label: "Defence Jobs 2025" },
-  { href: "/jobs/teaching", label: "Teaching Jobs 2025" },
-  { href: "/jobs/state-psc", label: "State PSC Jobs" },
+  { href: "/jobs/ssc", label: "SSC Recruitment 2026" },
+  { href: "/jobs/railway", label: "Railway RRB Vacancy 2026" },
+  { href: "/jobs/banking", label: "Bank PO & Clerk 2026" },
+  { href: "/jobs/upsc", label: "UPSC Civil Services 2026" },
+  { href: "/jobs/police", label: "Police Constable & SI 2026" },
+  { href: "/jobs/defence", label: "Defence & Army Bharti 2026" },
+  { href: "/jobs/teaching", label: "Teaching & TET Jobs 2026" },
+  { href: "/jobs/state-psc", label: "State PSC Recruitment" },
 ];
 
 const jobsByState = [
-  { href: "/state/uttar-pradesh", label: "UP Govt Jobs" },
-  { href: "/state/bihar", label: "Bihar Govt Jobs" },
-  { href: "/state/delhi", label: "Delhi Govt Jobs" },
-  { href: "/state/rajasthan", label: "Rajasthan Govt Jobs" },
-  { href: "/state/madhya-pradesh", label: "MP Govt Jobs" },
-  { href: "/state/maharashtra", label: "Maharashtra Govt Jobs" },
-  { href: "/state/haryana", label: "Haryana Govt Jobs" },
-  { href: "/state/west-bengal", label: "West Bengal Govt Jobs" },
+  { href: "/state/up", label: "UP Govt Jobs (UPPSC/Police)" },
+  { href: "/state/bh", label: "Bihar Govt Jobs (BPSC/Police)" },
+  { href: "/state/dl", label: "Delhi Jobs (DSSSB)" },
+  { href: "/state/rj", label: "Rajasthan Jobs (RPSC)" },
+  { href: "/state/mp", label: "MP Govt Jobs (MPPEB)" },
+  { href: "/state/cg", label: "Chhattisgarh Jobs (CGPSC)" },
+  { href: "/state/jh", label: "Jharkhand Jobs (JSSC)" },
+  { href: "/state/hr", label: "Haryana Jobs (HSSC)" },
+  { href: "/state/gu", label: "Gujarat Govt Jobs" },
+  { href: "/state/ka", label: "Karnataka Govt Jobs" },
 ];
 
 const eSuvidhaLinks = [
-  { href: "/e-suvidha", label: "e-Suvidha Portal" },
-  { href: "/e-suvidha/apply/pan-new", label: "Apply PAN Card Online" },
-  { href: "/e-suvidha/apply/voter-new", label: "Apply Voter ID Online" },
-  { href: "/e-suvidha/apply/udyam", label: "Udyam Aadhaar (MSME)" },
-  { href: "/e-suvidha/apply/pcc", label: "Police Clearance (PCC)" },
-  { href: "/e-suvidha/apply/itr-nil", label: "ITR Filing (Nil Return)" },
-  { href: "/e-suvidha/apply/resume-cv", label: "Professional Resume Maker" },
-  { href: "/e-suvidha/apply/passport", label: "Passport Appointment" },
+  { href: "/e-suvidha", label: "e-Suvidha Master Portal" },
+  { href: "/e-suvidha/apply/eshram", label: "e-Shram Card Registration" },
+  { href: "/e-suvidha/apply/ayushman", label: "Ayushman Card Online" },
+  { href: "/e-suvidha/apply/caste-cert", label: "Caste Certificate Apply" },
+  { href: "/e-suvidha/apply/income-cert", label: "Income Certificate Apply" },
+  { href: "/e-suvidha/apply/domicile-cert", label: "Domicile / Niwas Praman" },
+  { href: "/e-suvidha/apply/pan-correction", label: "PAN Card Correction Online" },
+  { href: "/e-suvidha/apply/pf-withdrawal", label: "PF Withdrawal Assistance" },
+  { href: "/e-suvidha/apply/passport", label: "Passport Seva Kendra Online" },
+  { href: "/e-suvidha/apply/itr-nil", label: "ITR Nil Filing Online" },
+  { href: "/e-suvidha/apply/resume-cv", label: "Sarkari Resume Maker" },
 ];
 
 export default function Footer() {

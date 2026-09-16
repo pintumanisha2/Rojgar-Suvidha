@@ -19,12 +19,12 @@ export function getGeminiApiKeys(): string[] {
   return keys;
 }
 
-// Active verified Google Gemini models in 2026 REST API order of preference
+// Active verified Google Gemini models in REST API order of preference
 export const VALID_GEMINI_MODELS = [
-  "gemini-3.7-flash",
-  "gemini-3.6-flash",
   "gemini-3.5-flash-lite",
+  "gemini-3.6-flash",
   "gemini-3.5-flash",
+  "gemini-3.7-flash",
 ];
 
 export interface GeminiCallOptions {
@@ -74,7 +74,7 @@ export async function callGeminiWithRotation(options: GeminiCallOptions): Promis
     // Inner loop: Try active valid Gemini models for current key
     for (const model of VALID_GEMINI_MODELS) {
       let attempt = 0;
-      const maxAttempts = 1;
+      const maxAttempts = 2;
 
       while (attempt < maxAttempts) {
         attempt++;

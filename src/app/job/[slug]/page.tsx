@@ -108,7 +108,7 @@ export async function generateMetadata(
   const { slug } = await params;
   const { data: job } = await supabase
     .from("jobs")
-    .select("title, short_info, meta_description, banner_url, category, state_code, created_at, updated_at, slug")
+    .select("title, short_info, meta_description, banner_url, category, state_code, created_at, updated_at, slug, total_posts, last_date, important_dates")
     .eq("slug", slug)
     .single();
 
@@ -126,18 +126,51 @@ export async function generateMetadata(
     ? (bracketMatch[2].toLowerCase().includes(bracketMatch[1].toLowerCase()) ? bracketMatch[2].trim() : `${bracketMatch[2].trim()} (${bracketMatch[1].trim()})`)
     : baseTitle;
 
-  // Safe word-boundary truncation for Google SERP: keep under 58 chars to leave room for brand
+  // Safe word-boundary truncation for Google SERP
   let cleanBase = normTitle;
-  if (normTitle.length > 55) {
-    const sub = normTitle.slice(0, 55);
+  if (normTitle.length > 52) {
+    const sub = normTitle.slice(0, 52);
     const lastSpace = sub.lastIndexOf(" ");
     cleanBase = (lastSpace > 25 ? sub.slice(0, lastSpace) : sub).replace(/[\s,:\-–|]+$/, "");
   }
 
-  const titleStr = cleanBase.length <= 38
-    ? `${cleanBase} — Notification & Apply | Rojgar Suvidha`
-    : `${cleanBase} | Rojgar Suvidha`;
+  // ── Extract last date for title suffix ───────────────────────────────────
+  let lastDateDisplay = job.last_date || "";
+  if (!lastDateDisplay && Array.isArray(job.important_dates)) {
+    const ldObj = (job.important_dates as any[]).find((d: any) =>
+      /last\s*date|closing|deadline/i.test(d?.label || "")
+    );
+    if (ldObj?.value) lastDateDisplay = ldObj.value;
+  }
+  // Shorten: "31 August 2026" → "31 Aug"
+  const shortLastDate = lastDateDisplay
+    ? lastDateDisplay.replace(/(\d+)\s+([A-Za-z]{3})[A-Za-z]*\s+\d{4}/, "$1 $2")
+        .replace(/(\d{4}-\d{2}-\d{2})/, (m: string) => {
+          const d = new Date(m); return `${d.getDate()} ${d.toLocaleString("en", { month: "short" })}`;
+        })
+    : "";
+
+
+  // ── Build click-worthy SERP title with vacancy + deadline ────────────────
+  const vacancySuffix = job.total_posts ? ` — ${Number(String(job.total_posts).replace(/,/g, "")).toLocaleString("en-IN")} Posts` : "";
+  const dateSuffix    = shortLastDate && job.category === "latest-jobs" ? ` | Last Date ${shortLastDate}` : "";
+
+  let titleStr: string;
+  const baseWithVacancy = cleanBase + vacancySuffix;
+  if (baseWithVacancy.length + dateSuffix.length <= 58) {
+    titleStr = `${baseWithVacancy}${dateSuffix} | Rojgar Suvidha`;
+  } else if (baseWithVacancy.length <= 55) {
+    titleStr = `${baseWithVacancy} | Rojgar Suvidha`;
+  } else if (cleanBase.length <= 38) {
+    titleStr = `${cleanBase} — Notification & Apply | Rojgar Suvidha`;
+  } else {
+    titleStr = `${cleanBase} | Rojgar Suvidha`;
+  }
   const title = { absolute: titleStr };
+
+  // ── Description ──────────────────────────────────────────────────────────
+  const vacDesc = job.total_posts ? `${job.total_posts} vacancies. ` : "";
+  const dateDesc = lastDateDisplay ? `Last date: ${lastDateDisplay}. ` : "";
 
   const rawDescription = (job.meta_description || job.short_info || "").trim();
   const categoryFallbacks: Record<string, string> = {
@@ -148,10 +181,11 @@ export async function generateMetadata(
     "news": `${baseTitle} — Latest update for all government job aspirants. Check full details, impact analysis & advisory at Rojgar Suvidha.`,
   };
   const fallbackDesc = categoryFallbacks[job.category || ""] 
-    || `${baseTitle} notification out. Check eligibility, vacancy, last date, fee & direct apply link. Full details at Rojgar Suvidha — India's trusted Sarkari Naukri portal.`;
+    || `${baseTitle} notification out. ${vacDesc}${dateDesc}Check eligibility, fee & direct apply link. Full details at Rojgar Suvidha — India's trusted Sarkari Naukri portal.`;
   const description = rawDescription.length > 10
     ? (rawDescription.length > 160 ? `${rawDescription.slice(0, 157)}...` : rawDescription)
     : (fallbackDesc.length > 160 ? `${fallbackDesc.slice(0, 157)}...` : fallbackDesc);
+
 
   const dynamicOgUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(job.title)}&category=${encodeURIComponent(job.category || "")}&state=${encodeURIComponent(job.state_code || "")}`;
   const shareImage = job.banner_url || dynamicOgUrl;
@@ -252,8 +286,18 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     .select("title, slug, status, category, created_at")
     .eq("category", job.category)
     .neq("id", job.id)
+    .neq("status", "draft")
     .order("created_at", { ascending: false })
-    .limit(4);
+    .limit(6);
+
+  // ── Fetch cross-category trending updates (crucial for Googlebot crawler mesh) ──
+  const { data: trendingUpdates } = await supabase
+    .from("jobs")
+    .select("title, slug, status, category, created_at")
+    .neq("category", job.category)
+    .neq("status", "draft")
+    .order("created_at", { ascending: false })
+    .limit(6);
 
   // ── Structured Data ──
   const categoryLabel = job.category?.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "";
@@ -1107,10 +1151,10 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
 
               {/* ── Similar Posts ── */}
               {similarJobs && similarJobs.length > 0 && (
-                <div>
-                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <span className="w-1 h-5 bg-indigo-500 rounded-full inline-block" />
-                    You May Also Like
+                <div className="space-y-3">
+                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block" />
+                    More in {categoryLabel || "This Category"}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {similarJobs.map((simJob: any) => (
@@ -1129,7 +1173,39 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                         </div>
                         <div className="mt-3 flex items-center justify-between text-xs font-semibold text-gray-500">
                           <span>{new Date(simJob.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                          <span className="text-indigo-500 group-hover:translate-x-0.5 transition-transform">View →</span>
+                          <span className="text-indigo-500 group-hover:translate-x-0.5 transition-transform">Read Details →</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Trending Cross-Category Updates (Crucial for Crawlability & User Retention) ── */}
+              {trendingUpdates && trendingUpdates.length > 0 && (
+                <div className="space-y-3 mt-8">
+                  <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span className="w-1.5 h-5 bg-emerald-500 rounded-full inline-block" />
+                    🔥 Trending Sarkari Results & Live Vacancies
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {trendingUpdates.map((tJob: any) => (
+                      <Link
+                        href={`/job/${tJob.slug}`}
+                        key={tJob.slug}
+                        className="group bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-4 hover:shadow-md transition-all hover:border-emerald-300 dark:hover:border-emerald-700/50 flex flex-col justify-between"
+                      >
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">
+                            {tJob.category?.replace(/-/g, " ")}
+                          </span>
+                          <h4 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2 mt-2">
+                            {tJob.title}
+                          </h4>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs font-semibold text-gray-500">
+                          <span>{new Date(tJob.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                          <span className="text-emerald-500 group-hover:translate-x-0.5 transition-transform">Check Now →</span>
                         </div>
                       </Link>
                     ))}

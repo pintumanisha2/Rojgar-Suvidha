@@ -39,7 +39,16 @@ export default async function CategoryPageTemplate({ category, title, descriptio
     .in("category", categoryList)
     .neq("status", "draft")
     .order("created_at", { ascending: false })
-    .limit(15);
+    .limit(50);
+
+  // Fetch all active titles and slugs for full server-rendered internal linking
+  const { data: allCategoryPosts } = await supabase
+    .from("jobs")
+    .select("title, slug, created_at, state_code")
+    .in("category", categoryList)
+    .neq("status", "draft")
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   // Map Color classes dynamically for tailwind to compile properly, we use fixed string checks or pre-defined classes.
   // We'll pass the full class names from the parent instead of generating them here to avoid Tailwind purging issues.
@@ -141,6 +150,39 @@ export default async function CategoryPageTemplate({ category, title, descriptio
 
         {/* Grid of Small Premium Cards (Infinite Scroll) */}
         <InfiniteJobList initialJobs={jobs || []} category={category} />
+
+        {/* ── Complete Crawlable Archive & Quick Directory (Crucial for Search Engine Indexing) ── */}
+        {allCategoryPosts && allCategoryPosts.length > 0 && (
+          <div className="mt-12 bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+              <div>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="w-2 h-5 bg-indigo-600 rounded-full inline-block" />
+                  All {title} — Complete Directory & Quick Links
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Direct links to all official active notifications, scorecards, and admit cards.
+                </p>
+              </div>
+              <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold text-xs rounded-full">
+                {allCategoryPosts.length} Active Posts
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {allCategoryPosts.map((post) => (
+                <Link
+                  key={post.slug}
+                  href={`/job/${post.slug}`}
+                  className="group flex items-start gap-2.5 p-3 rounded-xl hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800/40 transition-all text-xs text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 transition-transform mt-1.5 shrink-0" />
+                  <span className="line-clamp-2">{post.title}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* SEO Content Section */}
         {seoContent && (
