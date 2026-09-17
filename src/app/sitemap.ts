@@ -127,17 +127,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority,
   }));
 
-  // ── 5. State-specific pages ──────────────────────────────────
-  const ALL_STATE_CODES = ["up", "mp", "rj", "bh", "hr", "pb", "uk", "jh", "mh", "gu", "ka", "tn", "dl", "wb", "od", "as", "hp", "ch", "cg", "ga"];
+  // ── 5. State-specific pages (Only states with actual jobs to prevent Google thin content penalty) ──
   const { data: stateData } = await supabase
     .from('jobs')
     .select('state_code')
+    .neq('status', 'draft')
     .not('state_code', 'is', null);
 
-  const dbStates = (stateData || []).map(s => s.state_code?.toLowerCase()).filter(Boolean);
-  const combinedStates = Array.from(new Set([...ALL_STATE_CODES, ...dbStates]));
+  const activeStateCodes = Array.from(
+    new Set(
+      (stateData || [])
+        .map(s => s.state_code?.toLowerCase().trim())
+        .filter((code): code is string => Boolean(code && code.length === 2 && !['all', 'null'].includes(code)))
+    )
+  );
 
-  const stateUrls: MetadataRoute.Sitemap = combinedStates.map(code => ({
+  const stateUrls: MetadataRoute.Sitemap = activeStateCodes.map(code => ({
     url: `${baseUrl}/state/${code}`,
     lastModified: latestJobDate,
     changeFrequency: 'daily' as const,

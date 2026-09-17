@@ -14,6 +14,9 @@
  */
 
 import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
+import { JWT } from "google-auth-library";
+import fs from "fs";
+import path from "path";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://www.rojgarsuvidha.com";
 const SITE_HOST = "www.rojgarsuvidha.com";
@@ -26,18 +29,91 @@ export interface GoogleIndexingResult {
   error?: string;
 }
 
-// ── Method 1 (FIXED): Google + Bing Sitemap Ping ────────────────────────────
-// Google Indexing API works ONLY for JobPosting/BroadcastEvent schema pages.
-// For regular blog posts, the correct approach is Google's documented sitemap ping.
-// Reference: https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+function getServiceAccountCredentials() {
+  const envVal = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_INDEXING_CREDENTIALS;
+  if (envVal) {
+    try {
+      const raw = envVal.trim();
+      if (raw.startsWith("{")) {
+        return JSON.parse(raw);
+      }
+      const decoded = Buffer.from(raw, "base64").toString("utf-8");
+      return JSON.parse(decoded);
+    } catch (e) {
+      console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY env var:", e);
+    }
+  }
+
+  const candidates = [
+    path.join(process.cwd(), "service-account.json"),
+    path.join(process.cwd(), "google-key.json"),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return null;
+}
+
+// ── Method 1: Google Indexing API (Service Account) with fallback ─────────────
+async function submitToGoogleIndexingAPI(urls: string[]): Promise<GoogleIndexingResult> {
+  const creds = getServiceAccountCredentials();
+  if (!creds) {
+    console.warn("⚠️ [Indexing] Google Service Account credentials missing, falling back to sitemap ping");
+    return pingGoogleAndBingSitemap();
+  }
+
+  try {
+    const jwtClient = new JWT({
+      email: creds.client_email,
+      key: creds.private_key,
+      scopes: ["https://www.googleapis.com/auth/indexing"],
+    });
+
+    const tokens = await jwtClient.authorize();
+    const accessToken = tokens.access_token;
+    if (!accessToken) throw new Error("No access token obtained");
+
+    let successCount = 0;
+    const targets = urls.filter((u) => u.includes("/job/"));
+
+    await Promise.allSettled(
+      targets.slice(0, 5).map(async (url) => {
+        const res = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ url, type: "URL_UPDATED" }),
+        });
+        if (res.ok) successCount++;
+      })
+    );
+
+    console.log(`✅ [Indexing] Google Indexing API: ${successCount}/${targets.slice(0, 5).length} published directly`);
+    return { attempted: true, success: successCount > 0, status: 200 };
+  } catch (err: any) {
+    console.warn(`⚠️ [Indexing] Google Indexing API failed: ${err.message}, falling back to sitemap ping`);
+    return pingGoogleAndBingSitemap();
+  }
+}
+
 async function pingGoogleAndBingSitemap(): Promise<GoogleIndexingResult> {
   const sitemapEncoded = encodeURIComponent(`${BASE_URL}/sitemap.xml`);
   const newsSitemapEncoded = encodeURIComponent(`${BASE_URL}/news-sitemap.xml`);
 
   const pings = [
-    `https://www.google.com/ping?sitemap=${sitemapEncoded}`,          // Google — primary sitemap
-    `https://www.google.com/ping?sitemap=${newsSitemapEncoded}`,      // Google — news sitemap
-    `https://www.bing.com/ping?sitemap=${sitemapEncoded}`,            // Bing — primary sitemap
+    `https://www.google.com/ping?sitemap=${sitemapEncoded}`,
+    `https://www.google.com/ping?sitemap=${newsSitemapEncoded}`,
+    `https://www.bing.com/ping?sitemap=${sitemapEncoded}`,
   ];
 
   try {
@@ -51,7 +127,7 @@ async function pingGoogleAndBingSitemap(): Promise<GoogleIndexingResult> {
     );
 
     const ok = results.filter((r) => r.status === "fulfilled").length;
-    console.log(`✅ [Indexing] Google+Bing sitemap ping: ${ok}/${pings.length} succeeded`);
+    console.log(`✅ [Indexing] Sitemap ping: ${ok}/${pings.length} succeeded`);
     return { attempted: true, success: ok > 0, status: 200 };
   } catch (err: any) {
     console.warn(`⚠️ [Indexing] Sitemap ping failed: ${err.message}`);
@@ -193,7 +269,7 @@ export async function notifySearchEngines(slug: string, category = "latest-jobs"
 
   const start = Date.now();
   const [googleRes] = await Promise.allSettled([
-    pingGoogleAndBingSitemap(),          // Google + Bing sitemap ping (official method)
+    submitToGoogleIndexingAPI(allUrlsToSubmit), // Google Indexing API (Service Account) with sitemap fallback
     pingWebSubHubs(),                    // WebSub / PubSubHubbub
     submitIndexNowMulti(allUrlsToSubmit), // IndexNow → Bing, Yandex, Seznam
     warmUpEdgeCache(allUrlsToSubmit),    // Edge cache pre-warm

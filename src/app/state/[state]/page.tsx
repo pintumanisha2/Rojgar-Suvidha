@@ -179,10 +179,24 @@ export async function generateMetadata({ params }: { params: Promise<{ state: st
   const orgs = STATE_ORGS[stateKey] ? ` Recruitment by ${STATE_ORGS[stateKey]}.` : "";
   const currentYear = new Date().getFullYear();
 
+  // Check if state actually has active specific jobs
+  const upperCode = stateKey.toUpperCase();
+  const { count } = await supabaseServer
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .neq("status", "draft")
+    .eq("state_code", upperCode);
+
+  const hasSpecificJobs = (count || 0) > 0;
+
   return {
     title: `${stateName} Sarkari Naukri ${currentYear} — Latest Govt Jobs in ${stateName} | Rojgar Suvidha`,
     description: `${stateName} mein aaj ki sarkari naukri ${currentYear}. Find all government job vacancies, results, admit cards for ${stateName}.${orgs} Daily updates on Rojgar Suvidha.`,
     alternates: { canonical: `https://www.rojgarsuvidha.com/state/${stateKey}` },
+    robots: {
+      index: hasSpecificJobs,
+      follow: true,
+    },
     openGraph: {
       title: `${emoji} ${stateName} Sarkari Naukri ${currentYear} — Rojgar Suvidha`,
       description: `All latest government job vacancies, results and notifications from ${stateName}.${orgs} Direct apply links on Rojgar Suvidha.`,

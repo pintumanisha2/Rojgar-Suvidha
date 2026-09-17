@@ -20,12 +20,10 @@ Sitemap: https://www.rojgarsuvidha.com/news-sitemap.xml
 # Google specific
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
 
 # Bing specific
 User-agent: Bingbot
 Allow: /
-Crawl-delay: 2
 
 # AI Crawlers - Allow for GEO (Generative Engine Optimization)
 User-agent: GPTBot
