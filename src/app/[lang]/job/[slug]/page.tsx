@@ -112,7 +112,8 @@ export default async function MultilingualJobPage({
   // Get translated content — fallback to English if translation not yet ready
   const translatedContent = (job as any)[contentColumn];
   const hasTranslation = !!translatedContent;
-  const blogContent = translatedContent || job.blog_content;
+  const rawContent = translatedContent || job.blog_content || "";
+  const blogContent = rawContent.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, " ");
 
   // Check which languages have translations available
   const { data: availData } = await supabase

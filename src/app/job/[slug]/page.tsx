@@ -563,6 +563,12 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
     }
   }
 
+  // Always sanitize escaped literal strings like \n, \r, \t so they never render as raw text
+  cleanBlogHtml = cleanBlogHtml
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, " ");
+
   // Wrap all HTML tables in responsive touch-pan scroll containers with visual swipe hints for mobile users
   if (cleanBlogHtml.includes("<table")) {
     cleanBlogHtml = cleanBlogHtml.replace(
