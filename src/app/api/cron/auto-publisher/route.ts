@@ -44,16 +44,15 @@ export async function GET(request: Request) {
 
   console.log(`\n⏰ [Auto-Publisher Cron] Started at ${now}`);
 
-  // 1. Find all mature SarkariResult drafts (45-min window passed, not yet published)
+  // 1. Find all mature drafts (window passed, not yet published)
   const { data: matureDrafts, error: fetchError } = await supabase
     .from("auto_blog_drafts")
     .select("id, generated_title, category, source_site, auto_publish_at")
     .eq("status", "pending_review")
-    .eq("source_site", "sarkariresult") // ← ONLY SarkariResult
     .not("auto_publish_at", "is", null)  // ← Must have timer set
     .lte("auto_publish_at", now)          // ← Timer must have expired
     .order("auto_publish_at", { ascending: true })
-    .limit(5); // Max 5 per run to stay within Vercel timeout
+    .limit(10); // Process up to 10 per run
 
   if (fetchError) {
     console.error("[Auto-Publisher] Supabase query error:", fetchError.message);
