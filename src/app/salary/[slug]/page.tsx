@@ -47,7 +47,7 @@ function fmt(n: number): string { return n.toLocaleString("en-IN"); }
 async function getJob(slug: string) {
   const { data } = await supabase
     .from("jobs")
-    .select("title, slug, short_info, category, state_code, total_posts, last_date, important_dates, qualification, created_at")
+    .select("title, slug, short_info, category, state_code, important_dates, created_at")
     .eq("slug", slug)
     .neq("status", "draft")
     .single();
@@ -75,7 +75,7 @@ export default async function SalaryPage({ params }: { params: Promise<{ slug: s
   if (!job) notFound();
 
   const shortTitle = job.title.split(/[:\-–|]/)[0].trim();
-  const payLevel = detectPayLevel(job.title, job.qualification || "");
+  const payLevel = detectPayLevel(job.title, "");
   const pm = PAY_MATRIX[payLevel] || PAY_MATRIX["4"];
 
   const daAmt  = Math.round(pm.basic * pm.da / 100);
@@ -88,9 +88,24 @@ export default async function SalaryPage({ params }: { params: Promise<{ slug: s
   const netB   = grossB - nps - cghs;
   const netC   = grossC - nps - cghs;
 
-  const lastDate = job.last_date || (Array.isArray(job.important_dates)
-    ? (job.important_dates as any[]).find((d: any) => /last\s*date|closing/i.test(d?.label || ""))?.value || ""
-    : "");
+  let lastDate = "";
+  let datesObj = job.important_dates;
+  if (typeof datesObj === "string") {
+    try { datesObj = JSON.parse(datesObj); } catch {}
+  }
+  if (Array.isArray(datesObj)) {
+    lastDate = datesObj.find((d: any) => /last\s*date|closing/i.test(d?.label || ""))?.value || "";
+  } else if (datesObj && typeof datesObj === "object") {
+    for (const [key, val] of Object.entries(datesObj)) {
+      if (/last\s*date|closing/i.test(key)) {
+        lastDate = String(val);
+        break;
+      }
+    }
+  }
+
+  const postMatch = (job.title + " " + (job.short_info || "")).match(/(\d[\d,]*)\s*(?:posts?|vacanc(?:y|ies))/i);
+  const totalPosts = postMatch ? postMatch[1] : "";
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -273,7 +288,7 @@ export default async function SalaryPage({ params }: { params: Promise<{ slug: s
                     ["Post", shortTitle.slice(0, 40)],
                     ["Pay Level", pm.level],
                     ["Basic Pay", `₹${fmt(pm.basic)}/month`],
-                    ...(job.total_posts ? [["Total Posts", String(job.total_posts)]] : []),
+                    ...(totalPosts ? [["Total Posts", totalPosts]] : []),
                     ...(lastDate ? [["Last Date", lastDate]] : []),
                     ["Location", job.state_code && job.state_code !== "ALL" ? job.state_code : "All India"],
                   ].map(([label, value]) => (

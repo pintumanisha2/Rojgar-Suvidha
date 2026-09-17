@@ -68,7 +68,7 @@ function InlineTag({ tag }: { tag?: TagType }) {
 export default async function MainContent({ stateCode }: { stateCode?: string }) {
   let query = supabase
     .from("jobs")
-    .select("title, slug, status, tag, category, short_info, important_dates, created_at, state_code, last_date, apply_status")
+    .select("title, slug, status, tag, category, short_info, important_dates, created_at, state_code")
     .neq("status", "draft")
     .neq("category", "news")
     .order("created_at", { ascending: false })
@@ -112,23 +112,37 @@ export default async function MainContent({ stateCode }: { stateCode?: string })
 
   const sections = sectionConfig.map(conf => {
     const rawItems = (jobsByCategory[conf.id] || []).map((job: any) => {
-      // Prefer direct last_date column, fallback to important_dates array
-      let lastDate = job.last_date || "";
-      if (!lastDate && Array.isArray(job.important_dates)) {
-        const ldObj = job.important_dates.find((d: any) =>
+      // Safely extract lastDate from important_dates (supports JSON string, object, or array)
+      let lastDate = "";
+      let datesObj = job.important_dates;
+      if (typeof datesObj === "string") {
+        try {
+          datesObj = JSON.parse(datesObj);
+        } catch {}
+      }
+      if (Array.isArray(datesObj)) {
+        const ldObj = datesObj.find((d: any) =>
           /last\s*date|closing|deadline/i.test(d?.label || "")
         );
         if (ldObj) lastDate = ldObj.value || "";
+      } else if (datesObj && typeof datesObj === "object") {
+        for (const [key, val] of Object.entries(datesObj)) {
+          if (/last\s*date|closing|deadline/i.test(key)) {
+            lastDate = String(val);
+            break;
+          }
+        }
       }
+
       return {
         title: job.title,
         status: job.status as StatusKey,
         tag: job.tag as TagType,
         lastDate,
-        applyStatus: job.apply_status || "",
+        applyStatus: "",
         slug: job.slug,
         category: job.category,
-        important_dates: job.important_dates,
+        important_dates: datesObj,
         created_at: job.created_at,
       } as JobItem;
     });

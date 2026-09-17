@@ -93,7 +93,7 @@ function DashboardContent() {
       try {
         const { data } = await supabase
           .from("jobs")
-          .select("id, title, slug, department, last_date")
+          .select("id, title, slug, category, created_at")
           .eq("status", "active")
           .order("created_at", { ascending: false })
           .limit(1)
@@ -867,7 +867,7 @@ function DashboardContent() {
                     <div>
                       <p className="text-[10px] text-orange-600 dark:text-orange-400 font-extrabold uppercase tracking-wider">Aaj Ki Recommended Job</p>
                       <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mt-0.5">{topJob.title}</h4>
-                      <p className="text-xs text-gray-400 mt-0.5">{topJob.department} • Last Date: {topJob.last_date ? new Date(topJob.last_date).toLocaleDateString("en-IN") : "Apply Soon"}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{topJob.category ? topJob.category.replace(/-/g, " ").toUpperCase() : "Govt Job"} • Official Notification</p>
                     </div>
                   </div>
                   <Link href={`/job/${topJob.slug}`} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black rounded-xl transition-all shadow shadow-orange-500/10 active:scale-95 shrink-0">

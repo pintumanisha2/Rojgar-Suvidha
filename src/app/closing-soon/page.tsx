@@ -41,12 +41,24 @@ function daysBetween(dateStr: string): number | null {
 }
 
 function getLastDate(job: any): string {
-  if (job.last_date) return job.last_date;
-  if (Array.isArray(job.important_dates)) {
-    const found = job.important_dates.find((d: any) =>
+  let datesObj = job.important_dates;
+  if (typeof datesObj === "string") {
+    try {
+      datesObj = JSON.parse(datesObj);
+    } catch {}
+  }
+  if (Array.isArray(datesObj)) {
+    const found = datesObj.find((d: any) =>
       /last\s*date|closing|deadline/i.test(d?.label || "")
     );
     return found?.value || "";
+  }
+  if (datesObj && typeof datesObj === "object") {
+    for (const [key, val] of Object.entries(datesObj)) {
+      if (/last\s*date|closing|deadline/i.test(key)) {
+        return String(val);
+      }
+    }
   }
   return "";
 }
@@ -56,7 +68,7 @@ type Group = { label: string; color: string; bg: string; border: string; icon: s
 export default async function ClosingSoonPage() {
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("title, slug, category, status, last_date, important_dates, state_code, total_posts")
+    .select("title, slug, category, status, important_dates, state_code")
     .neq("status", "draft")
     .neq("status", "closed")
     .neq("category", "news")
