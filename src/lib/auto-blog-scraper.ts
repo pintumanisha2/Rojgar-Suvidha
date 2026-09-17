@@ -3784,7 +3784,9 @@ export async function forceProcessSpecificItem(item: {
         form_fees_structure: aiResult.form_fees_structure || null,
       }),
       status: "pending_review",
-      auto_publish_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      auto_publish_at: item.source === "sarkariresult"
+        ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+        : null,
     };
 
     let { data, error: insertError } = await supabase
