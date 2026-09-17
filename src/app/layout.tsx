@@ -261,6 +261,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
+        {/* Google AdSense */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1981132026296164"
+          crossOrigin="anonymous"
+        />
         {/* Preconnect for performance (Core Web Vitals = SEO signal) */}
         <link rel="preconnect" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
         <link rel="dns-prefetch" href="https://kkfgdzaoukekhlijlfsw.supabase.co" />
