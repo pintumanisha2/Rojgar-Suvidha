@@ -4,549 +4,765 @@ import { NextRequest } from "next/server";
 export const runtime = "edge";
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CATEGORY THEMES — 6 main visual identities
+// CATEGORY VISUAL IDENTITIES & THEMES
 // ═══════════════════════════════════════════════════════════════════════════
-const CATEGORY_THEMES: Record<string, {
-  bg1: string; bg2: string; bg3: string;
-  accent: string; accentDim: string;
+interface CategoryTheme {
+  bgGradient: string;
+  accent: string;
+  accentGlow: string;
+  badgeBg: string;
+  badgeText: string;
   overline: string;
-  ctaLeft: string; ctaRight: string;
-}> = {
+  ctaLeft: string;
+  ctaRight: string;
+  iconType: "trophy" | "badge" | "key" | "cap" | "newspaper" | "briefcase";
+}
+
+const THEMES: Record<string, CategoryTheme> = {
   "latest-jobs": {
-    bg1: "#060913", bg2: "#0d1b3e", bg3: "#0a0f1e",
-    accent: "#2563EB", accentDim: "#1d4ed8",
+    bgGradient: "linear-gradient(135deg, #030712 0%, #0c1838 50%, #030712 100%)",
+    accent: "#38bdf8",
+    accentGlow: "rgba(56, 189, 248, 0.4)",
+    badgeBg: "#2563eb",
+    badgeText: "#ffffff",
     overline: "OFFICIAL NOTIFICATION",
-    ctaLeft: "NOTIFICATION OUT NOW", ctaRight: "APPLY NOW →",
+    ctaLeft: "NOTIFICATION OUT NOW",
+    ctaRight: "APPLY NOW →",
+    iconType: "briefcase",
   },
   "results": {
-    bg1: "#020d06", bg2: "#052e16", bg3: "#020d06",
-    accent: "#22c55e", accentDim: "#16a34a",
+    bgGradient: "linear-gradient(135deg, #020d06 0%, #06381a 50%, #020d06 100%)",
+    accent: "#4ade80",
+    accentGlow: "rgba(74, 222, 128, 0.45)",
+    badgeBg: "#16a34a",
+    badgeText: "#ffffff",
     overline: "RESULT DECLARED",
-    ctaLeft: "CHECK YOUR RESULT NOW", ctaRight: "DOWNLOAD PDF →",
+    ctaLeft: "CHECK YOUR RESULT NOW",
+    ctaRight: "DOWNLOAD PDF →",
+    iconType: "trophy",
   },
   "admit-card": {
-    bg1: "#06040f", bg2: "#130b2e", bg3: "#06040f",
-    accent: "#a78bfa", accentDim: "#7c3aed",
+    bgGradient: "linear-gradient(135deg, #0d0600 0%, #381a03 50%, #0d0600 100%)",
+    accent: "#fb923c",
+    accentGlow: "rgba(251, 146, 60, 0.45)",
+    badgeBg: "#ea580c",
+    badgeText: "#ffffff",
     overline: "ADMIT CARD RELEASED",
-    ctaLeft: "DOWNLOAD ADMIT CARD", ctaRight: "EXAM TIPS INSIDE →",
+    ctaLeft: "DOWNLOAD ADMIT CARD",
+    ctaRight: "GET HALL TICKET →",
+    iconType: "badge",
   },
   "answer-key": {
-    bg1: "#0f0800", bg2: "#1c0e00", bg3: "#0f0800",
-    accent: "#f59e0b", accentDim: "#d97706",
-    overline: "ANSWER KEY RELEASED",
-    ctaLeft: "ANSWER KEY OUT NOW", ctaRight: "DOWNLOAD / CHALLENGE →",
+    bgGradient: "linear-gradient(135deg, #0d0014 0%, #2e0840 50%, #0d0014 100%)",
+    accent: "#c084fc",
+    accentGlow: "rgba(192, 132, 252, 0.45)",
+    badgeBg: "#9333ea",
+    badgeText: "#ffffff",
+    overline: "ANSWER KEY OUT",
+    ctaLeft: "CHECK ANSWER KEY",
+    ctaRight: "SUBMIT OBJECTION →",
+    iconType: "key",
   },
   "admission": {
-    bg1: "#020b1e", bg2: "#0c1a45", bg3: "#020b1e",
-    accent: "#60a5fa", accentDim: "#2563eb",
-    overline: "ADMISSION OPEN",
-    ctaLeft: "ADMISSION OPEN NOW", ctaRight: "REGISTER NOW →",
+    bgGradient: "linear-gradient(135deg, #00101c 0%, #042645 50%, #00101c 100%)",
+    accent: "#67e8f9",
+    accentGlow: "rgba(103, 232, 249, 0.45)",
+    badgeBg: "#0891b2",
+    badgeText: "#ffffff",
+    overline: "ADMISSION OPEN 2026",
+    ctaLeft: "ADMISSION PROCESS OPEN",
+    ctaRight: "REGISTER ONLINE →",
+    iconType: "cap",
   },
   "news": {
-    bg1: "#080f14", bg2: "#0c1f2e", bg3: "#080f14",
-    accent: "#38bdf8", accentDim: "#0284c7",
-    overline: "GOVERNMENT UPDATE",
-    ctaLeft: "LATEST NEWS UPDATE", ctaRight: "READ MORE →",
+    bgGradient: "linear-gradient(135deg, #050b14 0%, #0e2038 50%, #050b14 100%)",
+    accent: "#38bdf8",
+    accentGlow: "rgba(56, 189, 248, 0.4)",
+    badgeBg: "#0284c7",
+    badgeText: "#ffffff",
+    overline: "SARKARI NEWS UPDATE",
+    ctaLeft: "LATEST EDUCATION UPDATE",
+    ctaRight: "READ FULL STORY →",
+    iconType: "newspaper",
   },
 };
-const DEFAULT_THEME = CATEGORY_THEMES["latest-jobs"];
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SUB-THEMES — keyword-based accent override (54 combinations possible)
-// ═══════════════════════════════════════════════════════════════════════════
-const SUB_THEMES: Array<{ pattern: RegExp; accent: string; accentDim: string; icon: string }> = [
-  { pattern: /railway|rrb|rrc|ntpc|group.?d|loco pilot|rrb.*je|rail.*engineer/i,      accent: "#06b6d4", accentDim: "#0891b2", icon: "🚂" },
-  { pattern: /police|constable|sipahi|sub inspector|\bsi\b|dsp|crpf|cisf|bsf|itbp|ssb|paramilitary|home guard/i, accent: "#ef4444", accentDim: "#dc2626", icon: "🛡️" },
-  { pattern: /\bbank\b|ibps|sbi|rbi|nabard|sidbi|bank.*clerk|bank.*po|bank.*officer|rrb.*bank/i,  accent: "#f59e0b", accentDim: "#d97706", icon: "🏦" },
-  { pattern: /army|navy|air.?force|defence|agniveer|military|soldier|\bnda\b|\bcds\b|territorial/i, accent: "#65a30d", accentDim: "#4d7c0f", icon: "✈️" },
-  { pattern: /teacher|tet|shikshak|ctet|stet|lekhpal|patwari|anganwadi|vidya.*sahayak/i,          accent: "#0d9488", accentDim: "#0f766e", icon: "📚" },
-  { pattern: /nurse|doctor|medical|health|aiims|esic|cghs|pharmacist|\bmbbs\b|hospital|dental/i,  accent: "#e11d48", accentDim: "#be123c", icon: "🏥" },
-  { pattern: /india post|gds|dak sevak|post office|gramin dak|postal/i,                            accent: "#2563EB", accentDim: "#1d4ed8", icon: "📮" },
-  { pattern: /upsc|civil service|\bias\b|\bips\b|\bifs\b|\biras\b|judicial|hcs|pcs|state.*service/i, accent: "#b45309", accentDim: "#92400e", icon: "⚖️" },
-];
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CATEGORY FALLBACK ICONS
-// ═══════════════════════════════════════════════════════════════════════════
-const CATEGORY_ICONS: Record<string, string> = {
-  "latest-jobs": "🏛️", "results": "🏆", "admit-card": "🪪",
-  "answer-key": "📋", "admission": "🎓", "news": "📰",
-};
-
-// ═══════════════════════════════════════════════════════════════════════════
-// STATE MAP
-// ═══════════════════════════════════════════════════════════════════════════
 const STATE_NAMES: Record<string, string> = {
   UP: "UP", BH: "BIHAR", MP: "MP", RJ: "RAJASTHAN", HR: "HARYANA",
   HP: "H.P.", DL: "DELHI", MH: "MAHARASHTRA", WB: "W.BENGAL",
   UK: "UTTARAKHAND", JH: "JHARKHAND", PB: "PUNJAB", OD: "ODISHA",
   TS: "TELANGANA", AP: "ANDHRA", KL: "KERALA", TN: "TAMIL NADU",
   CG: "C.G.", GU: "GUJARAT", AS: "ASSAM", KA: "KARNATAKA",
-  JK: "J&K", GA: "GOA", MN: "MANIPUR", TR: "TRIPURA", SK: "SIKKIM",
+  JK: "J&K", GA: "GOA",
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
+function safeTruncateWords(str: string, maxLen: number): string {
+  if (str.length <= maxLen) return str;
+  const sub = str.slice(0, maxLen);
+  const lastSpace = sub.lastIndexOf(" ");
+  return (lastSpace > 10 ? sub.slice(0, lastSpace) : sub).trim();
+}
 
-/** Smart extract org name + post line from full title */
-function parseOrgAndPost(title: string): { org: string; post: string } {
-  const upper = title.toUpperCase();
+/** Clean and split title into impactful Line 1, Line 2, and Authority sub-pill */
+function formatBannerTitles(rawTitle: string, category: string): {
+  line1: string;
+  line2: string;
+  subPill: string;
+  burstText: string;
+} {
+  const clean = rawTitle
+    .replace(/\b(sarkariresult\.com|freejobalert\.com|rojgar\s*suvidha)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
-  // Known org shortcuts — fast path
-  const knownOrgs: [RegExp, string][] = [
-    [/india post|gds|dak sevak|post office/i, "INDIA POST"],
-    [/indian railway|rrb|rrc|rail.*ministry|railway.*board/i, "INDIAN RAILWAYS"],
-    [/\bssb\b.*(?:recruit|constable|head constable)/i, "SSB"],
-    [/\bssc\b|staff selection commission/i, "STAFF SELECTION COMMISSION"],
-    [/\bupsc\b|union public service/i, "UPSC"],
-    [/bihar.*public.*service|\bbpsc\b/i, "BPSC"],
-    [/\bmpsc\b/i, "MPSC"], [/\buppsc\b/i, "UPPSC"], [/\brpsc\b/i, "RPSC"],
-    [/\bspsc\b/i, "SPSC"], [/\bkpsc\b/i, "KPSC"], [/\bappsc\b/i, "APPSC"],
-    [/\bstate bank|\bsbi\b/i, "STATE BANK OF INDIA"],
-    [/\bibps\b/i, "IBPS"], [/\brbi\b/i, "RBI"],
-    [/\bnabard\b/i, "NABARD"], [/\bsidbi\b/i, "SIDBI"],
-    [/up police|uttar pradesh police/i, "UP POLICE"],
-    [/bihar police/i, "BIHAR POLICE"],
-    [/rajasthan police/i, "RAJASTHAN POLICE"],
-    [/mp police|madhya pradesh police/i, "MP POLICE"],
-    [/indian army|agniveer.*army/i, "INDIAN ARMY"],
-    [/indian navy|agniveer.*navy/i, "INDIAN NAVY"],
-    [/indian air force|iaf|agniveer.*air/i, "INDIAN AIR FORCE"],
-    [/\baiims\b/i, "AIIMS"], [/\besic\b/i, "ESIC"],
-    [/high court/i, "HIGH COURT"], [/supreme court/i, "SUPREME COURT"],
-    [/\bhal\b.*(?:recruit|engineer|technician)/i, "HAL"],
-    [/\bdrdo\b/i, "DRDO"], [/\bisro\b/i, "ISRO"],
-    [/\bntpc\b.*(?:recruit|engineer)/i, "NTPC"],
-    [/\bnhpc\b/i, "NHPC"], [/\boncg\b|\bongc\b/i, "ONGC"],
-    [/\bcoal india|\bcoal.*limited/i, "COAL INDIA"],
-    [/\bcrpf\b/i, "CRPF"], [/\bcisf\b/i, "CISF"],
-    [/\bbsf\b/i, "BSF"], [/\bitbp\b/i, "ITBP"],
-    [/\bnda\b.*(?:recruit|exam)/i, "NDA"], [/\bcds\b.*(?:recruit|exam)/i, "CDS"],
-  ];
-  for (const [pat, name] of knownOrgs) {
-    if (pat.test(title)) {
-      // Post = title minus org name minus noise words
-      const noise = /notification|recruitment|result|admit card|answer key|hall ticket|admission|bharti|bharati|\b20\d{2}\b|sarkariresult\.com|free\s*job\s*alert/gi;
-      const postLine = title.replace(pat, "").replace(noise, "").replace(/\s{2,}/g, " ").trim().toUpperCase();
-      return { org: name, post: postLine.slice(0, 44) };
-    }
+  const currentYear = new Date().getFullYear().toString();
+  const yearMatch = clean.match(/\b(202[4-7])\b/);
+  const detectedYear = yearMatch ? yearMatch[1] : currentYear;
+
+  // Extract post count if present e.g. (2,569 Posts) or 132 Posts
+  const postsMatch = clean.match(/(\d[\d,]*)\s*(?:posts?|vacanc(?:y|ies))/i);
+  const postsCount = postsMatch ? `${postsMatch[1]} POSTS` : "";
+
+  // Detect Organization
+  let org = "SARKARI RECRUITMENT";
+  if (/railway|rrb|rrc/i.test(clean)) org = "RAILWAY RECRUITMENT BOARD (RRB)";
+  else if (/upsssc/i.test(clean)) org = "UP SUBORDINATE (UPSSSC)";
+  else if (/ssc|staff selection/i.test(clean)) org = "STAFF SELECTION COMMISSION (SSC)";
+  else if (/upsc|civil service/i.test(clean)) org = "UNION PUBLIC SERVICE (UPSC)";
+  else if (/bpsc|bihar public/i.test(clean)) org = "BIHAR PSC (BPSC)";
+  else if (/uppsc|up public/i.test(clean)) org = "UTTAR PRADESH PSC (UPPSC)";
+  else if (/rpsc|rajasthan public/i.test(clean)) org = "RAJASTHAN PSC (RPSC)";
+  else if (/mppsc|mp public/i.test(clean)) org = "MADHYA PRADESH PSC (MPPSC)";
+  else if (/ibps/i.test(clean)) org = "INSTITUTE OF BANKING (IBPS)";
+  else if (/sbi|state bank/i.test(clean)) org = "STATE BANK OF INDIA (SBI)";
+  else if (/police/i.test(clean)) org = "STATE POLICE DEPARTMENT";
+  else if (/army|navy|air force|defence/i.test(clean)) org = "INDIAN ARMED FORCES";
+  else if (/neet|nta|jee|ctet/i.test(clean)) org = "CENTRAL / NATIONAL EXAM";
+  else if (/post office|india post|gds/i.test(clean)) org = "INDIA POST • DAK SEVAK";
+
+  let line1 = "";
+  let line2 = "";
+  let burstText = "";
+
+  if (category === "results") {
+    // e.g. RRB JE CBT II Result 2026
+    const base = clean.split(/result|out|scorecard|cut\s*off/i)[0].trim().replace(/[:\-–]/g, "");
+    line1 = safeTruncateWords(base, 28).toUpperCase() || "SARKARI EXAM";
+    line2 = `RESULT ${detectedYear}`;
+    burstText = "RESULT OUT";
+  } else if (category === "admit-card") {
+    const base = clean.split(/admit\s*card|hall\s*ticket|exam\s*date|out/i)[0].trim().replace(/[:\-–]/g, "");
+    line1 = safeTruncateWords(base, 28).toUpperCase() || "SARKARI EXAM";
+    line2 = `ADMIT CARD ${detectedYear}`;
+    burstText = "ADMIT CARD OUT";
+  } else if (category === "answer-key") {
+    const base = clean.split(/answer\s*key|key|out/i)[0].trim().replace(/[:\-–]/g, "");
+    line1 = safeTruncateWords(base, 28).toUpperCase() || "SARKARI EXAM";
+    line2 = `ANSWER KEY ${detectedYear}`;
+    burstText = "KEY LIVE";
+  } else if (category === "admission") {
+    const base = clean.split(/admission|counselling|round|out/i)[0].trim().replace(/[:\-–]/g, "");
+    line1 = safeTruncateWords(base, 28).toUpperCase() || "ENTRANCE EXAM";
+    line2 = `ADMISSION ${detectedYear}`;
+    burstText = "ADMISSION OPEN";
+  } else {
+    // Latest jobs / recruitment
+    const base = clean.split(/recruitment|online\s*form|apply\s*online|apply|vacancy|posts/i)[0].trim().replace(/[:\-–]/g, "");
+    line1 = safeTruncateWords(base, 28).toUpperCase() || "GOVT RECRUITMENT";
+    line2 = `RECRUITMENT ${detectedYear}`;
+    burstText = "APPLY ONLINE";
   }
 
-  // Generic extraction — first capitalised noun phrase
-  const noise = /notification|recruitment|result|admit card|answer key|hall ticket|admission|bharti|\b20\d{2}\b|sarkariresult\.com|free\s*job\s*alert/gi;
-  const cleaned = title.replace(noise, " ").replace(/\s{2,}/g, " ").trim();
-  const words = cleaned.split(" ").filter(w => w.length > 1);
-  const orgWords = words.slice(0, Math.min(3, words.length));
-  const org = orgWords.join(" ").toUpperCase().slice(0, 28);
-  const post = words.slice(orgWords.length).join(" ").toUpperCase().slice(0, 44);
-  return { org, post };
+  const subPill = postsCount ? `${org} • ${postsCount}` : org;
+
+  return { line1, line2, subPill, burstText };
 }
 
-/** Adaptive font size: shorter org = bigger text, feels designed */
-function orgFontSize(org: string): number {
-  const l = org.length;
-  if (l <= 5)  return 80;
-  if (l <= 9)  return 70;
-  if (l <= 14) return 58;
-  if (l <= 18) return 48;
-  if (l <= 23) return 40;
-  return 32;
+/** Sanitize scraper strings so banners look crisp and clean */
+function sanitizeField(raw: string, type: "date" | "age" | "fee" | "qual"): string {
+  if (!raw) return "";
+  if (type === "date") {
+    const match = raw.match(/(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4})/);
+    return match ? match[1] : raw.slice(0, 15);
+  }
+  if (type === "age") {
+    const minMatch = raw.match(/min(?:imum)?\s*(?:age)?\s*[:\-]?\s*(\d+)/i);
+    const maxMatch = raw.match(/max(?:imum)?\s*(?:age)?\s*[:\-]?\s*(\d+)/i);
+    if (minMatch && maxMatch) return `${minMatch[1]}–${maxMatch[1]} Yrs`;
+    if (minMatch) return `Min ${minMatch[1]} Yrs`;
+    if (maxMatch) return `Max ${maxMatch[1]} Yrs`;
+    return raw.length > 18 ? raw.slice(0, 18) : raw;
+  }
+  if (type === "fee") {
+    const m = raw.match(/(?:₹|rs\.?)\s*(\d+)/i);
+    if (m) return `₹${m[1]}`;
+    if (/free|nil|0/i.test(raw)) return "₹0 (Free)";
+    return raw.slice(0, 15);
+  }
+  if (type === "qual") {
+    if (/10th|matric/i.test(raw)) return "10th Pass";
+    if (/12th|inter/i.test(raw)) return "12th Pass";
+    if (/degree|graduate|b\.?tech|b\.?sc/i.test(raw)) return "Graduate Degree";
+    if (/diploma/i.test(raw)) return "Diploma / Poly";
+    if (/iti/i.test(raw)) return "ITI Certificate";
+    return raw.length > 20 ? raw.slice(0, 20) : raw;
+  }
+  return raw;
 }
 
-/** Days remaining until lastDate */
-function getDaysLeft(lastDate: string): number | null {
-  if (!lastDate) return null;
-  try {
-    // Handle DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
-    let iso = lastDate;
-    const ddmm = lastDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (ddmm) iso = `${ddmm[3]}-${ddmm[2].padStart(2,"0")}-${ddmm[1].padStart(2,"0")}`;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return null;
-    const today = new Date(); today.setHours(0,0,0,0);
-    return Math.ceil((d.getTime() - today.getTime()) / 86400000);
-  } catch { return null; }
-}
-
-/** Format vacancy count with smart scarcity framing */
-function fmtVacancy(posts: string): string {
-  if (!posts) return "";
-  const n = parseInt(posts.replace(/[^0-9]/g, "") || "0");
-  if (!n || isNaN(n)) return posts.toUpperCase().slice(0, 20);
-  const f = n.toLocaleString("en-IN");
-  if (n < 50)   return `ONLY ${f} POSTS`;
-  if (n >= 10000) return `${f}+ POSTS`;
-  return `${f} POSTS`;
-}
-
-/** Format qualification into short readable label */
-function fmtQual(q: string): string {
-  if (!q) return "";
-  if (/10th|matric|high school|secondary/i.test(q))    return "10th Pass";
-  if (/12th|intermediate|senior secondary/i.test(q))    return "12th Pass";
-  if (/b\.?tech|b\.?e\b|engineering degree/i.test(q))  return "B.Tech";
-  if (/\bmbbs\b/i.test(q))                              return "MBBS";
-  if (/graduation|graduate|degree|b\.?a\b|b\.?sc\b|b\.?com\b/i.test(q)) return "Graduate";
-  if (/diploma/i.test(q))                               return "Diploma";
-  if (/post.?grad|m\.?a\b|m\.?sc\b|m\.?com\b/i.test(q)) return "Post Graduate";
-  return q.slice(0, 14);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN HANDLER
-// ═══════════════════════════════════════════════════════════════════════════
 export async function GET(req: NextRequest) {
   try {
     const sp = new URL(req.url).searchParams;
 
-    // ── Parse params ──
-    const title        = sp.get("title")       || "Sarkari Naukri Notification";
-    const catRaw       = (sp.get("category")   || "latest-jobs").toLowerCase();
-    const postsRaw     = sp.get("posts")        || sp.get("vacancies") || "";
-    const startDate    = sp.get("startDate")    || "";
-    const lastDate     = sp.get("lastDate")     || "";
-    const qualification= sp.get("qualification")|| "";
-    const stateRaw     = sp.get("state")        || "";
-    const salaryRaw    = sp.get("salary")       || "";
-    const ageRaw       = sp.get("age")          || sp.get("ageLimit") || "";
-    const applyStatus  = (sp.get("applyStatus") || "unknown").toLowerCase();
-    const feeRaw       = sp.get("fee")          || "";
+    const title         = sp.get("title") || "Sarkari Naukri Notification 2026";
+    const catRaw        = (sp.get("category") || "latest-jobs").toLowerCase();
+    const postsRaw      = sp.get("posts") || sp.get("vacancies") || "";
+    const startDateRaw  = sp.get("startDate") || "";
+    const lastDateRaw   = sp.get("lastDate") || "";
+    const qualRaw       = sp.get("qualification") || "";
+    const stateRaw      = sp.get("state") || "";
+    const salaryRaw     = sp.get("salary") || "";
+    const ageRaw        = sp.get("age") || sp.get("ageLimit") || "";
 
-    // ── Resolve theme ──
-    const baseTheme = CATEGORY_THEMES[catRaw] || DEFAULT_THEME;
-    const sub = SUB_THEMES.find(s => s.pattern.test(title));
-    const accent    = sub ? sub.accent    : baseTheme.accent;
-    const accentDim = sub ? sub.accentDim : baseTheme.accentDim;
-    const icon      = sub ? sub.icon      : (CATEGORY_ICONS[catRaw] || "🏛️");
+    const lastDate      = sanitizeField(lastDateRaw, "date");
+    const startDate     = sanitizeField(startDateRaw, "date");
+    const ageLimit      = sanitizeField(ageRaw, "age");
+    const qualification = sanitizeField(qualRaw, "qual");
 
-    // ── Compute dynamic values ──
-    const { org, post }  = parseOrgAndPost(title);
-    const orgFs          = orgFontSize(org);
-    const postFs         = post.length > 30 ? 24 : post.length > 20 ? 28 : 32;
-    const daysLeft       = getDaysLeft(lastDate);
-    const qualLabel      = fmtQual(qualification);
-    const stateName      = STATE_NAMES[stateRaw.toUpperCase()] || (stateRaw ? stateRaw.toUpperCase().slice(0,8) : "");
-    const vacancyDisplay = fmtVacancy(postsRaw);
-    const isFree         = /^0$|free|nil|zero|no fee/i.test(feeRaw);
-    const currentYear    = new Date().getFullYear();
+    const theme = THEMES[catRaw] || THEMES["latest-jobs"];
+    const stateName = STATE_NAMES[stateRaw.toUpperCase()] || (stateRaw ? stateRaw.toUpperCase().slice(0, 8) : "ALL INDIA");
 
-    // Post display line
-    const postLine = post ||
-      (catRaw === "results"     ? `RESULT ${currentYear}` :
-       catRaw === "admit-card"  ? `ADMIT CARD ${currentYear}` :
-       catRaw === "answer-key"  ? `ANSWER KEY ${currentYear}` :
-       catRaw === "admission"   ? `ADMISSION ${currentYear}` :
-                                   `RECRUITMENT ${currentYear}`);
+    const { line1, line2, subPill, burstText } = formatBannerTitles(title, catRaw);
 
-    // ── Urgency badge ──
-    let urgencyText = ""; let urgencyBg = "";
-    if (daysLeft !== null && daysLeft >= 0 && daysLeft <= 30) {
-      if (daysLeft === 0)      { urgencyText = "⚡ TODAY IS LAST DATE"; urgencyBg = "#7f1d1d"; }
-      else if (daysLeft <= 2)  { urgencyText = `⚡ ${daysLeft}D LEFT`;  urgencyBg = "#dc2626"; }
-      else if (daysLeft <= 7)  { urgencyText = `🔴 ${daysLeft} DAYS LEFT`; urgencyBg = "#b91c1c"; }
-      else if (daysLeft <= 15) { urgencyText = `⏰ ${daysLeft} DAYS LEFT`; urgencyBg = "#d97706"; }
-      else                     { urgencyText = `📅 ${daysLeft} DAYS LEFT`; urgencyBg = "#0891b2"; }
-    }
-
-    // ── Apply status chip ──
-    const statusMap: Record<string, { text: string; bg: string }> = {
-      open:         { text: "✅ APPLY OPEN",  bg: "#15803d" },
-      coming_soon:  { text: "🟡 APPLY SOON",  bg: "#854d0e" },
-      closed:       { text: "🔴 CLOSED",      bg: "#991b1b" },
-      unknown:      { text: "",               bg: "" },
+    // Render Crisp SVG Icons in Hexagon
+    const renderHexagonIcon = () => {
+      if (catRaw === "results") {
+        return (
+          <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+            <path d="M4 22h16" />
+            <path d="M10 14.66V17c0 .55-.45 1-1 1H8v4h8v-4h-1c-.55 0-1-.45-1-1v-2.34" />
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+          </svg>
+        );
+      }
+      if (catRaw === "admit-card") {
+        return (
+          <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+            <path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" />
+          </svg>
+        );
+      }
+      if (catRaw === "answer-key") {
+        return (
+          <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4" />
+            <path d="m21 2-9.6 9.6" />
+            <circle cx="7.5" cy="15.5" r="5.5" />
+          </svg>
+        );
+      }
+      return (
+        <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+          <rect width="20" height="14" x="2" y="6" rx="2" />
+        </svg>
+      );
     };
-    const statusChip = statusMap[applyStatus] || statusMap["unknown"];
-
-    // ── Dynamic CTA text ──
-    let ctaLeft  = baseTheme.ctaLeft;
-    let ctaRight = baseTheme.ctaRight;
-    if (catRaw === "latest-jobs" && applyStatus === "coming_soon") {
-      ctaLeft = "NOTIFICATION RELEASED"; ctaRight = "APPLY LINK COMING SOON";
-    }
-    if (catRaw === "latest-jobs" && applyStatus === "closed") {
-      ctaLeft = "APPLICATION CLOSED"; ctaRight = "CHECK RE-NOTIFICATION";
-    }
-
-    // ── Info chips — show only available data ──
-    const chips: Array<{ label: string; value: string }> = [];
-    if (salaryRaw) chips.push({ label: "SALARY",    value: salaryRaw.slice(0, 22) });
-    if (ageRaw)    chips.push({ label: "AGE LIMIT", value: ageRaw.slice(0, 18) });
-    chips.push({ label: "LOCATION", value: stateName ? `${stateName} STATE` : "PAN INDIA" });
-    if (qualification) chips.push({ label: "EDUCATION", value: qualLabel || qualification.slice(0, 12) });
-    const displayChips = chips.slice(0, 4);
-
-    // ── Category label pill text ──
-    const catLabel: Record<string, string> = {
-      "results":    "RESULT DECLARED",
-      "admit-card": "HALL TICKET AVAILABLE",
-      "answer-key": "ANSWER KEY RELEASED",
-      "admission":  "ADMISSION OPEN",
-      "news":       "IMPORTANT UPDATE",
-    };
-    const postTypePill = catLabel[catRaw] || "NOTIFICATION OUT";
 
     return new ImageResponse(
       (
         <div
           style={{
-            height: "100%", width: "100%",
-            display: "flex", flexDirection: "column",
-            background: `linear-gradient(135deg, ${baseTheme.bg1} 0%, ${baseTheme.bg2} 55%, ${baseTheme.bg3} 100%)`,
-            fontFamily: "'Segoe UI', Arial, sans-serif",
+            height: "100%",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            background: theme.bgGradient,
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             color: "#FFFFFF",
             position: "relative",
             overflow: "hidden",
           }}
         >
-          {/* ── Diagonal texture overlay ── */}
-          <div style={{
-            position: "absolute", inset: "0",
-            backgroundImage: `repeating-linear-gradient(-45deg,rgba(255,255,255,0.018) 0,rgba(255,255,255,0.018) 1px,transparent 1px,transparent 26px)`,
-            zIndex: 0,
-          }} />
+          {/* ── Background Radial Glows ── */}
+          <div
+            style={{
+              position: "absolute",
+              top: "-100px",
+              left: "-100px",
+              width: "450px",
+              height: "450px",
+              borderRadius: "50%",
+              background: `radial-gradient(circle, ${theme.accentGlow} 0%, transparent 70%)`,
+              display: "flex",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-80px",
+              right: "-80px",
+              width: "500px",
+              height: "500px",
+              borderRadius: "50%",
+              background: `radial-gradient(circle, ${theme.accentGlow} 0%, transparent 70%)`,
+              display: "flex",
+            }}
+          />
 
-          {/* ── Radial accent glow top-right ── */}
-          <div style={{
-            position: "absolute", top: -100, right: -100,
-            width: 380, height: 380,
-            background: `radial-gradient(circle, ${accent}45 0%, transparent 68%)`,
-            zIndex: 0,
-          }} />
-
-          {/* ── Content row ── */}
-          <div style={{ display: "flex", flex: 1, position: "relative", zIndex: 1 }}>
-
-            {/* ════ LEFT PANEL 68% ════ */}
-            <div style={{
-              width: "68%",
-              display: "flex", flexDirection: "column",
-              padding: "24px 28px 0 34px",
-            }}>
-
-              {/* Row 1: Logo + Urgency badge */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                {/* Rojgar Suvidha wordmark */}
-                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                  <span style={{ fontSize: "19px", fontWeight: 900, color: "#2563EB", letterSpacing: "-0.3px" }}>Rojgar</span>
-                  <span style={{ fontSize: "19px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.3px" }}>Suvidha</span>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ marginLeft: "4px" }}>
-                    <circle cx="10" cy="10" r="6" stroke="#2563EB" strokeWidth="2.5"/>
-                    <line x1="14.5" y1="14.5" x2="20" y2="20" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round"/>
-                    <circle cx="10" cy="10" r="2" fill="#2563EB" fillOpacity="0.4"/>
+          {/* ── Main Content Container ── */}
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              padding: "36px 44px 0 44px",
+            }}
+          >
+            {/* ════ LEFT COLUMN (72%) ════ */}
+            <div
+              style={{
+                width: "72%",
+                display: "flex",
+                flexDirection: "column",
+                paddingRight: "28px",
+              }}
+            >
+              {/* Header Bar: Brand + Overline Pill */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  marginBottom: "18px",
+                }}
+              >
+                {/* Brand */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "24px", fontWeight: 900, color: "#38bdf8", letterSpacing: "-0.5px" }}>Rojgar</span>
+                  <span style={{ fontSize: "24px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px" }}>Suvidha</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ marginLeft: "4px" }}>
+                    <circle cx="10" cy="10" r="6" stroke="#38bdf8" strokeWidth="2.5" />
+                    <line x1="14.5" y1="14.5" x2="20" y2="20" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" />
                   </svg>
                 </div>
-                {/* Urgency pill */}
-                {urgencyText ? (
-                  <div style={{
-                    backgroundColor: urgencyBg, color: "#FFF",
-                    padding: "4px 12px", borderRadius: "20px",
-                    fontSize: "12px", fontWeight: 800, letterSpacing: "0.3px",
-                  }}>{urgencyText}</div>
-                ) : null}
-              </div>
 
-              {/* Row 2: Overline pill */}
-              <div style={{
-                display: "flex", alignSelf: "flex-start",
-                backgroundColor: accentDim, color: "#FFF",
-                padding: "3px 14px", borderRadius: "20px",
-                fontSize: "11px", fontWeight: 800, letterSpacing: "3px",
-                marginBottom: "7px",
-              }}>
-                {baseTheme.overline}
-              </div>
-
-              {/* Row 3: Org name — giant adaptive */}
-              <div style={{
-                fontSize: `${orgFs}px`, fontWeight: 900,
-                color: "#FFFFFF", lineHeight: "1.0",
-                letterSpacing: orgFs > 55 ? "-1.5px" : "-0.5px",
-                textShadow: `0 0 50px ${accent}70`,
-                marginBottom: "3px",
-              }}>
-                {org}
-              </div>
-
-              {/* Row 4: Post line — accent colour */}
-              <div style={{
-                fontSize: `${postFs}px`, fontWeight: 900,
-                color: accent, letterSpacing: "-0.3px",
-                textShadow: `0 0 30px ${accent}55`,
-                marginBottom: "8px", lineHeight: "1.15",
-              }}>
-                {postLine}
-              </div>
-
-              {/* Row 5: Type pill + Vacancy burst */}
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-                <div style={{
-                  backgroundColor: "#FFFFFF", color: "#0F172A",
-                  padding: "5px 13px", borderRadius: "8px",
-                  fontSize: "13px", fontWeight: 900, letterSpacing: "0.2px",
-                }}>
-                  {postTypePill}
+                {/* Overline Badge */}
+                <div
+                  style={{
+                    display: "flex",
+                    backgroundColor: theme.badgeBg,
+                    color: theme.badgeText,
+                    padding: "4px 16px",
+                    borderRadius: "20px",
+                    fontSize: "12px",
+                    fontWeight: 900,
+                    letterSpacing: "1.5px",
+                  }}
+                >
+                  {theme.overline}
                 </div>
-                {vacancyDisplay ? (
-                  <div style={{
-                    backgroundColor: "#DC2626", color: "#FFF",
-                    padding: "5px 12px", borderRadius: "8px",
-                    fontSize: "13px", fontWeight: 900,
-                    border: `2px solid ${accent}`,
-                    boxShadow: "0 3px 12px rgba(220,38,38,0.5)",
-                    transform: "rotate(3deg)",
-                  }}>
-                    {vacancyDisplay}
+              </div>
+
+              {/* Main Headline (Line 1: White, Line 2: Glowing Accent) */}
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: line1.length > 18 ? "46px" : "54px",
+                  fontWeight: 900,
+                  color: "#FFFFFF",
+                  lineHeight: 1.05,
+                  letterSpacing: "-1px",
+                  marginBottom: "2px",
+                }}
+              >
+                {line1}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: "44px",
+                  fontWeight: 900,
+                  color: theme.accent,
+                  lineHeight: 1.1,
+                  letterSpacing: "-0.5px",
+                  textShadow: `0 0 30px ${theme.accentGlow}`,
+                  marginBottom: "16px",
+                }}
+              >
+                {line2}
+              </div>
+
+              {/* Sub-Pill & Burst Badge */}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    backgroundColor: "#FFFFFF",
+                    color: "#0f172a",
+                    padding: "6px 18px",
+                    borderRadius: "24px",
+                    fontSize: "14px",
+                    fontWeight: 900,
+                    letterSpacing: "0.4px",
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  {subPill}
+                </div>
+
+                {burstText && (
+                  <div
+                    style={{
+                      display: "flex",
+                      backgroundColor: theme.badgeBg,
+                      color: "#FFFFFF",
+                      border: `1.5px solid ${theme.accent}`,
+                      padding: "5px 14px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: 900,
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    {burstText}
                   </div>
-                ) : null}
+                )}
               </div>
 
-              {/* Row 6: Dynamic info chips (show only available) */}
-              {displayChips.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "7px", marginBottom: "9px" }}>
-                  {displayChips.map((chip, i) => (
-                    <div key={i} style={{
-                      backgroundColor: "rgba(255,255,255,0.07)",
-                      border: `1px solid ${accent}45`,
-                      borderRadius: "8px",
-                      padding: "5px 11px",
-                      display: "flex", flexDirection: "column",
-                      minWidth: "110px", maxWidth: "180px",
-                    }}>
-                      <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.5)", fontWeight: 800, letterSpacing: "1.5px" }}>
-                        {chip.label}
-                      </span>
-                      <span style={{ fontSize: "12px", color: "#FFF", fontWeight: 800, marginTop: "1px" }}>
-                        {chip.value}
-                      </span>
+              {/* Information Rows (Clean Glassmorphism Table Style) */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  width: "100%",
+                }}
+              >
+                {catRaw === "results" ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "7px 16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(74, 222, 128, 0.3)",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 700 }}>Total Vacancies</span>
+                      <span style={{ color: "#ffffff", fontSize: "14px", fontWeight: 900 }}>{postsRaw ? `${postsRaw} Posts` : "Official Notice"}</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "7px 16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(74, 222, 128, 0.3)",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 700 }}>Selection Status</span>
+                      <span style={{ color: theme.accent, fontSize: "14px", fontWeight: 900 }}>Scorecard & Cut Off Marks Released</span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "7px 16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(74, 222, 128, 0.3)",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 700 }}>Merit List PDF</span>
+                      <span style={{ color: "#ffffff", fontSize: "14px", fontWeight: 900 }}>Direct Download Link Active</span>
+                    </div>
+                  </div>
+                ) : catRaw === "admit-card" ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "7px 16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(251, 146, 60, 0.3)",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 700 }}>Hall Ticket Status</span>
+                      <span style={{ color: theme.accent, fontSize: "14px", fontWeight: 900 }}>E-Call Letter Available Online</span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "7px 16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(251, 146, 60, 0.3)",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 700 }}>Exam Shift & Center</span>
+                      <span style={{ color: "#ffffff", fontSize: "14px", fontWeight: 900 }}>Check Roll No & Shift Timing</span>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "7px 16px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(251, 146, 60, 0.3)",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: 700 }}>Required Documents</span>
+                      <span style={{ color: "#ffffff", fontSize: "14px", fontWeight: 900 }}>Admit Card + Photo ID Original</span>
+                    </div>
+                  </div>
+                ) : (
+                  // Latest jobs: 4 Sleek Chips
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: "150px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: `1px solid ${theme.accentGlow}`,
+                        borderRadius: "10px",
+                        padding: "8px 14px",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 800, letterSpacing: "1px" }}>SALARY</span>
+                      <span style={{ fontSize: "14px", color: "#ffffff", fontWeight: 900, marginTop: "2px" }}>{salaryRaw || "As per Rules"}</span>
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: "150px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: `1px solid ${theme.accentGlow}`,
+                        borderRadius: "10px",
+                        padding: "8px 14px",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 800, letterSpacing: "1px" }}>AGE LIMIT</span>
+                      <span style={{ fontSize: "14px", color: "#ffffff", fontWeight: 900, marginTop: "2px" }}>{ageLimit || "18–40 Years"}</span>
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: "150px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: `1px solid ${theme.accentGlow}`,
+                        borderRadius: "10px",
+                        padding: "8px 14px",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 800, letterSpacing: "1px" }}>LOCATION</span>
+                      <span style={{ fontSize: "14px", color: "#ffffff", fontWeight: 900, marginTop: "2px" }}>{stateName}</span>
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: "150px",
+                        backgroundColor: "rgba(255, 255, 255, 0.05)",
+                        border: `1px solid ${theme.accentGlow}`,
+                        borderRadius: "10px",
+                        padding: "8px 14px",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 800, letterSpacing: "1px" }}>ELIGIBILITY</span>
+                      <span style={{ fontSize: "14px", color: "#ffffff", fontWeight: 900, marginTop: "2px" }}>{qualification || "10th / 12th / Degree"}</span>
+                    </div>
 
-              {/* Row 7: Status pills (apply status + qual + free) */}
-              <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                {statusChip.text ? (
-                  <div style={{
-                    backgroundColor: statusChip.bg, color: "#FFF",
-                    padding: "4px 11px", borderRadius: "20px",
-                    fontSize: "11px", fontWeight: 800,
-                  }}>{statusChip.text}</div>
-                ) : null}
-                {qualLabel ? (
-                  <div style={{
-                    backgroundColor: "rgba(255,255,255,0.09)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    color: "#FFF", padding: "4px 11px",
-                    borderRadius: "20px", fontSize: "11px", fontWeight: 700,
-                  }}>🎓 {qualLabel}</div>
-                ) : null}
-                {isFree && feeRaw ? (
-                  <div style={{
-                    backgroundColor: "#166534", color: "#FFF",
-                    padding: "4px 11px", borderRadius: "20px",
-                    fontSize: "11px", fontWeight: 800,
-                  }}>💸 NO FEE</div>
-                ) : null}
+                    {/* Status badges matching reference design */}
+                    <div style={{ display: "flex", gap: "10px", width: "100%", marginTop: "4px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          backgroundColor: "#16a34a",
+                          color: "#ffffff",
+                          padding: "4px 14px",
+                          borderRadius: "16px",
+                          fontSize: "12px",
+                          fontWeight: 900,
+                        }}
+                      >
+                        ✔ APPLY OPEN
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          backgroundColor: "rgba(255, 255, 255, 0.08)",
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          color: "#e2e8f0",
+                          padding: "4px 14px",
+                          borderRadius: "16px",
+                          fontSize: "12px",
+                          fontWeight: 800,
+                        }}
+                      >
+                        🎓 {qualification || "Online Application"}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* ════ RIGHT PANEL 32% ════ */}
-            <div style={{
-              width: "32%",
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "space-between",
-              borderLeft: `2px solid ${accent}50`,
-              padding: "22px 18px",
-              background: "rgba(0,0,0,0.22)",
-            }}>
-              {/* State / All India badge — top-right */}
-              <div style={{
-                backgroundColor: stateName ? "#c2410c" : "#1d4ed8",
-                color: "#FFF",
-                padding: "5px 14px", borderRadius: "20px",
-                fontSize: "13px", fontWeight: 900, letterSpacing: "0.8px",
-                alignSelf: "flex-end",
-              }}>
-                {stateName || "ALL INDIA"}
+            {/* ════ RIGHT COLUMN (28%) ════ */}
+            <div
+              style={{
+                width: "28%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "rgba(255, 255, 255, 0.03)",
+                border: `1px solid ${theme.accentGlow}`,
+                borderRadius: "24px",
+                padding: "24px 18px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+              }}
+            >
+              {/* State Pill */}
+              <div
+                style={{
+                  display: "flex",
+                  backgroundColor: "#f59e0b",
+                  color: "#0f172a",
+                  padding: "4px 16px",
+                  borderRadius: "20px",
+                  fontSize: "13px",
+                  fontWeight: 900,
+                  letterSpacing: "1px",
+                  alignSelf: "flex-end",
+                }}
+              >
+                {stateName}
               </div>
 
-              {/* Category icon box */}
-              <div style={{
-                width: "108px", height: "108px",
-                background: `linear-gradient(140deg, ${accentDim}25, ${accent}18)`,
-                border: `2px solid ${accent}`,
-                borderRadius: "18px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: `0 6px 24px ${accent}35`,
-              }}>
-                <span style={{ fontSize: "52px" }}>{icon}</span>
+              {/* Emblem Hexagon Box with Clean SVG */}
+              <div
+                style={{
+                  width: "120px",
+                  height: "120px",
+                  borderRadius: "28px",
+                  backgroundColor: "rgba(255, 255, 255, 0.06)",
+                  border: `2px solid ${theme.accent}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: `0 0 40px ${theme.accentGlow}`,
+                }}
+              >
+                {renderHexagonIcon()}
               </div>
 
-              {/* Date cards — dynamic, shown only if data present */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "7px", width: "100%" }}>
-                {startDate ? (
-                  <div style={{
-                    backgroundColor: "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(255,255,255,0.13)",
-                    borderRadius: "10px", padding: "7px 11px", width: "100%",
-                  }}>
-                    <div style={{ fontSize: "8px", color: "rgba(255,255,255,0.45)", fontWeight: 800, letterSpacing: "1px" }}>START DATE</div>
-                    <div style={{ fontSize: "12px", color: "#FFF", fontWeight: 800, marginTop: "2px" }}>{startDate}</div>
-                  </div>
-                ) : null}
-                {lastDate ? (
-                  <div style={{
-                    backgroundColor: daysLeft !== null && daysLeft <= 7 ? "rgba(220,38,38,0.18)" : "rgba(255,255,255,0.07)",
-                    border: daysLeft !== null && daysLeft <= 7 ? "1px solid rgba(220,38,38,0.55)" : "1px solid rgba(255,255,255,0.13)",
-                    borderRadius: "10px", padding: "7px 11px", width: "100%",
-                  }}>
-                    <div style={{ fontSize: "8px", color: "rgba(255,255,255,0.45)", fontWeight: 800, letterSpacing: "1px" }}>LAST DATE</div>
-                    <div style={{
-                      fontSize: "12px", fontWeight: 900, marginTop: "2px",
-                      color: daysLeft !== null && daysLeft <= 7 ? "#f87171" : "#FFF",
-                    }}>{lastDate}</div>
-                  </div>
-                ) : null}
-
-                {/* Site branding */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "4px" }}>
-                  <span style={{ fontSize: "11px", color: accent, fontWeight: 800, letterSpacing: "0.3px" }}>
-                    www.rojgarsuvidha.com
+              {/* Status / Dates Box */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "4px",
+                  width: "100%",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    backgroundColor: "rgba(255, 255, 255, 0.07)",
+                    borderRadius: "12px",
+                    padding: "8px 12px",
+                    width: "100%",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                  }}
+                >
+                  <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 800, letterSpacing: "1px" }}>
+                    {lastDate ? "LAST DATE" : "OFFICIAL STATUS"}
+                  </span>
+                  <span style={{ fontSize: "13px", color: "#ffffff", fontWeight: 900, marginTop: "2px" }}>
+                    {lastDate || "100% VERIFIED UPDATE"}
                   </span>
                 </div>
+
+                <span style={{ fontSize: "12px", color: theme.accent, fontWeight: 800, marginTop: "6px" }}>
+                  www.rojgarsuvidha.com
+                </span>
               </div>
             </div>
           </div>
 
-          {/* ════ BOTTOM CTA RIBBON — dynamic text ════ */}
-          <div style={{ display: "flex", width: "100%", height: "52px", position: "relative", zIndex: 1 }}>
-            <div style={{
-              flex: "0 0 57%",
-              backgroundColor: "rgba(5,10,30,0.95)",
-              borderTop: `2px solid ${accent}30`,
-              display: "flex", alignItems: "center",
-              paddingLeft: "34px",
-            }}>
-              <span style={{ fontSize: "19px", fontWeight: 900, color: "#FFF", letterSpacing: "0.4px" }}>
-                {ctaLeft}
+          {/* ── Bottom CTA Bar ── */}
+          <div
+            style={{
+              display: "flex",
+              height: "64px",
+              width: "100%",
+              marginTop: "auto",
+              boxShadow: "0 -4px 20px rgba(0,0,0,0.5)",
+            }}
+          >
+            {/* Left CTA (Dark) */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: "#0b1329",
+                display: "flex",
+                alignItems: "center",
+                paddingLeft: "44px",
+                borderTop: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <span style={{ fontSize: "17px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.5px" }}>
+                {theme.ctaLeft}
               </span>
             </div>
-            <div style={{
-              flex: "0 0 43%",
-              backgroundColor: accent,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ fontSize: "19px", fontWeight: 900, color: "#FFF", letterSpacing: "0.2px" }}>
-                {ctaRight}
+
+            {/* Right CTA (Accent Action Button) */}
+            <div
+              style={{
+                backgroundColor: theme.badgeBg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0 40px",
+              }}
+            >
+              <span style={{ fontSize: "18px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "0.5px" }}>
+                {theme.ctaRight}
               </span>
             </div>
           </div>
         </div>
       ),
-      { width: 1200, height: 630 }
+      {
+        width: 1200,
+        height: 630,
+      }
     );
   } catch (err: any) {
-    return new Response(`Banner render error: ${err.message}`, { status: 500 });
+    console.error("Banner generation error:", err);
+    return new Response(`Error generating banner: ${err?.message}`, { status: 500 });
   }
 }
