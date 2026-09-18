@@ -23,6 +23,7 @@ import { createClient } from "@supabase/supabase-js";
 import { sendAdminDraftApprovalAlert, sendTelegramAdminErrorAlert, sendTelegramAdminSummaryDigest } from "./social-publisher";
 import { callGeminiWithRotation } from "./gemini-rotator";
 import { syncCronSummaryToGoogleSheet, syncSkipLogToGoogleSheet } from "./backlink-exporter";
+import { generateAndUploadBanner } from "./banner-generator";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ApplyStatus = "open" | "coming_soon" | "closed" | "unknown";
@@ -2612,34 +2613,11 @@ async function sendTelegramNotification(draft: {
   }
 }
 
-// ── AI Topic-Specific Banner Generator (Pollinations.ai Free Flux Model) ───────
-function generateAiTopicBannerUrl(title: string, category: string, stateCode?: string | null): string {
-  let subjectPrompt = "Sarkari Naukri Government Job Notification official badge";
-  const cleanT = title.toLowerCase();
-
-  if (cleanT.includes("post") || cleanT.includes("gds") || cleanT.includes("dak") || cleanT.includes("post office")) {
-    subjectPrompt = "Indian Post Office GDS mail van envelope gold stamp 3d isometric render";
-  } else if (cleanT.includes("police") || cleanT.includes("constable") || cleanT.includes("si ") || cleanT.includes("sub inspector") || cleanT.includes("lokrakshak")) {
-    subjectPrompt = "Indian Police officer gold metallic emblem badge navy blue uniform 3d render";
-  } else if (cleanT.includes("railway") || cleanT.includes("rrb") || cleanT.includes("ntpc") || cleanT.includes("alp") || cleanT.includes("loco")) {
-    subjectPrompt = "Indian Railways Vande Bharat high speed train engine golden rails 3d render";
-  } else if (cleanT.includes("bank") || cleanT.includes("sbi") || cleanT.includes("ibps") || cleanT.includes("rbi") || cleanT.includes("clerk") || cleanT.includes("po ")) {
-    subjectPrompt = "State Bank of India building gold coins financial growth chart 3d render";
-  } else if (cleanT.includes("isro") || cleanT.includes("drdo") || cleanT.includes("scientist") || cleanT.includes("engineer")) {
-    subjectPrompt = "ISRO rocket launch satellite space technology dark blue glowing 3d render";
-  } else if (cleanT.includes("army") || cleanT.includes("navy") || cleanT.includes("air force") || cleanT.includes("nda") || cleanT.includes("cds") || cleanT.includes("defence")) {
-    subjectPrompt = "Indian Military Armed Forces gold badge camouflage background 3d render";
-  } else if (cleanT.includes("teacher") || cleanT.includes("tet") || cleanT.includes("neet") || cleanT.includes("cuet") || cleanT.includes("school") || cleanT.includes("college")) {
-    subjectPrompt = "Education graduation hat study books glowing golden diploma certificate 3d render";
-  } else if (cleanT.includes("upsc") || cleanT.includes("psc") || cleanT.includes("ssc") || cleanT.includes("cgl") || cleanT.includes("chsl")) {
-    subjectPrompt = "Ashoka Stambha Lion Capital official government seal gold 3d render";
-  }
-
-  const promptText = `3D ultra realistic cinematic lighting banner for ${subjectPrompt}, vibrant colors, 8k resolution studio photo`;
-  
-  // Use Pollinations AI Free Flux Model
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=1200&height=630&model=flux&nologo=true`;
-}
+// ── generateAiTopicBannerUrl REMOVED ────────────────────────────────────────
+// Previously used Pollinations.ai (unreliable, external dependency, no SLA).
+// Replaced by: generateAndUploadBanner() from ./banner-generator
+//   → HF FLUX.1-schnell API → Backblaze B2 storage → permanent CDN URL
+//   → Fallback: /api/og/banner (Next.js ImageResponse SVG banner)
 
 // ── SEO Title Normalizer (Front-loads primary search keyword) ────────────────
 export function normalizeSeoTitle(title: string): string {
@@ -3387,7 +3365,10 @@ export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResul
       const slug = await getUniqueSlug(baseSlug, supabase);
       const startDateVal = aiResult.startDate || "";
       const qualVal = aiResult.qualification || aiResult.eligibility || "";
-      const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}&salary=${encodeURIComponent(aiResult.salaryText || "")}&age=${encodeURIComponent(ageLimit || "")}&applyStatus=${encodeURIComponent(applyStatus)}&fee=${encodeURIComponent(appFeeGen || "")}`;
+      // AI Banner: HF FLUX → B2 CDN URL | Fallback: /api/og/banner SVG
+      const ogBannerFallback = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(sanitizedLastDate || "")}&state=${encodeURIComponent(stateCode || "")}&age=${encodeURIComponent(ageLimit || "")}&applyStatus=${encodeURIComponent(applyStatus)}&fee=${encodeURIComponent(appFeeGen || "")}`;
+      const aiBannerUrl = await generateAndUploadBanner(slug, cleanedTitle, aiResult.category || category).catch(() => null);
+      const autoBannerUrl = aiBannerUrl || ogBannerFallback;
 
 
       // 10. Save draft to Supabase
@@ -3424,10 +3405,10 @@ export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResul
           form_fees_structure: aiResult.form_fees_structure || null,
         }),
         status: "pending_review",
-        // SarkariResult posts → 45 min baad auto-publish
+        // SarkariResult posts → 10 min baad auto-publish (reduced from 45min to cut latency)
         // FreeJobAlert / google_trends / ndtv → NULL = manual Admin approval only
         auto_publish_at: item.source === "sarkariresult"
-          ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+          ? new Date(Date.now() + 10 * 60 * 1000).toISOString()
           : null,
       };
 
@@ -3498,16 +3479,19 @@ export async function runAutoBlogScraper(processLimit = 2): Promise<ScraperResul
           qualityScore: qualityCheck.score ?? null,
           sourceUrl: item.link || null,  // Original URL for admin cross-check
           autoPublishAt: item.source === "sarkariresult"
-            ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+            ? new Date(Date.now() + 10 * 60 * 1000).toISOString()
             : null,
         }).catch((e) => console.warn("Admin draft approval alert failed:", e));
       }
 
       results.processed++;
 
-      // 🎯 Strict 1-post-per-run policy: process exactly 1 verified fresh post, then stop
-      if (results.processed >= 1) {
-        console.log(`🎯 [1-Post Target] Successfully drafted 1 fresh post: "${cleanedTitle}". Finishing run.`);
+      // 🎯 Post-per-run policy:
+      // SarkariResult: 2 posts per run (time-sensitive, high-priority source)
+      // All others: 1 post per run (to stay within Vercel timeout)
+      const runLimit = item.source === "sarkariresult" ? 2 : 1;
+      if (results.processed >= runLimit) {
+        console.log(`🎯 [Run Limit] Processed ${results.processed} post(s) this run (limit: ${runLimit}). Finishing.`);
         break;
       }
 
@@ -3749,7 +3733,10 @@ export async function forceProcessSpecificItem(item: {
     const slug = await getUniqueSlug(baseSlug, supabase);
     const startDateVal = aiResult.startDate || "";
     const qualVal = aiResult.qualification || aiResult.eligibility || "";
-    const autoBannerUrl = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&startDate=${encodeURIComponent(startDateVal)}&lastDate=${encodeURIComponent(lastDate || "")}&qualification=${encodeURIComponent(qualVal)}&state=${encodeURIComponent(stateCode || "")}&salary=${encodeURIComponent(aiResult.salaryText || "")}&age=${encodeURIComponent(ageLimit || "")}&applyStatus=${encodeURIComponent(applyStatus)}&fee=${encodeURIComponent(appFeeGen || "")}`;
+    // AI Banner: HF FLUX → B2 CDN URL | Fallback: /api/og/banner SVG
+    const ogBannerFallback = `${BASE_URL}/api/og/banner?title=${encodeURIComponent(cleanedTitle)}&category=${encodeURIComponent(aiResult.category || category)}&posts=${encodeURIComponent(aiResult.totalPosts || totalPosts || "")}&lastDate=${encodeURIComponent(lastDate || "")}&state=${encodeURIComponent(stateCode || "")}&age=${encodeURIComponent(ageLimit || "")}&applyStatus=${encodeURIComponent(applyStatus)}&fee=${encodeURIComponent(appFeeGen || "")}`;
+    const aiBannerUrl = await generateAndUploadBanner(slug, cleanedTitle, aiResult.category || category).catch(() => null);
+    const autoBannerUrl = aiBannerUrl || ogBannerFallback;
 
     const finalDatesObj = aiResult.important_dates;
 
@@ -3784,8 +3771,9 @@ export async function forceProcessSpecificItem(item: {
         form_fees_structure: aiResult.form_fees_structure || null,
       }),
       status: "pending_review",
+      // 10-min buffer (reduced from 45min) for SarkariResult fast-publish
       auto_publish_at: item.source === "sarkariresult"
-        ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+        ? new Date(Date.now() + 10 * 60 * 1000).toISOString()
         : null,
     };
 
@@ -3833,7 +3821,7 @@ export async function forceProcessSpecificItem(item: {
       qualityScore: qualityCheck.score ?? null,
       sourceUrl: item.link || null,
       autoPublishAt: item.source === "sarkariresult"
-        ? new Date(Date.now() + 45 * 60 * 1000).toISOString()
+        ? new Date(Date.now() + 10 * 60 * 1000).toISOString()
         : null,
     });
 

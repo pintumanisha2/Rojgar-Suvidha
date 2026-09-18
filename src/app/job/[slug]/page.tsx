@@ -734,7 +734,8 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
               {/* ── PROFESSIONAL GRAPHIC DESIGNER BANNER ── */}
               {(() => {
                 const catKey = (job.category || categoryLabel || "").toLowerCase();
-                const isCustomImage = job.banner_url && !job.banner_url.includes("/api/og/banner");
+                // Fix: /api/og/banner returns a real PNG via ImageResponse — treat it as an image too
+                const isCustomImage = !!job.banner_url;
 
                 const theme =
                   catKey.includes("result")
@@ -750,11 +751,11 @@ export default async function JobDetailsPage({ params }: { params: Promise<{ slu
                     : { bg: "from-slate-950 via-indigo-950 to-zinc-950", badgeBg: "bg-indigo-600", textAccent: "text-amber-400", border: "border-indigo-500/30", label: "💼 LATEST SARKARI JOB" };
 
                 return isCustomImage ? (
-                  <div className="w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-zinc-800 shadow-md bg-gray-50 dark:bg-zinc-950">
+                  <div className="w-full rounded-2xl overflow-hidden border border-zinc-800 shadow-xl bg-black">
                     <img
-                      src={job.banner_url}
+                      src={job.banner_url!}
                       alt={job.title}
-                      className="w-full h-auto object-contain max-h-[320px] mx-auto"
+                      className="w-full h-auto object-cover"
                       loading="eager"
                       fetchPriority="high"
                       decoding="sync"
